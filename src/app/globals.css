@@ -257,3 +257,22 @@ input:focus, textarea:focus {
   height: 1px;
   background: linear-gradient(90deg, transparent, var(--card-border) 20%, var(--card-border) 80%, transparent);
 }
+
+/* ── Konami Code Rain ─────────────────────────── */
+
+@keyframes konamiFall {
+  0% {
+    opacity: 0;
+    transform: translateY(0) rotate(0deg);
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(100vh) rotate(15deg);
+  }
+}

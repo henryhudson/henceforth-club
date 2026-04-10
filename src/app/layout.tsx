@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Space_Mono } from "next/font/google";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import KonamiCode from "@/components/KonamiCode";
+import MiniTerminal from "@/components/MiniTerminal";
 import "./globals.css";
 
 const spaceMono = Space_Mono({
@@ -108,6 +110,8 @@ export default function RootLayout({
         <Navbar />
         <main className="flex-1">{children}</main>
         <Footer />
+        <KonamiCode />
+        <MiniTerminal />
       </body>
     </html>
   );
