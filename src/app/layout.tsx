@@ -91,6 +91,11 @@ function Footer() {
         <p className="mt-6 text-xs text-muted/40">
           &copy; {new Date().getFullYear()} Henry Hudson. All rights reserved.
         </p>
+        <div className="mt-4 flex flex-col gap-1.5 text-[10px] text-muted/20">
+          <p>Some say the old code still listens. Try the sequence the masters knew: up, up, down, down...</p>
+          <p>Press the key beside 1 while holding control. A stack awaits.</p>
+          <p>Not all paths are on the map. Say hello to the world and see what stacks up.</p>
+        </div>
       </div>
     </footer>
   );
