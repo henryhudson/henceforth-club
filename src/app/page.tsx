@@ -12,7 +12,7 @@ function TerminalHero() {
         <FadeIn>
           <div className="max-w-3xl">
             <p className="text-sm tracking-widest text-accent/70 uppercase">
-              iOS apps by Henry Hudson
+              iOS Apps
             </p>
             <h1 className="mt-6 text-4xl sm:text-6xl leading-[1.1] text-foreground font-bold">
               Code meets craft.

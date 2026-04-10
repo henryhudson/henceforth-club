@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**henceforth.club** — a Next.js 16 marketing site showcasing two iOS apps by Henry Hudson:
+**henceforth.club** — a Next.js 16 marketing site showcasing two iOS apps by Henceforth Bitcoin Limited:
 - **Henceforth** — FORTH interpreter + Bitcoin SV wallet (App Store: id1602896145)
 - **DaDeckOfCards** — multiplayer card game (App Store: id1520654142)
 

@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     template: "%s | Henceforth Club",
   },
   description:
-    "iOS apps by Henry Hudson — Henceforth (FORTH interpreter + Bitcoin wallet) and DaDeckOfCards (multiplayer card game).",
+    "Henceforth (FORTH interpreter + Bitcoin wallet) and DaDeckOfCards (multiplayer card game) — iOS apps from Henceforth Club.",
   keywords: [
     "iOS",
     "apps",
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Henceforth Club",
     description:
-      "iOS apps by Henry Hudson — a FORTH interpreter with a Bitcoin wallet, and a multiplayer deck of cards.",
+      "A FORTH interpreter with a Bitcoin wallet, and a multiplayer deck of cards. iOS apps from Henceforth Club.",
     url: "https://henceforth.club",
     siteName: "Henceforth Club",
     locale: "en_NZ",
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Henceforth Club",
     description:
-      "iOS apps by Henry Hudson — a FORTH interpreter with a Bitcoin wallet, and a multiplayer deck of cards.",
+      "A FORTH interpreter with a Bitcoin wallet, and a multiplayer deck of cards. iOS apps from Henceforth Club.",
   },
 };
 
@@ -57,7 +57,7 @@ function Footer() {
               henceforth<span className="text-muted">.club</span>
             </p>
             <p className="mt-2 text-xs text-muted/60">
-              iOS apps crafted by Henry Hudson
+              iOS apps for thinkers and players
             </p>
           </div>
           <div className="flex gap-8 text-sm">
@@ -89,7 +89,7 @@ function Footer() {
         </div>
         <div className="section-line mt-8" />
         <p className="mt-6 text-xs text-muted/40">
-          &copy; {new Date().getFullYear()} Henry Hudson. All rights reserved.
+          &copy; {new Date().getFullYear()} Henceforth Bitcoin Limited. All rights reserved.
         </p>
         <div className="mt-4 flex flex-col gap-1.5 text-[10px] text-muted/20">
           <p>Some say the old code still listens. Try the sequence the masters knew: up, up, down, down...</p>
