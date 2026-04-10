@@ -91,6 +91,7 @@ function Footer() {
         <p className="mt-6 text-xs text-muted/40">
           &copy; {new Date().getFullYear()} Henceforth Bitcoin Limited. All rights reserved.
         </p>
+        <p className="mt-3 text-[10px] text-muted/25">by Henry Hudson</p>
         <div className="mt-4 flex flex-col gap-1.5 text-[10px] text-muted/20">
           <p>Some say the old code still listens. Try the sequence the masters knew: up, up, down, down...</p>
           <p>Press the key beside 1 while holding control. A stack awaits.</p>
