@@ -23,7 +23,6 @@ export default function Navbar() {
     { href: "/henceforth", label: "Henceforth", hoverColor: "hover:text-accent" },
     { href: "/dadeckofcards", label: "DaDeckOfCards", hoverColor: "hover:text-accent-warm" },
     { href: "/docs", label: "Docs", hoverColor: "hover:text-foreground" },
-    { href: "/contact", label: "Contact", hoverColor: "hover:text-foreground" },
   ];
 
   return (

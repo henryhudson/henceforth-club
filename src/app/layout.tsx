@@ -79,12 +79,6 @@ function Footer() {
             >
               Docs
             </Link>
-            <Link
-              href="/contact"
-              className="text-muted/60 transition-colors hover:text-foreground"
-            >
-              Contact
-            </Link>
           </div>
         </div>
         <div className="section-line mt-8" />
