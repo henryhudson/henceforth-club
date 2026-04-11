@@ -16,7 +16,7 @@ const profiles = [
     description: "App updates, FORTH tips, and Bitcoin.",
   },
   {
-    label: "DaDeckOfCards",
+    label: "Deck of Cards",
     handle: "@cardsDeck",
     href: "https://x.com/cardsDeck",
     color: "text-accent-warm",

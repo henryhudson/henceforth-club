@@ -141,7 +141,7 @@ export default function Home() {
             </FadeIn>
             <FadeIn delay={0.2}>
               <AppCard
-                title="DaDeckOfCards"
+                title="Deck of Cards"
                 tagline="Multiplayer card games"
                 description="A beautiful, multiplayer card game platform. Play classic card games with friends in real time. Custom decks, smooth animations, and a clean interface designed for the way you actually play cards."
                 href="/dadeckofcards"

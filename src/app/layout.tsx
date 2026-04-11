@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     template: "%s | Henceforth Club",
   },
   description:
-    "Henceforth (FORTH interpreter + Bitcoin wallet), DaDeckOfCards (multiplayer card game), and Hansard (UK Parliament browser) — iOS apps from Henceforth Club.",
+    "Henceforth (FORTH interpreter + Bitcoin wallet), Deck of Cards (multiplayer card game), and Hansard (UK Parliament browser) — iOS apps from Henceforth Club.",
   keywords: [
     "iOS",
     "apps",
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     "BSV",
     "card game",
     "Henceforth",
-    "DaDeckOfCards",
+    "Deck of Cards",
     "Hansard",
     "UK Parliament",
   ],
@@ -73,7 +73,7 @@ function Footer() {
               href="/dadeckofcards"
               className="text-muted/60 transition-colors hover:text-foreground"
             >
-              DaDeckOfCards
+              Deck of Cards
             </Link>
             <Link
               href="/hansard"

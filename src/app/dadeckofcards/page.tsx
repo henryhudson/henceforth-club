@@ -3,7 +3,7 @@ import Image from "next/image";
 import FadeIn from "@/components/FadeIn";
 
 export const metadata: Metadata = {
-  title: "DaDeckOfCards",
+  title: "Deck of Cards",
   description: "A beautiful multiplayer card game platform for iOS.",
 };
 
@@ -124,7 +124,7 @@ export default function DaDeckOfCardsPage() {
               iOS App
             </p>
             <h1 className="mt-6 text-5xl sm:text-7xl text-foreground font-bold">
-              DaDeckOfCards
+              Deck of Cards
             </h1>
             <p className="mt-6 text-lg leading-relaxed text-muted max-w-2xl">
               A{" "}
@@ -167,7 +167,7 @@ export default function DaDeckOfCardsPage() {
             <div className="section-line mb-12" />
             <Image
               src="/icons/dadeckofcards.png"
-              alt="DaDeckOfCards app icon"
+              alt="Deck of Cards app icon"
               width={80}
               height={80}
               className="mx-auto mb-6 rounded-2xl shadow-lg shadow-accent/10"

@@ -21,7 +21,7 @@ export default function Navbar() {
 
   const links = [
     { href: "/henceforth", label: "Henceforth", hoverColor: "hover:text-accent-warm" },
-    { href: "/dadeckofcards", label: "DaDeckOfCards", hoverColor: "hover:text-accent" },
+    { href: "/dadeckofcards", label: "Deck of Cards", hoverColor: "hover:text-accent" },
     { href: "/hansard", label: "Hansard", hoverColor: "hover:text-accent-green" },
     { href: "/contact", label: "Contact", hoverColor: "hover:text-foreground" },
   ];
