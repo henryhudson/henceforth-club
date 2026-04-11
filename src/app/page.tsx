@@ -1,69 +1,6 @@
 import Link from "next/link";
 import FadeIn from "@/components/FadeIn";
-
-function TerminalHero() {
-  return (
-    <section className="relative hero-gradient overflow-hidden">
-      {/* Grid background */}
-      <div className="absolute inset-0 hero-grid" />
-
-      <div className="relative mx-auto max-w-6xl px-6 py-28 sm:py-40">
-        {/* Editorial headline */}
-        <FadeIn>
-          <div className="max-w-3xl">
-            <p className="text-sm tracking-widest text-accent/70 uppercase">
-              iOS Apps
-            </p>
-            <h1 className="mt-6 text-4xl sm:text-6xl leading-[1.1] text-foreground font-bold">
-              Code meets craft.
-            </h1>
-            <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
-              A FORTH interpreter with a Bitcoin wallet. A multiplayer deck of cards.
-              A UK Parliament browser. Three apps built with care, running natively on iOS.
-            </p>
-          </div>
-        </FadeIn>
-
-        {/* Terminal window */}
-        <FadeIn delay={0.2}>
-          <div className="mt-16 max-w-2xl">
-            <div className="terminal-window relative terminal-scanlines">
-              {/* Title bar */}
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-card-border/50">
-                <div className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
-                <div className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
-                <div className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
-                <span className="ml-3 text-xs text-muted/50">henceforth</span>
-              </div>
-              {/* Terminal body */}
-              <div className="p-6 text-sm leading-[2]">
-                <p className="text-muted/60">
-                  <span className="text-accent glow-cyan">$</span>{" "}
-                  <span className="text-foreground">2 3 + .</span>
-                </p>
-                <p className="text-terminal-green">5 ok.</p>
-                <p className="text-muted/60">
-                  <span className="text-accent glow-cyan">$</span>{" "}
-                  <span className="text-foreground">: greet .&quot; Hello, world!&quot; ;</span>
-                </p>
-                <p className="text-terminal-green">ok.</p>
-                <p className="text-muted/60">
-                  <span className="text-accent glow-cyan">$</span>{" "}
-                  <span className="text-foreground">greet</span>
-                </p>
-                <p className="text-terminal-green">Hello, world! ok.</p>
-                <p className="text-muted/60">
-                  <span className="text-accent glow-cyan">$</span>{" "}
-                  <span className="cursor-blink text-foreground">_</span>
-                </p>
-              </div>
-            </div>
-          </div>
-        </FadeIn>
-      </div>
-    </section>
-  );
-}
+import HeroTerminal from "@/components/HeroTerminal";
 
 function AppCard({
   title,
@@ -85,7 +22,7 @@ function AppCard({
   return (
     <Link
       href={href}
-      className={`group card-glow ${glowClass} block rounded-2xl border border-card-border bg-card-bg p-8 sm:p-10 hover:border-card-border-hover`}
+      className={`group card-glow ${glowClass} flex flex-col rounded-2xl border border-card-border bg-card-bg p-8 sm:p-10 hover:border-card-border-hover h-full sm:aspect-[1/1.618]`}
     >
       <div className="flex items-center gap-3">
         <span className="text-xs px-2.5 py-1 rounded-full border border-card-border bg-background/50 text-muted">
@@ -96,7 +33,7 @@ function AppCard({
         {title}
       </h2>
       <p className="mt-2 text-sm text-muted/70">{tagline}</p>
-      <p className="mt-6 text-sm leading-relaxed text-muted">{description}</p>
+      <p className="mt-6 text-sm leading-relaxed text-muted flex-1">{description}</p>
       <div className="mt-8 flex items-center gap-2 text-sm text-muted/50 group-hover:text-foreground transition-colors">
         <span>Explore</span>
         <svg
@@ -116,7 +53,7 @@ function AppCard({
 export default function Home() {
   return (
     <>
-      <TerminalHero />
+      <HeroTerminal />
 
       <div className="section-line" />
 
@@ -128,7 +65,7 @@ export default function Home() {
             </p>
           </FadeIn>
           <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            <FadeIn delay={0.1}>
+            <FadeIn delay={0.1} className="h-full">
               <AppCard
                 title="Henceforth"
                 tagline="FORTH interpreter + Bitcoin wallet"
@@ -139,7 +76,7 @@ export default function Home() {
                 badge="iOS"
               />
             </FadeIn>
-            <FadeIn delay={0.2}>
+            <FadeIn delay={0.2} className="h-full">
               <AppCard
                 title="Deck of Cards"
                 tagline="Multiplayer card games"
@@ -150,7 +87,7 @@ export default function Home() {
                 badge="iOS"
               />
             </FadeIn>
-            <FadeIn delay={0.3}>
+            <FadeIn delay={0.3} className="h-full">
               <AppCard
                 title="Hansard"
                 tagline="UK Parliament browser"
