@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import FadeIn from "@/components/FadeIn";
 
 export const metadata: Metadata = {
@@ -58,7 +59,7 @@ function FeatureCard({
   return (
     <div className="rounded-xl border border-card-border bg-card-bg/50 p-6 hover:border-card-border-hover transition-colors">
       <div className="flex items-baseline gap-2">
-        <span className="text-2xl font-bold text-accent">{num}</span>
+        <span className="text-2xl font-bold text-accent-warm">{num}</span>
         <span className="text-xs text-muted/50 uppercase tracking-wider">
           {label}
         </span>
@@ -79,17 +80,17 @@ function TerminalDemo() {
       </div>
       <div className="p-6 text-sm leading-[2.2] text-muted/60">
         <p>
-          <span className="text-accent glow-cyan">$</span>{" "}
+          <span className="text-accent-warm glow-warm">$</span>{" "}
           <span className="text-foreground">2 3 + .</span>
         </p>
         <p className="text-terminal-green">5 ok.</p>
         <p>
-          <span className="text-accent glow-cyan">$</span>{" "}
+          <span className="text-accent-warm glow-warm">$</span>{" "}
           <span className="text-foreground">: square dup * ;</span>
         </p>
         <p className="text-terminal-green">ok.</p>
         <p>
-          <span className="text-accent glow-cyan">$</span>{" "}
+          <span className="text-accent-warm glow-warm">$</span>{" "}
           <span className="text-foreground">7 square .</span>
         </p>
         <p className="text-terminal-green">49 ok.</p>
@@ -97,17 +98,17 @@ function TerminalDemo() {
           ── Bitcoin ──────────────────────────
         </p>
         <p>
-          <span className="text-accent glow-cyan">$</span>{" "}
+          <span className="text-accent-warm glow-warm">$</span>{" "}
           <span className="text-foreground">wallet-balance .</span>
         </p>
         <p className="text-terminal-green">1,250,000 sats ok.</p>
         <p>
-          <span className="text-accent glow-cyan">$</span>{" "}
+          <span className="text-accent-warm glow-warm">$</span>{" "}
           <span className="text-foreground">tx-new 10000 make-p2pkh-script tx-add-output tx-broadcast</span>
         </p>
         <p className="text-terminal-green">Transaction broadcast. txid: 3a7f...c9e1 ok.</p>
         <p>
-          <span className="text-accent glow-cyan">$</span>{" "}
+          <span className="text-accent-warm glow-warm">$</span>{" "}
           <span className="cursor-blink text-foreground">_</span>
         </p>
       </div>
@@ -122,7 +123,7 @@ export default function HenceforthPage() {
         {/* Header */}
         <FadeIn>
           <div className="max-w-3xl">
-            <p className="text-xs tracking-widest text-accent/70 uppercase">
+            <p className="text-xs tracking-widest text-accent-warm/70 uppercase">
               iOS App
             </p>
             <h1 className="mt-6 text-5xl sm:text-7xl text-foreground font-bold">
@@ -170,6 +171,13 @@ export default function HenceforthPage() {
         <FadeIn>
           <div className="mt-24 text-center">
             <div className="section-line mb-12" />
+            <Image
+              src="/icons/henceforth.png"
+              alt="Henceforth app icon"
+              width={80}
+              height={80}
+              className="mx-auto mb-6 rounded-2xl shadow-lg shadow-accent-warm/10"
+            />
             <p className="text-xs text-muted/50 mb-6 tracking-wider uppercase">
               Available now
             </p>
@@ -177,7 +185,7 @@ export default function HenceforthPage() {
               href="https://apps.apple.com/app/henceforth/id1602896145"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-3 rounded-full border border-card-border bg-card-bg/50 px-8 py-4 text-sm text-muted hover:border-accent hover:text-foreground hover:shadow-lg hover:shadow-accent/10 transition-all"
+              className="inline-flex items-center gap-3 rounded-full border border-card-border bg-card-bg/50 px-8 py-4 text-sm text-muted hover:border-accent-warm hover:text-foreground hover:shadow-lg hover:shadow-accent-warm/10 transition-all"
             >
               <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />

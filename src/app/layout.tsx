@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     template: "%s | Henceforth Club",
   },
   description:
-    "Henceforth (FORTH interpreter + Bitcoin wallet) and DaDeckOfCards (multiplayer card game) — iOS apps from Henceforth Club.",
+    "Henceforth (FORTH interpreter + Bitcoin wallet), DaDeckOfCards (multiplayer card game), and Hansard (UK Parliament browser) — iOS apps from Henceforth Club.",
   keywords: [
     "iOS",
     "apps",
@@ -28,12 +28,14 @@ export const metadata: Metadata = {
     "card game",
     "Henceforth",
     "DaDeckOfCards",
+    "Hansard",
+    "UK Parliament",
   ],
   metadataBase: new URL("https://henceforth.club"),
   openGraph: {
     title: "Henceforth Club",
     description:
-      "A FORTH interpreter with a Bitcoin wallet, and a multiplayer deck of cards. iOS apps from Henceforth Club.",
+      "A FORTH interpreter with a Bitcoin wallet, a multiplayer deck of cards, and a UK Parliament browser. iOS apps from Henceforth Club.",
     url: "https://henceforth.club",
     siteName: "Henceforth Club",
     locale: "en_NZ",
@@ -43,7 +45,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Henceforth Club",
     description:
-      "A FORTH interpreter with a Bitcoin wallet, and a multiplayer deck of cards. iOS apps from Henceforth Club.",
+      "A FORTH interpreter with a Bitcoin wallet, a multiplayer deck of cards, and a UK Parliament browser. iOS apps from Henceforth Club.",
   },
 };
 
@@ -72,6 +74,12 @@ function Footer() {
               className="text-muted/60 transition-colors hover:text-foreground"
             >
               DaDeckOfCards
+            </Link>
+            <Link
+              href="/hansard"
+              className="text-muted/60 transition-colors hover:text-foreground"
+            >
+              Hansard
             </Link>
             <Link
               href="/docs"

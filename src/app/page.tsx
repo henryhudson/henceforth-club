@@ -19,7 +19,7 @@ function TerminalHero() {
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
               A FORTH interpreter with a Bitcoin wallet. A multiplayer deck of cards.
-              Two apps built with care, running natively on iOS. Available now on the App Store.
+              A UK Parliament browser. Three apps built with care, running natively on iOS.
             </p>
           </div>
         </FadeIn>
@@ -127,15 +127,15 @@ export default function Home() {
               Applications
             </p>
           </FadeIn>
-          <div className="mt-10 grid gap-6 sm:grid-cols-2">
+          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <FadeIn delay={0.1}>
               <AppCard
                 title="Henceforth"
                 tagline="FORTH interpreter + Bitcoin wallet"
                 description="A full Forth-2012 compliant interpreter with an integrated BSV wallet. Execute stack-based programs, build and broadcast Bitcoin transactions, and manage keys — all from an interactive terminal on your iPhone or iPad."
                 href="/henceforth"
-                accentClass="text-accent"
-                glowClass=""
+                accentClass="text-accent-warm"
+                glowClass="card-glow-warm"
                 badge="iOS"
               />
             </FadeIn>
@@ -145,9 +145,20 @@ export default function Home() {
                 tagline="Multiplayer card games"
                 description="A beautiful, multiplayer card game platform. Play classic card games with friends in real time. Custom decks, smooth animations, and a clean interface designed for the way you actually play cards."
                 href="/dadeckofcards"
-                accentClass="text-accent-warm"
-                glowClass="card-glow-warm"
+                accentClass="text-accent"
+                glowClass=""
                 badge="iOS"
+              />
+            </FadeIn>
+            <FadeIn delay={0.3}>
+              <AppCard
+                title="Hansard"
+                tagline="UK Parliament browser"
+                description="Browse Members of the Commons, the House of Lords, and every constituency on an interactive map — coloured by political party. Offline-first with bundled parliamentary data."
+                href="/hansard"
+                accentClass="text-accent-green"
+                glowClass="card-glow-green"
+                badge="iOS · Coming Soon"
               />
             </FadeIn>
           </div>

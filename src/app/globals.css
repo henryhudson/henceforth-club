@@ -7,6 +7,8 @@
   --accent-glow: rgba(94, 234, 212, 0.15);
   --accent-warm: #fbbf24;
   --accent-warm-glow: rgba(251, 191, 36, 0.12);
+  --accent-green: #3da87a;
+  --accent-green-glow: rgba(61, 168, 122, 0.12);
   --card-bg: #0d1117;
   --card-border: #1e2530;
   --card-border-hover: #2d3748;
@@ -23,6 +25,8 @@
   --color-accent-glow: var(--accent-glow);
   --color-accent-warm: var(--accent-warm);
   --color-accent-warm-glow: var(--accent-warm-glow);
+  --color-accent-green: var(--accent-green);
+  --color-accent-green-glow: var(--accent-green-glow);
   --color-card-bg: var(--card-bg);
   --color-card-border: var(--card-border);
   --color-card-border-hover: var(--card-border-hover);
@@ -113,6 +117,10 @@ body::before {
   text-shadow: 0 0 10px rgba(251, 191, 36, 0.4), 0 0 40px rgba(251, 191, 36, 0.1);
 }
 
+.glow-green {
+  text-shadow: 0 0 10px rgba(61, 168, 122, 0.4), 0 0 40px rgba(61, 168, 122, 0.1);
+}
+
 /* Card glow on hover */
 .card-glow {
   position: relative;
@@ -137,6 +145,10 @@ body::before {
 
 .card-glow-warm::before {
   background: linear-gradient(135deg, var(--accent-warm-glow), transparent 40%, transparent 60%, var(--accent-warm-glow));
+}
+
+.card-glow-green::before {
+  background: linear-gradient(135deg, var(--accent-green-glow), transparent 40%, transparent 60%, var(--accent-green-glow));
 }
 
 /* ── Animations ───────────────────────────────── */
@@ -241,7 +253,7 @@ body::before {
 .playing-card:hover {
   box-shadow:
     0 8px 40px rgba(0, 0, 0, 0.5),
-    0 0 30px var(--accent-warm-glow),
+    0 0 30px var(--accent-glow),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
