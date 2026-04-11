@@ -93,10 +93,10 @@ export default function BeatingHeart({
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx!.clearRect(0, 0, w, h);
 
-      // Pulsing factor: 0 → 1 → 0 over BEAT_MS
+      // Pulsing factor: 0.6 → 1 → 0.6 (subtle pulse, not full collapse)
       const t = (now % BEAT_MS) / BEAT_MS;
       const raw = t < 0.5 ? t * 2 : 2 - t * 2;
-      const factor = easeOut(raw);
+      const factor = 0.6 + easeOut(raw) * 0.4;
 
       const size = Math.min(w, h) * 0.35;
 
