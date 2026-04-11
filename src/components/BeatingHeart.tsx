@@ -20,7 +20,7 @@ export default function BeatingHeart({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const BEAT_MS = 840; // 0.42s × 2 (there and back)
+    const BEAT_MS = 1400; // relaxed heartbeat
     let animId: number;
 
     function easeOut(t: number): number {
