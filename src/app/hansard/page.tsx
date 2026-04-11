@@ -107,7 +107,7 @@ function CommonsChamber() {
             width={sq}
             height={sq}
             fill={s.fill}
-            opacity={0.5}
+            opacity={0.66}
             stroke="rgba(255,255,255,0.15)"
             strokeWidth={0.3}
             rx={0.5}
