@@ -91,8 +91,8 @@ export default function ConstituencyMorph({
       };
     }
 
-    const CYCLE_MS = 8000; // 4s map, 4s pie
-    const TRANSITION_MS = 2000;
+    // 10s cycle: 4s map hold, 2s morph to pie, 2s pie hold, 2s morph back
+    const CYCLE_MS = 10000;
     let animId: number;
 
     function ease(t: number): number {
@@ -116,18 +116,16 @@ export default function ConstituencyMorph({
       const cycleT = (now % CYCLE_MS) / CYCLE_MS;
       let morphT: number;
 
-      if (cycleT < 0.25) {
-        // Map state (hold)
+      // 0–0.4: map hold (4s), 0.4–0.6: morph to pie (2s),
+      // 0.6–0.8: pie hold (2s), 0.8–1.0: morph back (2s)
+      if (cycleT < 0.4) {
         morphT = 0;
-      } else if (cycleT < 0.5) {
-        // Morph to pie
-        morphT = ease((cycleT - 0.25) / 0.25);
-      } else if (cycleT < 0.75) {
-        // Pie state (hold)
+      } else if (cycleT < 0.6) {
+        morphT = ease((cycleT - 0.4) / 0.2);
+      } else if (cycleT < 0.8) {
         morphT = 1;
       } else {
-        // Morph back to map
-        morphT = 1 - ease((cycleT - 0.75) / 0.25);
+        morphT = 1 - ease((cycleT - 0.8) / 0.2);
       }
 
       // Scale map to fit with aspect ratio (UK is taller than wide)
