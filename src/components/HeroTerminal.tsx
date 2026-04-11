@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import FadeIn from "@/components/FadeIn";
-import ExpandingCircles from "@/components/ExpandingCircles";
+import TimesTableCircle from "@/components/TimesTableCircle";
 
 interface TerminalLine {
   type: "input" | "output";
@@ -81,10 +81,10 @@ export default function HeroTerminal() {
     <section className="relative hero-gradient overflow-hidden">
       <div className="absolute inset-0 hero-grid" />
 
-      {/* Expanding circles */}
+      {/* Times-table circle */}
       <div className="absolute inset-0 flex items-center justify-end pointer-events-none overflow-hidden">
         <div className="w-[600px] h-[600px] sm:w-[800px] sm:h-[800px] -mr-[100px] sm:-mr-[50px] opacity-40">
-          <ExpandingCircles />
+          <TimesTableCircle userMultiplier={userMultiplier} />
         </div>
       </div>
 

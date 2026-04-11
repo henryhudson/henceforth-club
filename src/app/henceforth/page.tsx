@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import FadeIn from "@/components/FadeIn";
-import TimesTableCircle from "@/components/TimesTableCircle";
+import ExpandingCircles from "@/components/ExpandingCircles";
 
 export const metadata: Metadata = {
   title: "Henceforth",
@@ -120,10 +120,10 @@ function TerminalDemo() {
 export default function HenceforthPage() {
   return (
     <div className="relative py-20 sm:py-28 overflow-hidden">
-      {/* Times-table circle — from Henceforth app sync animation */}
+      {/* Expanding circles — from CircleMath app */}
       <div className="absolute inset-0 flex items-start justify-end pointer-events-none">
         <div className="w-[600px] h-[600px] sm:w-[800px] sm:h-[800px] -mr-[100px] sm:-mr-[50px] mt-[20px] sm:mt-[40px] opacity-50">
-          <TimesTableCircle />
+          <ExpandingCircles />
         </div>
       </div>
 
