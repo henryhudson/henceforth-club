@@ -59,36 +59,51 @@ export default function ConstituencyMorph({
       cumAngle += sweep;
     }
 
-    // Place each seat's dot within its party's pie slice
+    // Place each seat's dot tightly within its party's pie slice
+    // Pack from center outward in concentric arcs with consistent spacing
+    const dotSpacing = 0.022; // normalised gap between dot centres
+    const innerR = 0.06;
+
     const partyIndex = new Map<string, number>();
     for (const [colour] of sortedParties) partyIndex.set(colour, 0);
 
+    // Pre-compute pie positions per party
+    const partyPiePositions = new Map<string, { x: number; y: number }[]>();
+    for (const range of partyRanges) {
+      const count = partyCounts.get(range.colour)!;
+      const positions: { x: number; y: number }[] = [];
+      const sweep = range.endAngle - range.startAngle;
+      let placed = 0;
+      let ring = 0;
+
+      while (placed < count) {
+        const r = innerR + ring * dotSpacing;
+        // How many dots fit on this arc?
+        const arcLen = r * sweep;
+        const dotsOnRing = Math.max(1, Math.floor(arcLen / dotSpacing));
+        const toPlace = Math.min(dotsOnRing, count - placed);
+
+        for (let j = 0; j < toPlace; j++) {
+          const angle =
+            range.startAngle +
+            sweep * ((j + 0.5) / dotsOnRing);
+          positions.push({
+            x: 0.5 + r * Math.cos(angle),
+            y: 0.5 + r * Math.sin(angle),
+          });
+          placed++;
+        }
+        ring++;
+      }
+      partyPiePositions.set(range.colour, positions);
+    }
+
     for (let i = 0; i < seats.length; i++) {
       const colour = seats[i][2];
-      const range = partyRanges.find((r) => r.colour === colour)!;
-      const count = partyCounts.get(colour)!;
       const idx = partyIndex.get(colour)!;
       partyIndex.set(colour, idx + 1);
-
-      // Distribute dots in concentric rings within the slice
-      const sweep = range.endAngle - range.startAngle;
-      const midAngle = range.startAngle + sweep / 2;
-      const ringCount = Math.ceil(Math.sqrt(count));
-      const ring = Math.floor(idx / Math.max(ringCount, 1));
-      const posInRing = idx % Math.max(ringCount, 1);
-      const maxRings = Math.ceil(count / ringCount);
-
-      const r = 0.15 + (ring / Math.max(maxRings, 1)) * 0.3;
-      const angleSpread = sweep * 0.8;
-      const angle =
-        midAngle -
-        angleSpread / 2 +
-        (posInRing / Math.max(ringCount - 1, 1)) * angleSpread;
-
-      piePositions[i] = {
-        x: 0.5 + r * Math.cos(angle),
-        y: 0.5 + r * Math.sin(angle),
-      };
+      const positions = partyPiePositions.get(colour)!;
+      piePositions[i] = positions[idx];
     }
 
     // 10s cycle: 4s map hold, 2s morph to pie, 2s pie hold, 2s morph back
