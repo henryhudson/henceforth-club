@@ -67,99 +67,113 @@ function FeatureCard({
   );
 }
 
-function ParliamentChart() {
-  // Generate seats in semicircular arcs — like the House of Commons chamber
-  // Each row is an arc from π to 0 (left to right), seats evenly spaced
-  const rows = [
-    { radius: 60, seats: 12 },
-    { radius: 75, seats: 15 },
-    { radius: 90, seats: 18 },
-    { radius: 105, seats: 21 },
-    { radius: 120, seats: 24 },
-    { radius: 135, seats: 27 },
-    { radius: 150, seats: 30 },
-    { radius: 165, seats: 33 },
-    { radius: 180, seats: 36 },
-    { radius: 195, seats: 39 },
+function CommonsChamber() {
+  // Faithful to the app's CommonsChamberView layout:
+  // Two opposing benches of party-coloured squares facing each other
+  // across an aisle, Speaker at top, government left, opposition right.
+  const sq = 4;
+  const gap = 1;
+  const pitch = sq + gap;
+  const rows = 6;
+  const aisleW = 16;
+  const topPad = 22;
+  const bottomPad = 8;
+
+  // Party seat counts (2024 general election results)
+  const parties: [string, number][] = [
+    ["#E4003B", 411], // Labour
+    ["#0087DC", 121], // Conservative
+    ["#FDBB30", 72],  // Lib Dem
+    ["#FDF38E", 9],   // SNP
+    ["#005B54", 4],   // Plaid Cymru
+    ["#2AA82A", 4],   // Green
+    ["#D46A4C", 5],   // DUP
+    ["#CE4A7E", 7],   // Sinn Féin
+    ["#8b949e", 17],  // Other / Independent
   ];
 
-  // Party colours — roughly proportional to 2024 Commons
-  const parties = [
-    { color: "#E4003B", count: 411 }, // Labour
-    { color: "#0087DC", count: 121 }, // Conservative
-    { color: "#FDBB30", count: 72 },  // Lib Dem
-    { color: "#FDF38E", count: 9 },   // SNP
-    { color: "#005B54", count: 4 },   // Plaid Cymru
-    { color: "#2AA82A", count: 4 },   // Green
-    { color: "#8b949e", count: 34 },  // Other / Independent
-  ];
+  const colours: string[] = [];
+  for (const [c, n] of parties) for (let i = 0; i < n; i++) colours.push(c);
 
-  // Build a flat array of colours, then assign to seats
-  const seatColours: string[] = [];
-  for (const p of parties) {
-    for (let i = 0; i < p.count; i++) seatColours.push(p.color);
-  }
+  const cap = 325;
+  const gov = colours.slice(0, cap);
+  const opp = colours.slice(cap, cap * 2);
 
-  const totalSeats = rows.reduce((sum, r) => sum + r.seats, 0);
-  // Scale party counts to fit total seats
-  const ratio = totalSeats / seatColours.length;
+  const benchDepth = rows * pitch - gap;
+  const chartW = benchDepth * 2 + aisleW;
+  const maxCols = Math.ceil(Math.max(gov.length, opp.length) / rows);
+  const chartH = topPad + maxCols * pitch - gap + bottomPad;
 
-  const cx = 200; // centre x
-  const cy = 210; // centre y (bottom of semicircle)
+  const seats: { x: number; y: number; fill: string }[] = [];
 
-  let seatIndex = 0;
-  const dots: { x: number; y: number; fill: string }[] = [];
+  // Government bench (left) — rows fill from aisle outward
+  gov.forEach((fill, i) => {
+    const col = Math.floor(i / rows);
+    const row = i % rows;
+    seats.push({
+      x: (rows - 1 - row) * pitch,
+      y: topPad + col * pitch,
+      fill,
+    });
+  });
 
-  for (const row of rows) {
-    for (let i = 0; i < row.seats; i++) {
-      const angle = Math.PI - (i / (row.seats - 1)) * Math.PI;
-      const x = cx + row.radius * Math.cos(angle);
-      const y = cy - row.radius * Math.sin(angle);
-      const colourIdx = Math.min(
-        Math.floor(seatIndex / ratio),
-        seatColours.length - 1
-      );
-      dots.push({ x, y, fill: seatColours[colourIdx] });
-      seatIndex++;
-    }
-  }
+  // Opposition bench (right) — rows fill from aisle outward
+  opp.forEach((fill, i) => {
+    const col = Math.floor(i / rows);
+    const row = i % rows;
+    seats.push({
+      x: benchDepth + aisleW + row * pitch,
+      y: topPad + col * pitch,
+      fill,
+    });
+  });
 
   return (
     <div className="flex justify-center py-8 sm:py-12">
       <svg
-        viewBox="0 0 400 240"
-        className="w-72 sm:w-96 h-auto drop-shadow-[0_0_30px_rgba(61,168,122,0.15)]"
-        aria-label="House of Commons seating chart coloured by party"
+        viewBox={`0 0 ${chartW} ${chartH}`}
+        className="h-64 sm:h-80 w-auto drop-shadow-[0_0_30px_rgba(61,168,122,0.15)]"
+        aria-label="House of Commons seating chart — 650 seats coloured by party"
+        role="img"
       >
-        {dots.map((dot, i) => (
-          <circle
+        {/* Commons green background */}
+        <rect x={0} y={0} width={chartW} height={chartH} rx={3} fill="#004432" />
+
+        {/* Aisle lines */}
+        <line x1={benchDepth + 1} y1={topPad - 4} x2={benchDepth + 1} y2={chartH - bottomPad + 2} stroke="rgba(255,255,255,0.08)" strokeWidth={0.5} />
+        <line x1={benchDepth + aisleW - 1} y1={topPad - 4} x2={benchDepth + aisleW - 1} y2={chartH - bottomPad + 2} stroke="rgba(255,255,255,0.08)" strokeWidth={0.5} />
+
+        {/* Speaker */}
+        <text
+          x={chartW / 2}
+          y={12}
+          textAnchor="middle"
+          fontSize={5}
+          fontWeight="bold"
+          fill="rgba(255,255,255,0.6)"
+          fontFamily="monospace"
+        >
+          SPEAKER
+        </text>
+
+        {/* Seats */}
+        {seats.map((s, i) => (
+          <rect
             key={i}
-            cx={dot.x}
-            cy={dot.y}
-            r={3}
-            fill={dot.fill}
-            opacity={0.85}
+            x={s.x}
+            y={s.y}
+            width={sq}
+            height={sq}
+            fill={s.fill}
+            stroke="rgba(255,255,255,0.25)"
+            strokeWidth={0.3}
+            rx={0.5}
           />
         ))}
-        {/* Speaker's chair */}
-        <rect x={196} y={218} width={8} height={12} rx={1} fill="#3da87a" opacity={0.6} />
-        {/* Legend */}
-        <g transform="translate(70, 230)" fill="#8b949e">
-          <circle cx={0} cy={0} r={3} fill="#E4003B" />
-          <text x={6} y={3} fontSize="7" fill="#8b949e">Lab</text>
-          <circle cx={38} cy={0} r={3} fill="#0087DC" />
-          <text x={44} y={3} fontSize="7" fill="#8b949e">Con</text>
-          <circle cx={76} cy={0} r={3} fill="#FDBB30" />
-          <text x={82} y={3} fontSize="7" fill="#8b949e">LD</text>
-          <circle cx={106} cy={0} r={3} fill="#FDF38E" />
-          <text x={112} y={3} fontSize="7" fill="#8b949e">SNP</text>
-          <circle cx={142} cy={0} r={3} fill="#005B54" />
-          <text x={148} y={3} fontSize="7" fill="#8b949e">PC</text>
-          <circle cx={172} cy={0} r={3} fill="#2AA82A" />
-          <text x={178} y={3} fontSize="7" fill="#8b949e">Grn</text>
-          <circle cx={208} cy={0} r={3} fill="#8b949e" />
-          <text x={214} y={3} fontSize="7" fill="#8b949e">Oth</text>
-        </g>
+
+        {/* Dispatch boxes (the tables at the front of each bench) */}
+        <rect x={benchDepth + 3} y={topPad + 2} width={aisleW - 6} height={3} rx={0.5} fill="rgba(255,255,255,0.12)" />
+        <rect x={benchDepth + 3} y={topPad + 8} width={aisleW - 6} height={3} rx={0.5} fill="rgba(255,255,255,0.12)" />
       </svg>
     </div>
   );
@@ -199,7 +213,7 @@ export default function HansardPage() {
         {/* Parliament seating chart */}
         <FadeIn delay={0.15}>
           <div className="mt-8">
-            <ParliamentChart />
+            <CommonsChamber />
           </div>
         </FadeIn>
 

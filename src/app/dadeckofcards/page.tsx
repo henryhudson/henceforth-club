@@ -126,6 +126,9 @@ export default function DaDeckOfCardsPage() {
             <h1 className="mt-6 text-5xl sm:text-7xl text-foreground font-bold">
               Deck of Cards
             </h1>
+            <p className="mt-3 text-sm tracking-wide text-accent/70">
+              A digital deck.
+            </p>
             <p className="mt-6 text-lg leading-relaxed text-muted max-w-2xl">
               A{" "}
               <strong className="text-foreground font-medium">

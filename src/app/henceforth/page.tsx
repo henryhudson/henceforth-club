@@ -129,6 +129,9 @@ export default function HenceforthPage() {
             <h1 className="mt-6 text-5xl sm:text-7xl text-foreground font-bold">
               Henceforth
             </h1>
+            <p className="mt-3 text-sm tracking-wide text-accent-warm/70">
+              Bitcoin meets Forth.
+            </p>
             <p className="mt-6 text-lg leading-relaxed text-muted max-w-2xl">
               A full{" "}
               <strong className="text-foreground font-medium">
