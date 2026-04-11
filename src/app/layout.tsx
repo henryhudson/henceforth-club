@@ -40,12 +40,14 @@ export const metadata: Metadata = {
     siteName: "Henceforth Club",
     locale: "en_NZ",
     type: "website",
+    images: [{ url: "/cover.png", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Henceforth Club",
     description:
       "A FORTH interpreter with a Bitcoin wallet, a multiplayer deck of cards, and a UK Parliament browser. iOS apps from Henceforth Club.",
+    images: ["/cover.png"],
   },
 };
 
