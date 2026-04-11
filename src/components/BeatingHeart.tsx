@@ -101,12 +101,11 @@ export default function BeatingHeart({
       const size = Math.min(w, h) * 0.35;
 
       ctx!.shadowColor = "rgba(239, 68, 68, 0.5)";
-      ctx!.shadowBlur = 12;
-      ctx!.strokeStyle = "rgba(239, 68, 68, 0.25)";
-      ctx!.lineWidth = 1.5;
+      ctx!.shadowBlur = 14;
+      ctx!.fillStyle = "rgba(239, 68, 68, 0.2)";
 
       drawHeart(ctx!, w / 2, h / 2, size, factor);
-      ctx!.stroke();
+      ctx!.fill();
 
       animId = requestAnimationFrame(draw);
     }
