@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import FadeIn from "@/components/FadeIn";
+import BeatingHeart from "@/components/BeatingHeart";
 
 export const metadata: Metadata = {
   title: "Deck of Cards",
@@ -115,8 +116,15 @@ function FeatureCard({
 
 export default function DaDeckOfCardsPage() {
   return (
-    <div className="py-20 sm:py-28">
-      <div className="mx-auto max-w-6xl px-6">
+    <div className="relative py-20 sm:py-28 overflow-hidden">
+      {/* Beating heart — ported from CodeSlicing HeartShape */}
+      <div className="absolute inset-0 flex items-start justify-end pointer-events-none">
+        <div className="w-[600px] h-[600px] sm:w-[800px] sm:h-[800px] -mr-[100px] sm:-mr-[50px] mt-[20px] sm:mt-[40px] opacity-50">
+          <BeatingHeart />
+        </div>
+      </div>
+
+      <div className="relative mx-auto max-w-6xl px-6">
         {/* Header */}
         <FadeIn>
           <div className="max-w-3xl">
