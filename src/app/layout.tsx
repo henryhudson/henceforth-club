@@ -82,12 +82,6 @@ function Footer() {
               Hansard
             </Link>
             <Link
-              href="/docs"
-              className="text-muted/60 transition-colors hover:text-foreground"
-            >
-              Docs
-            </Link>
-            <Link
               href="/contact"
               className="text-muted/60 transition-colors hover:text-foreground"
             >
