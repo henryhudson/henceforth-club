@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import FadeIn from "@/components/FadeIn";
+import ExpandingCircles from "@/components/ExpandingCircles";
 
 export const metadata: Metadata = {
   title: "Henceforth",
@@ -57,14 +58,14 @@ function FeatureCard({
   description: string;
 }) {
   return (
-    <div className="rounded-xl border border-card-border bg-card-bg/50 p-6 hover:border-card-border-hover transition-colors">
+    <div className="flex flex-col rounded-xl border border-card-border bg-card-bg/50 p-6 hover:border-card-border-hover transition-colors h-full">
       <div className="flex items-baseline gap-2">
         <span className="text-2xl font-bold text-accent-warm">{num}</span>
         <span className="text-xs text-muted/50 uppercase tracking-wider">
           {label}
         </span>
       </div>
-      <p className="mt-4 text-sm leading-relaxed text-muted">{description}</p>
+      <p className="mt-4 text-sm leading-relaxed text-muted flex-1">{description}</p>
     </div>
   );
 }
@@ -118,8 +119,15 @@ function TerminalDemo() {
 
 export default function HenceforthPage() {
   return (
-    <div className="py-20 sm:py-28">
-      <div className="mx-auto max-w-6xl px-6">
+    <div className="relative py-20 sm:py-28 overflow-hidden">
+      {/* Expanding circles — ported from CircleMath app */}
+      <div className="absolute inset-0 flex items-start justify-end pointer-events-none">
+        <div className="w-[600px] h-[600px] sm:w-[800px] sm:h-[800px] -mr-[100px] sm:-mr-[50px] mt-[20px] sm:mt-[40px] opacity-50">
+          <ExpandingCircles />
+        </div>
+      </div>
+
+      <div className="relative mx-auto max-w-6xl px-6">
         {/* Header */}
         <FadeIn>
           <div className="max-w-3xl">
@@ -163,7 +171,7 @@ export default function HenceforthPage() {
           </FadeIn>
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {features.map((feature, i) => (
-              <FadeIn key={feature.num} delay={i * 0.08}>
+              <FadeIn key={feature.num} delay={i * 0.08} className="h-full">
                 <FeatureCard {...feature} />
               </FadeIn>
             ))}

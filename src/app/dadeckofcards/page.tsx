@@ -101,14 +101,14 @@ function FeatureCard({
 }) {
   const isRed = suit === "\u2665" || suit === "\u2666";
   return (
-    <div className="card-glow rounded-xl border border-card-border bg-card-bg/50 p-6 hover:border-card-border-hover transition-colors">
+    <div className="card-glow flex flex-col rounded-xl border border-card-border bg-card-bg/50 p-6 hover:border-card-border-hover transition-colors h-full">
       <div className="flex items-center gap-3">
         <span className={`text-xl ${isRed ? "text-red-500" : "text-foreground"}`}>
           {suit}
         </span>
         <h3 className="font-semibold text-foreground">{title}</h3>
       </div>
-      <p className="mt-3 text-sm leading-relaxed text-muted">{description}</p>
+      <p className="mt-3 text-sm leading-relaxed text-muted flex-1">{description}</p>
     </div>
   );
 }
@@ -157,7 +157,7 @@ export default function DaDeckOfCardsPage() {
           </FadeIn>
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {features.map((feature, i) => (
-              <FadeIn key={feature.title} delay={i * 0.08}>
+              <FadeIn key={feature.title} delay={i * 0.08} className="h-full">
                 <FeatureCard {...feature} />
               </FadeIn>
             ))}
