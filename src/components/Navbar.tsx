@@ -8,11 +8,6 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  // Close menu on route change
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
-
   // Prevent body scroll when menu is open
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -31,6 +26,7 @@ export default function Navbar() {
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
         <Link
           href="/"
+          onClick={() => setOpen(false)}
           className="text-lg font-bold tracking-tight text-accent glow-cyan transition-all hover:opacity-80"
         >
           henceforth<span className="text-muted">.club</span>
@@ -86,6 +82,7 @@ export default function Navbar() {
             <Link
               key={link.href}
               href={link.href}
+              onClick={() => setOpen(false)}
               className={`text-sm transition-colors ${link.hoverColor} ${
                 pathname === link.href ? "text-foreground" : "text-muted"
               }`}

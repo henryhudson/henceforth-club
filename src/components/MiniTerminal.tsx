@@ -70,7 +70,7 @@ const STACK_OPS: Record<string, (stack: number[]) => { stack: number[]; output?:
     return { stack: s, output: `<${s.length}> ${s.join(" ")}` };
   },
   cr: (s) => ({ stack: s, output: "" }),
-  clear: (s) => ({ stack: [], output: "Stack cleared" }),
+  clear: () => ({ stack: [], output: "Stack cleared" }),
 };
 
 export default function MiniTerminal() {

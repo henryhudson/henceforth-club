@@ -21,7 +21,13 @@ export default function TimesTableCircle({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const userMultiplierRef = useRef(userMultiplier);
-  userMultiplierRef.current = userMultiplier;
+
+  // Keep the ref in sync with the prop so the animation loop's
+  // long-lived closure always reads the latest value. Writing to a
+  // ref must happen in an effect, not during render.
+  useEffect(() => {
+    userMultiplierRef.current = userMultiplier;
+  }, [userMultiplier]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

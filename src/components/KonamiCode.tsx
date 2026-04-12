@@ -30,7 +30,7 @@ interface FallingWord {
 }
 
 export default function KonamiCode() {
-  const [sequence, setSequence] = useState<string[]>([]);
+  const [, setSequence] = useState<string[]>([]);
   const [triggered, setTriggered] = useState(false);
   const [words, setWords] = useState<FallingWord[]>([]);
 
