@@ -2,6 +2,80 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import FadeIn from "@/components/FadeIn";
 import ExpandingCircles from "@/components/ExpandingCircles";
+import Accordion from "@/components/Accordion";
+
+const accordionSections = [
+  {
+    title: "Henceforth",
+    content: (
+      <>
+        <p>
+          Henceforth is a pocket-sized programming environment built around
+          FORTH — a minimal, stack-based language from 1970 that fits an entire
+          interpreter into a few thousand lines of code. On iOS, that means
+          you carry a real programming language in your pocket, not a
+          playground or a sandbox.
+        </p>
+        <p>
+          Write definitions, build stacks, save words, and compose new
+          behaviours on the fly. The interpreter is Forth-2012 compliant, so
+          anything you write works in any standard FORTH implementation on
+          any platform.
+        </p>
+      </>
+    ),
+  },
+  {
+    title: "FORTH",
+    content: (
+      <>
+        <p>
+          FORTH is a concatenative language — programs are sequences of
+          <em> words</em> that push, pop, and manipulate values on a shared
+          stack. Define your own words with <code className="text-accent-warm">: name ... ;</code>{" "}
+          and extend the language as you go.
+        </p>
+        <p>
+          Henceforth ships with 133 CORE words from the standard, plus over
+          200 extensions for graphics, file I/O, Bitcoin operations, and
+          terminal control. Everything is interactive: type a word, see the
+          stack, try another.
+        </p>
+      </>
+    ),
+  },
+  {
+    title: "Bitcoin",
+    content: (
+      <>
+        <p>
+          Built in, not bolted on. Henceforth includes a full Bitcoin SV
+          wallet with Type42 (BRC-42) key derivation, SPV verification,
+          direct ARC broadcasting, and BRC-2 encryption — all accessible as
+          FORTH words. You can build, sign, and broadcast transactions from
+          the command line.
+        </p>
+        <p>
+          140+ Bitcoin Script opcodes are exposed as FORTH words, so you can
+          compose locking scripts, simulate spending conditions, and
+          experiment with the protocol interactively.
+        </p>
+      </>
+    ),
+  },
+  {
+    title: "Documentation",
+    content: (
+      <>
+        <p>
+          The full LaTeX reference manual documents every word by category,
+          every Bitcoin Script opcode, the wallet architecture, and example
+          programs. Download the PDF or read it alongside the app.
+        </p>
+      </>
+    ),
+  },
+];
 
 export const metadata: Metadata = {
   title: "Henceforth",
@@ -160,6 +234,21 @@ export default function HenceforthPage() {
             <TerminalDemo />
           </div>
         </FadeIn>
+
+        {/* Learn more accordion */}
+        <div className="mt-24">
+          <div className="section-line" />
+          <FadeIn>
+            <p className="mt-12 text-xs tracking-widest text-muted/50 uppercase">
+              Learn more
+            </p>
+          </FadeIn>
+          <FadeIn delay={0.1}>
+            <div className="mt-8">
+              <Accordion sections={accordionSections} accentClass="text-accent-warm" />
+            </div>
+          </FadeIn>
+        </div>
 
         {/* Features grid */}
         <div className="mt-24">

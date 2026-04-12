@@ -2,6 +2,72 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import FadeIn from "@/components/FadeIn";
 import BeatingHeart from "@/components/BeatingHeart";
+import Accordion from "@/components/Accordion";
+
+const accordionSections = [
+  {
+    title: "Deck of Cards",
+    content: (
+      <>
+        <p>
+          Deck of Cards is a beautiful, multiplayer card game platform for iOS.
+          It started as a way to play cards with family across time zones, and
+          grew into a flexible engine for classic card games on iPhone and
+          iPad.
+        </p>
+        <p>
+          Every interaction is designed to feel like physical cards — dealing,
+          fanning, flipping, and gathering. No ads, no subscriptions, just a
+          clean deck in your pocket.
+        </p>
+      </>
+    ),
+  },
+  {
+    title: "Multiplayer",
+    content: (
+      <>
+        <p>
+          Play with friends in real time over Game Center. Host a game,
+          invite others, and the cards update instantly on everyone&apos;s
+          device. The multiplayer engine handles reconnection, late joiners,
+          and card state syncing automatically.
+        </p>
+        <p>
+          You can also play solo in Free Play mode — useful for learning a
+          new game or just shuffling through a deck.
+        </p>
+      </>
+    ),
+  },
+  {
+    title: "Games",
+    content: (
+      <>
+        <p>
+          A growing library of classic card games, all playable with the same
+          consistent interface. Learn new games with interactive tutorials
+          that walk you through the rules as you play.
+        </p>
+        <p>
+          Replay any hand to review your plays and step through each action.
+        </p>
+      </>
+    ),
+  },
+  {
+    title: "Custom Decks",
+    content: (
+      <>
+        <p>
+          Design your own card decks with the built-in deck editor. Start
+          from a template or build one from scratch — every card face, suit,
+          and back is customisable.
+        </p>
+      </>
+    ),
+  },
+];
 
 export const metadata: Metadata = {
   title: "Deck of Cards",
@@ -155,8 +221,23 @@ export default function DaDeckOfCardsPage() {
           </div>
         </FadeIn>
 
-        {/* Features grid */}
+        {/* Learn more accordion */}
         <div className="mt-16">
+          <div className="section-line" />
+          <FadeIn>
+            <p className="mt-12 text-xs tracking-widest text-muted/50 uppercase">
+              Learn more
+            </p>
+          </FadeIn>
+          <FadeIn delay={0.1}>
+            <div className="mt-8">
+              <Accordion sections={accordionSections} accentClass="text-accent" />
+            </div>
+          </FadeIn>
+        </div>
+
+        {/* Features grid */}
+        <div className="mt-24">
           <div className="section-line" />
           <FadeIn>
             <p className="mt-12 text-xs tracking-widest text-muted/50 uppercase">

@@ -2,6 +2,73 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import FadeIn from "@/components/FadeIn";
 import ConstituencyMorph from "@/components/ConstituencyMorph";
+import Accordion from "@/components/Accordion";
+
+const accordionSections = [
+  {
+    title: "Hansard",
+    content: (
+      <>
+        <p>
+          Hansard is a native iOS browser for the UK Parliament. Named after
+          the official record of debates in the Commons and Lords, the app
+          puts every MP, every Lord, and every constituency at your
+          fingertips — with offline-first access to the data that matters.
+        </p>
+        <p>
+          Built as a tool for the curious citizen, the researcher, and anyone
+          who wants to understand how parliament actually works.
+        </p>
+      </>
+    ),
+  },
+  {
+    title: "Members",
+    content: (
+      <>
+        <p>
+          Browse every sitting MP and every member of the House of Lords.
+          View party affiliation, constituency, parliamentary record, voting
+          history, written questions, registered interests, biography, and
+          Hansard speeches — all pulled from the official Parliament API.
+        </p>
+        <p>
+          Filter by party, search by name, and tap through to detailed
+          profiles with direct links to write to your MP.
+        </p>
+      </>
+    ),
+  },
+  {
+    title: "Constituencies",
+    content: (
+      <>
+        <p>
+          An interactive MapKit map with every UK constituency boundary drawn
+          as a polygon overlay, coloured by the sitting member&apos;s
+          political party. Zoom, pan, and tap to jump straight to your MP.
+        </p>
+        <p>
+          Every one of the 650 constituencies is included, with boundaries
+          and metadata bundled in the app — no network required.
+        </p>
+      </>
+    ),
+  },
+  {
+    title: "Offline-First",
+    content: (
+      <>
+        <p>
+          Hansard ships with bundled JSON snapshots of constituency
+          boundaries and member data. The app works immediately on first
+          launch, on the tube, or anywhere without a signal — then updates
+          when you&apos;re back online.
+        </p>
+      </>
+    ),
+  },
+];
 
 export const metadata: Metadata = {
   title: "Hansard",
@@ -112,8 +179,23 @@ export default function HansardPage() {
           </div>
         </FadeIn>
 
-        {/* Features grid */}
+        {/* Learn more accordion */}
         <div className="mt-16">
+          <div className="section-line" />
+          <FadeIn>
+            <p className="mt-12 text-xs tracking-widest text-muted/50 uppercase">
+              Learn more
+            </p>
+          </FadeIn>
+          <FadeIn delay={0.1}>
+            <div className="mt-8">
+              <Accordion sections={accordionSections} accentClass="text-accent-green" />
+            </div>
+          </FadeIn>
+        </div>
+
+        {/* Features grid */}
+        <div className="mt-24">
           <div className="section-line" />
           <FadeIn>
             <p className="mt-12 text-xs tracking-widest text-muted/50 uppercase">
