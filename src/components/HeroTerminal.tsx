@@ -95,12 +95,11 @@ export default function HeroTerminal() {
               iOS Apps
             </p>
             <h1 className="mt-6 text-4xl sm:text-6xl leading-[1.1] text-foreground font-bold">
-              Code meets craft.
+              FORTH. Cards. Parliament.
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
               A FORTH interpreter with a Bitcoin wallet. A multiplayer deck of
-              cards. A UK Parliament browser. Three apps built with care,
-              running natively on iOS.
+              cards. A UK Parliament browser. Native iOS. No ads.
             </p>
           </div>
         </FadeIn>

@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     template: "%s | Henceforth Club",
   },
   description:
-    "Henceforth (FORTH interpreter + Bitcoin wallet), Deck of Cards (multiplayer card game), and Hansard (UK Parliament browser) — iOS apps from Henceforth Club.",
+    "FORTH. Cards. Parliament. A FORTH interpreter with a Bitcoin wallet, a multiplayer deck of cards, and a UK Parliament browser. Native iOS apps. No ads.",
   keywords: [
     "iOS",
     "apps",
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Henceforth Club",
     description:
-      "A FORTH interpreter with a Bitcoin wallet, a multiplayer deck of cards, and a UK Parliament browser. iOS apps from Henceforth Club.",
+      "FORTH. Cards. Parliament. A FORTH interpreter with a Bitcoin wallet, a multiplayer deck of cards, and a UK Parliament browser. Native iOS. No ads.",
     url: "https://henceforth.club",
     siteName: "Henceforth Club",
     locale: "en_NZ",
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Henceforth Club",
     description:
-      "A FORTH interpreter with a Bitcoin wallet, a multiplayer deck of cards, and a UK Parliament browser. iOS apps from Henceforth Club.",
+      "FORTH. Cards. Parliament. A FORTH interpreter with a Bitcoin wallet, a multiplayer deck of cards, and a UK Parliament browser. Native iOS. No ads.",
     images: ["/cover.png"],
   },
 };
