@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Space_Mono } from "next/font/google";
 import Link from "next/link";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import Navbar from "@/components/Navbar";
 import KonamiCode from "@/components/KonamiCode";
 import MiniTerminal from "@/components/MiniTerminal";
@@ -122,6 +124,8 @@ export default function RootLayout({
         <Footer />
         <KonamiCode />
         <MiniTerminal />
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
