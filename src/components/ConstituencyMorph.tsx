@@ -47,63 +47,112 @@ export default function ConstituencyMorph({
     );
     const total = seats.length;
 
-    // Assign each seat a pie-chart position
-    const piePositions: { x: number; y: number }[] = new Array(seats.length);
-
-    // Build a colour→angle-range mapping
-    const partyRanges: { colour: string; startAngle: number; endAngle: number }[] = [];
-    let cumAngle = -Math.PI / 2; // start at top
-    for (const [colour, count] of sortedParties) {
-      const sweep = (count / total) * Math.PI * 2;
-      partyRanges.push({ colour, startAngle: cumAngle, endAngle: cumAngle + sweep });
-      cumAngle += sweep;
-    }
-
-    // Place each seat's dot tightly within its party's pie slice
-    // Pack from center outward in concentric arcs with consistent spacing
     const dotSpacing = 0.022; // normalised gap between dot centres
     const innerR = 0.06;
 
-    const partyIndex = new Map<string, number>();
-    for (const [colour] of sortedParties) partyIndex.set(colour, 0);
+    // Merge parties below this seat count into a single "Others" wedge.
+    // Why 10? Adjacent wedges need to sum to ≥ 42° at innerR=0.06 for
+    // their innermost dots to clear each other (dotSpacing / innerR =
+    // 0.367 rad minimum sweep for one dot to fit, × 2 neighbours).
+    // SNP (9 seats) and everything below is adjacent to another tiny
+    // party in the sort order, so they'd all overlap on their own.
+    const TINY_THRESHOLD = 10;
+    const bigParties = sortedParties.filter(([, n]) => n >= TINY_THRESHOLD);
+    const tinyParties = sortedParties.filter(([, n]) => n < TINY_THRESHOLD);
+    const othersCount = tinyParties.reduce((s, [, n]) => s + n, 0);
 
-    // Pre-compute pie positions per party
-    const partyPiePositions = new Map<string, { x: number; y: number }[]>();
-    for (const range of partyRanges) {
-      const count = partyCounts.get(range.colour)!;
-      const positions: { x: number; y: number }[] = [];
-      const sweep = range.endAngle - range.startAngle;
+    type Wedge =
+      | { kind: "party"; colour: string; count: number; startAngle: number; sweep: number }
+      | { kind: "others"; tiny: [string, number][]; count: number; startAngle: number; sweep: number };
+
+    const wedges: Wedge[] = bigParties.map(([colour, count]) => ({
+      kind: "party" as const,
+      colour,
+      count,
+      startAngle: 0,
+      sweep: 0,
+    }));
+    if (othersCount > 0) {
+      wedges.push({
+        kind: "others" as const,
+        tiny: tinyParties,
+        count: othersCount,
+        startAngle: 0,
+        sweep: 0,
+      });
+    }
+
+    // Assign each wedge its angular range (clockwise from 12 o'clock)
+    let cumAngle = -Math.PI / 2;
+    for (const w of wedges) {
+      w.startAngle = cumAngle;
+      w.sweep = (w.count / total) * Math.PI * 2;
+      cumAngle += w.sweep;
+    }
+
+    // Seat-index queues per party so we can map slot → original index
+    const partyQueues = new Map<string, number[]>();
+    for (const [colour] of sortedParties) partyQueues.set(colour, []);
+    for (let i = 0; i < seats.length; i++) {
+      partyQueues.get(seats[i][2])!.push(i);
+    }
+
+    // Pack each wedge with concentric arcs. The Others wedge packs its
+    // tiny-party seats together, each keeping its actual colour — so
+    // every party stays visible, you just lose the wedge boundaries
+    // for the very smallest groups.
+    const piePositions: { x: number; y: number }[] = new Array(seats.length);
+    for (const w of wedges) {
+      const seatOrder: number[] =
+        w.kind === "party"
+          ? partyQueues.get(w.colour)!
+          : w.tiny.flatMap(([colour]) => partyQueues.get(colour)!);
+
       let placed = 0;
       let ring = 0;
-
-      while (placed < count) {
+      while (placed < w.count) {
         const r = innerR + ring * dotSpacing;
-        // How many dots fit on this arc?
-        const arcLen = r * sweep;
+        const arcLen = r * w.sweep;
         const dotsOnRing = Math.max(1, Math.floor(arcLen / dotSpacing));
-        const toPlace = Math.min(dotsOnRing, count - placed);
-
+        const toPlace = Math.min(dotsOnRing, w.count - placed);
         for (let j = 0; j < toPlace; j++) {
-          const angle =
-            range.startAngle +
-            sweep * ((j + 0.5) / dotsOnRing);
-          positions.push({
+          const origIdx = seatOrder[placed];
+          const angle = w.startAngle + w.sweep * ((j + 0.5) / dotsOnRing);
+          piePositions[origIdx] = {
             x: 0.5 + r * Math.cos(angle),
             y: 0.5 + r * Math.sin(angle),
-          });
+          };
           placed++;
         }
         ring++;
       }
-      partyPiePositions.set(range.colour, positions);
     }
 
-    for (let i = 0; i < seats.length; i++) {
-      const colour = seats[i][2];
-      const idx = partyIndex.get(colour)!;
-      partyIndex.set(colour, idx + 1);
-      const positions = partyPiePositions.get(colour)!;
-      piePositions[i] = positions[idx];
+    // Pre-render a glow sprite per party colour. Used in the draw loop
+    // with globalCompositeOperation = 'lighter' for an additive bloom
+    // that intensifies as dots stack (dense urban constituencies).
+    const hexToRgb = (hex: string): [number, number, number] => {
+      const n = parseInt(hex.slice(1), 16);
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    };
+    const glowSpriteSize = 64;
+    const glowSprites = new Map<string, HTMLCanvasElement>();
+    for (const [colour] of sortedParties) {
+      const sprite = document.createElement("canvas");
+      sprite.width = glowSpriteSize;
+      sprite.height = glowSpriteSize;
+      const sctx = sprite.getContext("2d")!;
+      const [r, g, b] = hexToRgb(colour);
+      const grad = sctx.createRadialGradient(
+        glowSpriteSize / 2, glowSpriteSize / 2, 0,
+        glowSpriteSize / 2, glowSpriteSize / 2, glowSpriteSize / 2
+      );
+      grad.addColorStop(0.0, `rgba(${r},${g},${b},0.30)`);
+      grad.addColorStop(0.35, `rgba(${r},${g},${b},0.12)`);
+      grad.addColorStop(1.0, `rgba(${r},${g},${b},0)`);
+      sctx.fillStyle = grad;
+      sctx.fillRect(0, 0, glowSpriteSize, glowSpriteSize);
+      glowSprites.set(colour, sprite);
     }
 
     // 10s cycle: 4s map hold, 2s morph to pie, 2s pie hold, 2s morph back
@@ -152,6 +201,31 @@ export default function ConstituencyMorph({
 
       const dotR = Math.min(w, h) * 0.006;
 
+      // Glow pass — additive blend, strength scales with map phase.
+      // Single dots give a faint halo; dense clusters bloom visibly
+      // past the point of normal alpha saturation.
+      const glowStrength = Math.max(0, 1 - morphT);
+      if (glowStrength > 0.02) {
+        const glowDiam = dotR * 6.4;
+        ctx!.globalCompositeOperation = "lighter";
+        ctx!.globalAlpha = glowStrength;
+        for (let i = 0; i < seats.length; i++) {
+          const mx = mapOffX + mapPositions[i].x * fitW;
+          const my = mapOffY + mapPositions[i].y * fitH;
+          const px = piePositions[i].x * w;
+          const py = piePositions[i].y * h;
+          const x = mx + (px - mx) * morphT;
+          const y = my + (py - my) * morphT;
+          const sprite = glowSprites.get(seats[i][2])!;
+          ctx!.drawImage(sprite, x - glowDiam / 2, y - glowDiam / 2, glowDiam, glowDiam);
+        }
+        ctx!.globalCompositeOperation = "source-over";
+        ctx!.globalAlpha = 1;
+      }
+
+      // Sharp dot pass — alpha blend keeps single dots crisp and
+      // party-coloured; stacked overlaps already brighten to saturation.
+      ctx!.globalAlpha = 0.78;
       for (let i = 0; i < seats.length; i++) {
         const mx = mapOffX + mapPositions[i].x * fitW;
         const my = mapOffY + mapPositions[i].y * fitH;
@@ -164,10 +238,9 @@ export default function ConstituencyMorph({
         ctx!.beginPath();
         ctx!.arc(x, y, dotR, 0, Math.PI * 2);
         ctx!.fillStyle = seats[i][2];
-        ctx!.globalAlpha = 0.75;
         ctx!.fill();
-        ctx!.globalAlpha = 1;
       }
+      ctx!.globalAlpha = 1;
 
       animId = requestAnimationFrame(draw);
     }

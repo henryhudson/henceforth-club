@@ -42,3 +42,8 @@ next-env.d.ts
 
 # Claude Code local settings
 .claude/
+
+# Generated video assets (see scripts/render-hansard-video.sh)
+scripts/.frames/
+scripts/anthem.oga
+scripts/hansard-anthem.mp4
