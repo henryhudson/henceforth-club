@@ -6,6 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import Navbar from "@/components/Navbar";
 import KonamiCode from "@/components/KonamiCode";
 import MiniTerminal from "@/components/MiniTerminal";
+import PageViewTracker from "@/components/PageViewTracker";
 import "./globals.css";
 
 const spaceMono = Space_Mono({
@@ -124,6 +125,7 @@ export default function RootLayout({
         <Footer />
         <KonamiCode />
         <MiniTerminal />
+        <PageViewTracker />
         <Analytics />
         <SpeedInsights />
       </body>

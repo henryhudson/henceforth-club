@@ -25,8 +25,16 @@ export default function HeroTerminal() {
   const inputRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
 
+  const scrollToBottom = useCallback(() => {
+    requestAnimationFrame(() => {
+      if (bodyRef.current) {
+        bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
+      }
+    });
+  }, []);
+
   const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
+    async (e: React.FormEvent) => {
       e.preventDefault();
       const trimmed = input.trim();
       if (!trimmed) return;
@@ -44,35 +52,98 @@ export default function HeroTerminal() {
           type: "output",
           text: `multiplier set to ${num} ok.`,
         });
-      } else if (trimmed.toLowerCase() === "clear") {
+        setLines(newLines);
+        setInput("");
+        scrollToBottom();
+        return;
+      }
+
+      const cmd = trimmed.toLowerCase();
+
+      if (cmd === "clear") {
         setLines(INITIAL_LINES);
         setUserMultiplier(undefined);
         setInput("");
         return;
-      } else if (trimmed.toLowerCase() === "random") {
+      }
+
+      if (cmd === "random") {
         setUserMultiplier(undefined);
         newLines.push({ type: "output", text: "random mode ok." });
-      } else {
-        // Simple stack evaluation for "X Y + ." style
-        const result = tryForthEval(trimmed);
-        if (result !== null) {
-          newLines.push({ type: "output", text: `${result} ok.` });
-        } else {
-          newLines.push({ type: "output", text: "ok." });
+        setLines(newLines);
+        setInput("");
+        scrollToBottom();
+        return;
+      }
+
+      if (cmd === "analytics" || cmd === "stats") {
+        newLines.push({ type: "output", text: "loading analytics..." });
+        setLines(newLines);
+        setInput("");
+        scrollToBottom();
+
+        try {
+          const res = await fetch("/api/stats");
+          const data = await res.json();
+
+          setLines((prev) => {
+            const withoutLoading = prev.slice(0, -1);
+            if (!data.ok) {
+              return [
+                ...withoutLoading,
+                {
+                  type: "output",
+                  text: "no data yet — come back after the next visitor. ok.",
+                },
+              ];
+            }
+            return [
+              ...withoutLoading,
+              ...formatStats(data),
+              { type: "output", text: "ok." },
+            ];
+          });
+          scrollToBottom();
+        } catch {
+          setLines((prev) => [
+            ...prev.slice(0, -1),
+            { type: "output", text: "error fetching stats. ok." },
+          ]);
+          scrollToBottom();
         }
+        return;
+      }
+
+      if (cmd === "help") {
+        newLines.push(
+          { type: "output", text: "available commands:" },
+          { type: "output", text: "  <number>    morph the circle pattern" },
+          { type: "output", text: "  analytics   visitor stats" },
+          { type: "output", text: "  random      resume random cycling" },
+          { type: "output", text: "  clear       reset terminal" },
+          { type: "output", text: "  help        this message" },
+          { type: "output", text: "  2 3 + .     basic FORTH arithmetic" },
+          { type: "output", text: "ok." }
+        );
+        setLines(newLines);
+        setInput("");
+        scrollToBottom();
+        return;
+      }
+
+      // Simple stack evaluation for "X Y + ." style
+      const result = tryForthEval(trimmed);
+      if (result !== null) {
+        newLines.push({ type: "output", text: `${result} ok.` });
+      } else {
+        newLines.push({ type: "output", text: "ok." });
       }
 
       setLines(newLines);
       setInput("");
-
-      // Scroll to bottom
-      requestAnimationFrame(() => {
-        if (bodyRef.current) {
-          bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
-        }
-      });
+      scrollToBottom();
     },
-    [input, lines]
+    [input, lines, scrollToBottom]
   );
 
   const focusInput = () => inputRef.current?.focus();
@@ -152,7 +223,7 @@ export default function HeroTerminal() {
               </div>
             </div>
             <p className="mt-3 text-[10px] text-muted/30">
-              Type a number to change the pattern. Try 2, 3, 41, 51, or 99.
+              Try a number (2, 3, 41, 51) or type <span className="text-muted/50">help</span>.
             </p>
           </div>
         </FadeIn>
@@ -202,4 +273,54 @@ function tryForthEval(input: string): number | null {
   // If there's a result on the stack but no ".", still show it
   if (stack.length === 1) return stack[0];
   return null;
+}
+
+interface StatsData {
+  ok: true;
+  total: number;
+  today: number;
+  week: number;
+  month: number;
+  year: number;
+  sparkline: number[];
+}
+
+/** Format stats data into terminal lines with an ASCII sparkline */
+function formatStats(data: StatsData): TerminalLine[] {
+  const { total, today, week, month, year, sparkline } = data;
+
+  const ordinal = (n: number) => {
+    const s = ["th", "st", "nd", "rd"];
+    const v = n % 100;
+    return n.toLocaleString() + (s[(v - 20) % 10] || s[v] || s[0]);
+  };
+
+  // Build an ASCII sparkline from the 30-day series
+  const max = Math.max(...sparkline, 1);
+  const blocks = "▁▂▃▄▅▆▇█";
+  const spark = sparkline
+    .map((v) => {
+      const idx = Math.min(
+        blocks.length - 1,
+        Math.floor((v / max) * (blocks.length - 1))
+      );
+      return blocks[idx];
+    })
+    .join("");
+
+  const pad = (label: string) => label.padEnd(18, " ");
+
+  return [
+    { type: "output", text: "── visitor stats ─────────────────" },
+    { type: "output", text: `you are the ${ordinal(total)} visitor.` },
+    { type: "output", text: "" },
+    { type: "output", text: `${pad("total")} ${total.toLocaleString()}` },
+    { type: "output", text: `${pad("today")} ${today.toLocaleString()}` },
+    { type: "output", text: `${pad("last 7 days")} ${week.toLocaleString()}` },
+    { type: "output", text: `${pad("last 30 days")} ${month.toLocaleString()}` },
+    { type: "output", text: `${pad("last year")} ${year.toLocaleString()}` },
+    { type: "output", text: "" },
+    { type: "output", text: `last 30 days: ${spark}` },
+    { type: "output", text: "──────────────────────────────────" },
+  ];
 }
