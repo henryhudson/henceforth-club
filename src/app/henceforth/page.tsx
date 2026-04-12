@@ -83,6 +83,31 @@ export const metadata: Metadata = {
     "A Forth-2012 compliant interpreter with an integrated Bitcoin SV wallet for iOS.",
 };
 
+// Structured data for search engines — tells Google/Bing this page
+// represents an actual iOS app, so the App Store link can show up as a
+// rich result with platform + publisher metadata.
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Henceforth",
+  operatingSystem: "iOS",
+  applicationCategory: "DeveloperApplication",
+  description:
+    "A Forth-2012 compliant interpreter with an integrated Bitcoin SV wallet for iOS.",
+  url: "https://henceforth.club/henceforth",
+  downloadUrl: "https://apps.apple.com/app/henceforth/id1602896145",
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "USD",
+  },
+  publisher: {
+    "@type": "Organization",
+    name: "Henceforth Bitcoin Limited",
+    url: "https://henceforth.club",
+  },
+};
+
 const features = [
   {
     num: "133",
@@ -194,6 +219,10 @@ function TerminalDemo() {
 export default function HenceforthPage() {
   return (
     <div className="relative py-20 sm:py-28 overflow-hidden">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Expanding circles — from CircleMath app */}
       <div className="absolute inset-0 flex items-start justify-end pointer-events-none">
         <div className="w-[600px] h-[600px] sm:w-[800px] sm:h-[800px] -mr-[100px] sm:-mr-[50px] mt-[20px] sm:mt-[40px] opacity-50">

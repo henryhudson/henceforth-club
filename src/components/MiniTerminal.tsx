@@ -199,6 +199,7 @@ export default function MiniTerminal() {
             }}
             className="flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted/30"
             placeholder="type forth here..."
+            aria-label="FORTH terminal input"
             autoComplete="off"
             spellCheck={false}
           />

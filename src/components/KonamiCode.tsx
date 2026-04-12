@@ -35,6 +35,16 @@ export default function KonamiCode() {
   const [words, setWords] = useState<FallingWord[]>([]);
 
   const triggerRain = useCallback(() => {
+    // Respect the user's OS-level motion preference — the Konami rain
+    // is a pure-decoration easter egg, so users who've asked for less
+    // motion shouldn't have 60 animated words flung at them.
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      return;
+    }
+
     setTriggered(true);
     const colors = [
       "rgb(94, 234, 212)",   // accent cyan
@@ -78,7 +88,10 @@ export default function KonamiCode() {
   if (!triggered) return null;
 
   return (
-    <div className="fixed inset-0 z-[9998] pointer-events-none overflow-hidden">
+    <div
+      className="fixed inset-0 z-[9998] pointer-events-none overflow-hidden"
+      aria-hidden="true"
+    >
       {words.map((w) => (
         <span
           key={w.id}

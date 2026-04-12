@@ -288,3 +288,21 @@ input:focus, textarea:focus {
     transform: translateY(100vh) rotate(15deg);
   }
 }
+
+/* ── Respect prefers-reduced-motion ───────────── */
+/* Disable the keyframe-driven entrance / blink / slide animations for
+   users who've asked their OS for less motion. The canvas animations
+   (ConstituencyMorph, TimesTableCircle, BeatingHeart, …) do their own
+   matchMedia check in the component and draw a static frame instead. */
+@media (prefers-reduced-motion: reduce) {
+  .cursor-blink,
+  .animate-in,
+  .animate-slide-down,
+  .animate-scale-in {
+    animation: none !important;
+  }
+  .delay-1, .delay-2, .delay-3, .delay-4,
+  .delay-5, .delay-6, .delay-7, .delay-8 {
+    animation-delay: 0s !important;
+  }
+}

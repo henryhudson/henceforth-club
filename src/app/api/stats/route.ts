@@ -53,8 +53,7 @@ export async function GET() {
       year,
       sparkline,
     });
-  } catch (err) {
-    console.error("stats error", err);
+  } catch {
     return NextResponse.json(
       { ok: false, reason: "error" },
       { status: 500 }

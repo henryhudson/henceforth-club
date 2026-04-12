@@ -23,8 +23,7 @@ export async function POST() {
       redis.incr(`views:${today}`),
     ]);
     return NextResponse.json({ ok: true, visitor: total });
-  } catch (err) {
-    console.error("hit error", err);
+  } catch {
     return NextResponse.json({ ok: false, reason: "error" }, { status: 500 });
   }
 }

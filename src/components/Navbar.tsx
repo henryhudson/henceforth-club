@@ -8,10 +8,15 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  // Prevent body scroll when menu is open
+  // Prevent body scroll when the mobile menu is open. Restore whatever
+  // overflow value was in place before we touched it, so we don't stomp
+  // on other components that may also be managing body scroll.
   useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = open ? "hidden" : prev;
+    return () => {
+      document.body.style.overflow = prev;
+    };
   }, [open]);
 
   const links = [

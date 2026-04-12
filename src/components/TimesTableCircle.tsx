@@ -50,6 +50,12 @@ export default function TimesTableCircle({
     let lastUserMultiplier: number | undefined;
     let animId: number;
 
+    // Respect prefers-reduced-motion — paint one static cardioid and
+    // skip the RAF loop if the user's OS asks for less motion.
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
     function pickTarget() {
       targetMultiplier =
         multipliers[Math.floor(Math.random() * multipliers.length)];
@@ -134,10 +140,18 @@ export default function TimesTableCircle({
       }
 
       ctx!.stroke();
-      animId = requestAnimationFrame(draw);
+      if (!prefersReducedMotion) {
+        animId = requestAnimationFrame(draw);
+      }
     }
 
     pickTarget();
+    if (prefersReducedMotion) {
+      // Freeze at the default cardioid pattern
+      currentMultiplier = 2;
+      draw(performance.now());
+      return;
+    }
     animId = requestAnimationFrame(draw);
 
     return () => cancelAnimationFrame(animId);

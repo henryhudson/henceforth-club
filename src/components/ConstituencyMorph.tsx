@@ -159,6 +159,14 @@ export default function ConstituencyMorph({
     const CYCLE_MS = 10000;
     let animId: number;
 
+    // If the user prefers reduced motion, paint a single static frame
+    // at morphT=0 (the map view) and skip scheduling the RAF loop.
+    // Screen-reader users still get the aria-label, and sighted users
+    // with vestibular sensitivity see a non-moving visual.
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
     function ease(t: number): number {
       // Smooth ease in-out
       return t < 0.5
@@ -242,9 +250,15 @@ export default function ConstituencyMorph({
       }
       ctx!.globalAlpha = 1;
 
-      animId = requestAnimationFrame(draw);
+      if (!prefersReducedMotion) {
+        animId = requestAnimationFrame(draw);
+      }
     }
 
+    if (prefersReducedMotion) {
+      draw(0); // one static frame in map state
+      return;
+    }
     animId = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(animId);
   }, [seats]);

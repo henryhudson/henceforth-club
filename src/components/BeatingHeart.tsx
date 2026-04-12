@@ -23,6 +23,12 @@ export default function BeatingHeart({
     const BEAT_MS = 1400; // relaxed heartbeat
     let animId: number;
 
+    // Respect prefers-reduced-motion — paint one static heart and
+    // skip the pulse loop for users who've asked for less motion.
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
     function easeOut(t: number): number {
       return 1 - Math.pow(1 - t, 3);
     }
@@ -107,9 +113,15 @@ export default function BeatingHeart({
       drawHeart(ctx!, w / 2, h / 2, size, factor);
       ctx!.fill();
 
-      animId = requestAnimationFrame(draw);
+      if (!prefersReducedMotion) {
+        animId = requestAnimationFrame(draw);
+      }
     }
 
+    if (prefersReducedMotion) {
+      draw(BEAT_MS * 0.5); // paint mid-beat static frame and exit
+      return;
+    }
     animId = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(animId);
   }, []);
