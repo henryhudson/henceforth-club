@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRedis, dateKey } from "@/lib/redis";
 
-export const runtime = "edge";
-
 // Cache stats for 60 seconds to avoid hammering Redis on every terminal query
 export const revalidate = 60;
 

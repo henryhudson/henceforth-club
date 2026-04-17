@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRedis, dateKey } from "@/lib/redis";
 
-export const runtime = "edge";
-
 /**
  * POST /api/hit — increments the visitor counter.
  * Stores:
