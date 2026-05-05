@@ -88,12 +88,6 @@ function Footer() {
               Hansard
             </Link>
             <Link
-              href="/code"
-              className="text-muted/60 transition-colors hover:text-foreground"
-            >
-              Code
-            </Link>
-            <Link
               href="/contact"
               className="text-muted/60 transition-colors hover:text-foreground"
             >
