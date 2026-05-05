@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# henceforth.club
 
-## Getting Started
+Marketing site for three iOS apps by [Henceforth Bitcoin Limited](https://apps.apple.com/nz/developer/henceforth-bitcoin-limited/id1520654144). Live at [henceforth.club](https://henceforth.club).
 
-First, run the development server:
+## Apps
+
+| App | What it is | Status |
+|---|---|---|
+| **[Henceforth](https://apps.apple.com/app/henceforth/id1602896145)** | FORTH interpreter and Bitcoin SV wallet | Released |
+| **[DaDeckOfCards](https://apps.apple.com/app/deck-of-cards/id1520654142)** | Multiplayer card game | Released |
+| **Hansard** | UK Parliament browser | Coming soon |
+
+## Stack
+
+- Next.js 16 (App Router, Turbopack) on React 19
+- Tailwind CSS v4 via `@theme inline` — no `tailwind.config`
+- Motion (`motion/react`) for scroll-triggered animation
+- Upstash Redis for visitor counting (`/api/hit`, `/api/stats`)
+- `next/og` for per-route OpenGraph cards from a shared template
+- TypeScript strict mode; deployed on Vercel from `main`
+
+## Phosphor Noir
+
+Single-font (Space Mono) dark interface with CRT scanlines, phosphor glow, and a fixed SVG noise overlay at 3.5% opacity. One accent colour per app:
+
+- Henceforth — amber `#fbbf24`
+- DaDeckOfCards — cyan `#5eead4`
+- Hansard — green `#3da87a`
+
+## Highlights
+
+- `HeroTerminal` — animated FORTH terminal on the homepage. Type `analytics`.
+- `ConstituencyMorph` — 650 constituency dots that morph between the UK map and a party pie chart on the Hansard page.
+- Per-route OG images generated at build time from a shared `next/og` template in `src/lib/og.tsx`.
+- A handful of easter eggs, with cryptic clues in the footer at 20% opacity.
+
+## Local dev
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run dev      # dev server (Turbopack)
+npm run build    # production build
+npm run lint     # eslint
+npm run start    # serve production build locally
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Visitor counting needs `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` in `.env.local`. The site builds and runs without them — the `/api/*` routes just return errors when called.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploy
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`git push origin main` triggers an automatic Vercel deploy.
