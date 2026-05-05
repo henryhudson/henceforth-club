@@ -90,10 +90,19 @@ export default function ExpandingCircles({
       // Scale so the grid fits the canvas (96 is the max x offset)
       const scale = Math.min(w, h) / (96 * 2 + MAX_RADIUS * 2 + 20);
 
-      ctx!.strokeStyle = "rgba(94, 234, 212, 0.3)";
-      ctx!.lineWidth = 1.5;
-      ctx!.shadowColor = "rgba(94, 234, 212, 0.6)";
-      ctx!.shadowBlur = 14;
+      // Additive blending: overlapping circles brighten at intersections,
+      // turning the fully-expanded grid into a self-illuminating
+      // flower-of-life / Twetch-logo pattern.
+      ctx!.globalCompositeOperation = "lighter";
+
+      // Stroke width 2 (matches SwiftUI's `.stroke(lineWidth: 2)`).
+      // SwiftUI paints the stroke 1pt OUTSIDE the geometric circle, so a
+      // 22-diameter circle has effective outer diameter 24 — the exact
+      // grid spacing, so neighbours kiss at MIN_RADIUS.
+      ctx!.lineWidth = 2;
+      ctx!.strokeStyle = "rgba(94, 234, 212, 0.55)";
+      ctx!.shadowColor = "rgba(94, 234, 212, 0.95)";
+      ctx!.shadowBlur = 20;
 
       // The SwiftUI version is rotated 90°, so swap x/y
       for (const [px, py] of POSITIONS) {
@@ -107,6 +116,9 @@ export default function ExpandingCircles({
         );
         ctx!.stroke();
       }
+
+      // Restore default composite for the next frame's clearRect
+      ctx!.globalCompositeOperation = "source-over";
 
       animId = requestAnimationFrame(draw);
     }

@@ -113,12 +113,11 @@ export default function TimesTableCircle({
       const cy = h / 2;
       const radius = Math.min(w, h) / 2;
 
-      ctx!.strokeStyle = "rgba(251, 191, 36, 0.15)";
-      ctx!.lineWidth = 0.5;
-      ctx!.shadowColor = "rgba(251, 191, 36, 0.3)";
-      ctx!.shadowBlur = 8;
-      ctx!.beginPath();
+      // Additive blending so the halo + core passes combine into a
+      // proper neon-tube look instead of overwriting each other.
+      ctx!.globalCompositeOperation = "lighter";
 
+      ctx!.beginPath();
       for (let x = 1; x <= SEGMENTS; x += 2) {
         const startAngle =
           OFFSET + (2 * Math.PI * x) / SEGMENTS;
@@ -139,7 +138,20 @@ export default function TimesTableCircle({
         }
       }
 
+      // Pass 1 — soft warm halo
+      ctx!.strokeStyle = "rgba(251, 191, 36, 0.10)";
+      ctx!.lineWidth = 2.5;
+      ctx!.shadowColor = "rgba(251, 191, 36, 0.55)";
+      ctx!.shadowBlur = 12;
       ctx!.stroke();
+
+      // Pass 2 — thin bright core (path is preserved between strokes)
+      ctx!.strokeStyle = "rgba(255, 224, 150, 0.45)";
+      ctx!.lineWidth = 0.6;
+      ctx!.shadowBlur = 0;
+      ctx!.stroke();
+
+      ctx!.globalCompositeOperation = "source-over";
       if (!prefersReducedMotion) {
         animId = requestAnimationFrame(draw);
       }
