@@ -68,7 +68,7 @@ function Footer() {
               iOS apps for thinkers and players
             </p>
           </div>
-          <div className="flex gap-8 text-sm">
+          <div className="flex flex-wrap gap-x-8 gap-y-3 text-sm">
             <Link
               href="/henceforth"
               className="text-muted/60 transition-colors hover:text-foreground"
@@ -86,6 +86,12 @@ function Footer() {
               className="text-muted/60 transition-colors hover:text-foreground"
             >
               Hansard
+            </Link>
+            <Link
+              href="/code"
+              className="text-muted/60 transition-colors hover:text-foreground"
+            >
+              Code
             </Link>
             <Link
               href="/contact"

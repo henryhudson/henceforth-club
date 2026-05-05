@@ -9,8 +9,8 @@ export const metadata: Metadata = {
 const profiles = [
   {
     label: "Henceforth",
-    handle: "@forth_hence4h",
-    href: "https://x.com/forth_hence4h",
+    handle: "@henceforth_app",
+    href: "https://x.com/henceforth_app",
     color: "text-accent",
     glowClass: "",
     description: "App updates, FORTH tips, and Bitcoin.",

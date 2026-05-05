@@ -3,6 +3,7 @@ import Image from "next/image";
 import FadeIn from "@/components/FadeIn";
 import ConstituencyMorph from "@/components/ConstituencyMorph";
 import Accordion from "@/components/Accordion";
+import TechModal from "@/components/TechModal";
 
 const accordionSections = [
   {
@@ -76,6 +77,30 @@ export const metadata: Metadata = {
     "Browse UK Parliament — Members of the Commons, House of Lords, and constituencies with an interactive map. A native iOS app.",
 };
 
+// Structured data for search engines and AI crawlers — declares this
+// page as an iOS app listing so it can show up as a rich result.
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Hansard",
+  operatingSystem: "iOS",
+  applicationCategory: "ReferenceApplication",
+  description:
+    "Browse UK Parliament — Members of the Commons, House of Lords, and constituencies with an interactive map. A native iOS app.",
+  url: "https://henceforth.club/hansard",
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "GBP",
+    availability: "https://schema.org/PreOrder",
+  },
+  publisher: {
+    "@type": "Organization",
+    name: "Henceforth Bitcoin Limited",
+    url: "https://henceforth.club",
+  },
+};
+
 const features = [
   {
     icon: "🏛",
@@ -142,6 +167,10 @@ const SEATS: [number, number, string][] = [[-1.95,59.8,"#FDBB30"],[-4.64,58.13,"
 export default function HansardPage() {
   return (
     <div className="py-20 sm:py-28">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div className="mx-auto max-w-6xl px-6">
         {/* Header */}
         <FadeIn>
@@ -214,6 +243,81 @@ export default function HansardPage() {
               </FadeIn>
             ))}
           </div>
+        </div>
+
+        {/* Engineering */}
+        <div className="mt-24">
+          <div className="section-line" />
+          <FadeIn>
+            <p className="mt-12 text-xs tracking-widest text-muted/50 uppercase">
+              Engineering
+            </p>
+            <p className="mt-4 text-sm leading-relaxed text-muted max-w-2xl">
+              The animation above renders 650 constituency dots that morph
+              between a UK map and a party-share pie chart. Read how it&apos;s
+              put together.
+            </p>
+            <div className="mt-6">
+              <TechModal accent="green" buttonLabel="How the morph works">
+                <h3>Single canvas, two pre-computed layouts</h3>
+                <p>
+                  The animation interpolates between two static layouts:{" "}
+                  <strong>map</strong> positions (normalised longitude/latitude)
+                  and <strong>pie</strong> positions (concentric arcs grouped
+                  by party). Both are computed once on mount. The render loop
+                  blends per-dot positions with a single eased{" "}
+                  <code>morphT</code> ∈ [0, 1].
+                </p>
+
+                <h3>Packing the pie</h3>
+                <p>
+                  Parties are sorted largest-to-smallest and laid out clockwise
+                  from 12 o&apos;clock. Each wedge is filled with concentric
+                  rings starting at <code>innerR = 0.06</code>, spaced{" "}
+                  <code>0.022</code> apart. Each ring fits as many dots as its
+                  arc length allows.
+                </p>
+                <p>
+                  Parties with fewer than 10 seats get merged into a single{" "}
+                  <strong>Others</strong> wedge — adjacent micro-parties
+                  don&apos;t have enough angular sweep for their innermost dots
+                  to clear neighbours. Every dot still keeps its own party
+                  colour, so nothing visually disappears.
+                </p>
+
+                <h3>The bloom is not a filter</h3>
+                <p>
+                  Each party has a pre-rendered radial-gradient sprite. The
+                  render loop draws those sprites with{" "}
+                  <code>globalCompositeOperation = &quot;lighter&quot;</code>,
+                  then a sharp dot on top at 0.78 alpha. Sparse rural seats
+                  get a faint halo; dense urban clusters stack their gradients
+                  and bloom visibly past saturation — the colour intensity
+                  becomes a density readout.
+                </p>
+
+                <h3>Reduced-motion path</h3>
+                <p>
+                  A{" "}
+                  <code>
+                    matchMedia(&quot;(prefers-reduced-motion: reduce)&quot;)
+                  </code>{" "}
+                  check at startup paints one static map frame and skips the
+                  requestAnimationFrame loop entirely. Screen readers see a
+                  labelled <code>&lt;canvas role=&quot;img&quot;&gt;</code>{" "}
+                  regardless.
+                </p>
+
+                <h3>Cycle and data</h3>
+                <p>
+                  10s total: 4s map hold, 2s morph, 2s pie hold, 2s morph back.
+                  Each morph segment is eased with a smooth in-out cubic. The
+                  data — 650 triples of [longitude, latitude, party-colour] —
+                  ships inline with the page, no network call.
+                </p>
+              </TechModal>
+            </div>
+          </FadeIn>
         </div>
 
         {/* CTA */}

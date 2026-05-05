@@ -3,6 +3,7 @@ import Image from "next/image";
 import FadeIn from "@/components/FadeIn";
 import BeatingHeart from "@/components/BeatingHeart";
 import Accordion from "@/components/Accordion";
+import TechModal from "@/components/TechModal";
 
 const accordionSections = [
   {
@@ -279,6 +280,57 @@ export default function DaDeckOfCardsPage() {
               </FadeIn>
             ))}
           </div>
+        </div>
+
+        {/* Engineering */}
+        <div className="mt-24">
+          <div className="section-line" />
+          <FadeIn>
+            <p className="mt-12 text-xs tracking-widest text-muted/50 uppercase">
+              Engineering
+            </p>
+            <p className="mt-4 text-sm leading-relaxed text-muted max-w-2xl">
+              Native iOS, real-time multiplayer over Game Center, spring-based
+              animation throughout.
+            </p>
+            <div className="mt-6">
+              <TechModal accent="cyan" buttonLabel="How it's built">
+                <h3>Native iOS, built on Game Center</h3>
+                <p>
+                  Deck of Cards is a native iOS app. Real-time multiplayer is
+                  built on Apple Game Center — host a game, invite players,
+                  and card state syncs across every device in the room. The
+                  multiplayer layer handles reconnection, late joiners, and
+                  replay from any point in the hand.
+                </p>
+
+                <h3>Animation as physics, not transitions</h3>
+                <p>
+                  Every card interaction — dealing, fanning, flipping,
+                  gathering — is spring-based. The goal is that the cards{" "}
+                  <em>feel</em> like cards: a deal arcs, a flip rotates around
+                  an axis with believable inertia, a fan responds to drag
+                  with the right damping. UIKit-style fixed-curve transitions
+                  don&apos;t get there.
+                </p>
+
+                <h3>Custom decks, custom rules</h3>
+                <p>
+                  The deck editor lets you replace any card face, suit, or
+                  back with your own art. The rules engine is data-driven, so
+                  adding a new game means declaring its rules — not writing a
+                  new view controller per game.
+                </p>
+
+                <h3>One platform, no ads</h3>
+                <p>
+                  iPhone and iPad only. Free, no ads, no subscription, no
+                  analytics SDKs that don&apos;t earn their keep. Game Center
+                  handles matchmaking; the app handles cards.
+                </p>
+              </TechModal>
+            </div>
+          </FadeIn>
         </div>
 
         {/* CTA */}

@@ -23,6 +23,7 @@ export default function Navbar() {
     { href: "/henceforth", label: "Henceforth", hoverColor: "hover:text-accent-warm" },
     { href: "/dadeckofcards", label: "Deck of Cards", hoverColor: "hover:text-accent" },
     { href: "/hansard", label: "Hansard", hoverColor: "hover:text-accent-green" },
+    { href: "/code", label: "Code", hoverColor: "hover:text-foreground" },
     { href: "/contact", label: "Contact", hoverColor: "hover:text-foreground" },
   ];
 
@@ -38,7 +39,7 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop links */}
-        <div className="hidden sm:flex gap-8 text-sm">
+        <div className="hidden sm:flex gap-6 lg:gap-8 text-sm">
           {links.map((link) => (
             <Link
               key={link.href}
@@ -79,7 +80,7 @@ export default function Navbar() {
       {/* Mobile menu */}
       <div
         className={`sm:hidden overflow-hidden transition-all duration-300 ease-out ${
-          open ? "max-h-64 opacity-100" : "max-h-0 opacity-0"
+          open ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
         }`}
       >
         <div className="border-t border-card-border/30 px-6 py-4 flex flex-col gap-4">

@@ -3,6 +3,7 @@ import Image from "next/image";
 import FadeIn from "@/components/FadeIn";
 import ExpandingCircles from "@/components/ExpandingCircles";
 import Accordion from "@/components/Accordion";
+import TechModal from "@/components/TechModal";
 
 const accordionSections = [
   {
@@ -294,6 +295,109 @@ export default function HenceforthPage() {
               </FadeIn>
             ))}
           </div>
+        </div>
+
+        {/* Engineering */}
+        <div className="mt-24">
+          <div className="section-line" />
+          <FadeIn>
+            <p className="mt-12 text-xs tracking-widest text-muted/50 uppercase">
+              Engineering
+            </p>
+            <p className="mt-4 text-sm leading-relaxed text-muted max-w-2xl">
+              Native Swift, end to end. The Bitcoin layer is built on the
+              open-source SwiftBSV SDK.
+            </p>
+
+            <a
+              href="https://github.com/henryhudson/SwiftBSV"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="card-glow card-glow-warm group mt-8 flex flex-col gap-4 rounded-xl border border-card-border bg-card-bg/50 p-6 hover:border-accent-warm transition-colors sm:flex-row sm:items-center"
+            >
+              <div className="flex items-center gap-3">
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-5 w-5 text-muted/60 group-hover:text-foreground transition-colors"
+                  fill="currentColor"
+                >
+                  <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56v-1.96c-3.2.69-3.87-1.54-3.87-1.54-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.24 3.34.95.1-.74.4-1.24.73-1.53-2.55-.29-5.23-1.27-5.23-5.66 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.17.91-.25 1.89-.38 2.86-.38.97 0 1.95.13 2.86.38 2.18-1.48 3.14-1.17 3.14-1.17.62 1.58.23 2.75.11 3.04.73.8 1.18 1.82 1.18 3.07 0 4.4-2.69 5.36-5.25 5.65.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.79.56C20.21 21.39 23.5 17.08 23.5 12c0-6.35-5.15-11.5-11.5-11.5z" />
+                </svg>
+                <span className="text-[10px] tracking-widest uppercase text-accent-warm/70">
+                  Built with
+                </span>
+                <h3 className="font-bold text-foreground text-lg">SwiftBSV</h3>
+              </div>
+              <p className="text-sm leading-relaxed text-muted flex-1">
+                Open-source Swift SDK for Bitcoin SV — Type42 key derivation,
+                SPV verification, ARC broadcast, BRC-2 encryption.
+              </p>
+              <span className="inline-flex items-center gap-1.5 text-xs text-muted/60 group-hover:text-accent-warm transition-colors">
+                GitHub
+                <svg
+                  className="h-3 w-3 transition-transform group-hover:translate-x-0.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </span>
+            </a>
+
+            <div className="mt-6">
+              <TechModal accent="warm" buttonLabel="How it's built">
+                <h3>Native Swift, end to end</h3>
+                <p>
+                  Henceforth is a native iOS app written in Swift — no React
+                  Native, no web view wrapper. The FORTH interpreter runs
+                  directly on the device, and the Bitcoin layer talks to the
+                  network from the same process.
+                </p>
+
+                <h3>The interpreter</h3>
+                <p>
+                  Forth-2012 compliant — 133 CORE words plus 200+ extensions
+                  for graphics, file I/O, Bitcoin operations, and terminal
+                  control. Custom words are first-class: define{" "}
+                  <code>: square dup * ;</code>, use it immediately, save it
+                  to disk.
+                </p>
+                <p>
+                  140+ Bitcoin Script opcodes are exposed as FORTH words, so
+                  you can compose locking scripts, simulate spending
+                  conditions, and step through opcode-level behaviour
+                  interactively — not in a textbook.
+                </p>
+
+                <h3>Bitcoin via SwiftBSV</h3>
+                <p>
+                  The wallet layer is built on{" "}
+                  <a
+                    href="https://github.com/henryhudson/SwiftBSV"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    SwiftBSV
+                  </a>
+                  , an open-source Swift SDK for Bitcoin SV. Type42 (BRC-42)
+                  key derivation gives deterministic addresses without
+                  HD-wallet plumbing. SPV verification validates transactions
+                  against block headers — Merkle proofs, no third-party
+                  trust. ARC handles broadcasting with automatic failover.
+                  BRC-2 (ECIES) encrypts messages wire-compatibly with the
+                  TypeScript BSV SDK.
+                </p>
+                <p>
+                  Because the wallet is exposed as FORTH words, you can build,
+                  sign, and broadcast transactions from the terminal{" "}
+                  (<code>tx-new ... tx-add-output tx-broadcast</code>) — the
+                  interpreter treats Bitcoin as just another vocabulary.
+                </p>
+              </TechModal>
+            </div>
+          </FadeIn>
         </div>
 
         {/* Documentation */}
