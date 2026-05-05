@@ -20,8 +20,13 @@ export default function BeatingHeart({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const BEAT_MS = 1400; // relaxed heartbeat
+    // Match Swift's `easeOut(duration: 0.42).repeatForever(autoreverses: true)`.
+    // 0.42s forward + 0.42s back = 840ms per full beat.
+    const BEAT_MS = 840;
     let animId: number;
+    let lastW = 0;
+    let lastH = 0;
+    let lastDpr = 0;
 
     // Respect prefers-reduced-motion — paint one static heart and
     // skip the pulse loop for users who've asked for less motion.
@@ -94,24 +99,52 @@ export default function BeatingHeart({
       const rect = canvas!.getBoundingClientRect();
       const w = rect.width;
       const h = rect.height;
-      canvas!.width = w * dpr;
-      canvas!.height = h * dpr;
-      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
+      // Only resize when dimensions actually change — assigning to
+      // canvas.width is a destructive op (full GPU buffer reset and
+      // context state wipe) so doing it 60×/sec was the main lag source.
+      if (w !== lastW || h !== lastH || dpr !== lastDpr) {
+        canvas!.width = w * dpr;
+        canvas!.height = h * dpr;
+        ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
+        lastW = w;
+        lastH = h;
+        lastDpr = dpr;
+      }
       ctx!.clearRect(0, 0, w, h);
 
-      // Pulsing factor: 0.6 → 1 → 0.6 (subtle pulse, not full collapse)
+      // Full-amplitude pulse 0 → 1 → 0, matching the Swift Heart's
+      // animatableData range. easeOut applied to each half of the
+      // triangle wave separately (mirrors SwiftUI's autoreversing
+      // easeOut — both directions feel "fast at start, slow at end",
+      // giving the punchy pulse the Swift original has).
       const t = (now % BEAT_MS) / BEAT_MS;
-      const raw = t < 0.5 ? t * 2 : 2 - t * 2;
-      const factor = 0.6 + easeOut(raw) * 0.4;
+      const half = t < 0.5 ? t * 2 : (1 - t) * 2;
+      const factor = easeOut(half);
 
       const size = Math.min(w, h) * 0.35;
 
-      ctx!.shadowColor = "rgba(239, 68, 68, 0.5)";
-      ctx!.shadowBlur = 14;
-      ctx!.fillStyle = "rgba(239, 68, 68, 0.2)";
-
+      // Build the path once; we'll fill+stroke it multiple times.
       drawHeart(ctx!, w / 2, h / 2, size, factor);
+
+      // Additive composite so the bloom + outline passes layer
+      // correctly into a neon-tube look.
+      ctx!.globalCompositeOperation = "lighter";
+
+      // Pass 1 — wide red bloom (fill with big shadow). The shadow
+      // is rendered as a blurred copy of the path, so this paints a
+      // soft halo around the heart silhouette.
+      ctx!.shadowColor = "rgba(239, 68, 68, 0.95)";
+      ctx!.shadowBlur = 24;
+      ctx!.fillStyle = "rgba(239, 68, 68, 0.35)";
       ctx!.fill();
+
+      // Pass 2 — bright neon outline with tighter glow.
+      ctx!.shadowBlur = 8;
+      ctx!.strokeStyle = "rgba(255, 130, 145, 0.9)";
+      ctx!.lineWidth = 2;
+      ctx!.stroke();
+
+      ctx!.globalCompositeOperation = "source-over";
 
       if (!prefersReducedMotion) {
         animId = requestAnimationFrame(draw);
