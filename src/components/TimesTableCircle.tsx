@@ -35,8 +35,12 @@ export default function TimesTableCircle({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const SEGMENTS = 150;
-    const DEPTH = 8;
+    // Match the Swift Mandelbrot shape: 200 segments around the circle,
+    // depth 6 nested multiplier hops per starting point. The marketing
+    // cardioid GIF is rendered with these exact constants — using
+    // anything lower drops resolution and visually loses lines.
+    const SEGMENTS = 200;
+    const DEPTH = 6;
     const OFFSET = -Math.PI / 2; // start at 12 o'clock
 
     // Weighted toward cardioid (2), with nephroid (3) and higher patterns
@@ -139,7 +143,12 @@ export default function TimesTableCircle({
 
         for (let i = 1; i <= DEPTH; i++) {
           const power = Math.pow(multiplier, i);
-          const target = Math.round(x * power) % (SEGMENTS + 1);
+          // Wrap mod SEGMENTS, matching SwiftUI's polar layout guide
+          // behaviour. Using `% (SEGMENTS + 1)` (the previous bug)
+          // shifted boundary indices by one, occasionally collapsing
+          // two distinct lines into the same endpoint and visually
+          // losing a unique line from the cardioid envelope.
+          const target = Math.round(x * power) % SEGMENTS;
           const endAngle =
             OFFSET + (2 * Math.PI * target) / SEGMENTS;
           ctx!.lineTo(
