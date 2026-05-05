@@ -49,6 +49,9 @@ export default function TimesTableCircle({
     let lastSwitch = performance.now();
     let lastUserMultiplier: number | undefined;
     let animId: number;
+    let lastW = 0;
+    let lastH = 0;
+    let lastDpr = 0;
 
     // Respect prefers-reduced-motion — paint one static cardioid and
     // skip the RAF loop if the user's OS asks for less motion.
@@ -98,14 +101,22 @@ export default function TimesTableCircle({
         currentMultiplier +
         (targetMultiplier - currentMultiplier) * ease(t);
 
-      // Handle high-DPI
+      // Handle high-DPI — only resize when dimensions change.
+      // Setting canvas.width/height is destructive (resets the GPU
+      // buffer and context state) so doing it every frame is the
+      // single biggest source of jank for canvas RAF loops.
       const dpr = window.devicePixelRatio || 1;
       const rect = canvas!.getBoundingClientRect();
       const w = rect.width;
       const h = rect.height;
-      canvas!.width = w * dpr;
-      canvas!.height = h * dpr;
-      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (w !== lastW || h !== lastH || dpr !== lastDpr) {
+        canvas!.width = w * dpr;
+        canvas!.height = h * dpr;
+        ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
+        lastW = w;
+        lastH = h;
+        lastDpr = dpr;
+      }
 
       ctx!.clearRect(0, 0, w, h);
 
@@ -138,11 +149,13 @@ export default function TimesTableCircle({
         }
       }
 
-      // Pass 1 — soft warm halo
-      ctx!.strokeStyle = "rgba(251, 191, 36, 0.10)";
-      ctx!.lineWidth = 2.5;
+      // Pass 1 — soft warm halo. shadowBlur is the most expensive
+      // op in canvas2d; keep it small enough to render a 600-segment
+      // path comfortably at 60fps.
+      ctx!.strokeStyle = "rgba(251, 191, 36, 0.12)";
+      ctx!.lineWidth = 2;
       ctx!.shadowColor = "rgba(251, 191, 36, 0.55)";
-      ctx!.shadowBlur = 12;
+      ctx!.shadowBlur = 6;
       ctx!.stroke();
 
       // Pass 2 — thin bright core (path is preserved between strokes)

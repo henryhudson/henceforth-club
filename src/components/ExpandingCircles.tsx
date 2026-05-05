@@ -53,15 +53,26 @@ export default function ExpandingCircles({
     const PAUSE_MS = 300;
 
     let animId: number;
+    let lastW = 0;
+    let lastH = 0;
+    let lastDpr = 0;
 
     function draw(now: number) {
       const dpr = window.devicePixelRatio || 1;
       const rect = canvas!.getBoundingClientRect();
       const w = rect.width;
       const h = rect.height;
-      canvas!.width = w * dpr;
-      canvas!.height = h * dpr;
-      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
+      // Resizing the canvas resets all context state, so only do it
+      // when dimensions actually change — otherwise we're resetting
+      // the GPU buffer 60 times a second for no reason.
+      if (w !== lastW || h !== lastH || dpr !== lastDpr) {
+        canvas!.width = w * dpr;
+        canvas!.height = h * dpr;
+        ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
+        lastW = w;
+        lastH = h;
+        lastDpr = dpr;
+      }
       ctx!.clearRect(0, 0, w, h);
 
       // Breathe cycle
@@ -95,14 +106,16 @@ export default function ExpandingCircles({
       // flower-of-life / Twetch-logo pattern.
       ctx!.globalCompositeOperation = "lighter";
 
-      // Stroke width 2 (matches SwiftUI's `.stroke(lineWidth: 2)`).
-      // SwiftUI paints the stroke 1pt OUTSIDE the geometric circle, so a
-      // 22-diameter circle has effective outer diameter 24 — the exact
-      // grid spacing, so neighbours kiss at MIN_RADIUS.
-      ctx!.lineWidth = 2;
+      // Stroke width is in design coords (matches SwiftUI's
+      // `.stroke(lineWidth: 2)`), then scaled with the rest of the
+      // vector design. Without the `* scale` factor the strokes stay
+      // at 2 raw pixels regardless of canvas size, so as the canvas
+      // grows the stroke's contribution to the visual outer radius
+      // shrinks and the circles never quite touch.
+      ctx!.lineWidth = 2 * scale;
       ctx!.strokeStyle = "rgba(94, 234, 212, 0.55)";
       ctx!.shadowColor = "rgba(94, 234, 212, 0.95)";
-      ctx!.shadowBlur = 20;
+      ctx!.shadowBlur = 16;
 
       // The SwiftUI version is rotated 90°, so swap x/y
       for (const [px, py] of POSITIONS) {
