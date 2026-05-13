@@ -1,0 +1,190 @@
+# Documentation
+
+Bitcoin meets Forth. Henceforth is a native iOS app that combines a Forth-2012 compliant interpreter with an integrated Bitcoin SV wallet — one stack-based language for arithmetic, scripting, and payments.
+
+<a id="about" />
+
+## About
+
+Henceforth is built and maintained by Henry Hudson at Henceforth Bitcoin Limited.
+
+### Source code
+
+[github.com/henryhudson/FORTHapp](https://github.com/henryhudson/FORTHapp)
+
+Running the project requires Xcode on any iPhone or iPad. Optimisation for all Apple platforms is in progress. The repository is private at the time of writing — get in touch if you would like access.
+
+### Support
+
+[Follow `@forth_hence4h` on Twitter](https://x.com/forth_hence4h)
+
+<a id="goals" />
+
+## Goals
+
+### Achieved
+
+- **Bitcoin (BSV) integration** — full wallet with HD key derivation (BIP-44 and Type42), transaction building, ARC broadcasting with failover, SPV verification, Paymail support, and 140+ Bitcoin Script opcodes including the Chronicle upgrade.
+- **Block headers** — locally chain-linked header store anchored to a hardcoded checkpoint, auto-synced from chain tip on every launch via a WebSocket history stream. SPV Merkle proof verification is bounded to the chain-validated range — no silent network fallback for missing headers.
+- **SwiftBSV** — fully integrated for transactions, Script building, BIP-32/39 key management, and ECDSA signing.
+- **OPCodes** — all standard and Chronicle-restored opcodes available as FORTH words. Script Recording mode assembles Bitcoin Scripts from the terminal.
+- **Files** — full CRUD for `.fs` and `.forth` files with iCloud backup. Script files identified by `SCRIPT-BEGIN` / `SCRIPT-END` markers.
+- **Colour customisation** — foreground and background colour pickers, keyboard selection, and Dynamic Type support throughout.
+- **Forth-2012 compliance** — 133 / 133 CORE words implemented, verified by the Hayes test suite.
+
+### Get people coding
+
+Provide a simple interface for the FORTH programming language, making it easy for people to learn to code.
+
+### Future
+
+- CRDT (Conflict-free Replicated Data Type) system using the timestamp server for user-defined words.
+- Trigonometry and calculus extensions.
+
+<a id="reference" />
+
+## Reference
+
+Henceforth's vocabulary is organised by category. **133 / 133** Forth-2012 CORE words are implemented, plus an extension set covering Bitcoin operations, wallet management, and script recording. Bitcoin Script opcodes are exposed as **140+** additional FORTH words.
+
+### Stack manipulation
+
+`DUP` · `DROP` · `SWAP` · `OVER` · `ROT` · `-ROT` · `NIP` · `TUCK` · `2DUP` · `2DROP` · `2SWAP` · `2OVER` · `?DUP` · `PICK` · `ROLL` · `DEPTH`
+
+### Arithmetic
+
+`+` · `-` · `*` · `/` · `MOD` · `/MOD` · `*/` · `*/MOD` · `1+` · `1-` · `2+` · `2-` · `2*` · `2/` · `ABS` · `NEGATE` · `MIN` · `MAX` · `S>D` · `M*` · `UM*` · `FM/MOD` · `SM/REM` · `UM/MOD`
+
+### Comparison
+
+`=` · `<>` · `<` · `>` · `<=` · `>=` · `0=` · `0<>` · `0<` · `0>` · `U<` · `U>` · `WITHIN`
+
+Comparison operators return `-1` (true) per Forth-2012 — *not* the Bitcoin Script convention of `1`. The corresponding Bitcoin Script opcodes (`OP_EQUAL` and friends) follow Script consensus rules instead.
+
+### Logic
+
+`AND` · `OR` · `XOR` · `NOT` · `INVERT` · `LSHIFT` · `RSHIFT` · `TRUE` · `FALSE`
+
+`TRUE` is `-1` (all bits set), `FALSE` is `0`. Non-zero values are truthy in `IF` / `AND` / `OR`.
+
+### Memory
+
+`@` · `!` · `+!` · `C@` · `C!` · `,` · `C,` · `ALLOT` · `ALIGN` · `ALIGNED` · `CHAR+` · `CHARS` · `CELLS` · `VARIABLE` · `CONSTANT` · `CREATE` · `DOES>` · `ALLOCATE` · `FREE` · `RESIZE`
+
+### Control flow
+
+`IF` · `ELSE` · `THEN` · `DO` · `?DO` · `LOOP` · `+LOOP` · `LEAVE` · `I` · `J` · `BEGIN` · `WHILE` · `REPEAT` · `UNTIL` · `AGAIN` · `EXIT` · `RECURSE` · `CASE` · `OF` · `ENDOF` · `ENDCASE`
+
+### Compilation and meta-programming
+
+`:` · `;` · `IMMEDIATE` · `POSTPONE` · `[` · `]` · `STATE` · `LITERAL` · `'` · `[']` · `[CHAR]` · `EVALUATE` · `FIND` · `>BODY` · `ABORT` · `ABORT"` · `QUIT`
+
+### I/O and parsing
+
+`EMIT` · `KEY` · `?TERMINAL` · `CR` · `SPACE` · `SPACES` · `TYPE` · `.` · `U.` · `."` · `S"` · `C"` · `ACCEPT` · `CHAR` · `WORD` · `COUNT` · `PAGE` · `MS` · `SOURCE` · `>IN`
+
+### Numeric formatting
+
+`BASE` · `DECIMAL` · `HEX` · `OCTAL` · `BINARY` · `<#` · `#` · `#S` · `#>` · `SIGN` · `HOLD` · `>NUMBER`
+
+`BASE` is a variable address — use `BASE @` and `n BASE !`. `DECIMAL` / `HEX` / `OCTAL` / `BINARY` are shortcuts.
+
+### Bitcoin: transaction building
+
+`tx-new` · `tx-set-fee` · `tx-add-output` · `tx-add-data` · `tx-preview-toggle` · `tx-show` · `tx-clear` · `tx-broadcast`
+
+### Bitcoin: payments
+
+`pay` · `send` · `send-many`
+
+Amounts go on the stack first, recipient string last. `send` to a single address pays that recipient; `send` to a space-separated list of addresses splits the amount equally across them; `send-many` pairs each amount with each address in order.
+
+### Bitcoin: script helpers
+
+`make-p2pkh-script` · `make-opreturn-script` · `make-2of3-multisig` · `script-pushdata`
+
+### Bitcoin: data conversion
+
+`hex2data` · `data2hex` · `.ds` · `>data` · `>addr`
+
+### Bitcoin: script recording
+
+`SCRIPT-BEGIN` · `SCRIPT-END` · `>script` · `data>script` · `text>script` · `file>script`
+
+Save the result with `SCRIPT-SAVE <name>` to add a script to the on-device library.
+
+### Bitcoin Script opcodes
+
+All 140+ Bitcoin Script opcodes are exposed as FORTH words. The standard set includes `OP_DUP`, `OP_HASH160`, `OP_EQUALVERIFY`, `OP_CHECKSIG`, `OP_ADD`, `OP_SUB`, `OP_MUL`, `OP_DIV`, `OP_VERIFY`, and many more. The 2024 Chronicle upgrade restored `OP_SUBSTR`, `OP_LEFT`, `OP_RIGHT`, `OP_LSHIFT`, `OP_RSHIFT`, `OP_INVERT`, and the other opcodes disabled in early Bitcoin Core.
+
+<a id="wallet" />
+
+## Bitcoin Wallet
+
+### Cryptography
+
+The wallet uses [SwiftBSV](https://github.com/henryhudson/SwiftBSV) for every cryptographic operation. [Read the SwiftBSV book](https://github.com/henryhudson/SwiftBSV/blob/main/Documentation/swiftbsv.pdf) for the full SDK reference.
+
+- **BIP-32 / BIP-39 HD key derivation** — standard hierarchical deterministic wallets, restorable from a 12 or 24 word mnemonic phrase.
+- **Type42 (BRC-42) invoice keys** — fresh keys per payment, derived via scalar tweaks. Default for new wallets; pivots away from BIP-44's public address reuse.
+- **ECDSA signing** — every transaction input signed individually with the relevant private key.
+- **BSM** — Bitcoin Signed Messages for arbitrary message signing and verification.
+- **BRC-2 ECIES** — Electrum-style encrypted messages (`BIE1` wire format), wire-compatible with `@bsv/sdk`.
+
+### Transactions
+
+- **UTXO selection** — largest-first by default; switches to a fragmentation-aware policy (raised dust cap, smallest-first phase 2) when a wallet exceeds 100 UTXOs. Normal sends drain dust as a side effect.
+- **Fee estimation** — quotes from ARC policy endpoints, refreshed on launch and cached for 5 minutes.
+- **Broadcasting** — ARC (Authority for Replicating Chains) via GorillaPool with TAAL as failover. Sole submission path; legacy mAPI removed.
+- **Multi-output sends** — `send-many` accepts N (amount, address) pairs and builds one transaction with N outputs at constant input cost. Atomic: all eight payments either confirm or none do.
+
+### SPV verification
+
+- **Hardcoded checkpoint** — `SPVCheckpoint.mainnet` is the trust anchor. The only header trusted without chain-linkage.
+- **Local header store** — chain-linked from the checkpoint forward, auto-synced via a WebSocket history stream on every launch.
+- **Bounded verification** — Merkle proofs verified only against headers within the chain-validated range. No silent network fallback for missing headers — a gap surfaces as `⏳ SPV PENDING`, not as a verification pass.
+- **Air-gap bundles** — `.hfheaders`, `.hfreceipt`, `.hfaddrpack` files exchange headers, transaction proofs, and watch-only addresses between offline signer and online watcher devices over AirDrop.
+
+### Security
+
+- **iOS Keychain** — private keys and seed phrases stored in the device's secure enclave.
+- **AES-256-GCM** — wallet files encrypted, keys derived from Keychain-stored material.
+- **Biometric auth** — Face ID / Touch ID gates every send. A 120-second approval cache scopes to surface + amount + recipient digest so authentication isn't re-prompted within a single intentional batch.
+- **Pre-signing verification** — every outgoing transaction surface (PayView, MultiPaySheet, BRC-100 review) shows the recipient set, total, and fee before Face ID fires. The user approves the *bytes*, not the *intent*.
+
+### BRC-100 wallet interface
+
+Henceforth implements the BRC-100 wallet interface for dApp integration:
+
+- **URL scheme** — `henceforth://wallet/{method}` with approval sheet + Face ID for sensitive operations.
+- **`createAction` / `signAction`** — two-phase transaction flow with idempotent fast-path (returns cached txid without re-prompting biometric).
+- **`abortAction`** — paired cancellation by reference UUID.
+- **Output baskets, certificates (BRC-52 / BRC-53)** — structured storage backed by Keychain.
+
+<a id="credits" />
+
+## Credits
+
+### Starting Forth — Leo Brodie
+
+Leo Brodie, author of *Starting Forth* — a great textbook, suitable for both novices and professionals.
+
+[Starting FORTH (PDF)](https://1scyem2bunjw1ghzsf1cjwwn-wpengine.netdna-ssl.com/wp-content/uploads/2018/01/Starting-FORTH.pdf)
+
+### BITSRFR
+
+Fellow surfer of the binary ocean who has made FORTH tutorials and is building a Swift command line FORTH application.
+
+[YouTube](https://www.youtube.com/user/JoeKreydt) · [cruxFORTH on GitHub](https://github.com/josephkreydt/cruxForth)
+
+### Bitcoin
+
+The greatest monetary system ever created. Invented by Satoshi Nakamoto — please read the white paper.
+
+[Bitcoin White Paper](https://craigwright.net/bitcoin-white-paper.pdf)
+
+### SwiftBSV
+
+The Swift SDK that powers every cryptographic operation in the Henceforth wallet — BIP-32 / BIP-39 key derivation, Type42 (BRC-42) invoice keys, ECDSA signing, BSM, ECIES (BIE1 wire format), Script construction, the full BSV opcode set, transaction building, and SPV verification. Originally written by Will Townsend at [wtsnz/SwiftBSV](https://github.com/wtsnz/SwiftBSV); the fork at [henryhudson/SwiftBSV](https://github.com/henryhudson/SwiftBSV) continues that foundation with Swift 6 strict concurrency, modern Apple platform targets, and a 41-page LaTeX book of its own.
+
+[SwiftBSV Book (PDF)](https://github.com/henryhudson/SwiftBSV/blob/main/Documentation/swiftbsv.pdf)

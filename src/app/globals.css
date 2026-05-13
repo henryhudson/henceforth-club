@@ -9,6 +9,8 @@
   --accent-warm-glow: rgba(251, 191, 36, 0.12);
   --accent-green: #3da87a;
   --accent-green-glow: rgba(61, 168, 122, 0.12);
+  --accent-orange: #e8731e;
+  --accent-orange-glow: rgba(232, 115, 30, 0.15);
   --card-bg: #0d1117;
   --card-border: #1e2530;
   --card-border-hover: #2d3748;
@@ -27,6 +29,8 @@
   --color-accent-warm-glow: var(--accent-warm-glow);
   --color-accent-green: var(--accent-green);
   --color-accent-green-glow: var(--accent-green-glow);
+  --color-accent-orange: var(--accent-orange);
+  --color-accent-orange-glow: var(--accent-orange-glow);
   --color-card-bg: var(--card-bg);
   --color-card-border: var(--card-border);
   --color-card-border-hover: var(--card-border-hover);
@@ -39,6 +43,14 @@
 }
 
 /* ── Base ─────────────────────────────────────── */
+
+html {
+  scroll-behavior: smooth;
+  /* Offset anchor scroll so jumps to #section don't collide with the
+     sticky navbar (~64px) — without this, the section heading lands
+     under the nav. */
+  scroll-padding-top: 80px;
+}
 
 body {
   background: var(--background);

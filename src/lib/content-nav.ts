@@ -15,20 +15,14 @@ export const CONTENT_SECTIONS: NavItem[] = [
   { href: "/learn", label: "Learn" },
 ];
 
+// The docs live on a single page (/docs) with anchor sections. Sub-pills
+// in <SectionNav> link to those anchors. Old per-chapter URLs (/docs/about,
+// /docs/goals, /docs/credits) still resolve but aren't navigated to from
+// any active nav.
 export const DOCS_CHAPTERS: NavItem[] = [
-  {
-    href: "/docs/about",
-    label: "About",
-    blurb: "Links to source code and support channels.",
-  },
-  {
-    href: "/docs/goals",
-    label: "Goals",
-    blurb: "What Henceforth has achieved and what's coming next.",
-  },
-  {
-    href: "/docs/credits",
-    label: "Credits",
-    blurb: "The people, books, and codebases that make Henceforth possible.",
-  },
+  { href: "/docs#about", label: "About" },
+  { href: "/docs#goals", label: "Goals" },
+  { href: "/docs#reference", label: "Reference" },
+  { href: "/docs#wallet", label: "Wallet" },
+  { href: "/docs#credits", label: "Credits" },
 ];
