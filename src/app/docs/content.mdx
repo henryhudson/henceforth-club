@@ -45,98 +45,760 @@ Provide a simple interface for the FORTH programming language, making it easy fo
 
 ## Reference
 
-Henceforth's vocabulary is organised by category. **133 / 133** Forth-2012 CORE words are implemented, plus an extension set covering Bitcoin operations, wallet management, and script recording. Bitcoin Script opcodes are exposed as **140+** additional FORTH words.
+Everything in FORTH is a **word** separated by spaces. That's all there is to the syntax. It's so simple.
 
-### Stack manipulation
+> **FORTH is LIFO** — FORTH is a stack-based programming language which operates on a *Last In, First Out* principle.
 
-`DUP` · `DROP` · `SWAP` · `OVER` · `ROT` · `-ROT` · `NIP` · `TUCK` · `2DUP` · `2DROP` · `2SWAP` · `2OVER` · `?DUP` · `PICK` · `ROLL` · `DEPTH`
+Ideally we give the user just enough to make use of FORTH and through FORTH some of Swift's functionality such as networking requests, the timer built into Swift, etc. But not so much as to be relied upon — user creation of words should be encouraged.
 
-### Arithmetic
+### Compile Words
 
-`+` · `-` · `*` · `/` · `MOD` · `/MOD` · `*/` · `*/MOD` · `1+` · `1-` · `2+` · `2-` · `2*` · `2/` · `ABS` · `NEGATE` · `MIN` · `MAX` · `S>D` · `M*` · `UM*` · `FM/MOD` · `SM/REM` · `UM/MOD`
+One of the great things about FORTH is its ability to extend the compiler during run time.
 
-### Comparison
+```
+:           puts the user into compile mode where they can
+            start to define their own word.
+;           exits compile mode so that word interpretation
+            can again occur.
+recurse     calls the word being executed.
+exit        exits the current word.
+immediate   marks the most recently defined word as immediate,
+            causing it to execute during compilation rather
+            than being compiled.
+postpone    forces compilation of the next word, even if it
+            is marked IMMEDIATE.
+value       (x --)  Creates a named value that can be read by
+            name and changed with TO.  Usage: 42 value myval
+to          (x --)  Change the value of a word created with
+            VALUE.  Usage: 99 to myval
+does>       ( -- )  Defines the runtime behaviour of a CREATE'd
+            word. Everything after DOES> runs when the created
+            word is executed, with the data-field address on
+            the stack.
+include     ( -- )  Loads and runs a FORTH file.
+            Usage: include maths.fs
+```
 
-`=` · `<>` · `<` · `>` · `<=` · `>=` · `0=` · `0<>` · `0<` · `0>` · `U<` · `U>` · `WITHIN`
+### Meta Programming
 
-Comparison operators return `-1` (true) per Forth-2012 — *not* the Bitcoin Script convention of `1`. The corresponding Bitcoin Script opcodes (`OP_EQUAL` and friends) follow Script consensus rules instead.
+```
+'        ( -- xt)  Gets the execution token of the named word.
+[']      ( -- xt)  Compile-time version of ' (tick).
+execute  (i*x xt -- j*x)  Executes the word whose execution
+         token is on the stack.
+literal  Compile: (x -- )  Run-time: ( -- x)  At compile time
+         compiles a numeric literal into the current definition;
+         at run time pushes that literal onto the stack.
+state    ( -- addr)  Returns the address of the STATE variable.
+         0 = interpreting, -1 = compiling.
+[        (--)  Switches from compilation mode to interpretation.
+]        (--)  Switches from interpretation mode to compilation.
+evaluate (c-addr u --)  Interprets the string as if typed at
+         the terminal.
+find     (c-addr -- c-addr 0 | xt 1 | xt -1)  Searches the
+         dictionary for the counted string.
+>body    (xt -- a-addr)  Returns the data-field address of a
+         CREATE'd word.
+>in      ( -- a-addr)  Returns the address of the input parse
+         position variable.
+>number  (ud1 c-addr1 u1 -- ud2 c-addr2 u2)  Converts characters
+         to a number using the current BASE.
+```
 
-### Logic
+### Arithmetic Operators
 
-`AND` · `OR` · `XOR` · `NOT` · `INVERT` · `LSHIFT` · `RSHIFT` · `TRUE` · `FALSE`
+Arithmetic is done using reverse Polish notation, so the numbers are required on the stack before the arithmetic operator can be used.
 
-`TRUE` is `-1` (all bits set), `FALSE` is `0`. Non-zero values are truthy in `IF` / `AND` / `OR`.
+```
++        (n1 n2 -- sum)         Sum of the top two items.
+-        (n1 n2 -- difference)  Difference.
+*        (n1 n2 -- product)     Product.
+/        (n1 n2 -- quotient)    Quotient.
+*/       (n1 n2 n3 -- result)   (n1*n2)/n3.
+mod      (n1 n2 -- modulus)     Remainder.
+/mod     (n1 n2 -- mod quot)    Modulus and quotient together.
+abs      (n -- |n|)             Absolute value.
+negate   (n -- -n)              Sign flipped.
+max      (n1 n2 -- max)         Largest of two.
+min      (n1 n2 -- min)         Smallest of two.
+1+       (n -- n+1)             Increment.
+1-       (n -- n-1)             Decrement.
+2+       (n -- n+2)             Henceforth extension.
+2-       (n -- n-2)             Henceforth extension.
+2*       (n -- n*2)             Double.
+2/       (n -- n/2)             Halve.
+sumStack (n1 ... n -- sum)      Sum entire stack (Henceforth).
+*/mod    (n1 n2 n3 -- rem quot) Multiply-divide with remainder.
+```
 
-### Memory
+### Double-Cell Arithmetic
 
-`@` · `!` · `+!` · `C@` · `C!` · `,` · `C,` · `ALLOT` · `ALIGN` · `ALIGNED` · `CHAR+` · `CHARS` · `CELLS` · `VARIABLE` · `CONSTANT` · `CREATE` · `DOES>` · `ALLOCATE` · `FREE` · `RESIZE`
+Double-cell words operate on 64-bit values represented as two stack items (high cell on top). Required by the Forth-2012 CORE standard for intermediate precision.
 
-### Control flow
+```
+s>d      (n -- d)        Sign-extends single-cell to double-cell.
+m*       (n1 n2 -- d)    Signed multiply, double-cell result.
+um*      (u1 u2 -- ud)   Unsigned multiply, double-cell result.
+fm/mod   (d n1 -- n2 n3) Floored division; quotient rounds toward
+                         negative infinity.
+sm/rem   (d n1 -- n2 n3) Symmetric division; quotient rounds toward
+                         zero.
+um/mod   (ud u1 -- u2 u3) Unsigned division.
+```
 
-`IF` · `ELSE` · `THEN` · `DO` · `?DO` · `LOOP` · `+LOOP` · `LEAVE` · `I` · `J` · `BEGIN` · `WHILE` · `REPEAT` · `UNTIL` · `AGAIN` · `EXIT` · `RECURSE` · `CASE` · `OF` · `ENDOF` · `ENDCASE`
+### Numeric Output
 
-### Compilation and meta-programming
+```
+<#       (--)             Begin pictured numeric output.
+#        (ud1 -- ud2)     Convert one digit.
+#s       (ud -- 0 0)      Convert all remaining digits.
+#>       (xd -- c-addr u) End pictured conversion.
+hold     (char --)        Add a character to the output buffer.
+sign     (n --)           Add minus sign if negative.
+.r       (n1 n2 --)       Right-aligned in field of n2 chars.
+u.       (u --)           Unsigned number + space.
+u.r      (u n --)         Unsigned right-aligned.
+```
 
-`:` · `;` · `IMMEDIATE` · `POSTPONE` · `[` · `]` · `STATE` · `LITERAL` · `'` · `[']` · `[CHAR]` · `EVALUATE` · `FIND` · `>BODY` · `ABORT` · `ABORT"` · `QUIT`
+### Comparison Operators
 
-### I/O and parsing
+> `f` is a flag or bool `[true | false]`. Per Forth-2012, `TRUE` is `-1` (all bits set) and `FALSE` is `0`. Any non-zero value is considered true by `IF`, `AND`, `OR`, and other conditional words.
 
-`EMIT` · `KEY` · `?TERMINAL` · `CR` · `SPACE` · `SPACES` · `TYPE` · `.` · `U.` · `."` · `S"` · `C"` · `ACCEPT` · `CHAR` · `WORD` · `COUNT` · `PAGE` · `MS` · `SOURCE` · `>IN`
+```
+=    (n1 n2 -- f)   Equal.
+<>   (n1 n2 -- f)   Not equal.
+<    (n1 n2 -- f)   n1 less than n2.
+>    (n1 n2 -- f)   n1 greater than n2.
+&&   (n1 n2 -- f)   Logical AND (Henceforth ext). -1 if both
+                    non-zero.
+||   (n1 n2 -- f)   Logical OR (Henceforth ext). -1 if either
+                    non-zero.
+0=   (n -- f)       True if zero.
+0<   (n -- f)       True if negative.
+0>   (n -- f)       True if positive.
+u<   (u1 u2 -- f)   Unsigned comparison.
+```
 
-### Numeric formatting
+### Bitwise Operators
 
-`BASE` · `DECIMAL` · `HEX` · `OCTAL` · `BINARY` · `<#` · `#` · `#S` · `#>` · `SIGN` · `HOLD` · `>NUMBER`
+```
+and     (x1 x2 -- x3)  Bitwise AND.
+or      (x1 x2 -- x3)  Bitwise OR.
+xor    (x1 x2 -- x3)  Bitwise XOR.
+invert  (n -- ~n)      Flips every bit.
+rshift  (n1 n2 -- n3)  Right shift.
+lshift  (n1 n2 -- n3)  Left shift.
+```
 
-`BASE` is a variable address — use `BASE @` and `n BASE !`. `DECIMAL` / `HEX` / `OCTAL` / `BINARY` are shortcuts.
+### Stack Operators
 
-### Bitcoin: transaction building
+```
+.s            ( -- )                Display the stack.
+.             (n -- )               Pop and print.
+dup           (n -- n n)            Duplicate top.
+?dup          (n -- 0 | n n)        Duplicate if non-zero.
+nip           (n1 n2 -- n2)         Drop second.
+swap          (n1 n2 -- n2 n1)      Swap top two.
+drop          (n -- )               Discard top.
+2dup          (n1 n2 -- n1 n2 n1 n2)  Duplicate top two.
+over          (n1 n2 -- n1 n2 n1)   Copy second on top.
+pick          (xu...x0 u -- xu...x0 xu)  Copy u-th item to top.
+rot           (n1 n2 n3 -- n2 n3 n1)  Rotate top three left.
+-rot          (n1 n2 n3 -- n3 n1 n2)  Rotate top three right.
+tuck          (n1 n2 -- n2 n1 n2)   Copy top under second.
+2drop         (n1 n2 -- )           Drop top two.
+2swap         (n1 n2 n3 n4 -- n3 n4 n1 n2)  Swap pairs.
+2over         (n1 n2 n3 n4 -- n1 n2 n3 n4 n1 n2)  Copy pair over.
+reverseStack  (n1 n2 ... nlast -- nlast ... n2 n1)  Henceforth ext.
+depth         ( -- n)               Number of items on stack.
+roll          (xu xu-1 ... x0 u -- xu-1 ... x0 xu)  Rotate u+1.
+stackCount    ( -- n)               Henceforth alias for depth.
+```
 
-`tx-new` · `tx-set-fee` · `tx-add-output` · `tx-add-data` · `tx-preview-toggle` · `tx-show` · `tx-clear` · `tx-broadcast`
+### Return Stack Operators
 
-### Bitcoin: payments
+```
+>r   (x -- )  ( R: -- x)   Move to return stack.
+r>   ( -- x)  ( R: x -- )  Move from return stack.
+r@   ( -- x)  ( R: x -- x) Copy from return stack.
+i    ( -- x)               Innermost DO LOOP's index.
+i'   ( -- x)               Next-outer loop's index.
+j    ( -- x)               Next-outer loop's index (same as i').
+nth  (u -- x)              u-th item from return stack
+                           (Henceforth ext).
+```
 
-`pay` · `send` · `send-many`
+### Decision Operators
 
-Amounts go on the stack first, recipient string last. `send` to a single address pays that recipient; `send` to a space-separated list of addresses splits the amount equally across them; `send-many` pairs each amount with each address in order.
+```
+if      (x -- )                If non-zero, execute up to ELSE/THEN.
+else    ( -- )                 Optional false branch.
+then    ( -- )                 End of IF...THEN.
+not     (x -- f)               Synonym for 0=.
+within  (n1 n2 n3 -- f)        True if n2 is between n1 and n3.
+true    ( -- -1)               Push true flag.
+false   ( -- 0)                Push false flag.
+case    ( -- )                 Begin CASE...OF...ENDOF...ENDCASE.
+of      (x1 x2 -- | x1)        Compare; if equal, drop both and run.
+endof   ( -- )                 End of OF clause; branch to ENDCASE.
+endcase (x -- )                End CASE statement.
+catch   (i*x xt -- j*x 0 | i*x n)  Protected execute. 0 on success;
+                                   n on THROW.
+throw   (k*x n -- k*x | i*x n)     Unwind to nearest CATCH if n≠0.
+```
 
-### Bitcoin: script helpers
+### Loop Operators
 
-`make-p2pkh-script` · `make-opreturn-script` · `make-2of3-multisig` · `script-pushdata`
+```
+do     (n1 n2 --)   Repeats from n2 to n1.
+loop   ( -- )       End loop.
++loop  (n1 -- )     Loop in n1 increments.
+every  (n1 -- )     Run following word every n1 seconds (ext).
+stop   ( -- )       Stop the EVERY loop.
+begin  ( -- )       Marks start of BEGIN...UNTIL/REPEAT.
+while  (x -- )      Tests condition within BEGIN...REPEAT.
+repeat ( -- )       End of BEGIN...WHILE...REPEAT; jump back.
+until  (x -- )      If zero, jump back to BEGIN.
+leave  ( -- )       Exit current DO LOOP immediately.
+unloop ( -- )       Discard loop control parameters.
+?do    (n1 n2 --)   Like DO but skips if start == end.
+again  ( -- )       Unconditional branch back to BEGIN.
+```
 
-### Bitcoin: data conversion
+### Base Operations
 
-`hex2data` · `data2hex` · `.ds` · `>data` · `>addr`
+Henceforth accepts integers as binary, octal, decimal and hexadecimal. Just change the base.
 
-### Bitcoin: script recording
+```
+base      ( -- addr)  Address of BASE variable. Read with BASE @
+                      and write with n BASE !. Bases 2 through 36.
+decimal   (--)        Set BASE to 10.
+binary    (--)        Set BASE to 2 (Henceforth ext).
+octal     (--)        Set BASE to 8 (Henceforth ext).
+hex       (--)        Set BASE to 16.
+```
 
-`SCRIPT-BEGIN` · `SCRIPT-END` · `>script` · `data>script` · `text>script` · `file>script`
+### Pop-up Operations
 
-Save the result with `SCRIPT-SAVE <name>` to add a script to the on-device library.
+```
+lineChart    (--)   Display a line chart of the stack.
+barChart     (--)   Display a bar chart of the stack.
+pieChart     (--)   Display a pie chart, slices proportional
+                    to each value's weight in the sum.
+```
 
-### Bitcoin Script opcodes
+### Constants and Variables
 
-All 140+ Bitcoin Script opcodes are exposed as FORTH words. The standard set includes `OP_DUP`, `OP_HASH160`, `OP_EQUALVERIFY`, `OP_CHECKSIG`, `OP_ADD`, `OP_SUB`, `OP_MUL`, `OP_DIV`, `OP_VERIFY`, and many more. The 2024 Chronicle upgrade restored `OP_SUBSTR`, `OP_LEFT`, `OP_RIGHT`, `OP_LSHIFT`, `OP_RSHIFT`, `OP_INVERT`, and the other opcodes disabled in early Bitcoin Core.
+```
+constant (n --)   Create a constant from the value and the name.
+variable (--)     Create a variable, initially zero.
+!        (n addr --)         Store value at address.
+@        (addr -- n)         Fetch value at address.
+?        (addr --)           Print value at address.
+c!       (char addr --)      Store one character.
+c@       (addr -- char)      Fetch one character.
+create   (--)                Create an array.
+,        (n --)              Append value to the latest array.
+allot    (n --)              Allocate n cells.
+here     ( -- addr)          Next available data space address.
+cells    (n1 -- n2)          Convert count to address offset.
+cell+    (addr1 -- addr2)    Advance address by one cell.
++!       (n addr --)         Add n to value at address.
+count    (c-addr1 -- c-addr2 u)  Counted string → addr + length.
+bl       ( -- char)          ASCII space (32).
+2@       (addr -- x1 x2)     Fetch two consecutive cells.
+2!       (x1 x2 addr --)     Store two consecutive cells.
+fill     (addr u char --)    Fill u bytes with character.
+move     (addr1 addr2 u --)  Copy u address units.
+erase    (addr u --)         Fill u address units with zeros.
+allocate (u -- a-addr ior)   Allocate u cells. ior 0 on success.
+free     (a-addr -- ior)     Free previously allocated memory.
+resize   (a-addr u -- a-addr2 ior)  Resize allocation.
+c,       (char --)           Reserve and store one character.
+char+    (c-addr1 -- c-addr2)  Advance by one character.
+chars    (n1 -- n2)          Size in address units of n chars.
+align    ( -- )              Align data-space pointer.
+aligned  (addr -- a-addr)    First aligned addr >= addr.
+```
+
+### Terminal Operators
+
+```
+cr           (--)              Newline.
+space        (--)              Single space.
+spaces       (n --)            n spaces.
+emit         (n --)            Emit ASCII code.
+(            (--)              Start inline comment.
+)            (--)              End inline comment.
+\            (--)              Line comment (ignored to EOL).
+.s           (--)              Show stack.
+.rs          (--)              Show return stack (Henceforth ext).
+clear        (i*x --)          Empty data + return stacks + screen.
+bye          (--)              Clear everything; defaults.
+."           (--)              Start printing.
+"            (--)              End printing.
+s"           ( -- addr u)      String literal → addr + length.
+type         (addr u --)       Display string.
+page         (--)              Clear terminal screen.
+ms           (u --)            Wait u milliseconds (FACILITY 10.6).
+char         ( -- char)        Parse next word; ASCII of first char.
+[char]       ( -- n)           Compile-time CHAR.
+word         (char -- c-addr)  Parse until delimiter; counted str.
+parse        (char -- c-addr u)  Parse until delimiter; addr + len.
+key          ( -- n)           Block for keypress; push ASCII.
+?terminal    ( -- flag)        -1 if input buffered / interrupt
+                               requested. Forth-2012 name: ekey?.
+accept       (c-addr n1 -- n2) Read up to n1 chars; return n2 read.
+sessionInput (--)              Display session input.
+dictionary   (--)              User-defined words.
+vlist        (--)              All built-in words. Same as `words`.
+forth        (--)              Reset vocabulary to built-ins.
+c"           ( -- c-addr)      Counted string literal.
+abort        (--)              Clear all stacks; reset interpreter.
+abort"       (flag --)         If flag, display message and abort.
+quit         (--)              Clear return stack; enter interpret.
+source       ( -- c-addr u)    Current input buffer.
+environment? (c-addr u -- false | i*x true)  Query environment.
+```
+
+### Other Words
+
+```
+date&time   ( -- s m h d M y)  Push device time to stack.
+pay         (--)               Present pay sheet.
+.fs                            Load file's contents into Henceforth.
+startup.fs                     Auto-loaded on launch; put your custom
+                               definitions, aliases, and INCLUDE
+                               calls here.
+```
+
+### Data Conversion
+
+Henceforth has two stacks: the integer stack (main) and the data stack (for raw bytes, used by Bitcoin Script operations). These words bridge between them.
+
+```
+hex2data    Convert following hex string to bytes; push to data stack.
+            Usage: hex2data 48656c6c6f
+data2hex    Pop top of data stack; display as hex.
+.ds         Display contents of data stack.
+>data       Convert following token to raw bytes; push to data stack.
+>addr       (n --) Mark top integer as a Bitcoin address string.
+```
+
+### String Operations
+
+```
+cmove    (c-addr1 c-addr2 u --)  Copy u chars low-to-high.
+cmove>   (c-addr1 c-addr2 u --)  Copy u chars high-to-low.
+/string  (c-addr1 u1 n -- c-addr2 u2)  Adjust string by n chars.
+search   (c-addr1 u1 c-addr2 u2 -- c-addr3 u3 flag)  Find substring.
+blank    (c-addr u --)           Fill with BL (ASCII 32).
+```
+
+### Networking Operations
+
+```
+wocbitcoinprice         ( -- n)  BSV price in USD pennies.
+woccirculatingsupply    (--)     Print circulating supply.
+wocblockchaininfo       (--)     Print latest block info.
+wocaddressinfo          (--)     Print address details.
+wocgetbalance           (--)     Print address balance.
+wocgethistory           (--)     Print address history.
+wocgetblockbyheight     (n --)   Print block info at height.
+```
+
+### Transaction Builder
+
+The transaction builder words allow programmatic construction of Bitcoin transactions directly from the FORTH terminal. Build a transaction step by step, then broadcast it.
+
+```
+tx-new           ( -- )  Initialise a new transaction builder.
+tx-set-fee       (n -- ) Set fee rate in satoshis per kilobyte.
+                         Usage: 500 tx-set-fee
+tx-add-output    (n -- ) Add P2PKH output; expects amount on
+                         stack and address as next word.
+                         Usage: 1000 tx-add-output 1A1zP1...
+tx-add-data      ( -- )  Add OP_RETURN data output.
+tx-preview-toggle ( -- ) Toggle preview mode. When ON,
+                         TX-BROADCAST shows without sending.
+tx-show          ( -- )  Display current transaction.
+tx-clear         ( -- )  Clear builder.
+tx-broadcast     ( -- )  Build, sign, broadcast via ARC.
+
+send             ( amount c-addr u -- )
+                 Standard payment in a single word. Validates,
+                 then presents PayView with the amount + address
+                 pre-filled. The user long-presses to confirm;
+                 Face ID gates the actual broadcast via ARC.
+                 Terminal output on success: "sent TXID: <id>".
+                 Usage: 1000 s" 1A1zP1..." send
+
+send-many        ( amount1 ... amountN c-addr u -- )
+                 Multi-recipient payment with per-recipient
+                 amounts. Pops the address string first to
+                 derive N, then pops N amounts. Presents
+                 MultiPaySheet for review before Face ID.
+                 Atomic: any validation failure rejects the
+                 whole transaction.
+                 Usage: 1000 5000 250 s" 1A 1B 1C" send-many
+```
+
+> **Standard payment example.** Single recipient:
+> ```
+> 1000 s" 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa" send
+> ```
+> Multiple recipients, equal-split, 2500 sats each:
+> ```
+> 5000 s" 1A1zP1... 1BvBMS..." send
+> ```
+
+> **Multi-recipient with per-recipient amounts.** When recipients should receive *different* amounts, use `send-many`. The recipient count is derived from the address string (single count source of truth) and the function pops exactly that many amounts.
+>
+> Reading rule for both `send` and `send-many`: amounts come first, the recipient string comes last. This places the address string at the top of the stack so `send-many` can read it first and infer N before consuming the amount block — no explicit count parameter is needed.
+
+#### Standard Transaction Script
+
+Every installation includes a `standard-transaction.fs` file in the Files tab. This is a Bitcoin Script file that defines the OP_RETURN output attached to your payments. It is automatically loaded each time you open the Pay view.
+
+```
+( Standard Transaction Script )
+
+SCRIPT-BEGIN
+OP_FALSE OP_RETURN
+." Hello, you are welcome." >data data>script
+SCRIPT-END
+```
+
+`SCRIPT-BEGIN` activates script recording; `OP_FALSE OP_RETURN` emits the opcodes for a data-carrying output; `."` places the message on terminal output; `>data` converts it to raw bytes on the data stack; `data>script` emits those bytes as PUSHDATA into the script buffer; `SCRIPT-END` finalises.
+
+### Bitcoin Cryptography
+
+```
+sign-msg     ( -- )      Sign a message with current wallet key (BSM).
+                         Usage: sign-msg <message>
+verify-msg   ( -- flag)  Verify a BSM signature against an address.
+                         Usage: verify-msg <addr> <sig> <message>
+encrypt-msg  ( -- )      Encrypt for a recipient using BRC-2 Electrum
+                         ECIES (ECDH + AES-CBC + HMAC-SHA256).
+                         Wire-compatible with @bsv/sdk.
+                         Usage: encrypt-msg <pubKeyHex> <message>
+decrypt-msg  ( -- )      Decrypt a BRC-2 ECIES ciphertext.
+                         Usage: decrypt-msg <ciphertextHex>
+```
+
+### BAP Identity
+
+BAP (Bitcoin Attestation Protocol) provides a decentralised identity system built on Bitcoin. Identity keys are derived using Type42 (BRC-42) key derivation from the wallet's master key.
+
+```
+bap-id       ( -- )      Show the BAP identity key + signing address.
+bap-sign     ( -- )      Sign with BAP identity key.
+                         Usage: bap-sign <message>
+bap-verify   ( -- flag)  Verify a BAP-signed message.
+                         Usage: bap-verify <addr> <sig> <message>
+bap-register ( -- )      Build a BAP ID registration tx (OP_RETURN
+                         with BAP + AIP attestation).
+```
+
+> **AIP signatures are over raw message bytes, not hex.** `bap-sign` and the AIP attestation inside `bap-register` apply the Bitcoin Signed Message wire format directly to raw payload bytes. Signatures produced by current builds verify against any BAP / AIP implementation that follows the standard (including `@bsv/sdk`).
+
+### Script Recording
+
+Script recording is a macro assembler for Bitcoin Script. When recording is active, `op_*` words emit their opcodes into a script buffer rather than executing. Standard FORTH control flow still runs normally.
+
+```
+script-begin   Start recording. op_* words emit opcodes to the
+               script buffer. FORTH control flow still runs.
+script-end     Stop and finalise; displays compiled script hex.
+script-show    Display the current buffer as hex.
+script-clear   Discard buffer; stop recording.
+script-use     Set recorded script as the selected transaction
+               script (for building transactions).
+script-save    Save current script with a name.
+               Usage: script-save <name>
+script-load    Load a saved script by name.
+               Usage: script-load <name>
+script-list    List all saved scripts.
+```
+
+> **Raw bytes require a `0x` prefix during recording.** A bare hex-looking token like `ff` is parsed according to current `BASE` and pushed to the integer stack. To emit raw opcode bytes, use an explicit `0x`-prefixed literal (e.g. `0xdeadbeef`).
+
+### Script Bridge Words
+
+The bridge words connect FORTH's stacks to the script recording buffer, enabling dynamic script construction with computed values, strings, and file data.
+
+```
+>script       (n -- )  Emit integer as a Bitcoin Script number.
+data>script   ( -- )   Emit top of data stack as PUSHDATA. Use
+                       after crypto ops to inject computed hashes.
+text>script   ( -- )   Convert following token to UTF-8 bytes and
+                       emit as PUSHDATA.
+                       Usage: text>script image/jpeg
+file>script   ( -- )   Read a file's raw contents and emit as
+                       PUSHDATA. For uploading images, videos, or
+                       data on-chain.
+                       Usage: file>script photo.jpg
+```
+
+### Script Helper Words
+
+Pre-built script templates for common Bitcoin transaction patterns.
+
+```
+make-p2pkh-script     Create a P2PKH locking script from an address.
+make-opreturn-script  Create OP_RETURN output script from data.
+make-2of3-multisig    Create 2-of-3 multisig script from three pubkeys.
+script-pushdata       Push raw bytes via OP_PUSHDATA.
+```
+
+> **Example: upload an image to the blockchain via the B:// protocol.**
+> ```
+> script-begin
+>   op_false op_return
+>   text>script 19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut
+>   file>script photo.jpg
+>   text>script image/jpeg
+>   text>script binary
+>   text>script my_photo
+> script-end
+> script-use
+> pay
+> ```
+
+> **Example: build a hash-locked script with a computed HASH160.**
+> ```
+> script-begin
+>   op_dup op_hash160
+>   " secret" op_sha256 op_hash160
+>   data>script
+>   op_equalverify op_checksig
+> script-end
+> ```
+
+### OPCodes
+
+#### Push data
+
+```
+op_0 ... op_16            Push the corresponding integer 0..16.
+op_false                  Push zero (false flag).
+op_pushdata1              Next byte = number of bytes to push.
+op_pushdata2              Next two bytes = number of bytes to push.
+op_pushdata4              Next four bytes = number of bytes to push.
+op_1negate                Push -1.
+```
+
+#### Control flow
+
+```
+op_nop                    Does nothing.
+op_ver        ( -- ver)   Push transaction version (1 legacy, 2
+                          Chronicle post-block-943,816).
+op_if         (f -- )     Conditional execute.
+op_notif      (f -- )     Inverted conditional.
+op_verif      ( th -- f)  True if tx version >= threshold (Chronicle).
+op_vernotif   ( th -- f)  True if tx version < threshold (Chronicle).
+op_else                   Else branch.
+op_endif                  End if/else.
+op_verify     (f -- )     Mark transaction invalid if flag is false.
+op_return                 End script; OP_RETURN output.
+```
+
+#### Stack operators
+
+```
+op_toaltstack    (n -- )                Move to alt stack.
+op_fromaltstack  ( -- n)                Move from alt stack.
+op_2drop, op_2dup, op_3dup, op_2over,
+op_2rot, op_2swap, op_ifdup, op_depth,
+op_drop, op_dup, op_nip, op_over,
+op_pick, op_roll, op_rot, op_swap,
+op_tuck                                 Standard Script stack ops.
+```
+
+#### Size & separator
+
+```
+op_size           (x -- x n)   Push byte length of top without
+                               consuming it.
+op_codeseparator               Marks beginning of signature-checked
+                               data.
+op_true           ( -- 1)      Alias for OP_1.
+```
+
+#### Splice operators (Chronicle restored)
+
+```
+op_cat      Concatenate two strings.
+op_split    (n n1 --)  Split byte sequence n at n1.
+op_num2bin  Convert value to a fixed-length byte sequence.
+op_bin2num  Convert byte sequence to numerical value.
+op_substr   (start length --)  Extract substring (0xb3, Chronicle).
+op_left     (n --)             Leftmost N bytes (0xb4, Chronicle).
+op_right    (n --)             Rightmost N bytes (0xb5, Chronicle).
+```
+
+#### Bitwise
+
+```
+op_invert       Flip all bits.
+op_and, op_or, op_xor              Logical AND / OR / XOR.
+op_equal, op_equalverify           Equality + VERIFY shortcut.
+op_reserved1, op_reserved2         Invalid unless in unexecuted OP_IF.
+```
+
+#### Arithmetic
+
+```
+op_1add, op_1sub, op_2mul, op_2div,
+op_negate, op_abs, op_not, op_0notequal,
+op_add, op_sub, op_mul, op_div, op_mod,
+op_lshift, op_rshift,
+op_lshiftnum, op_rshiftnum   (Chronicle: 0xb6, 0xb7 — sign-preserving
+                              numeric shifts, distinct from byte-level
+                              op_lshift / op_rshift)
+op_booland, op_boolor,
+op_numequal, op_numequalverify, op_numnotequal,
+op_lessthan, op_greaterthan,
+op_lessthanorequal, op_greaterthanorequal,
+op_min, op_max, op_within
+```
+
+#### Cryptographic
+
+```
+op_ripemd160, op_sha1, op_sha256, op_hash160, op_hash256,
+op_checksig, op_checksigverify,
+op_checkmultisig, op_checkmultisigverify
+```
+
+#### Locktime, reserved, invalid
+
+```
+op_nop2, op_nop3, op_pubkeyhash, op_pubkey, op_invalidopcode
+op_nop1, op_nop4, op_nop5, op_nop6, op_nop9, op_nop10
+```
+
+> **Chronicle upgrade (block 943,816).** NOP4–8 (0xb3–0xb7) were repurposed as `op_substr`, `op_left`, `op_right`, `op_lshiftnum`, and `op_rshiftnum`. The transaction version (`op_ver`) auto-switches from 1 to 2 at the activation block.
 
 <a id="wallet" />
 
 ## Bitcoin Wallet
 
-### Cryptography
+Henceforth includes a full Bitcoin SV (BSV) wallet, enabling users to create wallets, receive and send transactions, and interact with the blockchain — all from the same app that runs FORTH programs.
 
-The wallet uses [SwiftBSV](https://github.com/henryhudson/SwiftBSV) for every cryptographic operation. [Read the SwiftBSV book](https://github.com/henryhudson/SwiftBSV/blob/main/Documentation/swiftbsv.pdf) for the full SDK reference.
+### Wallet Architecture
 
-- **BIP-32 / BIP-39 HD key derivation** — standard hierarchical deterministic wallets, restorable from a 12 or 24 word mnemonic phrase.
-- **Type42 (BRC-42) invoice keys** — fresh keys per payment, derived via scalar tweaks. Default for new wallets; pivots away from BIP-44's public address reuse.
-- **ECDSA signing** — every transaction input signed individually with the relevant private key.
-- **BSM** — Bitcoin Signed Messages for arbitrary message signing and verification.
-- **BRC-2 ECIES** — Electrum-style encrypted messages (`BIE1` wire format), wire-compatible with `@bsv/sdk`.
+The wallet is built on a hierarchical deterministic (HD) key structure, meaning a single seed phrase generates an unlimited number of addresses.
+
+- **Seed Phrase** — a 12-word BIP-39 mnemonic generated when creating a new wallet. The master backup: from it, every key can be regenerated.
+- **Key Derivation** — two derivation methods are supported:
+  - **Type42 (BRC-42)** — the default for new wallets. Uses elliptic curve key tweaking (private key addition, public key multiplication) for more flexible derivation paths.
+  - **BIP-44** — the legacy standard. Retained for restoring wallets created by other software. Uses the standard path `m/44'/236'/0'/0/n`.
+- **Address Rotation** — after each transaction, a new receiving address is derived automatically. Improves privacy by avoiding address reuse.
+
+> **Security.** Private keys and seed phrases are stored exclusively in the iOS Keychain, protected by the device's Secure Enclave. They never leave the device and are never transmitted over the network.
+
+#### Address Discovery
+
+The wallet discovers addresses with funds using a shared Type42 scanner (`scanType42Addresses`). The scanner is *derivationType-independent* — it always tries Type42 first if the master key exists in Keychain, regardless of what `derivationType` says on the wallet card. This prevents funds from becoming invisible if the derivation type metadata is wrong.
+
+- **Dynamic scan range** — scans at least 20 addresses (gap limit) past the last address with activity, with a minimum floor of 50 addresses.
+- **Receive and change chains** — scans both `1-wallet-{N}` (receive) and `0-change-{N}` (change) invoice numbers.
+- **BIP-44 fallback** — after Type42, scans standard BIP-44 paths. A wallet can have funds on both derivation paths.
+- **Auto-repair** — if Type42 addresses are discovered but `derivationType` is wrong, the scanner automatically corrects it and persists the fix.
+
+### Wallet Cards
+
+Each wallet is represented by a *Wallet Card* in the app interface. A card stores:
+
+- **Wallet title** — a user-chosen name.
+- **Main address** — the primary receiving address.
+- **Derived addresses** — additional addresses generated through key rotation.
+- **Balance** — confirmed and unconfirmed satoshis, reconciled from the UTXO set.
+- **Derivation type** — Type42 or BIP-44.
+
+Multiple wallets can be created and managed simultaneously. Biometric (Face ID / Touch ID) authentication is required to access sensitive details.
+
+#### Default Wallet
+
+One wallet can be marked as the *default wallet*, indicated by a star on the wallet card. The default wallet is used by the terminal `send` word and other non-UI operations. To change the default wallet, open the wallet details view and tap **Set as Default Wallet**. The setting persists across app launches.
 
 ### Transactions
 
-- **UTXO selection** — largest-first by default; switches to a fragmentation-aware policy (raised dust cap, smallest-first phase 2) when a wallet exceeds 100 UTXOs. Normal sends drain dust as a side effect.
-- **Fee estimation** — quotes from ARC policy endpoints, refreshed on launch and cached for 5 minutes.
-- **Broadcasting** — ARC (Authority for Replicating Chains) via GorillaPool with TAAL as failover. Sole submission path; legacy mAPI removed.
-- **Multi-output sends** — `send-many` accepts N (amount, address) pairs and builds one transaction with N outputs at constant input cost. Atomic: all eight payments either confirm or none do.
+#### Receiving
+
+To receive BSV, share your wallet's receiving address or scan its QR code. The wallet monitors for incoming transactions using:
+
+1. **JungleBus REST polling** — polls every 30 seconds for new transactions via `GET /v1/address/get/{address}`. When a new transaction ID is detected, the wallet triggers an automatic refresh.
+2. **Periodic sync** — full balance and UTXO refresh as a safety net.
+
+When a new transaction is detected, the wallet automatically refreshes balance, UTXOs, and transaction history.
+
+#### Notifications
+
+The wallet uses a UTXO-based deposit detection system. Instead of comparing balances (which can fluctuate mid-sync), it tracks known UTXO outpoints (`txHash:txPos`) per wallet in UserDefaults. Only genuinely new outpoints trigger a notification — the system is immune to confirmation state changes and mid-sync transient balances.
+
+When a wallet is first seen, existing outpoints are seeded silently (no "received entire balance" notification on first install).
+
+#### Sending
+
+Transactions are built locally on the device:
+
+1. **UTXO Selection** — the wallet selects unspent transaction outputs to fund the payment, avoiding ordinal-protected UTXOs.
+2. **Fee Calculation** — fees are calculated using the current rate from the preferred miner (GorillaPool or TAAL) via ARC policy endpoints.
+3. **Change Output** — any excess is returned to a fresh change address derived from the wallet.
+4. **Signing** — each input is signed with the correct private key for its address (Type42 or BIP-44 derived).
+5. **Anti-Fee-Sniping** — the `nLockTime` field is set to the current block height, preventing miners from re-mining old transactions for higher fees.
+6. **Broadcasting** — the signed transaction is submitted via ARC with automatic failover between GorillaPool and TAAL.
+
+The `pay` word in the FORTH terminal opens the transaction builder. The pay view has three tabs:
+
+- **OP_RETURN** — write a text message to embed on-chain.
+- **Script** — select a saved script or a `.fs` script file.
+- **Upload** — pick a photo, video, or file from the device and upload it on-chain via the B:// protocol.
+
+#### Terminal Send Words
+
+In addition to `pay`, two terminal words compose payments directly from the stack:
+
+- **`send`** — `( amount c-addr u -- )`. Example: `1000 s" 1A..." send` sends 1000 satoshis to the given address. Space-separated addresses in the string equally split the amount.
+- **`send-many`** — `( amount1 ... amountN c-addr u -- )`. Example: `1000 5000 250 s" 1A 1B 1C" send-many` sends 1000, 5000, and 250 satoshis to three recipients in one transaction.
+
+Both accept P2PKH addresses only — paymail aliases must be resolved through the single-recipient `send` flow first.
+
+> **Mandatory pre-signing review.** Neither word broadcasts directly. `send` pre-fills the existing pay view; `send-many` presents a **MultiPaySheet** with a scrollable grid showing each (recipient, amount) row plus the total. The user sees the exact output set before the long-press triggers signature. The single canonical confirmation line `sent TXID: <id>` appears on the terminal after broadcast success.
+
+#### Fragmentation-Aware Selection
+
+UTXO selection switches to a *fragmentation-aware* policy when the wallet has more than 100 UTXOs OR when the average UTXO value is below 5000 satoshis with more than 40 UTXOs. In this mode:
+
+- The dust-input cap rises from 10 to 50, draining more of the dust pile per send.
+- Regular UTXO sort flips from largest-first to smallest-first.
+- Smart-change splitting is *disabled* — the residual coalesces into a single primary change output instead of re-fragmenting.
+- A transaction-size ceiling refuses to assemble a transaction larger than `maxStandardTxSize` (100 KB) *before* biometric prompts.
+
+The user initiates an ordinary send; the wallet consolidates as a side effect. No separate "Consolidate" button needed.
+
+> **Smart Sync.** When a payment is initiated, UTXOs are loaded from the local disk cache first (instant). A network fetch only occurs on genuine first launch when no UTXO file exists. Fee quotes are cached for 5 minutes. The payment flow trusts local UTXO state — if a UTXO turns out to be already spent, ARC will reject with `DOUBLE_SPEND_ATTEMPTED`.
+
+After a successful broadcast, the wallet builds a local transaction model from the data it already has (inputs, outputs, addresses, amounts) and inserts it into the transaction history immediately — no network fetch required. The ARC-returned `txid` is verified against the locally computed `txid` as cryptographic proof that the network accepted exactly what was built.
+
+> **Trust Local State.** Per the Bitcoin white paper (§2), we built the transaction and signed it with our private keys — we know exactly what it contains. There is no need to ask a third party (WhatsOnChain) what we just sent. ARC confirms the network saw it; the rest we already know.
+
+#### Paymail
+
+Paymail allows sending BSV to human-readable addresses (e.g., `user@example.com`) instead of raw Bitcoin addresses. The wallet implements:
+
+- **BRC-30 receive-transaction callbacks** — P2P payment destinations resolved via the `.well-known/bsvalias` capability discovery. The payee's server provides a fresh output script for each payment.
+- **Automatic resolution** — when a paymail address is entered in the pay view, the wallet resolves it to a Bitcoin address transparently.
+
+#### Transaction History
+
+- **Direction detection** — incoming (received) vs outgoing (sent), determined by checking whether any inputs belong to the wallet.
+- **Grouping** — transactions are grouped by Pending, Today, Yesterday, This Week, This Month, Earlier.
+- **Search and filter** — filter by amount, date range, or search by transaction ID.
+- **SPV verification** — transactions can be verified against the locally chain-linked block header store anchored to the hardcoded checkpoint.
 
 ### UTXO sync
 
@@ -154,28 +816,212 @@ The wallet's UTXO set is reconstructed from locally-held transactions, not queri
 - **Auto-rediscovery** — when an incoming transaction pays an address the wallet doesn't yet know about, the app silently attempts the same rederivation in the background. A path that exists in the seed is attached automatically before the next sync.
 - **Advanced sync toggle** — Settings → Bitcoin → Advanced Sync exposes the active UTXO sync model. Defaults to the legacy network-authoritative path during the rollout window; flip it to enable history-driven reconstruction as the authoritative source. Either side is safe; the toggle exists so users can self-recover if either path surfaces an anomaly.
 
-### SPV verification
+### SPV Architecture
 
-- **Hardcoded checkpoint** — `SPVCheckpoint.mainnet` is the trust anchor. The only header trusted without chain-linkage.
-- **Local header store** — chain-linked from the checkpoint forward, auto-synced via a WebSocket history stream on every launch.
-- **Bounded verification** — Merkle proofs verified only against headers within the chain-validated range. No silent network fallback for missing headers — a gap surfaces as `⏳ SPV PENDING`, not as a verification pass.
-- **Air-gap bundles** — `.hfheaders`, `.hfreceipt`, `.hfaddrpack` files exchange headers, transaction proofs, and watch-only addresses between offline signer and online watcher devices over AirDrop.
+The wallet implements Simplified Payment Verification per Section 8 of the Bitcoin white paper: clients trust a locally maintained chain of block headers and verify individual transactions against it using Merkle proofs.
+
+> **SPV trust boundary.** Every header in the local store is either the hardcoded checkpoint or transitively chain-links back to it via a series of PoW-validated, chain-linked intermediate headers. There is no silent network fallback in the verification path — if Henceforth doesn't have the header locally, it refuses to verify the transaction and reports a pending-sync state instead.
+
+#### Trust Anchor
+
+The wallet ships with a hardcoded checkpoint in `SPVCheckpoint.mainnet` — a tuple of `(height, hash, previousblockhash, merkleroot, version, time, nonce, bits)` for a recent mainnet block. This is the only header trusted without chain-linkage proof. The current pinned checkpoint is at a block roughly 500 confirmations below the then-tip, providing orders-of-magnitude safety margin against reorganization.
+
+The checkpoint hash doubles as its own migration version marker: bumping `SPVCheckpoint.mainnet` in source automatically triggers a wipe of every user's local header store on next launch, followed by a fresh re-sync from the new anchor.
+
+#### Header Store
+
+The local header store is `FORTH.blockHeaders: [Int: WOCGetHeadersModel]`. Every entry must satisfy four invariants:
+
+1. **Non-empty merkleroot** — enforced by `FORTH.isAuthoritativeBlockHeader`. Pre-Phase-1 placeholder rows are dropped on load.
+2. **Individual PoW validates** — double-SHA256 of the serialized header must be below the target encoded in the `bits` field.
+3. **Chain-linked to parent** — the header's `previousblockhash` must equal the hash of the header at `height - 1` in the store.
+4. **Transitively anchored to the checkpoint** — walking backward through parents eventually reaches `SPVCheckpoint.mainnet`.
+
+#### Validated Tip
+
+`FORTH.validatedTipHeight` is the highest block height whose header transitively chain-links back to the checkpoint via a contiguous run in `blockHeaders`. SPV verification uses `validatedTipHeight` as the trust upper bound, so unvalidated islands are invisible to proof checks.
+
+> **`validatedTipHeight` vs `latestBlockHeight`.** These are different concepts owned by different subsystems. `latestBlockHeight` is the live chain tip (driven by `wocGetHeaders` tip-10 fetch) used for `txVersion` activation gates and UI display. `validatedTipHeight` is "highest height I can prove SPV for right now" (driven by `HeaderSyncService` batch-commit). Never conflate them.
+
+#### Commit Path
+
+`FORTH.commitValidatedHeaderRun(_:)` is the single entry point for adding headers to `blockHeaders` with trust. It requires:
+
+1. The run's first header has a local anchor at `firstHeight - 1`.
+2. The anchor's hash equals the run's first `previousblockhash`.
+3. The full `[anchor] + run` batch passes `SPVService.validateBlockHeaderChain`, which PoW-validates every header and chain-links consecutive pairs.
+
+#### Auto-Sync Service
+
+`HeaderSyncService` (an `@MainActor` class) runs the background sync loop. On every launch, `ContentView.task` calls `getSavedBlockHeaders` (which enforces the checkpoint seed and recomputes the validated tip) and then `HeaderSyncService.shared.resume(forth:)`.
+
+1. Opens a WebSocket to `wss://socket.whatsonchain.com/websocket/history?from=<validatedTipHeight+1>`.
+2. Buffers decoded headers in chunks.
+3. When the buffer reaches 500 headers, splits into contiguous runs and flushes each via `commitValidatedHeaderRun`.
+4. Idle detection via a cancellable `Task.sleep(for: 3s)` armed on every message — when the sleep completes uncancelled, the WebSocket disconnects cleanly.
+5. Exponential backoff from 1s to a 60s cap on retry.
+
+A *force resync* debug button in Settings → Bitcoin → Headers wipes the store back to the checkpoint and restarts sync, behind a confirmation dialog.
+
+#### Bounded Lookup and Verification
+
+`SPVService.verifyTransaction(txid:blockHeaders:checkpointHeight:validatedTipHeight:)` is the single SPV entry point. It:
+
+1. Fetches the TSC (BRC-74) Merkle proof for the transaction from WhatsOnChain.
+2. Looks up the containing block header via `findBoundedBlockHeader` — returns the header only when its height falls in `[checkpointHeight ... validatedTipHeight]`.
+3. PoW-validates the local header (defense in depth).
+4. Verifies the TSC proof against the local header's `merkleroot`.
+
+If step 2 returns nil, verification returns `blockHeaderNotFound` — *without* fetching the header from WoC. A single PoW-valid header in isolation is not SPV: the attacker can produce any chain they like with valid PoW.
+
+#### Checkpoint Maintenance
+
+Bumping the checkpoint is a deliberate operation, not routine:
+
+1. Pick a target block at least 500 confirmations below the current chain tip; never within the last 144 blocks.
+2. Fetch the header from a primary source (WhatsOnChain) and **cross-verify** every field against a second independent source.
+3. Update `SPVCheckpoint.mainnet` in source. Commit.
+4. Every user's next launch detects the new checkpoint hash, wipes the local store, and auto-sync re-downloads from the new anchor.
+
+> **Never bump without cross-verification.** A compromised or cached response at bump time would silently become the new trust anchor baked into the binary shipped to every user. The second source is non-optional.
+
+### Cold Mode and Air-Gap Bundles
+
+Cold Mode is a per-wallet flag (`WalletCard.coldModeEnabled`) that defers broadcast. When set, a transaction the user has approved with Face ID is signed and stored locally as a *pending action* rather than submitted to ARC. The user releases it later from the **Pending Broadcasts** view — on the same device or, in the air-gap workflow, after handing off to a watcher iPhone via AirDrop.
+
+#### Bundle Formats
+
+Three serialisable JSON formats carry data across the air-gap. All three are exchanged via AirDrop, routed by file extension, and validated on import.
+
+- **`.hfheaders` (HFHeaderBundle)** — a contiguous run of validated block headers anchored to a checkpoint hash. The importer hands the run to the same `commitValidatedHeaderRun` path that the live WSS sync uses, so chain-link, proof-of-work, and checkpoint-anchor invariants self-enforce.
+- **`.hfreceipt` (HFReceiptBundle)** — proof that a specific transaction was included in the blockchain. Carries (txid, raw transaction hex, block height, block hash, TSC Merkle proof, containing block header). `SPVService.verifyTransaction(fromBundle:)` validates inclusion against the importer's own local header at the same height with no network call. After SPV passes, the importer re-derives output ownership by parsing the raw transaction and refuses unless at least one output's address resolves to one of the wallet's known derived addresses.
+- **`.hfaddrpack` (HFAddressPack)** — pre-derived receive addresses pushed outward from signer to watcher. Each entry carries the address, derivation scheme (`type42` or `bip44`), and the scheme-specific derivation reference. The pack is signed by the wallet's m/0/0 BIP32 identity key with a DER ECDSA signature; the watcher's `decode` verifies the signature and refuses tampered packs.
+
+#### Air-Gap Tools UI
+
+**Settings → Bitcoin → Air-Gap Tools** exposes three exporters and a single import button. The importer routes by file extension. Exports go through the system file picker / share sheet so AirDrop, iCloud Drive, and email are all reachable.
+
+> v1 `.hfreceipt` uses raw transaction plus TSC Merkle proof. A v2 schema bump may upgrade to BRC-62 BEEF for full ancestor-script validation.
+
+In v1.0, `.hfaddrpack` import validates the signature and counts the addresses; persisting the entries into a watch-only monitoring store wired to `MempoolMonitorService` is staged for the v1.0.2 follow-up.
+
+### Wallet Data Management
+
+UTXO and transaction persistence is the most security-critical layer of the wallet. The rules below are invariants, not preferences — violating any of them risks losing user funds or transaction history.
+
+- **Never overwrite UTXO files with partial data.** A UTXO file is saved only when *all* addresses queried successfully. A partial query leaves the previous snapshot intact.
+- **Conservative merge.** The wallet only removes a UTXO when its owning address was queried *and* the UTXO was not in the response.
+- **Never persist a smaller transaction set than what's on disk.** `persistTransactionsToDisk` reads the disk count before writing and refuses the write if the in-memory snapshot has fewer entries.
+- **Per-wallet file scoping.** Transactions, UTXOs, and pending broadcast amounts live in wallet-scoped files. On wallet open, in-memory state is cleared and reloaded from that wallet's files only — no cross-wallet bleed.
+- **Trust the per-wallet file on load.** Load-time `byOwnership` filtering has been removed because it dropped Type42 change addresses and paymail receives, then silently wrote the smaller set back on the next save.
+
+### UTXOs and Balance
+
+A UTXO (Unspent Transaction Output) represents a discrete amount of Bitcoin that can be spent. The wallet tracks all UTXOs across all addresses.
+
+> **Balance from UTXOs.** The displayed balance is computed solely from the UTXO set — no separate balance API call is needed:
+> ```
+> confirmed   = sum of UTXOs with block height > 0
+> unconfirmed = sum of UTXOs with block height = 0
+> total       = confirmed + unconfirmed
+> ```
+> Satoshi conversions use the named constant `satoshisPerBSV` (100,000,000) and price conversions use `priceCentsDivisor` (100.0). Raw magic numbers are never used.
+
+#### Ordinal Protection
+
+1Sat Ordinals are NFTs inscribed on single-satoshi UTXOs. The wallet protects ordinals at three levels:
+
+1. **Transaction builder** — UTXOs with a value of 1 satoshi are excluded from UTXO selection during transaction building.
+2. **Inscription scanner** — for display in the Ordinals view, 1-sat UTXOs are scanned by fetching the raw transaction and detecting the `OP_FALSE OP_IF ... OP_ENDIF` inscription pattern. Results are cached per outpoint.
+3. **1Sat indexer fallback** — ordinals transferred to this wallet carry an empty locking script at the receiving output. 1-sat UTXOs with no detectable current-output inscription are checked against the GorillaPool 1Sat indexer. The lookup is tri-state: confirms *is-ordinal*, confirms *not-ordinal*, or fails closed on HTTP 5xx — protecting the UTXO when ambiguous.
+
+#### UTXO Split
+
+From the UTXO detail view, a single UTXO can be split into up to 240 separate outputs across fresh derived addresses. Useful for preparing UTXOs for future transactions, distributing funds across addresses for privacy, and creating multiple 1-sat UTXOs for ordinal inscriptions.
+
+### API Providers
+
+The wallet uses a hybrid architecture with multiple blockchain service providers:
+
+| Capability             | WhatsOnChain | GorillaPool | TAAL     | JungleBus |
+|------------------------|:------------:|:-----------:|:--------:|:---------:|
+| UTXOs (balance)        | ✓            |             |          |           |
+| Transaction history    | ✓            |             |          | ✓         |
+| SPV Merkle proofs      | ✓            |             |          |           |
+| BSV price              | ✓            |             |          |           |
+| Fee quotes             |              | ✓           | ✓        |           |
+| Broadcast (ARC)        |              | ✓           | ✓*       |           |
+| Real-time monitoring   |              |             |          | ✓         |
+
+*TAAL requires a user-configured API key. GorillaPool is the primary broadcaster; TAAL is failover.
+
+Each provider handles what it does best. API keys and subscription IDs are stored securely in the iOS Keychain and can be configured in Settings → API & Miners.
 
 ### Security
 
-- **iOS Keychain** — private keys and seed phrases stored in the device's secure enclave.
-- **AES-256-GCM** — wallet files encrypted, keys derived from Keychain-stored material.
-- **Biometric auth** — Face ID / Touch ID gates every send. A 120-second approval cache scopes to surface + amount + recipient digest so authentication isn't re-prompted within a single intentional batch.
-- **Pre-signing verification** — every outgoing transaction surface (PayView, MultiPaySheet, BRC-100 review) shows the recipient set, total, and fee before Face ID fires. The user approves the *bytes*, not the *intent*.
+- **Biometric authentication** — Face ID or Touch ID required to view private keys, seed phrases, and wallet details. Sessions expire after 120 seconds of inactivity. The same window is used by the *payment approval cache* (below).
+- **Keychain storage** — all sensitive material (keys, seeds, API tokens) stored with `.whenUnlockedThisDeviceOnly` accessibility — encrypted at rest, tied to the device.
+- **Seed verification** — after creating a wallet, users are prompted to verify their seed phrase via a 3-word quiz.
+- **No server dependency** — the wallet is fully self-custodial. No account, no registration, no server holds your keys.
+- **Message encryption (BRC-2)** — Electrum ECIES format for end-to-end encrypted messages between BSV keys. Uses ECDH key agreement, AES-256-CBC encryption, and HMAC-SHA256 authentication. Wire-compatible with `@bsv/sdk`. Format: `"BIE1" || pubkey || ciphertext || HMAC`.
+- **Wallet file encryption** — wallet data files encrypted with AES-256-GCM using a Keychain-backed key before syncing to iCloud.
 
-### BRC-100 wallet interface
+#### Payment Approval Cache
 
-Henceforth implements the BRC-100 wallet interface for dApp integration:
+To avoid re-prompting Face ID for every successive broadcast in a single working session, the wallet keeps a session-scoped *approval cache* (`PaymentApprovalRecord`). A successful biometric approval stamps the cache with `(surface, amountSats, outputsDigest, timestamp)`. A subsequent broadcast within the 120-second window can skip the prompt when all three scoping axes match.
 
-- **URL scheme** — `henceforth://wallet/{method}` with approval sheet + Face ID for sensitive operations.
-- **`createAction` / `signAction`** — two-phase transaction flow with idempotent fast-path (returns cached txid without re-prompting biometric).
-- **`abortAction`** — paired cancellation by reference UUID.
-- **Output baskets, certificates (BRC-52 / BRC-53)** — structured storage backed by Keychain.
+The `outputsDigest` is a SHA-256 over a canonical encoding of the sorted output set. Each output contributes `UInt32-LE(recipientKey.utf8.count) || recipientKey.utf8 || Int64-LE(satoshis)`. The length-prefix defeats engineered concatenation collisions.
+
+> **The `recipientKey` must be the final resolved destination, never an alias.** For paymail surfaces, this means the resolved P2PKH address returned by the paymail server, never the `alice@example.com` alias string. A paymail server could change the resolution between the approval at time T and the broadcast at T+30 seconds — binding the digest to the resolved key forces a re-prompt whenever the destination changes.
+
+#### Encrypted Off-Device Backup
+
+The Keychain-bound wallet encryption above is device-local: the encrypted files on disk are useless on any other device. The *encrypted off-device backup* feature (`.bep` files, produced by `BackupService`) solves this by emitting a portable, password-encrypted blob that can be stored anywhere — iCloud Drive, AirDrop, email, USB — and restored on any device.
+
+- **Key derivation** — PBKDF2-HMAC-SHA256 with a per-backup 16-byte random salt, 600,000 iterations (≈500ms on modern iOS hardware).
+- **Encryption** — AES-256-GCM. GCM is authenticated — any bit flip in salt, nonce, ciphertext, or tag fails verification and returns `.invalidPassword` (no timing oracle).
+- **Wire format** — magic prefix `"HFBK1"` (5 bytes), salt (16 bytes), iteration count (4 bytes BE), nonce (12 bytes), AES-GCM ciphertext + 16-byte tag.
+- **Forward compatibility** — the version byte in the magic prefix allows a future format bump to coexist with older backups.
+- **Freshness** — the same plaintext encrypted twice under the same password produces different ciphertexts because salt and nonce are fresh.
+
+> The `.bep` file protects *only the seed phrase* (the BIP-39 mnemonic). It does not contain UTXO cache, transaction history, or user preferences — those are regenerated from the blockchain after restore. A `.bep` plus its password is sufficient to recover every wallet this seed ever spawned on any Henceforth install.
+
+#### QR Code Scanner
+
+A unified QR scanner in Settings handles three QR code types, routed automatically by content:
+
+1. **`hfauth:` prefix** — BRC-103 authentication flow.
+2. **WIF private key** (Base58Check version byte `0x80`) — prompts for a wallet name, then imports via `Wallet.restoreFromWIF()`.
+3. **Bitcoin address** (version byte `0x00`) — opens the pay view pre-filled with the scanned address.
+
+#### BRC-103 Authentication
+
+BRC-103 provides passwordless authentication to web services using Bitcoin key pairs:
+
+1. A web service displays a QR code containing a challenge and callback URL (prefixed with `hfauth:`).
+2. The wallet scans the QR, displays the requesting domain, and asks for user approval.
+3. On approval, the wallet signs the challenge with the wallet's identity key and sends the signature to the callback URL.
+4. The web service verifies the signature against the wallet's public key.
+
+No passwords, no accounts — just cryptographic proof of key ownership.
+
+#### BRC-100 Wallet Interface
+
+The wallet exposes a subset of its capabilities via a URL scheme for integration with external applications:
+
+```
+henceforth://wallet/{method}?params=...
+```
+
+Supported operations include key derivation, signing, encryption, and certificate management (BRC-52/53). All sensitive operations require user approval via an on-screen confirmation sheet with biometric authentication.
+
+#### Certificate Proofs (BRC-52/53)
+
+Selective-disclosure certificate proofs follow BRC-52 (field-level HMAC keyring) and BRC-53 (certificate envelope) with the following hardened semantics:
+
+- **Per-field HMAC keyring, ECDH-bound** — when the wallet proves a subset of certificate fields to a verifier, each field's HMAC key is encrypted with an ECDH shared secret derived between the prover's and verifier's BRC-42 identity keys. A leaked proof is useless against any other party.
+- **Issuer signature verification** — `verifyProof` checks the issuer's BSM signature over the certificate's canonical field set before accepting any field as authentic. Format-valid is not the same as cryptographically valid.
+- **Serial number carried in the proof** — each proof includes the certificate's serial number so the verifier can correlate against revocation or re-issuance records.
 
 <a id="credits" />
 
