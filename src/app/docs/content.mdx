@@ -49,412 +49,557 @@ Everything in FORTH is a **word** separated by spaces. That's all there is to th
 
 > **FORTH is LIFO** — FORTH is a stack-based programming language which operates on a *Last In, First Out* principle.
 
-Ideally we give the user just enough to make use of FORTH and through FORTH some of Swift's functionality such as networking requests, the timer built into Swift, etc. But not so much as to be relied upon — user creation of words should be encouraged.
+<a id="ref-compile" />
 
 ### Compile Words
 
 One of the great things about FORTH is its ability to extend the compiler during run time.
 
-```
-:           puts the user into compile mode where they can
-            start to define their own word.
-;           exits compile mode so that word interpretation
-            can again occur.
-recurse     calls the word being executed.
-exit        exits the current word.
-immediate   marks the most recently defined word as immediate,
-            causing it to execute during compilation rather
-            than being compiled.
-postpone    forces compilation of the next word, even if it
-            is marked IMMEDIATE.
-value       (x --)  Creates a named value that can be read by
-            name and changed with TO.  Usage: 42 value myval
-to          (x --)  Change the value of a word created with
-            VALUE.  Usage: 99 to myval
-does>       ( -- )  Defines the runtime behaviour of a CREATE'd
-            word. Everything after DOES> runs when the created
-            word is executed, with the data-field address on
-            the stack.
-include     ( -- )  Loads and runs a FORTH file.
-            Usage: include maths.fs
-```
+<Word name=":">Puts the user into compile mode where they can start to define their own word.</Word>
+
+<Word name=";">Exits compile mode so that word interpretation can again occur.</Word>
+
+<Word name="recurse">Calls the word being executed.</Word>
+
+<Word name="exit">Exits the current word.</Word>
+
+<Word name="immediate">Marks the most recently defined word as immediate, causing it to execute during compilation rather than being compiled.</Word>
+
+<Word name="postpone">Forces compilation of the next word, even if it is marked IMMEDIATE. Used inside definitions to defer execution of immediate words.</Word>
+
+<Word name="value" stack="(x --)">Creates a named value that can be read by name and changed with TO. Usage: `42 value myval`.</Word>
+
+<Word name="to" stack="(x --)">Change the value of a word created with VALUE. Usage: `99 to myval`.</Word>
+
+<Word name="does>" stack="( -- )">Defines the runtime behaviour of a CREATE'd word. Everything after DOES> runs when the created word is executed, with the data-field address on the stack. Usage: `: array create cells allot does> swap cells + ;`.</Word>
+
+<Word name="include" stack="( -- )">Loads and runs a FORTH file. Usage: `include maths.fs`.</Word>
+
+<a id="ref-meta" />
 
 ### Meta Programming
 
-```
-'        ( -- xt)  Gets the execution token of the named word.
-[']      ( -- xt)  Compile-time version of ' (tick).
-execute  (i*x xt -- j*x)  Executes the word whose execution
-         token is on the stack.
-literal  Compile: (x -- )  Run-time: ( -- x)  At compile time
-         compiles a numeric literal into the current definition;
-         at run time pushes that literal onto the stack.
-state    ( -- addr)  Returns the address of the STATE variable.
-         0 = interpreting, -1 = compiling.
-[        (--)  Switches from compilation mode to interpretation.
-]        (--)  Switches from interpretation mode to compilation.
-evaluate (c-addr u --)  Interprets the string as if typed at
-         the terminal.
-find     (c-addr -- c-addr 0 | xt 1 | xt -1)  Searches the
-         dictionary for the counted string.
->body    (xt -- a-addr)  Returns the data-field address of a
-         CREATE'd word.
->in      ( -- a-addr)  Returns the address of the input parse
-         position variable.
->number  (ud1 c-addr1 u1 -- ud2 c-addr2 u2)  Converts characters
-         to a number using the current BASE.
-```
+<Word name="'" stack="( -- xt)">Gets the execution token of the named word. Used to get a reference to a word for later execution.</Word>
 
-### Arithmetic Operators
+<Word name="[']" stack="( -- xt)">Compile-time version of `'` (tick). Compiles the execution token of a word into the current definition.</Word>
+
+<Word name="execute" stack="(i*x xt -- j*x)">Executes the word whose execution token is on the stack. The `i*x`/`j*x` notation acknowledges that the executed word may consume and produce arbitrary values; only the xt itself is consumed by EXECUTE.</Word>
+
+<Word name="literal" stack="Compile: (x -- )  Run-time: ( -- x)">At compile time, compiles a numeric literal into the current definition; at run time of the containing word, pushes that literal onto the stack. Used inside IMMEDIATE words to inject computed constants into the word being defined.</Word>
+
+<Word name="state" stack="( -- addr)">Returns the address of the STATE variable. STATE is 0 when interpreting, -1 when compiling.</Word>
+
+<Word name="[" stack="(--)">Switches from compilation mode to interpretation mode.</Word>
+
+<Word name="]" stack="(--)">Switches from interpretation mode to compilation mode.</Word>
+
+<Word name="evaluate" stack="(c-addr u --)">Interprets the string at c-addr of length u as if it were typed at the terminal.</Word>
+
+<Word name="find" stack="(c-addr -- c-addr 0 | xt 1 | xt -1)">Searches the dictionary for the counted string at c-addr. Returns xt and 1 (immediate) or -1 (normal), or c-addr and 0 if not found.</Word>
+
+<Word name=">body" stack="(xt -- a-addr)">Returns the data-field address of a CREATE'd word given its execution token.</Word>
+
+<Word name=">in" stack="( -- a-addr)">Returns the address of the variable holding the current input parse position.</Word>
+
+<Word name=">number" stack="(ud1 c-addr1 u1 -- ud2 c-addr2 u2)">Converts characters at c-addr to a number using the current BASE. Stops at the first non-convertible character.</Word>
+
+<a id="ref-arithmetic" />
+
+### Arithmetic
 
 Arithmetic is done using reverse Polish notation, so the numbers are required on the stack before the arithmetic operator can be used.
 
-```
-+        (n1 n2 -- sum)         Sum of the top two items.
--        (n1 n2 -- difference)  Difference.
-*        (n1 n2 -- product)     Product.
-/        (n1 n2 -- quotient)    Quotient.
-*/       (n1 n2 n3 -- result)   (n1*n2)/n3.
-mod      (n1 n2 -- modulus)     Remainder.
-/mod     (n1 n2 -- mod quot)    Modulus and quotient together.
-abs      (n -- |n|)             Absolute value.
-negate   (n -- -n)              Sign flipped.
-max      (n1 n2 -- max)         Largest of two.
-min      (n1 n2 -- min)         Smallest of two.
-1+       (n -- n+1)             Increment.
-1-       (n -- n-1)             Decrement.
-2+       (n -- n+2)             Henceforth extension.
-2-       (n -- n-2)             Henceforth extension.
-2*       (n -- n*2)             Double.
-2/       (n -- n/2)             Halve.
-sumStack (n1 ... n -- sum)      Sum entire stack (Henceforth).
-*/mod    (n1 n2 n3 -- rem quot) Multiply-divide with remainder.
-```
+<Word name="+" stack="(n1 n2 -- sum)">Takes the top two items from the stack and returns their sum.</Word>
+
+<Word name="-" stack="(n1 n2 -- difference)">Takes the top two items from the stack and returns their difference.</Word>
+
+<Word name="*" stack="(n1 n2 -- product)">Takes the top two items from the stack and returns their product.</Word>
+
+<Word name="/" stack="(n1 n2 -- quotient)">Takes the top two items from the stack and returns their quotient.</Word>
+
+<Word name="*/" stack="(n1 n2 n3 -- result)">`result = (n1*n2/n3)`. Multiplies n1 by n2, then divides by n3.</Word>
+
+<Word name="mod" stack="(n1 n2 -- modulus)">Divides the first by the second; the remainder is added to the stack.</Word>
+
+<Word name="/mod" stack="(n1 n2 -- modulus quotient)">Returns the modulus and the quotient.</Word>
+
+<Word name="abs" stack="(n -- |n|)">Absolute value of the top item on the stack.</Word>
+
+<Word name="negate" stack="(n -- -n)">Negates the top item.</Word>
+
+<Word name="max" stack="(n1 n2 -- max)">Returns the greater of two values.</Word>
+
+<Word name="min" stack="(n1 n2 -- min)">Returns the smaller of two values.</Word>
+
+<Word name="1+" stack="(n -- n+1)">Increments the top item.</Word>
+
+<Word name="1-" stack="(n -- n-1)">Decrements the top item.</Word>
+
+<Word name="2+" stack="(n -- n+2)">Adds 2 to the top of the stack. Henceforth extension — equivalent to `2 +`.</Word>
+
+<Word name="2-" stack="(n -- n-2)">Subtracts 2 from the top of the stack. Henceforth extension.</Word>
+
+<Word name="2*" stack="(n -- n*2)">Doubles the top item.</Word>
+
+<Word name="2/" stack="(n -- n/2)">Halves the top item.</Word>
+
+<Word name="sumStack" stack="(n1 ... n -- sum)">Sums every value on the stack into a single result. Henceforth extension — not in Forth-2012.</Word>
+
+<Word name="*/mod" stack="(n1 n2 n3 -- remainder quotient)">Multiplies n1 by n2, then divides by n3. Returns both the remainder and the quotient.</Word>
+
+<a id="ref-double-cell" />
 
 ### Double-Cell Arithmetic
 
-Double-cell words operate on 64-bit values represented as two stack items (high cell on top). Required by the Forth-2012 CORE standard for intermediate precision.
+Double-cell words operate on 64-bit values represented as two stack items (high cell on top). These are required by the Forth-2012 CORE standard for intermediate precision in calculations.
 
-```
-s>d      (n -- d)        Sign-extends single-cell to double-cell.
-m*       (n1 n2 -- d)    Signed multiply, double-cell result.
-um*      (u1 u2 -- ud)   Unsigned multiply, double-cell result.
-fm/mod   (d n1 -- n2 n3) Floored division; quotient rounds toward
-                         negative infinity.
-sm/rem   (d n1 -- n2 n3) Symmetric division; quotient rounds toward
-                         zero.
-um/mod   (ud u1 -- u2 u3) Unsigned division.
-```
+<Word name="s>d" stack="(n -- d)">Sign-extends a single-cell number to a double-cell number. Required before FM/MOD or SM/REM.</Word>
+
+<Word name="m*" stack="(n1 n2 -- d)">Signed multiply of n1 by n2, producing a double-cell result. No overflow possible.</Word>
+
+<Word name="um*" stack="(u1 u2 -- ud)">Unsigned multiply of u1 by u2, producing an unsigned double-cell result.</Word>
+
+<Word name="fm/mod" stack="(d n1 -- n2 n3)">Floored division of double-cell d by n1. The quotient n3 rounds toward negative infinity. The remainder n2 has the same sign as the divisor.</Word>
+
+<Word name="sm/rem" stack="(d n1 -- n2 n3)">Symmetric division of double-cell d by n1. The quotient n3 rounds toward zero. The remainder n2 has the same sign as the dividend.</Word>
+
+<Word name="um/mod" stack="(ud u1 -- u2 u3)">Unsigned division of unsigned double-cell ud by u1. Returns remainder u2 and quotient u3.</Word>
+
+<a id="ref-numeric-output" />
 
 ### Numeric Output
 
-```
-<#       (--)             Begin pictured numeric output.
-#        (ud1 -- ud2)     Convert one digit.
-#s       (ud -- 0 0)      Convert all remaining digits.
-#>       (xd -- c-addr u) End pictured conversion.
-hold     (char --)        Add a character to the output buffer.
-sign     (n --)           Add minus sign if negative.
-.r       (n1 n2 --)       Right-aligned in field of n2 chars.
-u.       (u --)           Unsigned number + space.
-u.r      (u n --)         Unsigned right-aligned.
-```
+<Word name="<#" stack="(--)">Initialises pictured numeric output conversion.</Word>
 
-### Comparison Operators
+<Word name="#" stack="(ud1 -- ud2)">Converts one digit from the double number and adds it to the pictured numeric output buffer.</Word>
+
+<Word name="#s" stack="(ud -- 0 0)">Converts all remaining digits from the double number until it becomes zero.</Word>
+
+<Word name="#>" stack="(xd -- c-addr u)">Completes pictured numeric conversion and returns the address and length of the formatted string.</Word>
+
+<Word name="hold" stack="(char --)">Adds a character to the beginning of the pictured numeric output buffer.</Word>
+
+<Word name="sign" stack="(n --)">If the number is negative, adds a minus sign to the pictured numeric output.</Word>
+
+<Word name=".r" stack="(n1 n2 --)">Displays a number right-aligned in a field of n2 characters width.</Word>
+
+<Word name="u." stack="(u --)">Displays an unsigned number followed by a space.</Word>
+
+<Word name="u.r" stack="(u n --)">Displays an unsigned number right-aligned in a field of n characters width.</Word>
+
+<a id="ref-comparison" />
+
+### Comparison
 
 > `f` is a flag or bool `[true | false]`. Per Forth-2012, `TRUE` is `-1` (all bits set) and `FALSE` is `0`. Any non-zero value is considered true by `IF`, `AND`, `OR`, and other conditional words.
 
-```
-=    (n1 n2 -- f)   Equal.
-<>   (n1 n2 -- f)   Not equal.
-<    (n1 n2 -- f)   n1 less than n2.
->    (n1 n2 -- f)   n1 greater than n2.
-&&   (n1 n2 -- f)   Logical AND (Henceforth ext). -1 if both
-                    non-zero.
-||   (n1 n2 -- f)   Logical OR (Henceforth ext). -1 if either
-                    non-zero.
-0=   (n -- f)       True if zero.
-0<   (n -- f)       True if negative.
-0>   (n -- f)       True if positive.
-u<   (u1 u2 -- f)   Unsigned comparison.
-```
+<Word name="=" stack="(n1 n2 -- f)">Returns the flag for n1 equal to n2.</Word>
 
-### Bitwise Operators
+<Word name="<>" stack="(n1 n2 -- f)">Returns the flag for n1 not equal to n2.</Word>
 
-```
-and     (x1 x2 -- x3)  Bitwise AND.
-or      (x1 x2 -- x3)  Bitwise OR.
-xor    (x1 x2 -- x3)  Bitwise XOR.
-invert  (n -- ~n)      Flips every bit.
-rshift  (n1 n2 -- n3)  Right shift.
-lshift  (n1 n2 -- n3)  Left shift.
-```
+<Word name="<" stack="(n1 n2 -- f)">True if n1 is less than n2.</Word>
+
+<Word name=">" stack="(n1 n2 -- f)">True if n1 is greater than n2.</Word>
+
+<Word name="&&" stack="(n1 n2 -- f)">Logical AND — Henceforth extension. Returns -1 if both values are non-zero, 0 otherwise.</Word>
+
+<Word name="||" stack="(n1 n2 -- f)">Logical OR — Henceforth extension. Returns -1 if either value is non-zero, 0 otherwise.</Word>
+
+<Word name="0=" stack="(n -- f)">True if n is zero.</Word>
+
+<Word name="0<" stack="(n -- f)">True if n is less than zero.</Word>
+
+<Word name="0>" stack="(n -- f)">True if n is greater than zero.</Word>
+
+<Word name="u<" stack="(u1 u2 -- f)">Unsigned comparison. True if u1 is less than u2 when both are treated as unsigned.</Word>
+
+<a id="ref-bitwise" />
+
+### Bitwise
+
+<Word name="and" stack="(x1 x2 -- x3)">Bitwise AND of the top two values (Forth-2012 6.1.0720). When both operands are well-formed flags (0 or -1), bitwise AND produces logical AND — so you don't need a separate logical operator if you keep flags well-formed.</Word>
+
+<Word name="or" stack="(x1 x2 -- x3)">Bitwise OR of the top two values (Forth-2012 6.1.1980).</Word>
+
+<Word name="xor" stack="(x1 x2 -- x3)">Bitwise XOR of the top two values (Forth-2012 6.1.2490).</Word>
+
+<Word name="invert" stack="(n -- ~n)">Bitwise inversion. Flips every bit of the top value on the stack.</Word>
+
+<Word name="rshift" stack="(n1 n2 -- n3)">Returns n1 bitwise right-shifted by n2.</Word>
+
+<Word name="lshift" stack="(n1 n2 -- n3)">Returns n1 bitwise left-shifted by n2.</Word>
+
+<a id="ref-stack" />
 
 ### Stack Operators
 
-```
-.s            ( -- )                Display the stack.
-.             (n -- )               Pop and print.
-dup           (n -- n n)            Duplicate top.
-?dup          (n -- 0 | n n)        Duplicate if non-zero.
-nip           (n1 n2 -- n2)         Drop second.
-swap          (n1 n2 -- n2 n1)      Swap top two.
-drop          (n -- )               Discard top.
-2dup          (n1 n2 -- n1 n2 n1 n2)  Duplicate top two.
-over          (n1 n2 -- n1 n2 n1)   Copy second on top.
-pick          (xu...x0 u -- xu...x0 xu)  Copy u-th item to top.
-rot           (n1 n2 n3 -- n2 n3 n1)  Rotate top three left.
--rot          (n1 n2 n3 -- n3 n1 n2)  Rotate top three right.
-tuck          (n1 n2 -- n2 n1 n2)   Copy top under second.
-2drop         (n1 n2 -- )           Drop top two.
-2swap         (n1 n2 n3 n4 -- n3 n4 n1 n2)  Swap pairs.
-2over         (n1 n2 n3 n4 -- n1 n2 n3 n4 n1 n2)  Copy pair over.
-reverseStack  (n1 n2 ... nlast -- nlast ... n2 n1)  Henceforth ext.
-depth         ( -- n)               Number of items on stack.
-roll          (xu xu-1 ... x0 u -- xu-1 ... x0 xu)  Rotate u+1.
-stackCount    ( -- n)               Henceforth alias for depth.
-```
+<Word name=".s" stack="( -- )">Displays the current stack to the terminal.</Word>
 
-### Return Stack Operators
+<Word name="." stack="(n -- )">Pops the top value to the terminal.</Word>
 
-```
->r   (x -- )  ( R: -- x)   Move to return stack.
-r>   ( -- x)  ( R: x -- )  Move from return stack.
-r@   ( -- x)  ( R: x -- x) Copy from return stack.
-i    ( -- x)               Innermost DO LOOP's index.
-i'   ( -- x)               Next-outer loop's index.
-j    ( -- x)               Next-outer loop's index (same as i').
-nth  (u -- x)              u-th item from return stack
-                           (Henceforth ext).
-```
+<Word name="dup" stack="(n -- n n)">The top value is duplicated and both the original and copy are returned.</Word>
 
-### Decision Operators
+<Word name="?dup" stack="(n -- 0 | n n)">Duplicates the top item only if it is non-zero.</Word>
 
-```
-if      (x -- )                If non-zero, execute up to ELSE/THEN.
-else    ( -- )                 Optional false branch.
-then    ( -- )                 End of IF...THEN.
-not     (x -- f)               Synonym for 0=.
-within  (n1 n2 n3 -- f)        True if n2 is between n1 and n3.
-true    ( -- -1)               Push true flag.
-false   ( -- 0)                Push false flag.
-case    ( -- )                 Begin CASE...OF...ENDOF...ENDCASE.
-of      (x1 x2 -- | x1)        Compare; if equal, drop both and run.
-endof   ( -- )                 End of OF clause; branch to ENDCASE.
-endcase (x -- )                End CASE statement.
-catch   (i*x xt -- j*x 0 | i*x n)  Protected execute. 0 on success;
-                                   n on THROW.
-throw   (k*x n -- k*x | i*x n)     Unwind to nearest CATCH if n≠0.
-```
+<Word name="nip" stack="(n1 n2 -- n2)">Drops the first item below the top of the stack.</Word>
 
-### Loop Operators
+<Word name="swap" stack="(n1 n2 -- n2 n1)">Swaps the top two values.</Word>
 
-```
-do     (n1 n2 --)   Repeats from n2 to n1.
-loop   ( -- )       End loop.
-+loop  (n1 -- )     Loop in n1 increments.
-every  (n1 -- )     Run following word every n1 seconds (ext).
-stop   ( -- )       Stop the EVERY loop.
-begin  ( -- )       Marks start of BEGIN...UNTIL/REPEAT.
-while  (x -- )      Tests condition within BEGIN...REPEAT.
-repeat ( -- )       End of BEGIN...WHILE...REPEAT; jump back.
-until  (x -- )      If zero, jump back to BEGIN.
-leave  ( -- )       Exit current DO LOOP immediately.
-unloop ( -- )       Discard loop control parameters.
-?do    (n1 n2 --)   Like DO but skips if start == end.
-again  ( -- )       Unconditional branch back to BEGIN.
-```
+<Word name="drop" stack="(n -- )">Discards the top item.</Word>
 
-### Base Operations
+<Word name="2dup" stack="(n1 n2 -- n1 n2 n1 n2)">Duplicates the top two values.</Word>
+
+<Word name="over" stack="(n1 n2 -- n1 n2 n1)">Copies the second value and pushes it on top.</Word>
+
+<Word name="pick" stack="(x_u ... x_1 x_0 u -- x_u ... x_1 x_0 x_u)">Pops u and pushes a copy of the u-th item from the stack (0-indexed from top: `0 PICK` is DUP, `1 PICK` is OVER).</Word>
+
+<Word name="rot" stack="(n1 n2 n3 -- n2 n3 n1)">Rotates the top three values left.</Word>
+
+<Word name="-rot" stack="(n1 n2 n3 -- n3 n1 n2)">Rotates the top three values right.</Word>
+
+<Word name="tuck" stack="(n1 n2 -- n2 n1 n2)">Copies the top value and places it before the second value (third deep).</Word>
+
+<Word name="2drop" stack="(n1 n2 -- )">Discards the top two values.</Word>
+
+<Word name="2swap" stack="(n1 n2 n3 n4 -- n3 n4 n1 n2)">Reverses the order of the top two pairs.</Word>
+
+<Word name="2over" stack="(n1 n2 n3 n4 -- n1 n2 n3 n4 n1 n2)">Copies items 3 and 4 deep onto the top.</Word>
+
+<Word name="reverseStack" stack="(n1 n2 ... nlast -- nlast ... n2 n1)">Reverses the order of every item on the stack. Henceforth extension — not in Forth-2012.</Word>
+
+<Word name="depth" stack="( -- n)">Returns the number of items currently on the data stack before DEPTH was executed.</Word>
+
+<Word name="roll" stack="(xu xu-1 ... x0 u -- xu-1 ... x0 xu)">Rotates u+1 items on the stack. The u-th item is moved to the top.</Word>
+
+<Word name="stackCount" stack="( -- n)">Pushes the number of items currently on the stack. Novice-friendly Henceforth alias for `depth` (Forth-2012 6.1.1200).</Word>
+
+<a id="ref-return-stack" />
+
+### Return Stack
+
+<Word name=">r" stack="(x -- )  ( R: -- x)">Pops the parameter stack and pushes onto the return stack.</Word>
+
+<Word name="r>" stack="( -- x)  ( R: x -- )">Pops the return stack and pushes onto the parameter stack.</Word>
+
+<Word name="r@" stack="( -- x)  ( R: x -- x)">Copies the top of the return stack to the parameter stack.</Word>
+
+<Word name="i" stack="( -- x)">The innermost DO LOOP's index. Copies the top of the return stack.</Word>
+
+<Word name="i'" stack="( -- x)">The next-outer loop's index in nested DO LOOPs. Copies the second-from-top of the return stack. In Henceforth `i'` and `j` return the same value.</Word>
+
+<Word name="j" stack="( -- x)">The next-outer loop's index in nested DO LOOPs (Forth-2012 6.1.1730).</Word>
+
+<Word name="nth" stack="(u -- x)">Pops u and pushes the u-th item from the return stack (0-indexed from top). Henceforth extension.</Word>
+
+<a id="ref-decision" />
+
+### Decision
+
+> `f` is a flag or bool `[true | false]`.
+
+<Word name="if" stack="(x -- )">Pops one cell. If non-zero, executes the words up to ELSE or THEN. If zero, skips over them.</Word>
+
+<Word name="else" stack="( -- )">The optional false branch of an IF...THEN. No runtime stack effect — the flag was already consumed by IF.</Word>
+
+<Word name="then" stack="( -- )">Denotes the end of the IF...THEN statement. No runtime stack effect.</Word>
+
+<Word name="not" stack="(x -- f)">Synonym for `0=` (returns -1 if x is 0, 0 otherwise). Retained for FIG-FORTH compatibility. Forth-2012 dropped `NOT` because pre-2012 implementations disagreed on whether it meant `0=` (logical) or `INVERT` (bitwise). Henceforth's `NOT` is the logical version. Prefer `0=` or `INVERT` in new code.</Word>
+
+<Word name="within" stack="(n1 n2 n3 -- f)">True if n2 is between n1 and n3.</Word>
+
+<Word name="true" stack="( -- -1)">Pushes the true flag (-1, all bits set). Per Forth-2012 standard.</Word>
+
+<Word name="false" stack="( -- 0)">Pushes the false flag (0).</Word>
+
+<Word name="case" stack="( -- )">Begins a CASE...OF...ENDOF...ENDCASE switch statement. The selector value must be on the stack.</Word>
+
+<Word name="of" stack="(x1 x2 -- | x1)">Compares the top of stack with the selector. If equal, drops both and executes the clause. If not, skips to ENDOF.</Word>
+
+<Word name="endof" stack="( -- )">Ends an OF clause. Branches to after ENDCASE.</Word>
+
+<Word name="endcase" stack="(x -- )">Ends a CASE statement. Drops the selector value if no OF clause matched.</Word>
+
+<Word name="catch" stack="(i*x xt -- j*x 0 | i*x n)">Executes the word referred to by xt while protecting the data stack. Returns 0 on success. If THROW is called during execution, restores the stack to its pre-CATCH depth and returns the thrown error code n.</Word>
+
+<Word name="throw" stack="(k*x n -- k*x | i*x n)">If n is 0, does nothing. Otherwise unwinds the stack to the nearest CATCH, leaving n as the result. The exception code is implementation-defined; -1 is conventional for ABORT, -2 for ABORT".</Word>
+
+<a id="ref-loop" />
+
+### Loop
+
+<Word name="do" stack="(n1 n2 --)">n1 is endValue, n2 is startValue. Repeats words between DO and LOOP from startValue until endValue is met.</Word>
+
+<Word name="loop" stack="( -- )">Ends loop.</Word>
+
+<Word name="+loop" stack="(n1 -- )">Loops in n1 increments.</Word>
+
+<Word name="every" stack="(n1 -- )">Performs the following word every n1 seconds until STOP is called. Henceforth scheduling extension.</Word>
+
+<Word name="stop" stack="( -- )">Stops the EVERY loop. Henceforth extension — pairs with EVERY only.</Word>
+
+<Word name="begin" stack="( -- )">Marks the start of a BEGIN...UNTIL or BEGIN...WHILE...REPEAT loop.</Word>
+
+<Word name="while" stack="(x -- )">Tests a condition within a BEGIN...REPEAT loop. Pops one cell; if zero, exits the loop.</Word>
+
+<Word name="repeat" stack="( -- )">Marks the end of a BEGIN...WHILE...REPEAT loop and jumps back to BEGIN.</Word>
+
+<Word name="until" stack="(x -- )">Pops one cell; if zero, jumps back to BEGIN. If non-zero, falls through.</Word>
+
+<Word name="leave" stack="( -- )">Exits the current DO...LOOP or DO...+LOOP immediately. Must be used within a loop.</Word>
+
+<Word name="unloop" stack="( -- )">Discards the loop control parameters from the return stack. Used when exiting a loop early with LEAVE.</Word>
+
+<Word name="?do" stack="(n1 n2 --)">Like DO but skips the loop entirely if the start and end values are equal. Executes loop from n1 to n2-1.</Word>
+
+<Word name="again" stack="( -- )">Unconditional branch back to BEGIN. Creates an infinite loop (BEGIN...AGAIN). Use LEAVE or the Escape key to exit.</Word>
+
+<a id="ref-base" />
+
+### Base
 
 Henceforth accepts integers as binary, octal, decimal and hexadecimal. Just change the base.
 
-```
-base      ( -- addr)  Address of BASE variable. Read with BASE @
-                      and write with n BASE !. Bases 2 through 36.
-decimal   (--)        Set BASE to 10.
-binary    (--)        Set BASE to 2 (Henceforth ext).
-octal     (--)        Set BASE to 8 (Henceforth ext).
-hex       (--)        Set BASE to 16.
-```
+<Word name="base" stack="( -- addr)">Returns the address of the BASE variable. Use `BASE @` to read and `n BASE !` to write. Supports bases 2 through 36.</Word>
 
-### Pop-up Operations
+<Word name="decimal" stack="(--)">Sets BASE to 10. Forth-2012 6.1.1170.</Word>
 
-```
-lineChart    (--)   Display a line chart of the stack.
-barChart     (--)   Display a bar chart of the stack.
-pieChart     (--)   Display a pie chart, slices proportional
-                    to each value's weight in the sum.
-```
+<Word name="binary" stack="(--)">Sets BASE to 2. Henceforth extension. Equivalent to `2 BASE !`.</Word>
 
-### Constants and Variables
+<Word name="octal" stack="(--)">Sets BASE to 8. Henceforth extension. Equivalent to `8 BASE !`.</Word>
 
-```
-constant (n --)   Create a constant from the value and the name.
-variable (--)     Create a variable, initially zero.
-!        (n addr --)         Store value at address.
-@        (addr -- n)         Fetch value at address.
-?        (addr --)           Print value at address.
-c!       (char addr --)      Store one character.
-c@       (addr -- char)      Fetch one character.
-create   (--)                Create an array.
-,        (n --)              Append value to the latest array.
-allot    (n --)              Allocate n cells.
-here     ( -- addr)          Next available data space address.
-cells    (n1 -- n2)          Convert count to address offset.
-cell+    (addr1 -- addr2)    Advance address by one cell.
-+!       (n addr --)         Add n to value at address.
-count    (c-addr1 -- c-addr2 u)  Counted string → addr + length.
-bl       ( -- char)          ASCII space (32).
-2@       (addr -- x1 x2)     Fetch two consecutive cells.
-2!       (x1 x2 addr --)     Store two consecutive cells.
-fill     (addr u char --)    Fill u bytes with character.
-move     (addr1 addr2 u --)  Copy u address units.
-erase    (addr u --)         Fill u address units with zeros.
-allocate (u -- a-addr ior)   Allocate u cells. ior 0 on success.
-free     (a-addr -- ior)     Free previously allocated memory.
-resize   (a-addr u -- a-addr2 ior)  Resize allocation.
-c,       (char --)           Reserve and store one character.
-char+    (c-addr1 -- c-addr2)  Advance by one character.
-chars    (n1 -- n2)          Size in address units of n chars.
-align    ( -- )              Align data-space pointer.
-aligned  (addr -- a-addr)    First aligned addr >= addr.
-```
+<Word name="hex" stack="(--)">Sets BASE to 16. Forth-2012 6.2.1660.</Word>
 
-### Terminal Operators
+<a id="ref-popup" />
 
-```
-cr           (--)              Newline.
-space        (--)              Single space.
-spaces       (n --)            n spaces.
-emit         (n --)            Emit ASCII code.
-(            (--)              Start inline comment.
-)            (--)              End inline comment.
-\            (--)              Line comment (ignored to EOL).
-.s           (--)              Show stack.
-.rs          (--)              Show return stack (Henceforth ext).
-clear        (i*x --)          Empty data + return stacks + screen.
-bye          (--)              Clear everything; defaults.
-."           (--)              Start printing.
-"            (--)              End printing.
-s"           ( -- addr u)      String literal → addr + length.
-type         (addr u --)       Display string.
-page         (--)              Clear terminal screen.
-ms           (u --)            Wait u milliseconds (FACILITY 10.6).
-char         ( -- char)        Parse next word; ASCII of first char.
-[char]       ( -- n)           Compile-time CHAR.
-word         (char -- c-addr)  Parse until delimiter; counted str.
-parse        (char -- c-addr u)  Parse until delimiter; addr + len.
-key          ( -- n)           Block for keypress; push ASCII.
-?terminal    ( -- flag)        -1 if input buffered / interrupt
-                               requested. Forth-2012 name: ekey?.
-accept       (c-addr n1 -- n2) Read up to n1 chars; return n2 read.
-sessionInput (--)              Display session input.
-dictionary   (--)              User-defined words.
-vlist        (--)              All built-in words. Same as `words`.
-forth        (--)              Reset vocabulary to built-ins.
-c"           ( -- c-addr)      Counted string literal.
-abort        (--)              Clear all stacks; reset interpreter.
-abort"       (flag --)         If flag, display message and abort.
-quit         (--)              Clear return stack; enter interpret.
-source       ( -- c-addr u)    Current input buffer.
-environment? (c-addr u -- false | i*x true)  Query environment.
-```
+### Pop-up
+
+<Word name="lineChart" stack="(--)">Displays a line chart representing the stack.</Word>
+
+<Word name="barChart" stack="(--)">Displays a bar chart representing the stack.</Word>
+
+<Word name="pieChart" stack="(--)">Displays a pie chart representing the stack with slices in proportion to each value's weight compared to the sum.</Word>
+
+<a id="ref-constants" />
+
+### Constants & Variables
+
+<Word name="constant" stack="(n --)">Takes a value from the stack and a name; creates a constant of that value called by the name provided.</Word>
+
+<Word name="variable" stack="(--)">Creates a variable whose name will be the first string of characters following VARIABLE, initially zero.</Word>
+
+<Word name="!" stack="(n address --)">Stores a number to the address provided.</Word>
+
+<Word name="@" stack="(address -- n)">Gives the value from address.</Word>
+
+<Word name="?" stack="(address --)">Prints the value from address to the terminal.</Word>
+
+<Word name="c!" stack="(char addr --)">Stores a single character at the specified memory address.</Word>
+
+<Word name="c@" stack="(addr -- char)">Fetches a single character from the specified memory address and places it on the stack.</Word>
+
+<Word name="create" stack="(--)">Creates an array named by the first string of characters following CREATE.</Word>
+
+<Word name="," stack="(n --)">Stores the top value as part of the array in the current data-space position.</Word>
+
+<Word name="allot" stack="(n --)">Allocates n cells of data space. Used after CREATE to allocate memory for arrays or data structures.</Word>
+
+<Word name="here" stack="( -- addr)">Returns the address of the next available data space location.</Word>
+
+<Word name="cells" stack="(n1 -- n2)">Converts a count to an address offset by multiplying by the cell size.</Word>
+
+<Word name="cell+" stack="(addr1 -- addr2)">Adds the size of one cell to an address, advancing it to the next cell boundary.</Word>
+
+<Word name="+!" stack="(n addr --)">Adds n to the value stored at the given address.</Word>
+
+<Word name="count" stack="(c-addr1 -- c-addr2 u)">Converts a counted string (length byte followed by characters) to an address and length suitable for TYPE.</Word>
+
+<Word name="bl" stack="( -- char)">Pushes the ASCII value for space character (32) onto the stack.</Word>
+
+<Word name="2@" stack="(addr -- x1 x2)">Fetches two consecutive cells from memory at the given address.</Word>
+
+<Word name="2!" stack="(x1 x2 addr --)">Stores two consecutive values to memory at the given address.</Word>
+
+<Word name="fill" stack="(addr u char --)">Fills u bytes of memory starting at addr with the specified character value.</Word>
+
+<Word name="move" stack="(addr1 addr2 u --)">Copies u address units from addr1 to addr2. Handles overlapping memory regions correctly.</Word>
+
+<Word name="erase" stack="(addr u --)">Fills u address units with zeros, effectively clearing the memory region.</Word>
+
+<Word name="allocate" stack="(u -- a-addr ior)">Allocates u cells of contiguous data space. Returns the start address and an I/O result code (0 = success, -1 = failure). Reuses previously freed blocks when possible.</Word>
+
+<Word name="free" stack="(a-addr -- ior)">Releases previously allocated memory starting at addr. Returns 0 on success. Adjacent freed blocks are merged to reduce fragmentation.</Word>
+
+<Word name="resize" stack="(a-addr u -- a-addr2 ior)">Changes the size of an allocation. If the new size fits within the existing block, returns the same address. Otherwise allocates a new block, copies existing data, and frees the old block.</Word>
+
+<Word name="c," stack="(char --)">Reserves one character of data space and stores char in it.</Word>
+
+<Word name="char+" stack="(c-addr1 -- c-addr2)">Adds the size of one character to the address.</Word>
+
+<Word name="chars" stack="(n1 -- n2)">Returns the size in address units of n characters. In this system, 1 char = 1 unit.</Word>
+
+<Word name="align" stack="( -- )">Aligns the data-space pointer to a cell boundary.</Word>
+
+<Word name="aligned" stack="(addr -- a-addr)">Returns the first aligned address greater than or equal to addr.</Word>
+
+<a id="ref-terminal" />
+
+### Terminal
+
+<Word name="cr" stack="(--)">Newline added to terminal.</Word>
+
+<Word name="space" stack="(--)">Adds a single space to the terminal.</Word>
+
+<Word name="spaces" stack="(n --)">Adds n spaces to the terminal.</Word>
+
+<Word name="emit" stack="(n --)">Emits the ASCII code on top of the stack.</Word>
+
+<Word name="(" stack="(--)">Starts inline comment. Everything between `(` and `)` will be ignored. Can appear anywhere on a line.</Word>
+
+<Word name=")" stack="(--)">Ends inline comment.</Word>
+
+<Word name="\\" stack="(--)">Line comment. Everything after `\` to the end of the line is ignored. Supported in `.fs` files.</Word>
+
+<Word name=".s" stack="(--)">Show stack on terminal.</Word>
+
+<Word name=".rs" stack="(--)">Displays the return stack on the terminal. Henceforth extension — Forth-2012 only specifies `.s` for the data stack.</Word>
+
+<Word name="clear" stack="(i*x --)">Empties the data stack, return stack, and terminal screen. Henceforth extension — non-standard. For just the screen use `page`; for stacks alone use `abort`.</Word>
+
+<Word name="bye" stack="(--)">Clears everything, resets to default settings.</Word>
+
+<Word name="." stack="(--)">Start print. Everything between quotes is printed.</Word>
+
+<Word name='"' stack="(--)">Ends print.</Word>
+
+<Word name='s"' stack="( -- addr u)">Creates a string literal. Returns the address and length of the string on the stack.</Word>
+
+<Word name="type" stack="(addr u --)">Displays the string at that address to the terminal.</Word>
+
+<Word name="page" stack="(--)">Clears the terminal screen (Forth-2012 6.2.2030). In Henceforth's append-only buffer this empties every prior entry so the next emission starts at the top. Does not affect the data, return, or data stack.</Word>
+
+<Word name="ms" stack="(u --)">Wait at least u milliseconds before the next loop iteration (Forth-2012 FACILITY 10.6.2.1905). Use it to pace animation and screen updates.</Word>
+
+<Word name="char" stack="( -- char)">Parses the next space-delimited word and returns the ASCII value of its first character.</Word>
+
+<Word name="[char]" stack="( -- n)">Compile-time version of CHAR. Compiles the character value into the current definition.</Word>
+
+<Word name="word" stack="(char -- c-addr)">Parses the input stream until the delimiter character is found and returns a counted string address.</Word>
+
+<Word name="parse" stack="(char -- c-addr u)">Parses the input stream until the delimiter character is found and returns address and length.</Word>
+
+<Word name="key" stack="( -- n)">Waits for a single keypress and pushes its ASCII value onto the stack. Blocks execution until a key is pressed.</Word>
+
+<Word name="?terminal" stack="( -- flag)">Returns -1 if the keyboard buffer has input or a terminal interrupt has been requested, 0 otherwise. The Forth-2012 standard name is `ekey?` (FACILITY 10.6.2.1306); both spellings dispatch to the same handler.</Word>
+
+<Word name="accept" stack="(c-addr n1 -- n2)">Receives up to n1 characters from the input source and stores them at c-addr. Returns n2, the actual number of characters received.</Word>
+
+<Word name="sessionInput" stack="(--)">Displays session input.</Word>
+
+<Word name="dictionary" stack="(--)">Shows the user's defined words, constants, and variables. Henceforth extension. For all words (built-in plus user-defined) use `words` or `vlist`.</Word>
+
+<Word name="vlist" stack="(--)">Displays a list of every built-in word Henceforth offers. The Forth-2012 standard name is `words` (TOOLS 15.6.1.2465); both spellings dispatch to the same handler.</Word>
+
+<Word name="forth" stack="(--)">Resets vocabulary to standard built-in words, removing all user definitions.</Word>
+
+<Word name='c"' stack="( -- c-addr)">Creates a counted string literal. Returns the address of a counted string (length byte followed by characters).</Word>
+
+<Word name="abort" stack="(--)">Clears all stacks and resets the interpreter state.</Word>
+
+<Word name='abort"' stack="(flag --)">If the flag is non-zero, displays the message and ABORTs. Otherwise discards the message and continues. Usage: `0= abort" value must not be zero"`.</Word>
+
+<Word name="quit" stack="(--)">Clears the return stack and enters interpretation state.</Word>
+
+<Word name="source" stack="( -- c-addr u)">Returns the address and length of the current input buffer.</Word>
+
+<Word name="environment?" stack="(c-addr u -- false | i*x true)">Queries the system for an environmental parameter. Returns false if unknown, or the value and true if known.</Word>
+
+<a id="ref-other" />
 
 ### Other Words
 
-```
-date&time   ( -- s m h d M y)  Push device time to stack.
-pay         (--)               Present pay sheet.
-.fs                            Load file's contents into Henceforth.
-startup.fs                     Auto-loaded on launch; put your custom
-                               definitions, aliases, and INCLUDE
-                               calls here.
-```
+<Word name="date&time" stack="(-- s m h d M y)">Adds the device's current time to the stack: seconds, minutes, hours, day, month, year.</Word>
+
+<Word name="pay" stack="(--)">Presents the pay sheet, where you can send Bitcoin.</Word>
+
+<Word name=".fs">Filename followed by `.fs` extension will load that file's contents into Henceforth.</Word>
+
+<Word name="startup.fs">A special file that runs automatically when Henceforth launches. Created as a blank template on first launch. Add your custom word definitions, aliases, and INCLUDE calls here so they are available every session.</Word>
+
+<a id="ref-data-conv" />
 
 ### Data Conversion
 
 Henceforth has two stacks: the integer stack (main) and the data stack (for raw bytes, used by Bitcoin Script operations). These words bridge between them.
 
-```
-hex2data    Convert following hex string to bytes; push to data stack.
-            Usage: hex2data 48656c6c6f
-data2hex    Pop top of data stack; display as hex.
-.ds         Display contents of data stack.
->data       Convert following token to raw bytes; push to data stack.
->addr       (n --) Mark top integer as a Bitcoin address string.
-```
+<Word name="hex2data" stack="( -- )">Converts the following hex string to bytes and pushes them onto the data stack. Usage: `hex2data 48656c6c6f`.</Word>
+
+<Word name="data2hex" stack="( -- )">Converts the top data stack item to a hex string and displays it on the terminal.</Word>
+
+<Word name=".ds" stack="( -- )">Displays the contents of the data stack.</Word>
+
+<Word name=">data" stack="( -- )">Converts the following token to raw data bytes and pushes them onto the data stack.</Word>
+
+<Word name=">addr" stack="(n -- )">Marks the top-of-stack integer value as a Bitcoin address string for transaction building.</Word>
+
+<a id="ref-strings" />
 
 ### String Operations
 
-```
-cmove    (c-addr1 c-addr2 u --)  Copy u chars low-to-high.
-cmove>   (c-addr1 c-addr2 u --)  Copy u chars high-to-low.
-/string  (c-addr1 u1 n -- c-addr2 u2)  Adjust string by n chars.
-search   (c-addr1 u1 c-addr2 u2 -- c-addr3 u3 flag)  Find substring.
-blank    (c-addr u --)           Fill with BL (ASCII 32).
-```
+<Word name="cmove" stack="(c-addr1 c-addr2 u -- )">Copies u characters from addr1 to addr2, proceeding low address to high (safe when addr2 > addr1).</Word>
 
-### Networking Operations
+<Word name="cmove>" stack="(c-addr1 c-addr2 u -- )">Copies u characters from addr1 to addr2, proceeding high address to low (safe for overlapping regions when addr2 < addr1).</Word>
 
-```
-wocbitcoinprice         ( -- n)  BSV price in USD pennies.
-woccirculatingsupply    (--)     Print circulating supply.
-wocblockchaininfo       (--)     Print latest block info.
-wocaddressinfo          (--)     Print address details.
-wocgetbalance           (--)     Print address balance.
-wocgethistory           (--)     Print address history.
-wocgetblockbyheight     (n --)   Print block info at height.
-```
+<Word name="/string" stack="(c-addr1 u1 n -- c-addr2 u2)">Adjusts a string address and length by n characters. Advances the address by n and reduces the length by n.</Word>
+
+<Word name="search" stack="(c-addr1 u1 c-addr2 u2 -- c-addr3 u3 flag)">Searches for string2 within string1. If found, returns the match address, remaining length, and true. If not found, returns the original string and false.</Word>
+
+<Word name="blank" stack="(c-addr u -- )">Fills u characters of memory starting at addr with spaces (BL, ASCII 32).</Word>
+
+<a id="ref-networking" />
+
+### Networking
+
+<Word name="wocbitcoinprice" stack="( -- n)">Fetches the bitcoin price in USD and adds it to the stack in pennies.</Word>
+
+<Word name="woccirculatingsupply" stack="(--)">Fetches the circulating supply of bitcoin.</Word>
+
+<Word name="wocblockchaininfo" stack="(--)">Fetches latest general block info from WhatsOnChain and prints to terminal.</Word>
+
+<Word name="wocaddressinfo" stack="(--)">Takes an address and displays its information to the terminal.</Word>
+
+<Word name="wocgetbalance" stack="(--)">Takes an address and displays its balance information to the terminal.</Word>
+
+<Word name="wocgethistory" stack="(--)">Takes an address and displays its history information to the terminal.</Word>
+
+<Word name="wocgetblockbyheight" stack="(n--)">Takes a block height from the stack and searches WhatsOnChain for info on that block.</Word>
+
+<a id="ref-tx-builder" />
 
 ### Transaction Builder
 
 The transaction builder words allow programmatic construction of Bitcoin transactions directly from the FORTH terminal. Build a transaction step by step, then broadcast it.
 
-```
-tx-new           ( -- )  Initialise a new transaction builder.
-tx-set-fee       (n -- ) Set fee rate in satoshis per kilobyte.
-                         Usage: 500 tx-set-fee
-tx-add-output    (n -- ) Add P2PKH output; expects amount on
-                         stack and address as next word.
-                         Usage: 1000 tx-add-output 1A1zP1...
-tx-add-data      ( -- )  Add OP_RETURN data output.
-tx-preview-toggle ( -- ) Toggle preview mode. When ON,
-                         TX-BROADCAST shows without sending.
-tx-show          ( -- )  Display current transaction.
-tx-clear         ( -- )  Clear builder.
-tx-broadcast     ( -- )  Build, sign, broadcast via ARC.
+<Word name="tx-new" stack="( -- )">Initialises a new transaction builder. Clears any previous transaction state.</Word>
 
-send             ( amount c-addr u -- )
-                 Standard payment in a single word. Validates,
-                 then presents PayView with the amount + address
-                 pre-filled. The user long-presses to confirm;
-                 Face ID gates the actual broadcast via ARC.
-                 Terminal output on success: "sent TXID: <id>".
-                 Usage: 1000 s" 1A1zP1..." send
+<Word name="tx-set-fee" stack="(n -- )">Sets the fee rate in satoshis per kilobyte for the current transaction. Usage: `500 tx-set-fee`.</Word>
 
-send-many        ( amount1 ... amountN c-addr u -- )
-                 Multi-recipient payment with per-recipient
-                 amounts. Pops the address string first to
-                 derive N, then pops N amounts. Presents
-                 MultiPaySheet for review before Face ID.
-                 Atomic: any validation failure rejects the
-                 whole transaction.
-                 Usage: 1000 5000 250 s" 1A 1B 1C" send-many
-```
+<Word name="tx-add-output" stack="(n -- )">Adds a P2PKH output to the transaction. Expects the amount in satoshis on the stack and the destination address as the next word. Usage: `1000 tx-add-output 1A1zP1...`.</Word>
 
-> **Standard payment example.** Single recipient:
-> ```
-> 1000 s" 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa" send
-> ```
-> Multiple recipients, equal-split, 2500 sats each:
-> ```
-> 5000 s" 1A1zP1... 1BvBMS..." send
-> ```
+<Word name="tx-add-data" stack="( -- )">Adds an OP_RETURN data output to the current transaction.</Word>
 
-> **Multi-recipient with per-recipient amounts.** When recipients should receive *different* amounts, use `send-many`. The recipient count is derived from the address string (single count source of truth) and the function pops exactly that many amounts.
->
-> Reading rule for both `send` and `send-many`: amounts come first, the recipient string comes last. This places the address string at the top of the stack so `send-many` can read it first and infer N before consuming the amount block — no explicit count parameter is needed.
+<Word name="tx-preview-toggle" stack="( -- )">Toggles preview mode. When ON, TX-BROADCAST shows the transaction without sending it; when OFF, TX-BROADCAST broadcasts.</Word>
+
+<Word name="tx-show" stack="( -- )">Displays the current transaction being built (inputs, outputs, fee).</Word>
+
+<Word name="tx-clear" stack="( -- )">Clears the transaction builder, discarding all inputs and outputs.</Word>
+
+<Word name="tx-broadcast" stack="( -- )">Builds, signs, and broadcasts the current transaction to the BSV network via ARC.</Word>
+
+<Word name="send" stack="( amount c-addr u -- )">Standard payment in a single word. Pops the destination string from the data stack (placed there by `S"`) and the amount from the integer stack. The string holds one address (single recipient) or N space-separated addresses (equal-split). Validates the inputs, then presents PayView with the amount + address pre-filled. The user long-presses to confirm; Face ID gates the actual broadcast via ARC. Terminal output on success: `sent TXID: <id>`. Usage: `1000 s" 1A1zP1..." send`.</Word>
+
+<Word name="send-many" stack="( amount1 ... amountN c-addr u -- )">Multi-recipient payment with per-recipient amounts. Pops the address string first to derive N (the recipient count), then pops N amounts. Pairs amount[i] with address[i] in left-to-right order. Validates every payee, then presents MultiPaySheet with a per-recipient grid so the user reviews the output set before Face ID. On confirm, builds one transaction with N P2PKH outputs and broadcasts via ARC. Atomic — any validation failure rejects the whole transaction. Usage: `1000 5000 250 s" 1A 1B 1C" send-many`.</Word>
+
+> **Standard Payment Example.** Single recipient: `1000 s" 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa" send`. Equal-split across multiple: `5000 s" 1A1zP1... 1BvBMS..." send` (2,500 sats each). Multi-recipient with different amounts: `1000 5000 250 s" 1A1zP1... 1BvBMS... 1FfmbHfn..." send-many`.
 
 #### Standard Transaction Script
 
@@ -469,89 +614,87 @@ OP_FALSE OP_RETURN
 SCRIPT-END
 ```
 
-`SCRIPT-BEGIN` activates script recording; `OP_FALSE OP_RETURN` emits the opcodes for a data-carrying output; `."` places the message on terminal output; `>data` converts it to raw bytes on the data stack; `data>script` emits those bytes as PUSHDATA into the script buffer; `SCRIPT-END` finalises.
+<a id="ref-crypto" />
 
 ### Bitcoin Cryptography
 
-```
-sign-msg     ( -- )      Sign a message with current wallet key (BSM).
-                         Usage: sign-msg <message>
-verify-msg   ( -- flag)  Verify a BSM signature against an address.
-                         Usage: verify-msg <addr> <sig> <message>
-encrypt-msg  ( -- )      Encrypt for a recipient using BRC-2 Electrum
-                         ECIES (ECDH + AES-CBC + HMAC-SHA256).
-                         Wire-compatible with @bsv/sdk.
-                         Usage: encrypt-msg <pubKeyHex> <message>
-decrypt-msg  ( -- )      Decrypt a BRC-2 ECIES ciphertext.
-                         Usage: decrypt-msg <ciphertextHex>
-```
+<Word name="sign-msg" stack="( -- )">Signs a message with the current wallet key using Bitcoin Signed Message (BSM). Usage: `sign-msg <message>`.</Word>
+
+<Word name="verify-msg" stack="( -- flag)">Verifies a BSM signature against an address. Pushes true (-1) or false (0). Usage: `verify-msg <address> <signature> <message>`.</Word>
+
+<Word name="encrypt-msg" stack="( -- )">Encrypts a message for a recipient using BRC-2 Electrum ECIES (ECDH + AES-CBC + HMAC-SHA256). Wire-compatible with `@bsv/sdk` EncryptedMessage. Usage: `encrypt-msg <recipientPubKeyHex> <message>`.</Word>
+
+<Word name="decrypt-msg" stack="( -- )">Decrypts a BRC-2 ECIES-encrypted message using the current wallet key. The plaintext is displayed. Usage: `decrypt-msg <ciphertextHex>`.</Word>
+
+<a id="ref-bap" />
 
 ### BAP Identity
 
 BAP (Bitcoin Attestation Protocol) provides a decentralised identity system built on Bitcoin. Identity keys are derived using Type42 (BRC-42) key derivation from the wallet's master key.
 
-```
-bap-id       ( -- )      Show the BAP identity key + signing address.
-bap-sign     ( -- )      Sign with BAP identity key.
-                         Usage: bap-sign <message>
-bap-verify   ( -- flag)  Verify a BAP-signed message.
-                         Usage: bap-verify <addr> <sig> <message>
-bap-register ( -- )      Build a BAP ID registration tx (OP_RETURN
-                         with BAP + AIP attestation).
-```
+<Word name="bap-id" stack="( -- )">Shows the BAP identity key (ID) and signing address for the current wallet.</Word>
 
-> **AIP signatures are over raw message bytes, not hex.** `bap-sign` and the AIP attestation inside `bap-register` apply the Bitcoin Signed Message wire format directly to raw payload bytes. Signatures produced by current builds verify against any BAP / AIP implementation that follows the standard (including `@bsv/sdk`).
+<Word name="bap-sign" stack="( -- )">Signs a message with the BAP identity key (Type42 derived). Usage: `bap-sign <message>`.</Word>
+
+<Word name="bap-verify" stack="( -- flag)">Verifies a BAP-signed message. Pushes true (-1) or false (0). Usage: `bap-verify <address> <signature> <message>`.</Word>
+
+<Word name="bap-register" stack="( -- )">Builds a BAP ID registration transaction (OP_RETURN with BAP + AIP attestation).</Word>
+
+> **AIP signatures are over raw message bytes, not hex.** `bap-sign` and the AIP attestation inside `bap-register` apply the Bitcoin Signed Message wire format directly to raw payload bytes. Signatures produced by current builds verify against any BAP / AIP implementation that follows the standard.
+
+<a id="ref-script-rec" />
 
 ### Script Recording
 
 Script recording is a macro assembler for Bitcoin Script. When recording is active, `op_*` words emit their opcodes into a script buffer rather than executing. Standard FORTH control flow still runs normally.
 
-```
-script-begin   Start recording. op_* words emit opcodes to the
-               script buffer. FORTH control flow still runs.
-script-end     Stop and finalise; displays compiled script hex.
-script-show    Display the current buffer as hex.
-script-clear   Discard buffer; stop recording.
-script-use     Set recorded script as the selected transaction
-               script (for building transactions).
-script-save    Save current script with a name.
-               Usage: script-save <name>
-script-load    Load a saved script by name.
-               Usage: script-load <name>
-script-list    List all saved scripts.
-```
+<Word name="script-begin" stack="( -- )">Start recording Bitcoin Script. `op_*` words emit opcodes to the script buffer. FORTH control flow still runs normally.</Word>
 
-> **Raw bytes require a `0x` prefix during recording.** A bare hex-looking token like `ff` is parsed according to current `BASE` and pushed to the integer stack. To emit raw opcode bytes, use an explicit `0x`-prefixed literal (e.g. `0xdeadbeef`).
+<Word name="script-end" stack="( -- )">Stop recording and finalise the script. Displays the compiled script hex.</Word>
 
-### Script Bridge Words
+<Word name="script-show" stack="( -- )">Display the current script buffer contents as hex.</Word>
+
+<Word name="script-clear" stack="( -- )">Discard the current script buffer and stop recording.</Word>
+
+<Word name="script-use" stack="( -- )">Set the recorded script as the selected transaction script (for building transactions).</Word>
+
+<Word name="script-save" stack="( -- )">Save the current script with a name. Usage: `script-save <name>`.</Word>
+
+<Word name="script-load" stack="( -- )">Load a previously saved script by name. Usage: `script-load <name>`.</Word>
+
+<Word name="script-list" stack="( -- )">List all saved scripts.</Word>
+
+> **Raw bytes require a `0x` prefix during recording.** A bare hex-looking token such as `ff` is *not* emitted as the byte `0xff` — it is parsed according to the current `BASE` and pushed to the integer stack. To emit raw opcode bytes into the script buffer, use an explicit `0x`-prefixed literal (e.g. `0xdeadbeef`).
+
+<a id="ref-script-bridge" />
+
+### Script Bridge
 
 The bridge words connect FORTH's stacks to the script recording buffer, enabling dynamic script construction with computed values, strings, and file data.
 
-```
->script       (n -- )  Emit integer as a Bitcoin Script number.
-data>script   ( -- )   Emit top of data stack as PUSHDATA. Use
-                       after crypto ops to inject computed hashes.
-text>script   ( -- )   Convert following token to UTF-8 bytes and
-                       emit as PUSHDATA.
-                       Usage: text>script image/jpeg
-file>script   ( -- )   Read a file's raw contents and emit as
-                       PUSHDATA. For uploading images, videos, or
-                       data on-chain.
-                       Usage: file>script photo.jpg
-```
+<Word name=">script" stack="(n -- )">Takes an integer from the stack and emits it as a Bitcoin Script number to the script buffer.</Word>
 
-### Script Helper Words
+<Word name="data>script" stack="( -- )">Takes the top item from the data stack and emits it as PUSHDATA to the script buffer. Use after crypto operations to inject computed hashes.</Word>
+
+<Word name="text>script" stack="( -- )">Converts the following token to UTF-8 bytes and emits as PUSHDATA to the script buffer. Usage: `text>script image/jpeg`.</Word>
+
+<Word name="file>script" stack="( -- )">Reads a file's raw contents and emits them as PUSHDATA to the script buffer. For uploading images, videos, or data on-chain. Usage: `file>script photo.jpg`.</Word>
+
+<a id="ref-script-helpers" />
+
+### Script Helpers
 
 Pre-built script templates for common Bitcoin transaction patterns.
 
-```
-make-p2pkh-script     Create a P2PKH locking script from an address.
-make-opreturn-script  Create OP_RETURN output script from data.
-make-2of3-multisig    Create 2-of-3 multisig script from three pubkeys.
-script-pushdata       Push raw bytes via OP_PUSHDATA.
-```
+<Word name="make-p2pkh-script" stack="( -- )">Creates a standard P2PKH (Pay-to-Public-Key-Hash) locking script from an address.</Word>
 
-> **Example: upload an image to the blockchain via the B:// protocol.**
+<Word name="make-opreturn-script" stack="( -- )">Creates an OP_RETURN output script from data on the stack.</Word>
+
+<Word name="make-2of3-multisig" stack="( -- )">Creates a 2-of-3 multisig script from three public keys on the stack.</Word>
+
+<Word name="script-pushdata" stack="( -- )">Pushes raw data bytes to the script recording buffer using OP_PUSHDATA.</Word>
+
+> **Example: upload an image via the B:// protocol.**
 > ```
 > script-begin
 >   op_false op_return
@@ -565,119 +708,130 @@ script-pushdata       Push raw bytes via OP_PUSHDATA.
 > pay
 > ```
 
-> **Example: build a hash-locked script with a computed HASH160.**
-> ```
-> script-begin
->   op_dup op_hash160
->   " secret" op_sha256 op_hash160
->   data>script
->   op_equalverify op_checksig
-> script-end
-> ```
+<a id="ref-opcodes" />
 
 ### OPCodes
 
-#### Push data
+All 140+ Bitcoin Script opcodes are exposed as FORTH words. Below are the categories — every opcode behaves like its Script consensus definition.
 
-```
-op_0 ... op_16            Push the corresponding integer 0..16.
-op_false                  Push zero (false flag).
-op_pushdata1              Next byte = number of bytes to push.
-op_pushdata2              Next two bytes = number of bytes to push.
-op_pushdata4              Next four bytes = number of bytes to push.
-op_1negate                Push -1.
-```
+#### Push Data
 
-#### Control flow
+<Word name="op_0 … op_16" stack="( -- 0..16)">Push the corresponding integer 0..16 onto the stack.</Word>
+<Word name="op_false" stack="( -- 0)">Zero (false flag) pushed to stack.</Word>
+<Word name="op_pushdata1" stack="(--)">The byte after will contain how many bytes are to be pushed.</Word>
+<Word name="op_pushdata2" stack="(--)">The next two bytes will contain how many bytes will be pushed.</Word>
+<Word name="op_pushdata4" stack="(--)">The next four bytes will contain how many bytes will be pushed.</Word>
+<Word name="op_1negate" stack="( -- -1)">Minus one pushed to the stack.</Word>
 
-```
-op_nop                    Does nothing.
-op_ver        ( -- ver)   Push transaction version (1 legacy, 2
-                          Chronicle post-block-943,816).
-op_if         (f -- )     Conditional execute.
-op_notif      (f -- )     Inverted conditional.
-op_verif      ( th -- f)  True if tx version >= threshold (Chronicle).
-op_vernotif   ( th -- f)  True if tx version < threshold (Chronicle).
-op_else                   Else branch.
-op_endif                  End if/else.
-op_verify     (f -- )     Mark transaction invalid if flag is false.
-op_return                 End script; OP_RETURN output.
-```
+#### Control Flow
 
-#### Stack operators
+<Word name="op_nop" stack="(--)">Does nothing.</Word>
+<Word name="op_ver" stack="( -- version)">Pushes the transaction version. Returns 1 (legacy) or 2 (Chronicle, post block 943,816).</Word>
+<Word name="op_if" stack="(f--)">Executes code depending on the expression's flag.</Word>
+<Word name="op_notif" stack="(n--)">Executes code depending on the inverted flag.</Word>
+<Word name="op_verif" stack="( threshold -- flag)">Pushes TRUE if tx version >= threshold. Chronicle upgrade.</Word>
+<Word name="op_vernotif" stack="( threshold -- flag)">Pushes TRUE if tx version &lt; threshold. Chronicle upgrade.</Word>
+<Word name="op_else" stack="(--)">Executes if the preceding OP_IF, OP_NOTIF, or OP_ELSE were not executed.</Word>
+<Word name="op_endif" stack="(--)">Ends the if/else statement.</Word>
+<Word name="op_verify" stack="(f--)">Marks the transaction as INVALID if the flag is false.</Word>
+<Word name="op_return" stack="(--)">Ends script. Often used to add data to the blockchain.</Word>
 
-```
-op_toaltstack    (n -- )                Move to alt stack.
-op_fromaltstack  ( -- n)                Move from alt stack.
-op_2drop, op_2dup, op_3dup, op_2over,
-op_2rot, op_2swap, op_ifdup, op_depth,
-op_drop, op_dup, op_nip, op_over,
-op_pick, op_roll, op_rot, op_swap,
-op_tuck                                 Standard Script stack ops.
-```
+#### Stack
 
-#### Size & separator
+<Word name="op_toaltstack" stack="(n--)">Moves the top of stack to the alt stack.</Word>
+<Word name="op_fromaltstack" stack="(--n)">Moves the top of alt stack to the main stack.</Word>
+<Word name="op_2drop" stack="(n n1--)">Discards the top two elements.</Word>
+<Word name="op_2dup" stack="(n n1 -- n n1 n n1)">Duplicates the top two values.</Word>
+<Word name="op_3dup" stack="(n n1 n2 -- n n1 n2 n n1 n2)">Duplicates the top three values.</Word>
+<Word name="op_2over" stack="(n n1 n2 n3 -- n n1 n2 n3 n n1)">Copies items 3 and 4 deep onto the top.</Word>
+<Word name="op_2rot" stack="(n n1 n2 n3 n4 n5 -- n2 n3 n4 n5 n n1)">Rotates items 5 and 6 to the top.</Word>
+<Word name="op_2swap" stack="(n n1 n2 n3 -- n2 n3 n n1)">Swaps the order of the top two pairs.</Word>
+<Word name="op_ifdup" stack="(n -- 0 | n n)">Duplicates the top value if it is NOT zero.</Word>
+<Word name="op_depth" stack="(--n)">Pushes the number of items on the stack.</Word>
+<Word name="op_drop" stack="(n--)">Discards the top item.</Word>
+<Word name="op_dup" stack="(n -- n n)">Duplicates the top item.</Word>
+<Word name="op_nip" stack="(n n1 -- n1)">Discards the second item.</Word>
+<Word name="op_over" stack="(n n1 -- n n1 n)">Copies the second item over the top.</Word>
+<Word name="op_pick" stack="(xu ... x0 u -- xu ... x0 xu)">Copies the u-th item to the top.</Word>
+<Word name="op_roll" stack="(xu xu-1 ... x0 u -- xu-1 ... x0 xu)">Moves the u-th item to the top.</Word>
+<Word name="op_rot" stack="(n n1 n2 -- n1 n2 n)">Rotates the top three items left.</Word>
+<Word name="op_swap" stack="(n n1 -- n1 n)">Swaps the top two items.</Word>
+<Word name="op_tuck" stack="(n n1 -- n1 n n1)">Copies the top item in front of the second.</Word>
 
-```
-op_size           (x -- x n)   Push byte length of top without
-                               consuming it.
-op_codeseparator               Marks beginning of signature-checked
-                               data.
-op_true           ( -- 1)      Alias for OP_1.
-```
+#### Size & Separator
 
-#### Splice operators (Chronicle restored)
+<Word name="op_size" stack="(x -- x n)">Pushes the byte length of the top stack element without consuming it.</Word>
+<Word name="op_codeseparator" stack="(--)">Marks the beginning of signature-checked data. All signature checks only use data after the most recent OP_CODESEPARATOR.</Word>
+<Word name="op_true" stack="( -- 1)">Pushes 1 onto the stack. Alias for OP_1.</Word>
 
-```
-op_cat      Concatenate two strings.
-op_split    (n n1 --)  Split byte sequence n at n1.
-op_num2bin  Convert value to a fixed-length byte sequence.
-op_bin2num  Convert byte sequence to numerical value.
-op_substr   (start length --)  Extract substring (0xb3, Chronicle).
-op_left     (n --)             Leftmost N bytes (0xb4, Chronicle).
-op_right    (n --)             Rightmost N bytes (0xb5, Chronicle).
-```
+#### Splice (Chronicle restored)
+
+<Word name="op_cat" stack="(--)">Concatenates the two strings provided.</Word>
+<Word name="op_split" stack="(n n1--)">Splits byte sequence n at n1.</Word>
+<Word name="op_num2bin" stack="(n n1--)">Converts value n into a byte sequence of length n1.</Word>
+<Word name="op_bin2num" stack="(n--)">Converts byte sequence n into a numerical value.</Word>
+<Word name="op_substr" stack="(start length --) data: (data -- substring)">Extracts a substring by start index and length. Chronicle upgrade (0xb3).</Word>
+<Word name="op_left" stack="(n --) data: (data -- left)">Extracts the leftmost N bytes. Chronicle upgrade (0xb4).</Word>
+<Word name="op_right" stack="(n --) data: (data -- right)">Extracts the rightmost N bytes. Chronicle upgrade (0xb5).</Word>
 
 #### Bitwise
 
-```
-op_invert       Flip all bits.
-op_and, op_or, op_xor              Logical AND / OR / XOR.
-op_equal, op_equalverify           Equality + VERIFY shortcut.
-op_reserved1, op_reserved2         Invalid unless in unexecuted OP_IF.
-```
+<Word name="op_invert" stack="(n -- n)">Flips all the bits in the input.</Word>
+<Word name="op_and" stack="(n1 n2 -- AND)">Logical AND.</Word>
+<Word name="op_or" stack="(n1 n2 -- OR)">Logical OR.</Word>
+<Word name="op_xor" stack="(n1 n2 -- XOR)">Logical XOR.</Word>
+<Word name="op_equal" stack="(n n1 -- f)">1 if equal, 0 if not.</Word>
+<Word name="op_equalverify" stack="(n1 n2 -- f)">OP_EQUAL then OP_VERIFY.</Word>
+<Word name="op_reserved1, op_reserved2" stack="(--)">Renders transaction invalid unless in an unexecuted OP_IF.</Word>
 
 #### Arithmetic
 
-```
-op_1add, op_1sub, op_2mul, op_2div,
-op_negate, op_abs, op_not, op_0notequal,
-op_add, op_sub, op_mul, op_div, op_mod,
-op_lshift, op_rshift,
-op_lshiftnum, op_rshiftnum   (Chronicle: 0xb6, 0xb7 — sign-preserving
-                              numeric shifts, distinct from byte-level
-                              op_lshift / op_rshift)
-op_booland, op_boolor,
-op_numequal, op_numequalverify, op_numnotequal,
-op_lessthan, op_greaterthan,
-op_lessthanorequal, op_greaterthanorequal,
-op_min, op_max, op_within
-```
+<Word name="op_1add" stack="(n -- n+1)">Adds 1.</Word>
+<Word name="op_1sub" stack="(n -- n-1)">Subtracts 1.</Word>
+<Word name="op_2mul" stack="(n -- n*2)">Doubles.</Word>
+<Word name="op_2div" stack="(n -- n/2)">Halves.</Word>
+<Word name="op_negate" stack="(n -- -n)">Flips sign.</Word>
+<Word name="op_abs" stack="(n -- |n|)">Absolute value.</Word>
+<Word name="op_not" stack="(n -- f)">Logical NOT. Returns 1 if 0, else 0.</Word>
+<Word name="op_0notequal" stack="(n -- f)">True if not zero.</Word>
+<Word name="op_add" stack="(n n1 -- n3)">Sum.</Word>
+<Word name="op_sub" stack="(n n1 -- n3)">Difference.</Word>
+<Word name="op_mul" stack="(n n1 -- n3)">Product.</Word>
+<Word name="op_div" stack="(n n1 -- n3)">Quotient.</Word>
+<Word name="op_mod" stack="(n n1 -- n3)">Remainder.</Word>
+<Word name="op_lshift" stack="(n n1 -- n3)">Bitwise left shift.</Word>
+<Word name="op_rshift" stack="(n n1 -- n3)">Bitwise right shift.</Word>
+<Word name="op_lshiftnum" stack="(n shift -- result)">Numeric left shift preserving sign. Distinct from `op_lshift` which is bitwise on bytes. Chronicle upgrade (0xb6).</Word>
+<Word name="op_rshiftnum" stack="(n shift -- result)">Numeric right shift preserving sign. Chronicle upgrade (0xb7).</Word>
+<Word name="op_booland" stack="(n n1 -- f)">True if both non-zero.</Word>
+<Word name="op_boolor" stack="(n n1 -- f)">True if either non-zero.</Word>
+<Word name="op_numequal" stack="(n n1 -- f)">Numeric equality.</Word>
+<Word name="op_numequalverify" stack="(n n1 -- f)">OP_NUMEQUAL then OP_VERIFY.</Word>
+<Word name="op_numnotequal" stack="(n n1 -- f)">Numeric inequality.</Word>
+<Word name="op_lessthan" stack="(n n1 -- f)">True if n &lt; n1.</Word>
+<Word name="op_greaterthan" stack="(n n1 -- f)">True if n &gt; n1.</Word>
+<Word name="op_lessthanorequal" stack="(n n1 -- f)">True if n &lt;= n1.</Word>
+<Word name="op_greaterthanorequal" stack="(n n1 -- f)">True if n &gt;= n1.</Word>
+<Word name="op_min" stack="(n n1 -- n)">Smaller value.</Word>
+<Word name="op_max" stack="(n n1 -- n)">Larger value.</Word>
+<Word name="op_within" stack="(n n1 n2 -- f)">True if n is between n1 and n2.</Word>
 
-#### Cryptographic
+#### Crypto
 
-```
-op_ripemd160, op_sha1, op_sha256, op_hash160, op_hash256,
-op_checksig, op_checksigverify,
-op_checkmultisig, op_checkmultisigverify
-```
+<Word name="op_ripemd160" stack="(--)">RIPEMD-160 hash.</Word>
+<Word name="op_sha1" stack="(--)">SHA-1 hash.</Word>
+<Word name="op_sha256" stack="(--)">SHA-256 hash.</Word>
+<Word name="op_hash160" stack="(--)">SHA-256 followed by RIPEMD-160 (address hash).</Word>
+<Word name="op_hash256" stack="(--)">Double SHA-256 (Bitcoin transaction hash).</Word>
+<Word name="op_checksig" stack="(--)">Verifies an ECDSA signature against a public key.</Word>
+<Word name="op_checksigverify" stack="(--)">OP_CHECKSIG then OP_VERIFY.</Word>
+<Word name="op_checkmultisig" stack="(--)">Verifies a set of signatures against a set of public keys.</Word>
+<Word name="op_checkmultisigverify" stack="(--)">OP_CHECKMULTISIG then OP_VERIFY.</Word>
 
-#### Locktime, reserved, invalid
+#### Lock Time / Reserved
 
-```
-op_nop2, op_nop3, op_pubkeyhash, op_pubkey, op_invalidopcode
-op_nop1, op_nop4, op_nop5, op_nop6, op_nop9, op_nop10
-```
+<Word name="op_nop2, op_nop3, op_pubkeyhash, op_pubkey, op_invalidopcode" stack="(--)">Reserved or pseudo-opcodes for locktime and pubkey-class operations.</Word>
+<Word name="op_nop1, op_nop4..6, op_nop9, op_nop10" stack="(--)">Reserved NOPs.</Word>
 
 > **Chronicle upgrade (block 943,816).** NOP4–8 (0xb3–0xb7) were repurposed as `op_substr`, `op_left`, `op_right`, `op_lshiftnum`, and `op_rshiftnum`. The transaction version (`op_ver`) auto-switches from 1 to 2 at the activation block.
 
@@ -687,134 +841,91 @@ op_nop1, op_nop4, op_nop5, op_nop6, op_nop9, op_nop10
 
 Henceforth includes a full Bitcoin SV (BSV) wallet, enabling users to create wallets, receive and send transactions, and interact with the blockchain — all from the same app that runs FORTH programs.
 
+<a id="wallet-architecture" />
+
 ### Wallet Architecture
 
 The wallet is built on a hierarchical deterministic (HD) key structure, meaning a single seed phrase generates an unlimited number of addresses.
 
-- **Seed Phrase** — a 12-word BIP-39 mnemonic generated when creating a new wallet. The master backup: from it, every key can be regenerated.
-- **Key Derivation** — two derivation methods are supported:
-  - **Type42 (BRC-42)** — the default for new wallets. Uses elliptic curve key tweaking (private key addition, public key multiplication) for more flexible derivation paths.
-  - **BIP-44** — the legacy standard. Retained for restoring wallets created by other software. Uses the standard path `m/44'/236'/0'/0/n`.
-- **Address Rotation** — after each transaction, a new receiving address is derived automatically. Improves privacy by avoiding address reuse.
+- **Seed Phrase** — a 12-word BIP-39 mnemonic generated when creating a new wallet. The master backup.
+- **Key Derivation** — two derivation methods are supported. **Type42 (BRC-42)** is the default for new wallets, using elliptic curve key tweaking for more flexible derivation paths. **BIP-44** is the legacy standard, retained for restoring wallets created by other software; path `m/44'/236'/0'/0/n`.
+- **Address Rotation** — after each transaction, a new receiving address is derived automatically.
 
-> **Security.** Private keys and seed phrases are stored exclusively in the iOS Keychain, protected by the device's Secure Enclave. They never leave the device and are never transmitted over the network.
+> **Security.** Private keys and seed phrases are stored exclusively in the iOS Keychain, protected by the device's Secure Enclave. They never leave the device.
 
 #### Address Discovery
 
-The wallet discovers addresses with funds using a shared Type42 scanner (`scanType42Addresses`). The scanner is *derivationType-independent* — it always tries Type42 first if the master key exists in Keychain, regardless of what `derivationType` says on the wallet card. This prevents funds from becoming invisible if the derivation type metadata is wrong.
+The wallet discovers addresses with funds using a shared Type42 scanner (`scanType42Addresses`). The scanner is *derivationType-independent* — it always tries Type42 first if the master key exists in Keychain, regardless of what `derivationType` says on the wallet card.
 
 - **Dynamic scan range** — scans at least 20 addresses (gap limit) past the last address with activity, with a minimum floor of 50 addresses.
 - **Receive and change chains** — scans both `1-wallet-{N}` (receive) and `0-change-{N}` (change) invoice numbers.
 - **BIP-44 fallback** — after Type42, scans standard BIP-44 paths. A wallet can have funds on both derivation paths.
-- **Auto-repair** — if Type42 addresses are discovered but `derivationType` is wrong, the scanner automatically corrects it and persists the fix.
+- **Auto-repair** — if Type42 addresses are discovered but `derivationType` is wrong, the scanner automatically corrects it.
+
+<a id="wallet-cards" />
 
 ### Wallet Cards
 
-Each wallet is represented by a *Wallet Card* in the app interface. A card stores:
+Each wallet is represented by a *Wallet Card* in the app interface. A card stores wallet title, main address, derived addresses, balance, and derivation type. Multiple wallets can be managed simultaneously; biometric authentication is required to access sensitive details.
 
-- **Wallet title** — a user-chosen name.
-- **Main address** — the primary receiving address.
-- **Derived addresses** — additional addresses generated through key rotation.
-- **Balance** — confirmed and unconfirmed satoshis, reconciled from the UTXO set.
-- **Derivation type** — Type42 or BIP-44.
+One wallet can be marked as the *default wallet*, indicated by a star on the wallet card. The default wallet is used by the terminal `send` word and other non-UI operations.
 
-Multiple wallets can be created and managed simultaneously. Biometric (Face ID / Touch ID) authentication is required to access sensitive details.
-
-#### Default Wallet
-
-One wallet can be marked as the *default wallet*, indicated by a star on the wallet card. The default wallet is used by the terminal `send` word and other non-UI operations. To change the default wallet, open the wallet details view and tap **Set as Default Wallet**. The setting persists across app launches.
+<a id="wallet-transactions" />
 
 ### Transactions
 
 #### Receiving
 
-To receive BSV, share your wallet's receiving address or scan its QR code. The wallet monitors for incoming transactions using:
+To receive BSV, share your wallet's receiving address or scan its QR code. Monitoring uses **JungleBus REST polling** every 30 seconds via `GET /v1/address/get/{address}`, plus a periodic sync as safety net.
 
-1. **JungleBus REST polling** — polls every 30 seconds for new transactions via `GET /v1/address/get/{address}`. When a new transaction ID is detected, the wallet triggers an automatic refresh.
-2. **Periodic sync** — full balance and UTXO refresh as a safety net.
-
-When a new transaction is detected, the wallet automatically refreshes balance, UTXOs, and transaction history.
-
-#### Notifications
-
-The wallet uses a UTXO-based deposit detection system. Instead of comparing balances (which can fluctuate mid-sync), it tracks known UTXO outpoints (`txHash:txPos`) per wallet in UserDefaults. Only genuinely new outpoints trigger a notification — the system is immune to confirmation state changes and mid-sync transient balances.
-
-When a wallet is first seen, existing outpoints are seeded silently (no "received entire balance" notification on first install).
+Notifications use a UTXO-based deposit detection system tracking known outpoints per wallet — immune to confirmation state changes and mid-sync transient balances. First-launch outpoints are seeded silently.
 
 #### Sending
 
 Transactions are built locally on the device:
 
-1. **UTXO Selection** — the wallet selects unspent transaction outputs to fund the payment, avoiding ordinal-protected UTXOs.
-2. **Fee Calculation** — fees are calculated using the current rate from the preferred miner (GorillaPool or TAAL) via ARC policy endpoints.
-3. **Change Output** — any excess is returned to a fresh change address derived from the wallet.
-4. **Signing** — each input is signed with the correct private key for its address (Type42 or BIP-44 derived).
-5. **Anti-Fee-Sniping** — the `nLockTime` field is set to the current block height, preventing miners from re-mining old transactions for higher fees.
-6. **Broadcasting** — the signed transaction is submitted via ARC with automatic failover between GorillaPool and TAAL.
+1. **UTXO Selection** — avoiding ordinal-protected UTXOs.
+2. **Fee Calculation** — current rate from GorillaPool or TAAL via ARC policy endpoints.
+3. **Change Output** — returned to a fresh change address.
+4. **Signing** — each input signed with the correct private key.
+5. **Anti-Fee-Sniping** — `nLockTime` set to current block height.
+6. **Broadcasting** — submitted via ARC with automatic failover.
 
-The `pay` word in the FORTH terminal opens the transaction builder. The pay view has three tabs:
+The `pay` word opens the transaction builder with three tabs: OP_RETURN, Script, Upload (B:// protocol).
 
-- **OP_RETURN** — write a text message to embed on-chain.
-- **Script** — select a saved script or a `.fs` script file.
-- **Upload** — pick a photo, video, or file from the device and upload it on-chain via the B:// protocol.
-
-#### Terminal Send Words
-
-In addition to `pay`, two terminal words compose payments directly from the stack:
-
-- **`send`** — `( amount c-addr u -- )`. Example: `1000 s" 1A..." send` sends 1000 satoshis to the given address. Space-separated addresses in the string equally split the amount.
-- **`send-many`** — `( amount1 ... amountN c-addr u -- )`. Example: `1000 5000 250 s" 1A 1B 1C" send-many` sends 1000, 5000, and 250 satoshis to three recipients in one transaction.
-
-Both accept P2PKH addresses only — paymail aliases must be resolved through the single-recipient `send` flow first.
-
-> **Mandatory pre-signing review.** Neither word broadcasts directly. `send` pre-fills the existing pay view; `send-many` presents a **MultiPaySheet** with a scrollable grid showing each (recipient, amount) row plus the total. The user sees the exact output set before the long-press triggers signature. The single canonical confirmation line `sent TXID: <id>` appears on the terminal after broadcast success.
+> **Mandatory pre-signing review.** Neither `send` nor `send-many` broadcasts directly. `send` pre-fills PayView; `send-many` presents a MultiPaySheet with a scrollable grid showing each (recipient, amount) row plus the total. The user sees the exact output set before the long-press triggers signature.
 
 #### Fragmentation-Aware Selection
 
-UTXO selection switches to a *fragmentation-aware* policy when the wallet has more than 100 UTXOs OR when the average UTXO value is below 5000 satoshis with more than 40 UTXOs. In this mode:
+UTXO selection switches to a fragmentation-aware policy when the wallet has more than 100 UTXOs OR average UTXO value is below 5000 satoshis with more than 40 UTXOs. Dust-input cap rises from 10 to 50, sort flips to smallest-first, smart-change splitting disabled. A 100 KB ceiling refuses oversize transactions before biometric prompts.
 
-- The dust-input cap rises from 10 to 50, draining more of the dust pile per send.
-- Regular UTXO sort flips from largest-first to smallest-first.
-- Smart-change splitting is *disabled* — the residual coalesces into a single primary change output instead of re-fragmenting.
-- A transaction-size ceiling refuses to assemble a transaction larger than `maxStandardTxSize` (100 KB) *before* biometric prompts.
-
-The user initiates an ordinary send; the wallet consolidates as a side effect. No separate "Consolidate" button needed.
-
-> **Smart Sync.** When a payment is initiated, UTXOs are loaded from the local disk cache first (instant). A network fetch only occurs on genuine first launch when no UTXO file exists. Fee quotes are cached for 5 minutes. The payment flow trusts local UTXO state — if a UTXO turns out to be already spent, ARC will reject with `DOUBLE_SPEND_ATTEMPTED`.
-
-After a successful broadcast, the wallet builds a local transaction model from the data it already has (inputs, outputs, addresses, amounts) and inserts it into the transaction history immediately — no network fetch required. The ARC-returned `txid` is verified against the locally computed `txid` as cryptographic proof that the network accepted exactly what was built.
-
-> **Trust Local State.** Per the Bitcoin white paper (§2), we built the transaction and signed it with our private keys — we know exactly what it contains. There is no need to ask a third party (WhatsOnChain) what we just sent. ARC confirms the network saw it; the rest we already know.
+> **Trust Local State.** Per the white paper (§2), we built the transaction and signed it with our private keys — we know exactly what it contains. ARC confirms the network saw it; the rest we already know.
 
 #### Paymail
 
-Paymail allows sending BSV to human-readable addresses (e.g., `user@example.com`) instead of raw Bitcoin addresses. The wallet implements:
+Paymail allows sending BSV to human-readable addresses (e.g., `user@example.com`) instead of raw Bitcoin addresses. Implements BRC-30 receive-transaction callbacks via `.well-known/bsvalias` discovery, and automatic resolution when a paymail address is entered in the pay view.
 
-- **BRC-30 receive-transaction callbacks** — P2P payment destinations resolved via the `.well-known/bsvalias` capability discovery. The payee's server provides a fresh output script for each payment.
-- **Automatic resolution** — when a paymail address is entered in the pay view, the wallet resolves it to a Bitcoin address transparently.
+<a id="wallet-utxo-sync" />
 
-#### Transaction History
-
-- **Direction detection** — incoming (received) vs outgoing (sent), determined by checking whether any inputs belong to the wallet.
-- **Grouping** — transactions are grouped by Pending, Today, Yesterday, This Week, This Month, Earlier.
-- **Search and filter** — filter by amount, date range, or search by transaction ID.
-- **SPV verification** — transactions can be verified against the locally chain-linked block header store anchored to the hardcoded checkpoint.
-
-### UTXO sync
+### UTXO Sync
 
 The wallet's UTXO set is reconstructed from locally-held transactions, not queried from a network endpoint. White paper §8 says SPV clients should derive ownership from chain-validated proofs they hold themselves; treating an external `/unspent` index as authoritative inverts that model. Henceforth follows the white paper.
 
 - **History authoritative** — every confirmed transaction in the local store contributes its outputs to the reconstructed UTXO set. WhatsOnChain `/unspent` corroborates and surfaces deposits we haven't fetched yet; it is never the source of truth.
-- **Canonical address set** — the wallet's master address, every derived address, and the currently-rotated receive address are unioned into a single set used by both history sync and UTXO reconstruction. A receive address that's been shown to the user can never fall outside this set.
-- **Strict removal policy** — a UTXO disappears from the wallet's view only on positive evidence of spend: (1) the user broadcast a transaction that consumes it, (2) a confirmed foreign transaction spending it lands in the local history, or (3) the producing transaction fails SPV verification. Absence from an external endpoint is never a removal trigger.
-- **Outpoint-consumption index** — a derived set of "txid:vout" strings recording every consumed output, rebuilt from the local transaction store on every wallet open and updated incrementally as new transactions arrive. The set is append-only and persists pending broadcasts across app death.
-- **Reconciliation** — every full sync compares the locally-reconstructed UTXO set against the network's `/unspent` view, partitions outpoints into *corroborated* (both sides agree), *provisional* (we have it, network doesn't yet), and *wallet-unknown* (network has it, we don't). Provisional UTXOs are kept visible; wallet-unknown outpoints trigger a background fetch of the producing transaction so they surface on the next pass.
+- **Canonical address set** — the wallet's master address, every derived address, and the currently-rotated receive address are unioned into a single set used by both history sync and UTXO reconstruction.
+- **Strict removal policy** — a UTXO disappears only on positive evidence of spend: the user broadcast a transaction that consumes it; a confirmed foreign transaction spending it lands in the local history; or the producing transaction fails SPV verification. Absence from an external endpoint is never a removal trigger.
+- **Outpoint-consumption index** — a derived set of "txid:vout" strings recording every consumed output, rebuilt from the local transaction store on every wallet open and updated incrementally as new transactions arrive.
+- **Reconciliation** — every full sync partitions outpoints into *corroborated*, *provisional*, and *wallet-unknown*. Wallet-unknown outpoints trigger a background fetch of the producing transaction.
 
-### Recovery tools
+<a id="wallet-recovery" />
 
-- **Add address** — paste any BSV address into the wallet's edit sheet; the app searches the wallet's seed across both Type42 and BIP-44 chains for a derivation path that produces it. On a hit, the path is attached to the wallet and a targeted sync runs immediately. Pure local computation — no network round-trip during the search.
-- **Auto-rediscovery** — when an incoming transaction pays an address the wallet doesn't yet know about, the app silently attempts the same rederivation in the background. A path that exists in the seed is attached automatically before the next sync.
-- **Advanced sync toggle** — Settings → Bitcoin → Advanced Sync exposes the active UTXO sync model. Defaults to the legacy network-authoritative path during the rollout window; flip it to enable history-driven reconstruction as the authoritative source. Either side is safe; the toggle exists so users can self-recover if either path surfaces an anomaly.
+### Recovery Tools
+
+- **Add address** — paste any BSV address into the wallet's edit sheet; the app searches the wallet's seed across both Type42 and BIP-44 chains for a derivation path that produces it. Pure local computation.
+- **Auto-rediscovery** — when an incoming transaction pays an address the wallet doesn't yet know about, the app silently attempts the same rederivation in the background.
+- **Advanced sync toggle** — Settings → Bitcoin → Advanced Sync exposes the active UTXO sync model. Either side is safe; the toggle exists so users can self-recover if either path surfaces an anomaly.
+
+<a id="wallet-spv" />
 
 ### SPV Architecture
 
@@ -824,124 +935,96 @@ The wallet implements Simplified Payment Verification per Section 8 of the Bitco
 
 #### Trust Anchor
 
-The wallet ships with a hardcoded checkpoint in `SPVCheckpoint.mainnet` — a tuple of `(height, hash, previousblockhash, merkleroot, version, time, nonce, bits)` for a recent mainnet block. This is the only header trusted without chain-linkage proof. The current pinned checkpoint is at a block roughly 500 confirmations below the then-tip, providing orders-of-magnitude safety margin against reorganization.
-
-The checkpoint hash doubles as its own migration version marker: bumping `SPVCheckpoint.mainnet` in source automatically triggers a wipe of every user's local header store on next launch, followed by a fresh re-sync from the new anchor.
+The wallet ships with a hardcoded checkpoint in `SPVCheckpoint.mainnet` — `(height, hash, previousblockhash, merkleroot, version, time, nonce, bits)` for a recent mainnet block roughly 500 confirmations below the then-tip. The checkpoint hash doubles as its own migration version marker: bumping it triggers a wipe of every user's local header store on next launch.
 
 #### Header Store
 
-The local header store is `FORTH.blockHeaders: [Int: WOCGetHeadersModel]`. Every entry must satisfy four invariants:
+`FORTH.blockHeaders: [Int: WOCGetHeadersModel]`. Every entry must satisfy:
 
-1. **Non-empty merkleroot** — enforced by `FORTH.isAuthoritativeBlockHeader`. Pre-Phase-1 placeholder rows are dropped on load.
-2. **Individual PoW validates** — double-SHA256 of the serialized header must be below the target encoded in the `bits` field.
-3. **Chain-linked to parent** — the header's `previousblockhash` must equal the hash of the header at `height - 1` in the store.
-4. **Transitively anchored to the checkpoint** — walking backward through parents eventually reaches `SPVCheckpoint.mainnet`.
+1. **Non-empty merkleroot** — pre-Phase-1 placeholder rows are dropped on load.
+2. **Individual PoW validates** — double-SHA256 of the serialized header must be below the target encoded in `bits`.
+3. **Chain-linked to parent** — `previousblockhash` must equal the hash of the header at `height - 1`.
+4. **Transitively anchored to the checkpoint**.
 
 #### Validated Tip
 
-`FORTH.validatedTipHeight` is the highest block height whose header transitively chain-links back to the checkpoint via a contiguous run in `blockHeaders`. SPV verification uses `validatedTipHeight` as the trust upper bound, so unvalidated islands are invisible to proof checks.
+`FORTH.validatedTipHeight` is the highest block height whose header transitively chain-links back to the checkpoint via a contiguous run. SPV verification uses `validatedTipHeight` as the trust upper bound.
 
-> **`validatedTipHeight` vs `latestBlockHeight`.** These are different concepts owned by different subsystems. `latestBlockHeight` is the live chain tip (driven by `wocGetHeaders` tip-10 fetch) used for `txVersion` activation gates and UI display. `validatedTipHeight` is "highest height I can prove SPV for right now" (driven by `HeaderSyncService` batch-commit). Never conflate them.
+> **`validatedTipHeight` vs `latestBlockHeight`.** `latestBlockHeight` is the live chain tip (driven by `wocGetHeaders` tip-10 fetch) used for `txVersion` activation gates and UI display. `validatedTipHeight` is "highest height I can prove SPV for right now". Never conflate them.
 
 #### Commit Path
 
-`FORTH.commitValidatedHeaderRun(_:)` is the single entry point for adding headers to `blockHeaders` with trust. It requires:
+`FORTH.commitValidatedHeaderRun(_:)` is the single entry point. It requires: (1) the run's first header has a local anchor at `firstHeight - 1`; (2) the anchor's hash equals the run's first `previousblockhash`; (3) the full batch passes `SPVService.validateBlockHeaderChain`.
 
-1. The run's first header has a local anchor at `firstHeight - 1`.
-2. The anchor's hash equals the run's first `previousblockhash`.
-3. The full `[anchor] + run` batch passes `SPVService.validateBlockHeaderChain`, which PoW-validates every header and chain-links consecutive pairs.
+#### Auto-Sync
 
-#### Auto-Sync Service
+`HeaderSyncService` opens a WebSocket to `wss://socket.whatsonchain.com/websocket/history?from=<validatedTipHeight+1>`, buffers decoded headers, flushes runs of 500 via `commitValidatedHeaderRun`, with idle detection via cancellable `Task.sleep(for: 3s)` and exponential backoff 1s → 60s cap.
 
-`HeaderSyncService` (an `@MainActor` class) runs the background sync loop. On every launch, `ContentView.task` calls `getSavedBlockHeaders` (which enforces the checkpoint seed and recomputes the validated tip) and then `HeaderSyncService.shared.resume(forth:)`.
+#### Verification
 
-1. Opens a WebSocket to `wss://socket.whatsonchain.com/websocket/history?from=<validatedTipHeight+1>`.
-2. Buffers decoded headers in chunks.
-3. When the buffer reaches 500 headers, splits into contiguous runs and flushes each via `commitValidatedHeaderRun`.
-4. Idle detection via a cancellable `Task.sleep(for: 3s)` armed on every message — when the sleep completes uncancelled, the WebSocket disconnects cleanly.
-5. Exponential backoff from 1s to a 60s cap on retry.
-
-A *force resync* debug button in Settings → Bitcoin → Headers wipes the store back to the checkpoint and restarts sync, behind a confirmation dialog.
-
-#### Bounded Lookup and Verification
-
-`SPVService.verifyTransaction(txid:blockHeaders:checkpointHeight:validatedTipHeight:)` is the single SPV entry point. It:
-
-1. Fetches the TSC (BRC-74) Merkle proof for the transaction from WhatsOnChain.
-2. Looks up the containing block header via `findBoundedBlockHeader` — returns the header only when its height falls in `[checkpointHeight ... validatedTipHeight]`.
-3. PoW-validates the local header (defense in depth).
-4. Verifies the TSC proof against the local header's `merkleroot`.
-
-If step 2 returns nil, verification returns `blockHeaderNotFound` — *without* fetching the header from WoC. A single PoW-valid header in isolation is not SPV: the attacker can produce any chain they like with valid PoW.
+`SPVService.verifyTransaction(...)` fetches the TSC (BRC-74) Merkle proof from WhatsOnChain, looks up the containing header via `findBoundedBlockHeader` (returns the header only when its height falls in `[checkpointHeight ... validatedTipHeight]`), PoW-validates the local header, and verifies the proof against the local merkleroot. If the bounded lookup returns nil, verification returns `blockHeaderNotFound` — *without* fetching from WoC.
 
 #### Checkpoint Maintenance
 
-Bumping the checkpoint is a deliberate operation, not routine:
+Bumping the checkpoint is deliberate: pick a target at least 500 confirmations below current tip; fetch from a primary source and **cross-verify** every field against a second independent source; commit the updated `SPVCheckpoint.mainnet`. The next launch detects the new hash and wipes/re-syncs.
 
-1. Pick a target block at least 500 confirmations below the current chain tip; never within the last 144 blocks.
-2. Fetch the header from a primary source (WhatsOnChain) and **cross-verify** every field against a second independent source.
-3. Update `SPVCheckpoint.mainnet` in source. Commit.
-4. Every user's next launch detects the new checkpoint hash, wipes the local store, and auto-sync re-downloads from the new anchor.
+> **Never bump without cross-verification.** A compromised response at bump time would silently become the new trust anchor baked into the binary.
 
-> **Never bump without cross-verification.** A compromised or cached response at bump time would silently become the new trust anchor baked into the binary shipped to every user. The second source is non-optional.
+<a id="wallet-cold-mode" />
 
-### Cold Mode and Air-Gap Bundles
+### Cold Mode & Air-Gap Bundles
 
-Cold Mode is a per-wallet flag (`WalletCard.coldModeEnabled`) that defers broadcast. When set, a transaction the user has approved with Face ID is signed and stored locally as a *pending action* rather than submitted to ARC. The user releases it later from the **Pending Broadcasts** view — on the same device or, in the air-gap workflow, after handing off to a watcher iPhone via AirDrop.
+Cold Mode (`WalletCard.coldModeEnabled`) defers broadcast: a transaction the user has approved with Face ID is signed and stored locally as a *pending action* rather than submitted to ARC. The user releases it later from the **Pending Broadcasts** view.
 
-#### Bundle Formats
+Three serialisable JSON formats carry data across the air-gap, exchanged via AirDrop and validated on import:
 
-Three serialisable JSON formats carry data across the air-gap. All three are exchanged via AirDrop, routed by file extension, and validated on import.
+- **`.hfheaders`** — a contiguous run of validated block headers anchored to a checkpoint hash. The importer hands the run to `commitValidatedHeaderRun` so chain-link, PoW, and checkpoint-anchor invariants self-enforce.
+- **`.hfreceipt`** — proof that a specific transaction was included in the blockchain. Carries (txid, raw tx hex, block height, block hash, TSC Merkle proof, containing header). `verifyTransaction(fromBundle:)` validates inclusion against the importer's own local header with no network call. After SPV passes, the importer re-derives output ownership and refuses receipts that don't pay this wallet.
+- **`.hfaddrpack`** — pre-derived receive addresses pushed signer → watcher. Each entry has the address, derivation scheme, and the scheme-specific derivation reference. Signed by the wallet's m/0/0 BIP32 identity key with DER ECDSA.
 
-- **`.hfheaders` (HFHeaderBundle)** — a contiguous run of validated block headers anchored to a checkpoint hash. The importer hands the run to the same `commitValidatedHeaderRun` path that the live WSS sync uses, so chain-link, proof-of-work, and checkpoint-anchor invariants self-enforce.
-- **`.hfreceipt` (HFReceiptBundle)** — proof that a specific transaction was included in the blockchain. Carries (txid, raw transaction hex, block height, block hash, TSC Merkle proof, containing block header). `SPVService.verifyTransaction(fromBundle:)` validates inclusion against the importer's own local header at the same height with no network call. After SPV passes, the importer re-derives output ownership by parsing the raw transaction and refuses unless at least one output's address resolves to one of the wallet's known derived addresses.
-- **`.hfaddrpack` (HFAddressPack)** — pre-derived receive addresses pushed outward from signer to watcher. Each entry carries the address, derivation scheme (`type42` or `bip44`), and the scheme-specific derivation reference. The pack is signed by the wallet's m/0/0 BIP32 identity key with a DER ECDSA signature; the watcher's `decode` verifies the signature and refuses tampered packs.
+**Settings → Bitcoin → Air-Gap Tools** exposes three exporters and a single import button (routed by file extension). In v1.0, `.hfaddrpack` import validates the signature; persistence into a watch-only store is staged for v1.0.2.
 
-#### Air-Gap Tools UI
-
-**Settings → Bitcoin → Air-Gap Tools** exposes three exporters and a single import button. The importer routes by file extension. Exports go through the system file picker / share sheet so AirDrop, iCloud Drive, and email are all reachable.
-
-> v1 `.hfreceipt` uses raw transaction plus TSC Merkle proof. A v2 schema bump may upgrade to BRC-62 BEEF for full ancestor-script validation.
-
-In v1.0, `.hfaddrpack` import validates the signature and counts the addresses; persisting the entries into a watch-only monitoring store wired to `MempoolMonitorService` is staged for the v1.0.2 follow-up.
+<a id="wallet-data-mgmt" />
 
 ### Wallet Data Management
 
-UTXO and transaction persistence is the most security-critical layer of the wallet. The rules below are invariants, not preferences — violating any of them risks losing user funds or transaction history.
+UTXO and transaction persistence is the most security-critical layer of the wallet. The rules below are invariants, not preferences.
 
-- **Never overwrite UTXO files with partial data.** A UTXO file is saved only when *all* addresses queried successfully. A partial query leaves the previous snapshot intact.
-- **Conservative merge.** The wallet only removes a UTXO when its owning address was queried *and* the UTXO was not in the response.
-- **Never persist a smaller transaction set than what's on disk.** `persistTransactionsToDisk` reads the disk count before writing and refuses the write if the in-memory snapshot has fewer entries.
-- **Per-wallet file scoping.** Transactions, UTXOs, and pending broadcast amounts live in wallet-scoped files. On wallet open, in-memory state is cleared and reloaded from that wallet's files only — no cross-wallet bleed.
-- **Trust the per-wallet file on load.** Load-time `byOwnership` filtering has been removed because it dropped Type42 change addresses and paymail receives, then silently wrote the smaller set back on the next save.
+- **Never overwrite UTXO files with partial data.** Saved only when *all* addresses queried successfully.
+- **Conservative merge.** A UTXO is removed only when its owning address was queried *and* the UTXO was not in the response.
+- **Never persist a smaller transaction set than what's on disk.** `persistTransactionsToDisk` refuses the write if the in-memory snapshot has fewer entries.
+- **Per-wallet file scoping.** Transactions, UTXOs, and pending broadcast amounts live in wallet-scoped files. On wallet open, in-memory state is cleared and reloaded from that wallet's files only.
+- **Trust the per-wallet file on load.** Load-time `byOwnership` filtering has been removed — it dropped Type42 change and paymail receives, then silently wrote the smaller set back.
 
-### UTXOs and Balance
+<a id="wallet-utxos" />
 
-A UTXO (Unspent Transaction Output) represents a discrete amount of Bitcoin that can be spent. The wallet tracks all UTXOs across all addresses.
+### UTXOs & Balance
 
-> **Balance from UTXOs.** The displayed balance is computed solely from the UTXO set — no separate balance API call is needed:
+A UTXO represents a discrete amount of Bitcoin that can be spent.
+
+> **Balance from UTXOs.** Displayed balance is computed solely from the UTXO set:
 > ```
 > confirmed   = sum of UTXOs with block height > 0
 > unconfirmed = sum of UTXOs with block height = 0
 > total       = confirmed + unconfirmed
 > ```
-> Satoshi conversions use the named constant `satoshisPerBSV` (100,000,000) and price conversions use `priceCentsDivisor` (100.0). Raw magic numbers are never used.
+> Satoshi conversions use `satoshisPerBSV` (100,000,000). Price conversions use `priceCentsDivisor` (100.0). Raw magic numbers are never used.
 
 #### Ordinal Protection
 
-1Sat Ordinals are NFTs inscribed on single-satoshi UTXOs. The wallet protects ordinals at three levels:
+1Sat Ordinals are NFTs inscribed on single-satoshi UTXOs. Protected at three levels:
 
-1. **Transaction builder** — UTXOs with a value of 1 satoshi are excluded from UTXO selection during transaction building.
-2. **Inscription scanner** — for display in the Ordinals view, 1-sat UTXOs are scanned by fetching the raw transaction and detecting the `OP_FALSE OP_IF ... OP_ENDIF` inscription pattern. Results are cached per outpoint.
-3. **1Sat indexer fallback** — ordinals transferred to this wallet carry an empty locking script at the receiving output. 1-sat UTXOs with no detectable current-output inscription are checked against the GorillaPool 1Sat indexer. The lookup is tri-state: confirms *is-ordinal*, confirms *not-ordinal*, or fails closed on HTTP 5xx — protecting the UTXO when ambiguous.
+1. **Transaction builder** — 1-satoshi UTXOs are excluded from UTXO selection.
+2. **Inscription scanner** — for display, 1-sat UTXOs are scanned by fetching the raw transaction and detecting the `OP_FALSE OP_IF ... OP_ENDIF` inscription pattern. Results are cached per outpoint.
+3. **1Sat indexer fallback** — 1-sat UTXOs with no detectable current-output inscription are checked against `ordinals.gorillapool.io`. Tri-state: is-ordinal, not-ordinal, or fails closed on HTTP 5xx (protect the UTXO).
 
 #### UTXO Split
 
-From the UTXO detail view, a single UTXO can be split into up to 240 separate outputs across fresh derived addresses. Useful for preparing UTXOs for future transactions, distributing funds across addresses for privacy, and creating multiple 1-sat UTXOs for ordinal inscriptions.
+From the UTXO detail view, a single UTXO can be split into up to 240 separate outputs across fresh derived addresses.
+
+<a id="wallet-api" />
 
 ### API Providers
-
-The wallet uses a hybrid architecture with multiple blockchain service providers:
 
 | Capability             | WhatsOnChain | GorillaPool | TAAL     | JungleBus |
 |------------------------|:------------:|:-----------:|:--------:|:---------:|
@@ -953,75 +1036,53 @@ The wallet uses a hybrid architecture with multiple blockchain service providers
 | Broadcast (ARC)        |              | ✓           | ✓*       |           |
 | Real-time monitoring   |              |             |          | ✓         |
 
-*TAAL requires a user-configured API key. GorillaPool is the primary broadcaster; TAAL is failover.
+*TAAL requires a user-configured API key. GorillaPool is primary; TAAL is failover. API keys are stored in the iOS Keychain and configured in Settings → API & Miners.
 
-Each provider handles what it does best. API keys and subscription IDs are stored securely in the iOS Keychain and can be configured in Settings → API & Miners.
+<a id="wallet-security" />
 
 ### Security
 
-- **Biometric authentication** — Face ID or Touch ID required to view private keys, seed phrases, and wallet details. Sessions expire after 120 seconds of inactivity. The same window is used by the *payment approval cache* (below).
-- **Keychain storage** — all sensitive material (keys, seeds, API tokens) stored with `.whenUnlockedThisDeviceOnly` accessibility — encrypted at rest, tied to the device.
-- **Seed verification** — after creating a wallet, users are prompted to verify their seed phrase via a 3-word quiz.
-- **No server dependency** — the wallet is fully self-custodial. No account, no registration, no server holds your keys.
-- **Message encryption (BRC-2)** — Electrum ECIES format for end-to-end encrypted messages between BSV keys. Uses ECDH key agreement, AES-256-CBC encryption, and HMAC-SHA256 authentication. Wire-compatible with `@bsv/sdk`. Format: `"BIE1" || pubkey || ciphertext || HMAC`.
-- **Wallet file encryption** — wallet data files encrypted with AES-256-GCM using a Keychain-backed key before syncing to iCloud.
+- **Biometric authentication** — Face ID or Touch ID required to view private keys, seed phrases, and wallet details. Sessions expire after 120 seconds of inactivity. The same window is used by the *payment approval cache*.
+- **Keychain storage** — all sensitive material stored with `.whenUnlockedThisDeviceOnly` accessibility.
+- **Seed verification** — after creating a wallet, users verify their seed phrase via a 3-word quiz.
+- **No server dependency** — fully self-custodial. No account, no registration, no server holds your keys.
+- **Message encryption (BRC-2)** — Electrum ECIES (ECDH + AES-CBC + HMAC-SHA256). Wire-compatible with `@bsv/sdk`. Format: `"BIE1" || pubkey || ciphertext || HMAC`.
+- **Wallet file encryption** — AES-256-GCM with a Keychain-backed key before syncing to iCloud.
 
 #### Payment Approval Cache
 
-To avoid re-prompting Face ID for every successive broadcast in a single working session, the wallet keeps a session-scoped *approval cache* (`PaymentApprovalRecord`). A successful biometric approval stamps the cache with `(surface, amountSats, outputsDigest, timestamp)`. A subsequent broadcast within the 120-second window can skip the prompt when all three scoping axes match.
+A successful biometric approval stamps the cache with `(surface, amountSats, outputsDigest, timestamp)`. A subsequent broadcast within the 120-second window can skip the prompt when all three scoping axes match. The `outputsDigest` is a SHA-256 over a canonical encoding of the sorted output set: `UInt32-LE(recipientKey.utf8.count) || recipientKey.utf8 || Int64-LE(satoshis)` per output. Length-prefixing defeats engineered concatenation collisions.
 
-The `outputsDigest` is a SHA-256 over a canonical encoding of the sorted output set. Each output contributes `UInt32-LE(recipientKey.utf8.count) || recipientKey.utf8 || Int64-LE(satoshis)`. The length-prefix defeats engineered concatenation collisions.
-
-> **The `recipientKey` must be the final resolved destination, never an alias.** For paymail surfaces, this means the resolved P2PKH address returned by the paymail server, never the `alice@example.com` alias string. A paymail server could change the resolution between the approval at time T and the broadcast at T+30 seconds — binding the digest to the resolved key forces a re-prompt whenever the destination changes.
+> **The `recipientKey` must be the final resolved destination, never an alias.** For paymail, the resolved P2PKH address, never `alice@example.com`. A paymail server could change resolution between approval and broadcast — binding to the resolved key forces a re-prompt whenever the destination changes.
 
 #### Encrypted Off-Device Backup
 
-The Keychain-bound wallet encryption above is device-local: the encrypted files on disk are useless on any other device. The *encrypted off-device backup* feature (`.bep` files, produced by `BackupService`) solves this by emitting a portable, password-encrypted blob that can be stored anywhere — iCloud Drive, AirDrop, email, USB — and restored on any device.
+`.bep` files produced by `BackupService`: a portable, password-encrypted blob restorable on any device.
 
-- **Key derivation** — PBKDF2-HMAC-SHA256 with a per-backup 16-byte random salt, 600,000 iterations (≈500ms on modern iOS hardware).
-- **Encryption** — AES-256-GCM. GCM is authenticated — any bit flip in salt, nonce, ciphertext, or tag fails verification and returns `.invalidPassword` (no timing oracle).
-- **Wire format** — magic prefix `"HFBK1"` (5 bytes), salt (16 bytes), iteration count (4 bytes BE), nonce (12 bytes), AES-GCM ciphertext + 16-byte tag.
-- **Forward compatibility** — the version byte in the magic prefix allows a future format bump to coexist with older backups.
-- **Freshness** — the same plaintext encrypted twice under the same password produces different ciphertexts because salt and nonce are fresh.
+- **Key derivation** — PBKDF2-HMAC-SHA256 with 16-byte salt, 600,000 iterations.
+- **Encryption** — AES-256-GCM (authenticated; tampering yields `.invalidPassword`).
+- **Wire format** — magic prefix `"HFBK1"`, salt (16), iteration count (4 BE), nonce (12), AES-GCM ciphertext + 16-byte tag.
+- **Forward compatibility** — version byte in the magic prefix allows future format bumps.
 
-> The `.bep` file protects *only the seed phrase* (the BIP-39 mnemonic). It does not contain UTXO cache, transaction history, or user preferences — those are regenerated from the blockchain after restore. A `.bep` plus its password is sufficient to recover every wallet this seed ever spawned on any Henceforth install.
+> `.bep` protects only the seed phrase. UTXO cache, transaction history, and user preferences regenerate from the blockchain after restore.
 
 #### QR Code Scanner
 
-A unified QR scanner in Settings handles three QR code types, routed automatically by content:
-
-1. **`hfauth:` prefix** — BRC-103 authentication flow.
-2. **WIF private key** (Base58Check version byte `0x80`) — prompts for a wallet name, then imports via `Wallet.restoreFromWIF()`.
-3. **Bitcoin address** (version byte `0x00`) — opens the pay view pre-filled with the scanned address.
+Unified QR scanner in Settings, routed by content: `hfauth:` prefix → BRC-103 auth; Base58Check `0x80` → WIF import; `0x00` → Bitcoin address → pay view.
 
 #### BRC-103 Authentication
 
-BRC-103 provides passwordless authentication to web services using Bitcoin key pairs:
-
-1. A web service displays a QR code containing a challenge and callback URL (prefixed with `hfauth:`).
-2. The wallet scans the QR, displays the requesting domain, and asks for user approval.
-3. On approval, the wallet signs the challenge with the wallet's identity key and sends the signature to the callback URL.
-4. The web service verifies the signature against the wallet's public key.
-
-No passwords, no accounts — just cryptographic proof of key ownership.
+Passwordless authentication: web service displays `hfauth:` QR with challenge + callback. Wallet displays the requesting domain, asks for approval, signs the challenge with the wallet's identity key, sends the signature to the callback. No passwords, no accounts.
 
 #### BRC-100 Wallet Interface
 
-The wallet exposes a subset of its capabilities via a URL scheme for integration with external applications:
+`henceforth://wallet/{method}?params=...` URL scheme exposes key derivation, signing, encryption, and certificate management (BRC-52/53). All sensitive operations require user approval via on-screen confirmation + biometric.
 
-```
-henceforth://wallet/{method}?params=...
-```
+##### Certificate Proofs (BRC-52/53)
 
-Supported operations include key derivation, signing, encryption, and certificate management (BRC-52/53). All sensitive operations require user approval via an on-screen confirmation sheet with biometric authentication.
-
-#### Certificate Proofs (BRC-52/53)
-
-Selective-disclosure certificate proofs follow BRC-52 (field-level HMAC keyring) and BRC-53 (certificate envelope) with the following hardened semantics:
-
-- **Per-field HMAC keyring, ECDH-bound** — when the wallet proves a subset of certificate fields to a verifier, each field's HMAC key is encrypted with an ECDH shared secret derived between the prover's and verifier's BRC-42 identity keys. A leaked proof is useless against any other party.
-- **Issuer signature verification** — `verifyProof` checks the issuer's BSM signature over the certificate's canonical field set before accepting any field as authentic. Format-valid is not the same as cryptographically valid.
-- **Serial number carried in the proof** — each proof includes the certificate's serial number so the verifier can correlate against revocation or re-issuance records.
+- **Per-field HMAC keyring, ECDH-bound** — each field's HMAC key is encrypted with an ECDH shared secret derived between the prover's and verifier's BRC-42 identity keys. A leaked proof is useless against any other party.
+- **Issuer signature verification** — `verifyProof` checks the issuer's BSM signature over the certificate's canonical field set before accepting any field as authentic.
+- **Serial number carried in the proof** — for correlation with revocation or re-issuance records.
 
 <a id="credits" />
 
@@ -1047,6 +1108,6 @@ The greatest monetary system ever created. Invented by Satoshi Nakamoto — plea
 
 ### SwiftBSV
 
-The Swift SDK that powers every cryptographic operation in the Henceforth wallet — BIP-32 / BIP-39 key derivation, Type42 (BRC-42) invoice keys, ECDSA signing, BSM, ECIES (BIE1 wire format), Script construction, the full BSV opcode set, transaction building, and SPV verification. Originally written by Will Townsend at [wtsnz/SwiftBSV](https://github.com/wtsnz/SwiftBSV); the fork at [henryhudson/SwiftBSV](https://github.com/henryhudson/SwiftBSV) continues that foundation with Swift 6 strict concurrency, modern Apple platform targets, and a 41-page LaTeX book of its own.
+The Swift SDK that powers every cryptographic operation in the Henceforth wallet. Originally written by Will Townsend at [wtsnz/SwiftBSV](https://github.com/wtsnz/SwiftBSV); the fork at [henryhudson/SwiftBSV](https://github.com/henryhudson/SwiftBSV) continues that foundation with Swift 6 strict concurrency, modern Apple platform targets, and a 41-page LaTeX book of its own.
 
 [SwiftBSV Book (PDF)](https://github.com/henryhudson/SwiftBSV/blob/main/Documentation/swiftbsv.pdf)

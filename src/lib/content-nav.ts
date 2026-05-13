@@ -35,12 +35,59 @@ export const DOCS_CHAPTERS: NavItem[] = [
 ];
 
 // TOC for the sidebar on /docs. Anchors must match <a id="..." /> markers
-// inside docs/content.mdx.
+// inside docs/content.mdx. Nested children render as indented sub-items.
 export const DOCS_TOC = [
   { id: "about", label: "About" },
   { id: "goals", label: "Goals" },
-  { id: "reference", label: "Reference" },
-  { id: "wallet", label: "Wallet" },
+  {
+    id: "reference",
+    label: "Reference",
+    children: [
+      { id: "ref-compile", label: "Compile Words" },
+      { id: "ref-meta", label: "Meta Programming" },
+      { id: "ref-arithmetic", label: "Arithmetic" },
+      { id: "ref-double-cell", label: "Double-Cell Arithmetic" },
+      { id: "ref-numeric-output", label: "Numeric Output" },
+      { id: "ref-comparison", label: "Comparison" },
+      { id: "ref-bitwise", label: "Bitwise" },
+      { id: "ref-stack", label: "Stack Operators" },
+      { id: "ref-return-stack", label: "Return Stack" },
+      { id: "ref-decision", label: "Decision" },
+      { id: "ref-loop", label: "Loop" },
+      { id: "ref-base", label: "Base" },
+      { id: "ref-popup", label: "Pop-up" },
+      { id: "ref-constants", label: "Constants & Variables" },
+      { id: "ref-terminal", label: "Terminal" },
+      { id: "ref-other", label: "Other Words" },
+      { id: "ref-data-conv", label: "Data Conversion" },
+      { id: "ref-strings", label: "String Operations" },
+      { id: "ref-networking", label: "Networking" },
+      { id: "ref-tx-builder", label: "Transaction Builder" },
+      { id: "ref-crypto", label: "Bitcoin Cryptography" },
+      { id: "ref-bap", label: "BAP Identity" },
+      { id: "ref-script-rec", label: "Script Recording" },
+      { id: "ref-script-bridge", label: "Script Bridge" },
+      { id: "ref-script-helpers", label: "Script Helpers" },
+      { id: "ref-opcodes", label: "OPCodes" },
+    ],
+  },
+  {
+    id: "wallet",
+    label: "Wallet",
+    children: [
+      { id: "wallet-architecture", label: "Architecture" },
+      { id: "wallet-cards", label: "Wallet Cards" },
+      { id: "wallet-transactions", label: "Transactions" },
+      { id: "wallet-utxo-sync", label: "UTXO Sync" },
+      { id: "wallet-recovery", label: "Recovery" },
+      { id: "wallet-spv", label: "SPV" },
+      { id: "wallet-cold-mode", label: "Cold Mode & Air-Gap" },
+      { id: "wallet-data-mgmt", label: "Data Management" },
+      { id: "wallet-utxos", label: "UTXOs & Balance" },
+      { id: "wallet-api", label: "API Providers" },
+      { id: "wallet-security", label: "Security" },
+    ],
+  },
   { id: "credits", label: "Credits" },
 ];
 
