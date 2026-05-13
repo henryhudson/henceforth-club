@@ -1,6 +1,22 @@
+import { statSync } from "fs";
+import path from "path";
 import type { Metadata } from "next";
 import Link from "next/link";
 import FadeIn from "@/components/FadeIn";
+
+// Bust browser caches when the PDF actually changes: append the file's
+// mtime as a query string. Resolved at build time (server component), so
+// the URL is baked into the static HTML. Each PDF refresh → new URL →
+// browsers re-fetch automatically instead of clinging to the old copy.
+const pdfVersion = (() => {
+  try {
+    return statSync(path.join(process.cwd(), "public/hforth.pdf"))
+      .mtimeMs.toString(36);
+  } catch {
+    return "";
+  }
+})();
+const pdfUrl = `/hforth.pdf${pdfVersion ? `?v=${pdfVersion}` : ""}`;
 
 export const metadata: Metadata = {
   title: "Documentation",
@@ -80,7 +96,7 @@ export default function DocsPage() {
         <FadeIn delay={0.2}>
           <div className="mt-12 flex items-center gap-4">
             <a
-              href="/hforth.pdf"
+              href={pdfUrl}
               download
               className="inline-flex items-center gap-2 rounded-full border border-card-border bg-card-bg/50 px-6 py-3 text-sm text-muted hover:border-accent hover:text-foreground transition-all"
             >
@@ -100,7 +116,7 @@ export default function DocsPage() {
               Download PDF
             </a>
             <a
-              href="/hforth.pdf"
+              href={pdfUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-sm text-muted/50 hover:text-foreground transition-colors"
@@ -114,7 +130,7 @@ export default function DocsPage() {
         <FadeIn delay={0.2}>
           <div className="mt-12 rounded-xl border border-card-border bg-card-bg overflow-hidden">
             <object
-              data="/hforth.pdf"
+              data={pdfUrl}
               type="application/pdf"
               className="w-full"
               style={{ height: "80vh" }}
@@ -124,7 +140,7 @@ export default function DocsPage() {
                   Your browser doesn&apos;t support embedded PDFs.
                 </p>
                 <a
-                  href="/hforth.pdf"
+                  href={pdfUrl}
                   download
                   className="mt-4 inline-flex items-center gap-2 rounded-full border border-card-border bg-card-bg/50 px-6 py-3 text-sm text-accent hover:text-foreground transition-all"
                 >
