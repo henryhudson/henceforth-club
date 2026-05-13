@@ -17,6 +17,8 @@
   --muted: #8b949e;
   --terminal-bg: #0a0e14;
   --terminal-green: #7ee787;
+  --code-text: #00ff41;
+  --code-comment: #7a8a7a;
   --scanline: rgba(255, 255, 255, 0.02);
 }
 
@@ -37,6 +39,8 @@
   --color-muted: var(--muted);
   --color-terminal-bg: var(--terminal-bg);
   --color-terminal-green: var(--terminal-green);
+  --color-code-text: var(--code-text);
+  --color-code-comment: var(--code-comment);
   --font-sans: var(--font-space-mono);
   --font-mono: var(--font-space-mono);
   --font-serif: var(--font-space-mono);
@@ -306,6 +310,29 @@ input:focus, textarea:focus {
    users who've asked their OS for less motion. The canvas animations
    (ConstituencyMorph, TimesTableCircle, BeatingHeart, …) do their own
    matchMedia check in the component and draw a static frame instead. */
+/* ── rehype-pretty-code output ────────────────── */
+/* The plugin wraps each code block in <figure> > <pre data-language=…>
+   > <code> > <span data-line>. We strip the figure's default margins
+   and let our own <pre> styling (in mdx-components.tsx pre handler)
+   carry the terminal-panel look. Shiki tokens have inline color via
+   style attributes, so the base text-terminal-green on <pre> is just
+   a fallback for unhighlighted plaintext. */
+figure[data-rehype-pretty-code-figure] {
+  margin: 0;
+}
+figure[data-rehype-pretty-code-figure] pre {
+  background: var(--terminal-bg);
+}
+figure[data-rehype-pretty-code-figure] code {
+  display: block;
+  width: max-content;
+  min-width: 100%;
+}
+figure[data-rehype-pretty-code-figure] [data-line] {
+  display: block;
+  padding-inline: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cursor-blink,
   .animate-in,
