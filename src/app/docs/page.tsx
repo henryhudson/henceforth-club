@@ -1,33 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import FadeIn from "@/components/FadeIn";
+import SectionNav from "@/components/SectionNav";
+import { CONTENT_SECTIONS, DOCS_CHAPTERS } from "@/lib/content-nav";
 
 export const metadata: Metadata = {
   title: "Documentation",
   description:
     "Henceforth documentation — complete reference for all FORTH words, Bitcoin wallet features, and scripting capabilities.",
 };
-
-const chapters = [
-  {
-    href: "/docs/about",
-    number: "01",
-    title: "About",
-    blurb: "Links to source code and support channels.",
-  },
-  {
-    href: "/docs/goals",
-    number: "02",
-    title: "Goals",
-    blurb: "What Henceforth has achieved and what's coming next.",
-  },
-  {
-    href: "/docs/credits",
-    number: "03",
-    title: "Credits",
-    blurb: "The people, books, and codebases that make Henceforth possible.",
-  },
-];
 
 const upcoming = [
   {
@@ -63,19 +44,25 @@ export default function DocsPage() {
         </FadeIn>
 
         <FadeIn delay={0.1}>
-          <ul className="mt-16 divide-y divide-card-border/40 border-t border-b border-card-border/40">
-            {chapters.map((ch) => (
+          <div className="mt-10">
+            <SectionNav sections={CONTENT_SECTIONS} subItems={DOCS_CHAPTERS} />
+          </div>
+        </FadeIn>
+
+        <FadeIn delay={0.2}>
+          <ul className="mt-12 divide-y divide-card-border/40 border-t border-b border-card-border/40">
+            {DOCS_CHAPTERS.map((ch, i) => (
               <li key={ch.href}>
                 <Link
                   href={ch.href}
                   className="group flex items-baseline gap-6 py-6 transition-colors hover:bg-card-bg/40"
                 >
                   <span className="w-8 shrink-0 font-mono text-sm text-accent-orange/70">
-                    {ch.number}
+                    {String(i + 1).padStart(2, "0")}
                   </span>
                   <span className="flex-1">
                     <span className="block text-lg font-bold text-foreground group-hover:text-accent-warm">
-                      {ch.title}
+                      {ch.label}
                     </span>
                     <span className="mt-1 block text-sm text-muted">
                       {ch.blurb}
@@ -90,7 +77,7 @@ export default function DocsPage() {
           </ul>
         </FadeIn>
 
-        <FadeIn delay={0.2}>
+        <FadeIn delay={0.3}>
           <p className="mt-16 text-xs uppercase tracking-[0.2em] text-muted">
             Coming next
           </p>

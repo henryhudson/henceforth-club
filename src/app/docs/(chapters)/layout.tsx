@@ -1,18 +1,12 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
+import SectionNav from "@/components/SectionNav";
+import { CONTENT_SECTIONS, DOCS_CHAPTERS } from "@/lib/content-nav";
 
 export default function ChapterLayout({ children }: { children: ReactNode }) {
   return (
-    <article className="mx-auto max-w-3xl px-6 py-20 sm:py-28">
-      <nav className="mb-10 text-xs uppercase tracking-[0.2em] text-muted">
-        <Link
-          href="/docs"
-          className="transition-colors hover:text-accent-warm"
-        >
-          ← Documentation
-        </Link>
-      </nav>
-      {children}
-    </article>
+    <div className="mx-auto max-w-3xl px-6 py-16 sm:py-20">
+      <SectionNav sections={CONTENT_SECTIONS} subItems={DOCS_CHAPTERS} />
+      <article className="mt-12">{children}</article>
+    </div>
   );
 }
