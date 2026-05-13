@@ -1,7 +1,6 @@
-// Shared navigation lists for the content sections (Docs, Articles, Learn).
-// Used by <SectionNav> on every content page, plus the chapter card list
-// on /docs. Single source of truth so route additions only need editing
-// here, not in multiple page files.
+// Per-app local navigation. The global Navbar handles switching between
+// apps + the landing page; these lists drive the <SectionNav> that
+// appears inside each app section.
 
 export type NavItem = {
   href: string;
@@ -9,16 +8,15 @@ export type NavItem = {
   blurb?: string;
 };
 
-export const CONTENT_SECTIONS: NavItem[] = [
+export const HENCEFORTH_NAV: NavItem[] = [
+  { href: "/henceforth", label: "Henceforth" },
+  { href: "/henceforth/swiftbsv", label: "SwiftBSV" },
   { href: "/docs", label: "Docs" },
   { href: "/articles", label: "Articles" },
   { href: "/learn", label: "Learn" },
 ];
 
-// The docs live on a single page (/docs) with anchor sections. Sub-pills
-// in <SectionNav> link to those anchors. Old per-chapter URLs (/docs/about,
-// /docs/goals, /docs/credits) still resolve but aren't navigated to from
-// any active nav.
+// In-page anchor TOC for the long single-page docs at /docs.
 export const DOCS_CHAPTERS: NavItem[] = [
   { href: "/docs#about", label: "About" },
   { href: "/docs#goals", label: "Goals" },

@@ -4,13 +4,51 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { NavItem } from "@/lib/content-nav";
 
+export type SectionAccent = "warm" | "cyan" | "green" | "neutral";
+
+const ACCENT_STYLES: Record<
+  SectionAccent,
+  { active: string; hover: string; subActive: string; subHover: string }
+> = {
+  warm: {
+    active: "border-accent-warm bg-accent-warm-glow text-accent-warm",
+    hover: "hover:border-accent-warm hover:text-accent-warm",
+    subActive: "border-accent-warm/60 bg-accent-warm-glow text-accent-warm",
+    subHover: "hover:border-accent-warm/60 hover:text-accent-warm",
+  },
+  cyan: {
+    active: "border-accent bg-accent-glow text-accent",
+    hover: "hover:border-accent hover:text-accent",
+    subActive: "border-accent/60 bg-accent-glow text-accent",
+    subHover: "hover:border-accent/60 hover:text-accent",
+  },
+  green: {
+    active: "border-accent-green bg-accent-green-glow text-accent-green",
+    hover: "hover:border-accent-green hover:text-accent-green",
+    subActive: "border-accent-green/60 bg-accent-green-glow text-accent-green",
+    subHover: "hover:border-accent-green/60 hover:text-accent-green",
+  },
+  neutral: {
+    active: "border-foreground text-foreground",
+    hover: "hover:border-foreground hover:text-foreground",
+    subActive: "border-foreground/60 text-foreground",
+    subHover: "hover:border-foreground/60 hover:text-foreground",
+  },
+};
+
 type Props = {
   sections: NavItem[];
   subItems?: NavItem[];
+  accent?: SectionAccent;
 };
 
-export default function SectionNav({ sections, subItems }: Props) {
+export default function SectionNav({
+  sections,
+  subItems,
+  accent = "neutral",
+}: Props) {
   const pathname = usePathname() ?? "";
+  const styles = ACCENT_STYLES[accent];
 
   return (
     <nav aria-label="Section navigation" className="space-y-3">
@@ -25,8 +63,8 @@ export default function SectionNav({ sections, subItems }: Props) {
               aria-current={isActive ? "page" : undefined}
               className={`inline-flex items-center rounded-full border px-5 py-2 text-sm transition-all ${
                 isActive
-                  ? "border-accent-warm bg-accent-warm-glow text-accent-warm"
-                  : "border-card-border bg-card-bg/50 text-muted hover:border-accent-warm hover:text-foreground"
+                  ? styles.active
+                  : `border-card-border bg-card-bg/50 text-muted ${styles.hover}`
               }`}
             >
               {s.label}
@@ -45,8 +83,8 @@ export default function SectionNav({ sections, subItems }: Props) {
                 aria-current={isActive ? "page" : undefined}
                 className={`inline-flex items-center rounded-full border px-3.5 py-1 text-xs transition-all ${
                   isActive
-                    ? "border-accent-warm/60 bg-accent-warm-glow text-accent-warm"
-                    : "border-card-border/40 bg-card-bg/30 text-muted/70 hover:border-accent-warm/60 hover:text-foreground"
+                    ? styles.subActive
+                    : `border-card-border/40 bg-card-bg/30 text-muted/70 ${styles.subHover}`
                 }`}
               >
                 {item.label}

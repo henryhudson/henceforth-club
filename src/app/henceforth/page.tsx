@@ -5,7 +5,7 @@ import ExpandingCircles from "@/components/ExpandingCircles";
 import Accordion from "@/components/Accordion";
 import TechModal from "@/components/TechModal";
 import SectionNav from "@/components/SectionNav";
-import { CONTENT_SECTIONS } from "@/lib/content-nav";
+import { HENCEFORTH_NAV } from "@/lib/content-nav";
 
 const accordionSections = [
   {
@@ -424,7 +424,7 @@ export default function HenceforthPage() {
               plus long-form articles and video tutorials. All on the web.
             </p>
             <div className="mt-6">
-              <SectionNav sections={CONTENT_SECTIONS} />
+              <SectionNav sections={HENCEFORTH_NAV} accent="warm" />
             </div>
           </FadeIn>
         </div>

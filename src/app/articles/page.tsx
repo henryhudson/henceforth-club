@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import FadeIn from "@/components/FadeIn";
 import SectionNav from "@/components/SectionNav";
-import { CONTENT_SECTIONS } from "@/lib/content-nav";
+import { HENCEFORTH_NAV } from "@/lib/content-nav";
 
 export const metadata: Metadata = {
   title: "Articles",
@@ -28,7 +28,7 @@ export default function ArticlesPage() {
 
         <FadeIn delay={0.1}>
           <div className="mt-10">
-            <SectionNav sections={CONTENT_SECTIONS} />
+            <SectionNav sections={HENCEFORTH_NAV} accent="warm" />
           </div>
         </FadeIn>
 
