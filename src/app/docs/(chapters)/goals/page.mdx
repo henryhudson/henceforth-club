@@ -1,0 +1,27 @@
+export const metadata = {
+  title: "Goals",
+  description:
+    "What Henceforth has achieved and what's coming next.",
+};
+
+# Goals
+
+## Achieved
+
+- **Bitcoin (BSV) integration** — full wallet with HD key derivation (BIP-44 and Type42), transaction building, ARC broadcasting with failover, SPV verification, Paymail support, and 140+ Bitcoin Script opcodes including the Chronicle upgrade.
+- **Block headers** — locally chain-linked header store anchored to a hardcoded checkpoint, auto-synced from chain tip on every launch via a WebSocket history stream. SPV Merkle proof verification is bounded to the chain-validated range — no silent network fallback for missing headers.
+- **SwiftBSV** — fully integrated for transactions, Script building, BIP-32/39 key management, and ECDSA signing.
+- **OPCodes** — all standard and Chronicle-restored opcodes available as FORTH words. Script Recording mode assembles Bitcoin Scripts from the terminal.
+- **Files** — full CRUD for `.fs` and `.forth` files with iCloud backup. Script files identified by `SCRIPT-BEGIN`/`SCRIPT-END` markers.
+- **Colour customisation** — foreground and background colour pickers, keyboard selection, and Dynamic Type support throughout.
+- **Forth-2012 compliance** — 133/133 CORE words implemented, verified by the Hayes test suite.
+
+## Get People Coding
+
+Provide a simple interface for the FORTH programming language, making it easy for people to learn to code.
+
+## Future
+
+- Full sCrypt capability — each FORTH file will create a sCrypt that runs the opcodes within.
+- CRDT (Conflict-free Replicated Data Type) system using the timestamp server for user-defined words.
+- Trigonometry and calculus extensions.
