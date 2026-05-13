@@ -718,57 +718,57 @@ All 140+ Bitcoin Script opcodes are exposed as FORTH words. Below are the catego
 
 #### Push Data
 
-<Word name="op_0 … op_16" stack="( -- 0..16)">Push the corresponding integer 0..16 onto the stack.</Word>
-<Word name="op_false" stack="( -- 0)">Zero (false flag) pushed to stack.</Word>
+<Word name="op_0 … op_16" stack="( -- 0..16)">Push the corresponding integer 0..16 onto the stack. Equivalent to typing a numeric literal in FORTH.</Word>
+<Word name="op_false" stack="( -- 0)" forth="false">Zero (false flag) pushed to stack.</Word>
 <Word name="op_pushdata1" stack="(--)">The byte after will contain how many bytes are to be pushed.</Word>
 <Word name="op_pushdata2" stack="(--)">The next two bytes will contain how many bytes will be pushed.</Word>
 <Word name="op_pushdata4" stack="(--)">The next four bytes will contain how many bytes will be pushed.</Word>
-<Word name="op_1negate" stack="( -- -1)">Minus one pushed to the stack.</Word>
+<Word name="op_1negate" stack="( -- -1)">Minus one pushed to the stack. (FORTH equivalent: `-1`.)</Word>
 
 #### Control Flow
 
 <Word name="op_nop" stack="(--)">Does nothing.</Word>
 <Word name="op_ver" stack="( -- version)">Pushes the transaction version. Returns 1 (legacy) or 2 (Chronicle, post block 943,816).</Word>
-<Word name="op_if" stack="(f--)">Executes code depending on the expression's flag.</Word>
-<Word name="op_notif" stack="(n--)">Executes code depending on the inverted flag.</Word>
+<Word name="op_if" stack="(f--)" forth="if">Executes code depending on the expression's flag.</Word>
+<Word name="op_notif" stack="(n--)">Executes code depending on the inverted flag. Composite FORTH: `0= if`.</Word>
 <Word name="op_verif" stack="( threshold -- flag)">Pushes TRUE if tx version >= threshold. Chronicle upgrade.</Word>
 <Word name="op_vernotif" stack="( threshold -- flag)">Pushes TRUE if tx version &lt; threshold. Chronicle upgrade.</Word>
-<Word name="op_else" stack="(--)">Executes if the preceding OP_IF, OP_NOTIF, or OP_ELSE were not executed.</Word>
-<Word name="op_endif" stack="(--)">Ends the if/else statement.</Word>
-<Word name="op_verify" stack="(f--)">Marks the transaction as INVALID if the flag is false.</Word>
-<Word name="op_return" stack="(--)">Ends script. Often used to add data to the blockchain.</Word>
+<Word name="op_else" stack="(--)" forth="else">Executes if the preceding OP_IF, OP_NOTIF, or OP_ELSE were not executed.</Word>
+<Word name="op_endif" stack="(--)" forth="then">Ends the if/else statement.</Word>
+<Word name="op_verify" stack="(f--)">Marks the transaction as INVALID if the flag is false. Script-specific — no FORTH analogue.</Word>
+<Word name="op_return" stack="(--)">Ends script. Often used to add data to the blockchain. Script-specific.</Word>
 
 #### Stack
 
-<Word name="op_toaltstack" stack="(n--)">Moves the top of stack to the alt stack.</Word>
-<Word name="op_fromaltstack" stack="(--n)">Moves the top of alt stack to the main stack.</Word>
-<Word name="op_2drop" stack="(n n1--)">Discards the top two elements.</Word>
-<Word name="op_2dup" stack="(n n1 -- n n1 n n1)">Duplicates the top two values.</Word>
-<Word name="op_3dup" stack="(n n1 n2 -- n n1 n2 n n1 n2)">Duplicates the top three values.</Word>
-<Word name="op_2over" stack="(n n1 n2 n3 -- n n1 n2 n3 n n1)">Copies items 3 and 4 deep onto the top.</Word>
-<Word name="op_2rot" stack="(n n1 n2 n3 n4 n5 -- n2 n3 n4 n5 n n1)">Rotates items 5 and 6 to the top.</Word>
-<Word name="op_2swap" stack="(n n1 n2 n3 -- n2 n3 n n1)">Swaps the order of the top two pairs.</Word>
-<Word name="op_ifdup" stack="(n -- 0 | n n)">Duplicates the top value if it is NOT zero.</Word>
-<Word name="op_depth" stack="(--n)">Pushes the number of items on the stack.</Word>
-<Word name="op_drop" stack="(n--)">Discards the top item.</Word>
-<Word name="op_dup" stack="(n -- n n)">Duplicates the top item.</Word>
-<Word name="op_nip" stack="(n n1 -- n1)">Discards the second item.</Word>
-<Word name="op_over" stack="(n n1 -- n n1 n)">Copies the second item over the top.</Word>
-<Word name="op_pick" stack="(xu ... x0 u -- xu ... x0 xu)">Copies the u-th item to the top.</Word>
-<Word name="op_roll" stack="(xu xu-1 ... x0 u -- xu-1 ... x0 xu)">Moves the u-th item to the top.</Word>
-<Word name="op_rot" stack="(n n1 n2 -- n1 n2 n)">Rotates the top three items left.</Word>
-<Word name="op_swap" stack="(n n1 -- n1 n)">Swaps the top two items.</Word>
-<Word name="op_tuck" stack="(n n1 -- n1 n n1)">Copies the top item in front of the second.</Word>
+<Word name="op_toaltstack" stack="(n--)" forth=">r">Moves the top of stack to the alt stack.</Word>
+<Word name="op_fromaltstack" stack="(--n)" forth="r>">Moves the top of alt stack to the main stack.</Word>
+<Word name="op_2drop" stack="(n n1--)" forth="2drop">Discards the top two elements.</Word>
+<Word name="op_2dup" stack="(n n1 -- n n1 n n1)" forth="2dup">Duplicates the top two values.</Word>
+<Word name="op_3dup" stack="(n n1 n2 -- n n1 n2 n n1 n2)">Duplicates the top three values. Composite FORTH: `2dup over`.</Word>
+<Word name="op_2over" stack="(n n1 n2 n3 -- n n1 n2 n3 n n1)" forth="2over">Copies items 3 and 4 deep onto the top.</Word>
+<Word name="op_2rot" stack="(n n1 n2 n3 n4 n5 -- n2 n3 n4 n5 n n1)">Rotates items 5 and 6 to the top. Composite FORTH: chain of three `rot`s.</Word>
+<Word name="op_2swap" stack="(n n1 n2 n3 -- n2 n3 n n1)" forth="2swap">Swaps the order of the top two pairs.</Word>
+<Word name="op_ifdup" stack="(n -- 0 | n n)" forth="?dup">Duplicates the top value if it is NOT zero.</Word>
+<Word name="op_depth" stack="(--n)" forth="depth">Pushes the number of items on the stack.</Word>
+<Word name="op_drop" stack="(n--)" forth="drop">Discards the top item.</Word>
+<Word name="op_dup" stack="(n -- n n)" forth="dup">Duplicates the top item.</Word>
+<Word name="op_nip" stack="(n n1 -- n1)" forth="nip">Discards the second item.</Word>
+<Word name="op_over" stack="(n n1 -- n n1 n)" forth="over">Copies the second item over the top.</Word>
+<Word name="op_pick" stack="(xu ... x0 u -- xu ... x0 xu)" forth="pick">Copies the u-th item to the top.</Word>
+<Word name="op_roll" stack="(xu xu-1 ... x0 u -- xu-1 ... x0 xu)" forth="roll">Moves the u-th item to the top.</Word>
+<Word name="op_rot" stack="(n n1 n2 -- n1 n2 n)" forth="rot">Rotates the top three items left.</Word>
+<Word name="op_swap" stack="(n n1 -- n1 n)" forth="swap">Swaps the top two items.</Word>
+<Word name="op_tuck" stack="(n n1 -- n1 n n1)" forth="tuck">Copies the top item in front of the second.</Word>
 
 #### Size & Separator
 
-<Word name="op_size" stack="(x -- x n)">Pushes the byte length of the top stack element without consuming it.</Word>
-<Word name="op_codeseparator" stack="(--)">Marks the beginning of signature-checked data. All signature checks only use data after the most recent OP_CODESEPARATOR.</Word>
-<Word name="op_true" stack="( -- 1)">Pushes 1 onto the stack. Alias for OP_1.</Word>
+<Word name="op_size" stack="(x -- x n)">Pushes the byte length of the top stack element without consuming it. Script-specific.</Word>
+<Word name="op_codeseparator" stack="(--)">Marks the beginning of signature-checked data. All signature checks only use data after the most recent OP_CODESEPARATOR. Script-specific.</Word>
+<Word name="op_true" stack="( -- 1)" forth="true">Pushes 1 onto the stack. Alias for OP_1.</Word>
 
 #### Splice (Chronicle restored)
 
-<Word name="op_cat" stack="(--)">Concatenates the two strings provided.</Word>
+<Word name="op_cat" stack="(--)">Concatenates the two byte strings. Script-specific — FORTH has no native byte-string concat.</Word>
 <Word name="op_split" stack="(n n1--)">Splits byte sequence n at n1.</Word>
 <Word name="op_num2bin" stack="(n n1--)">Converts value n into a byte sequence of length n1.</Word>
 <Word name="op_bin2num" stack="(n--)">Converts byte sequence n into a numerical value.</Word>
@@ -778,45 +778,45 @@ All 140+ Bitcoin Script opcodes are exposed as FORTH words. Below are the catego
 
 #### Bitwise
 
-<Word name="op_invert" stack="(n -- n)">Flips all the bits in the input.</Word>
-<Word name="op_and" stack="(n1 n2 -- AND)">Logical AND.</Word>
-<Word name="op_or" stack="(n1 n2 -- OR)">Logical OR.</Word>
-<Word name="op_xor" stack="(n1 n2 -- XOR)">Logical XOR.</Word>
-<Word name="op_equal" stack="(n n1 -- f)">1 if equal, 0 if not.</Word>
-<Word name="op_equalverify" stack="(n1 n2 -- f)">OP_EQUAL then OP_VERIFY.</Word>
+<Word name="op_invert" stack="(n -- n)" forth="invert">Flips all the bits in the input.</Word>
+<Word name="op_and" stack="(n1 n2 -- AND)" forth="and">Bitwise AND.</Word>
+<Word name="op_or" stack="(n1 n2 -- OR)" forth="or">Bitwise OR.</Word>
+<Word name="op_xor" stack="(n1 n2 -- XOR)" forth="xor">Bitwise XOR.</Word>
+<Word name="op_equal" stack="(n n1 -- f)" forth="=">1 if equal, 0 if not.</Word>
+<Word name="op_equalverify" stack="(n1 n2 -- f)">OP_EQUAL then OP_VERIFY. Script-specific composite.</Word>
 <Word name="op_reserved1, op_reserved2" stack="(--)">Renders transaction invalid unless in an unexecuted OP_IF.</Word>
 
 #### Arithmetic
 
-<Word name="op_1add" stack="(n -- n+1)">Adds 1.</Word>
-<Word name="op_1sub" stack="(n -- n-1)">Subtracts 1.</Word>
-<Word name="op_2mul" stack="(n -- n*2)">Doubles.</Word>
-<Word name="op_2div" stack="(n -- n/2)">Halves.</Word>
-<Word name="op_negate" stack="(n -- -n)">Flips sign.</Word>
-<Word name="op_abs" stack="(n -- |n|)">Absolute value.</Word>
-<Word name="op_not" stack="(n -- f)">Logical NOT. Returns 1 if 0, else 0.</Word>
-<Word name="op_0notequal" stack="(n -- f)">True if not zero.</Word>
-<Word name="op_add" stack="(n n1 -- n3)">Sum.</Word>
-<Word name="op_sub" stack="(n n1 -- n3)">Difference.</Word>
-<Word name="op_mul" stack="(n n1 -- n3)">Product.</Word>
-<Word name="op_div" stack="(n n1 -- n3)">Quotient.</Word>
-<Word name="op_mod" stack="(n n1 -- n3)">Remainder.</Word>
-<Word name="op_lshift" stack="(n n1 -- n3)">Bitwise left shift.</Word>
-<Word name="op_rshift" stack="(n n1 -- n3)">Bitwise right shift.</Word>
+<Word name="op_1add" stack="(n -- n+1)" forth="1+">Adds 1.</Word>
+<Word name="op_1sub" stack="(n -- n-1)" forth="1-">Subtracts 1.</Word>
+<Word name="op_2mul" stack="(n -- n*2)" forth="2*">Doubles.</Word>
+<Word name="op_2div" stack="(n -- n/2)" forth="2/">Halves.</Word>
+<Word name="op_negate" stack="(n -- -n)" forth="negate">Flips sign.</Word>
+<Word name="op_abs" stack="(n -- |n|)" forth="abs">Absolute value.</Word>
+<Word name="op_not" stack="(n -- f)" forth="0=">Logical NOT. Returns 1 if 0, else 0.</Word>
+<Word name="op_0notequal" stack="(n -- f)" forth="0<>">True if not zero.</Word>
+<Word name="op_add" stack="(n n1 -- n3)" forth="+">Sum.</Word>
+<Word name="op_sub" stack="(n n1 -- n3)" forth="-">Difference.</Word>
+<Word name="op_mul" stack="(n n1 -- n3)" forth="*">Product.</Word>
+<Word name="op_div" stack="(n n1 -- n3)" forth="/">Quotient.</Word>
+<Word name="op_mod" stack="(n n1 -- n3)" forth="mod">Remainder.</Word>
+<Word name="op_lshift" stack="(n n1 -- n3)" forth="lshift">Bitwise left shift.</Word>
+<Word name="op_rshift" stack="(n n1 -- n3)" forth="rshift">Bitwise right shift.</Word>
 <Word name="op_lshiftnum" stack="(n shift -- result)">Numeric left shift preserving sign. Distinct from `op_lshift` which is bitwise on bytes. Chronicle upgrade (0xb6).</Word>
 <Word name="op_rshiftnum" stack="(n shift -- result)">Numeric right shift preserving sign. Chronicle upgrade (0xb7).</Word>
-<Word name="op_booland" stack="(n n1 -- f)">True if both non-zero.</Word>
-<Word name="op_boolor" stack="(n n1 -- f)">True if either non-zero.</Word>
-<Word name="op_numequal" stack="(n n1 -- f)">Numeric equality.</Word>
-<Word name="op_numequalverify" stack="(n n1 -- f)">OP_NUMEQUAL then OP_VERIFY.</Word>
-<Word name="op_numnotequal" stack="(n n1 -- f)">Numeric inequality.</Word>
-<Word name="op_lessthan" stack="(n n1 -- f)">True if n &lt; n1.</Word>
-<Word name="op_greaterthan" stack="(n n1 -- f)">True if n &gt; n1.</Word>
-<Word name="op_lessthanorequal" stack="(n n1 -- f)">True if n &lt;= n1.</Word>
-<Word name="op_greaterthanorequal" stack="(n n1 -- f)">True if n &gt;= n1.</Word>
-<Word name="op_min" stack="(n n1 -- n)">Smaller value.</Word>
-<Word name="op_max" stack="(n n1 -- n)">Larger value.</Word>
-<Word name="op_within" stack="(n n1 n2 -- f)">True if n is between n1 and n2.</Word>
+<Word name="op_booland" stack="(n n1 -- f)" forth="&&">True if both non-zero.</Word>
+<Word name="op_boolor" stack="(n n1 -- f)" forth="||">True if either non-zero.</Word>
+<Word name="op_numequal" stack="(n n1 -- f)" forth="=">Numeric equality.</Word>
+<Word name="op_numequalverify" stack="(n n1 -- f)">OP_NUMEQUAL then OP_VERIFY. Script-specific composite.</Word>
+<Word name="op_numnotequal" stack="(n n1 -- f)" forth="<>">Numeric inequality.</Word>
+<Word name="op_lessthan" stack="(n n1 -- f)" forth="<">True if n &lt; n1.</Word>
+<Word name="op_greaterthan" stack="(n n1 -- f)" forth=">">True if n &gt; n1.</Word>
+<Word name="op_lessthanorequal" stack="(n n1 -- f)" forth="<=">True if n &lt;= n1.</Word>
+<Word name="op_greaterthanorequal" stack="(n n1 -- f)" forth=">=">True if n &gt;= n1.</Word>
+<Word name="op_min" stack="(n n1 -- n)" forth="min">Smaller value.</Word>
+<Word name="op_max" stack="(n n1 -- n)" forth="max">Larger value.</Word>
+<Word name="op_within" stack="(n n1 n2 -- f)" forth="within">True if n is between n1 and n2.</Word>
 
 #### Crypto
 
