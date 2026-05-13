@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import FadeIn from "@/components/FadeIn";
 
 export const metadata: Metadata = {
@@ -6,6 +7,16 @@ export const metadata: Metadata = {
   description:
     "Henceforth documentation — complete reference for all FORTH words, Bitcoin wallet features, and scripting capabilities.",
 };
+
+const chapters = [
+  {
+    href: "/docs/about",
+    number: "01",
+    title: "About",
+    blurb: "Links to source code and support channels.",
+  },
+  // Future chapters added here as they migrate to MDX.
+];
 
 export default function DocsPage() {
   return (
@@ -27,9 +38,47 @@ export default function DocsPage() {
           </div>
         </FadeIn>
 
-        {/* Download link */}
+        {/* Browse chapters — migrating from PDF to MDX, chapter by chapter */}
         <FadeIn delay={0.1}>
-          <div className="mt-8 flex items-center gap-4">
+          <div className="mt-12">
+            <p className="text-xs uppercase tracking-[0.2em] text-accent-warm/80">
+              Browse chapters
+            </p>
+            <ul className="mt-4 divide-y divide-card-border/40 border-t border-b border-card-border/40">
+              {chapters.map((ch) => (
+                <li key={ch.href}>
+                  <Link
+                    href={ch.href}
+                    className="group flex items-baseline gap-4 py-4 transition-colors hover:bg-card-bg/40"
+                  >
+                    <span className="font-mono text-xs text-accent-orange/70">
+                      {ch.number}
+                    </span>
+                    <span className="flex-1">
+                      <span className="block text-base font-bold text-foreground group-hover:text-accent-warm">
+                        {ch.title}
+                      </span>
+                      <span className="block text-sm text-muted">
+                        {ch.blurb}
+                      </span>
+                    </span>
+                    <span className="text-muted/40 group-hover:text-accent-warm">
+                      →
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-3 text-xs text-muted/60">
+              Remaining chapters live in the PDF below — migrating to web pages
+              one chapter at a time.
+            </p>
+          </div>
+        </FadeIn>
+
+        {/* Download link */}
+        <FadeIn delay={0.2}>
+          <div className="mt-12 flex items-center gap-4">
             <a
               href="/hforth.pdf"
               download
