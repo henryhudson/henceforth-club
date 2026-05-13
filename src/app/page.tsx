@@ -1,6 +1,8 @@
 import FadeIn from "@/components/FadeIn";
 import HeroTerminal from "@/components/HeroTerminal";
 import AppCard from "@/components/AppCard";
+import SectionNav from "@/components/SectionNav";
+import { CONTENT_SECTIONS } from "@/lib/content-nav";
 
 export default function Home() {
   return (
@@ -54,6 +56,23 @@ export default function Home() {
               />
             </FadeIn>
           </div>
+        </div>
+      </section>
+
+      <section className="pb-24 sm:pb-32">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="section-line" />
+          <FadeIn>
+            <p className="mt-16 text-xs tracking-widest text-muted/50 uppercase">
+              Read more
+            </p>
+            <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted">
+              Documentation, long-form articles, and video tutorials.
+            </p>
+            <div className="mt-6">
+              <SectionNav sections={CONTENT_SECTIONS} />
+            </div>
+          </FadeIn>
         </div>
       </section>
     </>

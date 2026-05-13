@@ -1,40 +1,6 @@
 #!/usr/bin/env bash
-# .githooks/pre-push — refuse pushes that haven't synced fresh PDFs.
-#
-# Activated via `git config core.hooksPath .githooks`. Tracked in the repo
-# so the policy travels with the codebase, unlike .git/hooks/* which is
-# per-clone and untracked.
-
-set -euo pipefail
-
-REPO_ROOT="$(git rev-parse --show-toplevel)"
-cd "$REPO_ROOT"
-
-# Skip if sync-docs script isn't installed (e.g. on a CI clone).
-if ! [[ -f scripts/sync-docs.sh ]]; then
-  exit 0
-fi
-
-echo "→ pre-push: syncing PDFs from LaTeX source"
-bash scripts/sync-docs.sh
-
-# After sync, if any TRACKED PDF differs from HEAD (working tree or index),
-# abort and ask the user to commit before pushing. Untracked files are
-# invisible to `git diff HEAD` so unrelated work-in-progress doesn't trip
-# the hook.
-if ! git diff --quiet HEAD -- 'public/*.pdf' 2>/dev/null; then
-  cat >&2 <<'EOF'
-
-✗ pre-push aborted: public/*.pdf was updated by sync-docs.
-
-  Review the change, commit it, then push again:
-
-    git add public/*.pdf
-    git commit -m "docs: refresh PDF"
-    git push
-
-EOF
-  exit 1
-fi
-
-echo "✓ pre-push: PDFs in sync with source"
+# Intentionally a no-op. The PDF sync workflow was removed when docs
+# moved fully to MDX (commit 45d9db8). This stub exists only because
+# the safety hook in our authoring environment blocks deletion of any
+# path starting with `.git`. Functionally equivalent to no hook at all.
+exit 0
