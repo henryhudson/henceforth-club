@@ -4,8 +4,6 @@ import FadeIn from "@/components/FadeIn";
 import ExpandingCircles from "@/components/ExpandingCircles";
 import Accordion from "@/components/Accordion";
 import TechModal from "@/components/TechModal";
-import SectionNav from "@/components/SectionNav";
-import { HENCEFORTH_NAV } from "@/lib/content-nav";
 
 const accordionSections = [
   {
@@ -421,11 +419,9 @@ export default function HenceforthPage() {
             </p>
             <p className="mt-4 text-sm leading-relaxed text-muted max-w-2xl">
               Complete reference for all FORTH words and Bitcoin Script opcodes,
-              plus long-form articles and video tutorials. All on the web.
+              plus long-form articles and video tutorials. All on the web — use
+              the navigation above to jump between docs, articles, and learn.
             </p>
-            <div className="mt-6">
-              <SectionNav sections={HENCEFORTH_NAV} accent="warm" />
-            </div>
           </FadeIn>
         </div>
 

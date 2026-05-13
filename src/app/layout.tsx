@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Navbar from "@/components/Navbar";
+import AppSubnav from "@/components/AppSubnav";
 import KonamiCode from "@/components/KonamiCode";
 import MiniTerminal from "@/components/MiniTerminal";
 import PageViewTracker from "@/components/PageViewTracker";
@@ -122,6 +123,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <Navbar />
+        <AppSubnav />
         <main className="flex-1">{children}</main>
         <Footer />
         <KonamiCode />

@@ -47,9 +47,9 @@
 html {
   scroll-behavior: smooth;
   /* Offset anchor scroll so jumps to #section don't collide with the
-     sticky navbar (~64px) — without this, the section heading lands
-     under the nav. */
-  scroll-padding-top: 80px;
+     sticky navbar (~57px) + sticky sub-nav (~56px). Without this, the
+     section heading lands under the chrome. */
+  scroll-padding-top: 130px;
 }
 
 body {

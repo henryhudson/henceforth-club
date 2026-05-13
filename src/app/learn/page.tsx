@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import FadeIn from "@/components/FadeIn";
-import SectionNav from "@/components/SectionNav";
-import { HENCEFORTH_NAV } from "@/lib/content-nav";
 
 export const metadata: Metadata = {
   title: "Learn",
@@ -11,10 +9,10 @@ export const metadata: Metadata = {
 
 export default function LearnPage() {
   return (
-    <div className="py-20 sm:py-28">
+    <div className="py-16 sm:py-24">
       <div className="mx-auto max-w-3xl px-6">
         <FadeIn>
-          <p className="text-xs uppercase tracking-widest text-accent/70">
+          <p className="text-xs uppercase tracking-widest text-accent-warm/70">
             Tutorials
           </p>
           <h1 className="mt-6 text-5xl font-bold text-foreground sm:text-7xl">
@@ -24,12 +22,6 @@ export default function LearnPage() {
             Starting Henceforth — a video series teaching FORTH and the
             Henceforth Bitcoin wallet from first principles.
           </p>
-        </FadeIn>
-
-        <FadeIn delay={0.1}>
-          <div className="mt-10">
-            <SectionNav sections={HENCEFORTH_NAV} accent="warm" />
-          </div>
         </FadeIn>
 
         <FadeIn delay={0.2}>

@@ -1,0 +1,139 @@
+# SwiftBSV
+
+A pure-Swift SDK for Bitcoin SV. SwiftBSV powers the wallet inside Henceforth and ships as a standalone Swift Package for any iOS or macOS app that needs Bitcoin keys, transactions, scripts, or SPV verification.
+
+<a id="about" />
+
+## About
+
+### Links to Source Code
+
+[github.com/henryhudson/SwiftBSV](https://github.com/henryhudson/SwiftBSV)
+
+Add it to a Swift package via the dependency stanza shown in the *Integration* chapter — one line in `Package.swift` or one menu click in Xcode.
+
+### Status
+
+- **Swift tools 5.9+**, builds cleanly under **Swift 6** with strict concurrency.
+- **Sendable** throughout the public surface — pass values across actor boundaries without `@unchecked` or `@preconcurrency` workarounds.
+- **No deprecated dependencies.** CryptoSwift 1.9.x and Boilertalk's secp256k1 binding are the only third-party packages.
+- **CI green** on macOS 15 + Xcode 16 via GitHub Actions on every push to `main`.
+
+### What This Book Covers
+
+The chapters that follow walk every public type in the SDK from the bottom up:
+
+- Cryptographic primitives (Point, BInt, Crypto)
+- Keys and addresses (PrivateKey, PublicKey, Address, WIF)
+- HD wallets (Bip39, Bip32) and Type42 (BRC-42) invoice-numbered derivation
+- Signatures (ECDSA, sighash, BSM) and ECIES encryption (BIE1 wire format)
+- Scripts and the full BSV opcode set
+- Transactions and the fluent `TxBuilder`
+- Simplified Payment Verification (block headers + Merkle proofs)
+- SwiftPM integration and contributing
+
+Every chapter includes runnable examples in dark terminal panels and notebox callouts for the safety invariants you cannot opt out of.
+
+<a id="goals" />
+
+## Goals
+
+### What SwiftBSV Is
+
+- **Idiomatic Swift.** Value types where they make sense, classes only where mutation lifecycle demands it (`TxBuilder`, `Bip39`). No `NS` prefixes leaking through, no implicit globals, no completion-handler closures where `async`/`await` would do.
+- **Compile-time safe.** Optionals where failure is part of the contract (parsing a malformed WIF, decoding a truncated DER signature). Throwing functions where the caller must handle it. No `try!`, no `fatalError` in the production path.
+- **Wire-compatible with the rest of BSV.** ECIES emits `BIE1`-format ciphertext readable by `@bsv/sdk`. BSM signatures verify against any other Bitcoin Signed Message implementation. Transaction binary matches whatever a node will accept.
+- **Small surface, deep semantics.** Every public type has a single clear responsibility. The *whole* library fits in your head once you've read this book.
+
+### What SwiftBSV Is Not
+
+- Not a wallet. Wallet UX, key storage, address discovery, sync strategy — those live one layer up. SwiftBSV gives you the primitives; Henceforth shows one way to compose them.
+- Not a network client. Broadcasting, fee quoting, UTXO fetching, Merkle-proof retrieval — all out of scope. SwiftBSV *validates* a Merkle proof; fetching one over HTTPS is your problem.
+- Not a token/ordinal SDK. BSV-20, BSV-21, 1Sat Ordinals, BAP, MAP — all build *on top* of the primitives here. SwiftBSV stays at the protocol layer.
+
+### Future
+
+- Direct support for BEEF (BRC-62) and BUMP (BRC-74) construction, not just verification.
+- Streaming Merkle-tree construction for very large blocks.
+- More extensive opcode tests — the Hayes-style suite that covers Henceforth's FORTH side has no exact analogue here yet.
+- A formal benchmark suite tracking ECDSA verification and SHA-256 throughput across iPhone generations.
+
+<a id="credits" />
+
+## Credits
+
+### Will Townsend — Original SwiftBSV
+
+SwiftBSV was originally written by Will Townsend at [wtsnz/SwiftBSV](https://github.com/wtsnz/SwiftBSV) as a Swift port of the moneybutton/bsv JavaScript library, mashing together ideas from several earlier Swift Bitcoin projects (Yenom's BitcoinKit, Kevin Vitale's WalletKit, yuzushioh's HDWalletKit). The current fork at [henryhudson/SwiftBSV](https://github.com/henryhudson/SwiftBSV) continues from that foundation: BSV-specific protocol decisions (restored opcodes, FORKID sighash, no segwit), Swift 6 strict concurrency, defensive Data slicing throughout the public surface, ECIES BIE1 wire compatibility, and a SPV verification module. Will's authorship of the BIP-32/39 implementation, the BInt big-integer wrapper, the Base58Check encoder, and the original `TxBuilder` fluent API is unchanged in this fork — the structural debt is large and acknowledged.
+
+### Boilertalk's secp256k1.swift
+
+[Boilertalk's secp256k1.swift](https://github.com/Boilertalk/secp256k1.swift) wraps Pieter Wuille's reference C library (`libsecp256k1`) for Swift. SwiftBSV uses it for every elliptic-curve operation: ECDSA sign and verify, public-key tweak (Type42), compact signature recovery (BSM). When you see `Secp256k1.signCompact` or `publicKeyTweakMul` in the source, you're calling through Boilertalk's binding into the C library that underlies Bitcoin Core itself.
+
+### CryptoSwift
+
+[Marcin Krzyżanowski's CryptoSwift](https://github.com/krzyzanowskim/CryptoSwift) provides SHA-256, SHA-512, RIPEMD-160, AES-CBC, HMAC, and PBKDF2. Apple's `CryptoKit` covers most modern needs but lacks RIPEMD-160 (used in `Hash160` for address derivation) and AES-CBC (used in ECIES BIE1). CryptoSwift fills both gaps in a Swift-native way.
+
+### Bitcoin White Paper
+
+The reference for everything in this book. Section 8 in particular — *Simplified Payment Verification* — defines the trust model implemented in the SPV chapter.
+
+[Bitcoin White Paper](https://craigwright.net/bitcoin-white-paper.pdf)
+
+### Henceforth
+
+The companion book [Henceforth](https://github.com/henryhudson/FORTHapp) documents the iOS app that consumes this SDK. SwiftBSV's design choices are calibrated for that consumer: every type that crosses an `@MainActor` boundary is `Sendable`; every initializer that touches the network is absent (because Henceforth's networking layer owns that); every value type is `Equatable` and `Hashable` where the protocol allows it because Henceforth's UI uses them in `ForEach` and `Set` routinely.
+
+<a id="cryptographic-primitives" />
+
+## Cryptographic Primitives
+
+> **Migrating from LaTeX source.** The full chapter covers `BInt` (Big Integer), `Point` (a point on secp256k1), and `Crypto` (hash and HMAC helpers). The complete reference is in the [SwiftBSV book PDF](https://github.com/henryhudson/SwiftBSV/blob/main/Documentation/swiftbsv.pdf) until the web migration finishes.
+
+<a id="keys-and-addresses" />
+
+## Keys and Addresses
+
+> **Migrating from LaTeX source.** Covers `Network`, `PrivateKey`, `PublicKey`, and `Address` — the fundamental key types and their serialisation. See the [PDF](https://github.com/henryhudson/SwiftBSV/blob/main/Documentation/swiftbsv.pdf).
+
+<a id="hd-wallets" />
+
+## HD Wallets — BIP-39 & BIP-32
+
+> **Migrating from LaTeX source.** Covers `Bip39` (mnemonic phrases) and `Bip32` (hierarchical deterministic keys). See the [PDF](https://github.com/henryhudson/SwiftBSV/blob/main/Documentation/swiftbsv.pdf).
+
+<a id="type42" />
+
+## Type42 — Invoice-Numbered Keys
+
+> **Migrating from LaTeX source.** Covers BRC-42 invoice-numbered derivation: the three derivation modes, Henceforth path conventions, and the ECDH shared secret construction. See the [PDF](https://github.com/henryhudson/SwiftBSV/blob/main/Documentation/swiftbsv.pdf).
+
+<a id="signatures" />
+
+## Signatures and ECIES
+
+> **Migrating from LaTeX source.** Covers ECDSA signing and verification, sighash flags (FORKID), Bitcoin Signed Messages (BSM), and ECIES encryption in the BIE1 wire format. See the [PDF](https://github.com/henryhudson/SwiftBSV/blob/main/Documentation/swiftbsv.pdf).
+
+<a id="scripts" />
+
+## Scripts and Opcodes
+
+> **Migrating from LaTeX source.** Covers the `Script` type, the full BSV opcode set including the Chronicle-restored opcodes, P2PKH and P2PK construction, and the `Interpreter`. See the [PDF](https://github.com/henryhudson/SwiftBSV/blob/main/Documentation/swiftbsv.pdf).
+
+<a id="transactions" />
+
+## Transactions and TxBuilder
+
+> **Migrating from LaTeX source.** Covers `Transaction`, `TxIn`, `TxOut`, the fluent `TxBuilder` API, and the serialization details. See the [PDF](https://github.com/henryhudson/SwiftBSV/blob/main/Documentation/swiftbsv.pdf).
+
+<a id="spv" />
+
+## Simplified Payment Verification
+
+> **Migrating from LaTeX source.** Covers block headers, Merkle proofs, the SPV verification path, and the trust model from white paper Section 8. See the [PDF](https://github.com/henryhudson/SwiftBSV/blob/main/Documentation/swiftbsv.pdf).
+
+<a id="integration" />
+
+## Integration
+
+> **Migrating from LaTeX source.** Covers adding SwiftBSV as a SwiftPM dependency, Xcode menu integration, contributing guidelines, and the test suite. See the [PDF](https://github.com/henryhudson/SwiftBSV/blob/main/Documentation/swiftbsv.pdf).
