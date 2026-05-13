@@ -57,7 +57,11 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
         {children}
       </code>
     ),
-    pre: ({ children }) => <Forthbox>{children as ReactNode}</Forthbox>,
+    pre: ({ children }) => (
+      <pre className="my-6 overflow-x-auto rounded border border-card-border bg-terminal-bg p-5 font-mono text-[13px] leading-[1.7] text-terminal-green shadow-lg shadow-black/40 sm:text-sm [&_code]:bg-transparent [&_code]:p-0 [&_code]:text-terminal-green">
+        {children as ReactNode}
+      </pre>
+    ),
     blockquote: ({ children }) => <Notebox>{children as ReactNode}</Notebox>,
     hr: () => <hr className="my-12 border-t border-card-border/30" />,
     table: ({ children }) => (

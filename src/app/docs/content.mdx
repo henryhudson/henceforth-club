@@ -605,6 +605,7 @@ The transaction builder words allow programmatic construction of Bitcoin transac
 
 Every installation includes a `standard-transaction.fs` file in the Files tab. This is a Bitcoin Script file that defines the OP_RETURN output attached to your payments. It is automatically loaded each time you open the Pay view.
 
+<Forthbox title="standard-transaction.fs">
 ```
 ( Standard Transaction Script )
 
@@ -613,6 +614,7 @@ OP_FALSE OP_RETURN
 ." Hello, you are welcome." >data data>script
 SCRIPT-END
 ```
+</Forthbox>
 
 <a id="ref-crypto" />
 
