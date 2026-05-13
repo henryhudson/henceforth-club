@@ -138,6 +138,22 @@ The wallet uses [SwiftBSV](https://github.com/henryhudson/SwiftBSV) for every cr
 - **Broadcasting** — ARC (Authority for Replicating Chains) via GorillaPool with TAAL as failover. Sole submission path; legacy mAPI removed.
 - **Multi-output sends** — `send-many` accepts N (amount, address) pairs and builds one transaction with N outputs at constant input cost. Atomic: all eight payments either confirm or none do.
 
+### UTXO sync
+
+The wallet's UTXO set is reconstructed from locally-held transactions, not queried from a network endpoint. White paper §8 says SPV clients should derive ownership from chain-validated proofs they hold themselves; treating an external `/unspent` index as authoritative inverts that model. Henceforth follows the white paper.
+
+- **History authoritative** — every confirmed transaction in the local store contributes its outputs to the reconstructed UTXO set. WhatsOnChain `/unspent` corroborates and surfaces deposits we haven't fetched yet; it is never the source of truth.
+- **Canonical address set** — the wallet's master address, every derived address, and the currently-rotated receive address are unioned into a single set used by both history sync and UTXO reconstruction. A receive address that's been shown to the user can never fall outside this set.
+- **Strict removal policy** — a UTXO disappears from the wallet's view only on positive evidence of spend: (1) the user broadcast a transaction that consumes it, (2) a confirmed foreign transaction spending it lands in the local history, or (3) the producing transaction fails SPV verification. Absence from an external endpoint is never a removal trigger.
+- **Outpoint-consumption index** — a derived set of "txid:vout" strings recording every consumed output, rebuilt from the local transaction store on every wallet open and updated incrementally as new transactions arrive. The set is append-only and persists pending broadcasts across app death.
+- **Reconciliation** — every full sync compares the locally-reconstructed UTXO set against the network's `/unspent` view, partitions outpoints into *corroborated* (both sides agree), *provisional* (we have it, network doesn't yet), and *wallet-unknown* (network has it, we don't). Provisional UTXOs are kept visible; wallet-unknown outpoints trigger a background fetch of the producing transaction so they surface on the next pass.
+
+### Recovery tools
+
+- **Add address** — paste any BSV address into the wallet's edit sheet; the app searches the wallet's seed across both Type42 and BIP-44 chains for a derivation path that produces it. On a hit, the path is attached to the wallet and a targeted sync runs immediately. Pure local computation — no network round-trip during the search.
+- **Auto-rediscovery** — when an incoming transaction pays an address the wallet doesn't yet know about, the app silently attempts the same rederivation in the background. A path that exists in the seed is attached automatically before the next sync.
+- **Advanced sync toggle** — Settings → Bitcoin → Advanced Sync exposes the active UTXO sync model. Defaults to the legacy network-authoritative path during the rollout window; flip it to enable history-driven reconstruction as the authoritative source. Either side is safe; the toggle exists so users can self-recover if either path surfaces an anomaly.
+
 ### SPV verification
 
 - **Hardcoded checkpoint** — `SPVCheckpoint.mainnet` is the trust anchor. The only header trusted without chain-linkage.
