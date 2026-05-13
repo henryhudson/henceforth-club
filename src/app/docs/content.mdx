@@ -716,6 +716,8 @@ Pre-built script templates for common Bitcoin transaction patterns.
 
 All 140+ Bitcoin Script opcodes are exposed as FORTH words. Below are the categories — every opcode behaves like its Script consensus definition.
 
+> **Reading the `≈` hint.** Where an opcode has a one-to-one Henceforth FORTH equivalent, you'll see it next to the stack diagram (e.g. `op_dup ≈ dup`, `op_add ≈ +`, `op_swap ≈ swap`). Opcodes without the hint are Script-specific and have no direct FORTH analogue — `op_checksig`, `op_verify`, `op_return`, `op_codeseparator`, the crypto ops, the Chronicle splice ops. Composite mappings (e.g. `op_3dup` = `2dup over`, `op_notif` = `0= if`) appear in the description prose rather than as a single-word hint.
+
 #### Push Data
 
 <Word name="op_0 … op_16" stack="( -- 0..16)">Push the corresponding integer 0..16 onto the stack. Equivalent to typing a numeric literal in FORTH.</Word>
