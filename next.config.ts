@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 import { resolve } from "path";
 import createMDX from "@next/mdx";
-import { HENCEFORTH_THEME } from "./src/lib/shiki-theme";
 
 const nextConfig: NextConfig = {
   pageExtensions: ["ts", "tsx", "md", "mdx"],
@@ -10,29 +9,21 @@ const nextConfig: NextConfig = {
   },
 };
 
-// Plugins are passed as string-form (`["plugin-name", options]`) so
-// Turbopack can serialize them across its worker boundary. The shiki
-// theme is plain JSON, so it serializes fine.
+// Plugins must be specified as string paths (Turbopack only accepts
+// serializable plugin specs). The wrapper at
+// src/lib/rehype-pretty-forth.mjs is self-contained: it owns the
+// custom FORTH grammar, the Henceforth shiki theme, and the lazy
+// highlighter cache. Resolved to an absolute path at config-load so
+// @next/mdx's dynamic import succeeds from any cwd.
+const rehypePrettyForthPath = resolve(
+  __dirname,
+  "src/lib/rehype-pretty-forth.mjs",
+);
+
 const withMDX = createMDX({
   options: {
     remarkPlugins: [["remark-gfm", {}]],
-    rehypePlugins: [
-      [
-        "rehype-pretty-code",
-        {
-          // Use our custom Henceforth theme: neon green base + gray
-          // comments. Defined in src/lib/shiki-theme.ts.
-          theme: HENCEFORTH_THEME,
-          // Don't paint the panel bg from the theme — globals.css
-          // already styles <pre> with our terminal-bg so the
-          // Forthbox treatment stays coherent.
-          keepBackground: false,
-          // Single-line indicator class so we can target via CSS
-          // for hover / focus highlights later if needed.
-          defaultLang: "plaintext",
-        },
-      ],
-    ],
+    rehypePlugins: [[rehypePrettyForthPath]],
   },
 });
 
