@@ -5,7 +5,7 @@
 *Henry Hudson · Henceforth · 2026*
 
 <Notebox>
-**Based on findings from Craig Wright.** The work documented here implements components of the system described in Craig Wright, *Batching, Headers, and Throughput: Operating a Bitcoin SV Wallet with Offline Synchronisation and High-Volume Microtransactions*, Craig's Substack, 2026-05-02. The article frames a wallet capable of high-volume operation as built on three pillars — header-based blockchain awareness (SPV), batch construction of transactions, and structured UTXO management for both sending and receiving. Henceforth had the first and most of the third before this paper was written; the `send` and `send-many` words documented here close the second. §9 below maps the full architecture against the current implementation, naming the gaps explicitly.
+**Based on findings from Craig Wright.** The work documented here implements components of the system described in Craig Wright, *Batching, Headers, and Throughput: Operating a Bitcoin SV Wallet with Offline Synchronisation and High-Volume Microtransactions*, Craig's Substack, 2026-05-02. The article frames a wallet capable of high-volume operation as built on three pillars — header-based blockchain awareness (SPV), batch construction of transactions, and structured UTXO management for both sending and receiving. Henceforth had the first and most of the third before this paper was written; the `send` and `send-many` words documented here close the second. §10 below maps the full architecture against the current implementation, naming the gaps explicitly.
 </Notebox>
 
 ---
@@ -206,6 +206,12 @@ The structural savings compound:
 
 From the network's perspective, the freelancer paid 770,000 satoshis from one input to eight payees, with change returned to themselves. Every recipient sees a normal P2PKH output addressed to them, indistinguishable from a single-purpose payment.
 
+There's a security argument adjacent to atomicity. One signed bundle of eight payments is one biometric prompt, one Keychain access, one signing event — a smaller attack surface than eight independent signing sessions. Wright's §XII frames it directly: fewer events, fewer opportunities for error. The atomicity property and the reduced-attack-surface property come from the same underlying fact — eight outputs in one transaction is *one operation*, not eight near-simultaneous ones.
+
+<Notebox>
+**On failure.** Atomicity defines what success looks like; the failure surface is the same shape inverted. ARC rejects the 464-byte transaction: zero payments broadcast, the stack restores to its pre-call state (per §5), the user retries. Pre-build validation catches malformed addresses, zero amounts, or insufficient balance before any signature is produced — no biometric prompt fires for a transaction that cannot build. Change-address derivation faults surface at the same layer. The only outcome the user must reason about is *all eight* or *none* — the implementation forecloses the partial-failure space that drives the worst weeks in payment-ops history.
+</Notebox>
+
 ---
 
 ## 8. Why this belongs in a terminal
@@ -251,7 +257,23 @@ The illustrative `1Land…kqW / 1Groc…xR2 / …` addresses above stand in for 
 
 ---
 
-## 9. The wider context
+## 9. The other half — receiving at scale
+
+The send-side argument has a receive-side mirror. Every inbound payment is a new UTXO; every freshly-derived receive address (Type42 rotation, the BRC-42 privacy story) means the wallet's UTXO set grows by one entry per payment received. A wallet that receives payments at any reasonable cadence — donations, payroll, micropayment subscriptions, royalty splits — accumulates hundreds or thousands of inputs over a year.
+
+Wright's framing in §V: *fragmentation is the structural consequence of the receive-side strategy that the privacy and accounting story demands*. You can't have fresh addresses without UTXO accumulation. The two problems are entangled, and a wallet that ignores either half eventually fails on the other.
+
+Henceforth handles consolidation two ways. Most of the time, **normal sends consolidate as a side effect.** `Wallet.selectUTXOs` switches above 100 UTXOs into a fragmentation-aware mode — smallest-first phase, raised dust cap — so an ordinary send pays the recipient *and* drains the dust pile in the same transaction. The user initiates a payment; the wallet quietly cleans up the inputs as part of building it.
+
+When the user wants to consolidate proactively — say, after a long receive-only period, or before a known large outflow — the **Consolidate** action in the UTXO detail view assembles a self-transfer that merges many small inputs into one large output. The on-chain shape is the geometric mirror of `send-many`: many inputs, one or two outputs. Same protocol primitive, opposite direction.
+
+The receive-side story has a watch-only half too. The signer derives its own receive addresses (no network needed for derivation); but the *wallet* needs to know when those addresses receive funds. `HFAddressPack` is the signed export of a derived address list — the signer hands it across the air-gap to an online watcher, the watcher monitors the mempool and chain, and notifies the signer (via the same `HFReceiptBundle` path the receipt loop in §3 uses) when payments land. Same two-machine architecture, reverse direction.
+
+The send side and the receive side cannot be separated. A wallet that doesn't batch its outgoing payments will fragment its inputs faster than the receive side can compensate. A wallet that batches outputs but never consolidates inputs will fail differently — bigger transactions, worse fees per byte, eventually transactions that exceed the standard relay size. Henceforth implements both halves because Wright's framing makes the cost of skipping either half explicit.
+
+---
+
+## 10. The wider context
 
 *Batching, Headers, and Throughput* frames a high-volume wallet as a system of components, none removable without loss: offline signer, header sync, watch-only monitoring, batching, consolidation, fresh-address strategy, and a non-negotiable pre-signing verification step. Henceforth's current mapping against Wright's architecture:
 
@@ -259,16 +281,17 @@ The illustrative `1Land…kqW / 1Groc…xR2 / …` addresses above stand in for 
 - **Header-based blockchain awareness** — `HeaderSyncService` + `SPVCheckpoint`. SPV against block headers, not network calls to a trusted node.
 - **Offline header transfer** — `HFHeaderBundle`. The watcher exports headers as a signed bundle; the signer imports them through the same `commitValidatedHeaderRun` path that validates online sync.
 - **Merkle-proof export for offline verify** — `HFReceiptBundle`. The receipt-back flow described in §3 above.
-- **Watch-only address monitoring** — `HFAddressPack` + `MempoolMonitorService`. The signer derives addresses; the watcher monitors them.
+- **Watch-only address monitoring** — `HFAddressPack` + `MempoolMonitorService`. *Partial in v1.0:* the signer exports a signed address-pack and the watcher decodes and validates it, but the watcher does not yet persist the addresses into a monitoring store wired to `MempoolMonitorService`. v1.1 closes the loop.
 - **Batching on the send side** — `send-many`.
-- **Consolidation on the receive side** — `ConsolidateUTXO`, plus a fragmentation-aware UTXO selection policy that drains the dust pile as a side effect of normal sends.
+- **Consolidation on the receive side** — `ConsolidateUTXO`, plus a fragmentation-aware UTXO selection policy that drains the dust pile as a side effect of normal sends (see §9).
 - **Fresh address per payment** — Type42 (BRC-42) rotation, automatic post-transaction.
+- **Pre-signing verification** — `PayView` / `MultiPaySheet` present the output set before Face ID on every send. *Partial in v1.0:* `TransactionReviewView` is the canonical byte-level review surface (inputs + outputs + fee) but is currently wired into the BRC-100 pending-broadcast queue, not yet hoisted as an overlay over the active PayView / MultiPaySheet path. The surface exists and is tested; the residual is the routing decision.
 
-The send side and the receive side are inseparable. A wallet that doesn't batch its outgoing payments will, over time, also fail to consolidate its incoming UTXOs — the two problems compound. Henceforth implements both halves.
+The send side and the receive side are inseparable, and the article's argument is structural rather than incremental — Wright's framing forces both halves to be implemented, and Henceforth's v1.0 ships seven of nine components fully and two in honest partial state.
 
 ---
 
-## 10. Closing
+## 11. Closing
 
 Three observations from shipping this.
 
