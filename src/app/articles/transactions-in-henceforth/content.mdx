@@ -4,11 +4,15 @@
 
 *Henry Hudson · Henceforth · 2026*
 
+<Notebox>
+**Based on findings from Craig Wright.** The work documented here implements components of the system described in Craig Wright, *Batching, Headers, and Throughput: Operating a Bitcoin SV Wallet with Offline Synchronisation and High-Volume Microtransactions*, Craig's Substack, 2026-05-02. The article frames a wallet capable of high-volume operation as built on three pillars — header-based blockchain awareness (SPV), batch construction of transactions, and structured UTXO management for both sending and receiving. Henceforth had the first and most of the third before this paper was written; the `send` and `send-many` words documented here close the second. §9 below maps the full architecture against the current implementation, naming the gaps explicitly.
+</Notebox>
+
 ---
 
 ## 1. Background — transactions are data, not events
 
-Satoshi's framing from §2 of the white paper:
+Satoshi's framing from §2 of the [white paper](https://bitcoin.org/bitcoin.pdf):
 
 > "We define an electronic coin as a chain of digital signatures. Each owner transfers the coin to the next by digitally signing a hash of the previous transaction and the public key of the next owner and adding these to the end of the coin."
 
@@ -98,7 +102,7 @@ This is the Satoshi loop, materialised:
 
 The receiver verifies the chain. The sender doesn't have to be online for the verification to happen. The transaction is just data — and so is the receipt.
 
-Wright's 2026 paper *Batching, Headers, and Throughput: Operating a Bitcoin SV Wallet with Offline Synchronisation and High-Volume Microtransactions* presses this further into a full operating model. An air-gapped signer can never see the chain directly, so it must receive headers (`HFHeaderBundle`) and receipts (`HFReceiptBundle`) from an online watcher — passed across an explicit boundary. Henceforth ships both bundle formats; the Settings → Bitcoin → Air-Gap Tools UI surfaces export/import for each, routed by `.hf*` file extension and reachable via the system share sheet (AirDrop included).
+Wright's 2026 paper, *Batching, Headers, and Throughput*, presses this further into a full operating model. An air-gapped signer can never see the chain directly, so it must receive headers (`HFHeaderBundle`) and receipts (`HFReceiptBundle`) from an online watcher — passed across an explicit boundary. Henceforth ships both bundle formats; the Settings → Bitcoin → Air-Gap Tools UI surfaces export/import for each, routed by `.hf*` file extension and reachable via the system share sheet (AirDrop included).
 
 The Bitcoin-logo tap is the ergonomic, single-payment version of the same architecture. You don't have to flip Cold Mode on; you don't have to be in the Air-Gap Tools panel. You're already in PayView, you've already built the transaction — the raw hex is one tap away.
 
@@ -218,7 +222,7 @@ Multi-output sending is not a feature that has to be added to a UI. It is what f
 
 ## 9. The wider context
 
-Wright frames a high-volume wallet as a system of components, none removable without loss: offline signer, header sync, watch-only monitoring, batching, consolidation, fresh-address strategy, and a non-negotiable pre-signing verification step. Henceforth's current mapping:
+*Batching, Headers, and Throughput* frames a high-volume wallet as a system of components, none removable without loss: offline signer, header sync, watch-only monitoring, batching, consolidation, fresh-address strategy, and a non-negotiable pre-signing verification step. Henceforth's current mapping against Wright's architecture:
 
 - **Offline signer** — `WalletCard.coldModeEnabled` + Pending Broadcasts. The signer never goes online; the watcher broadcasts.
 - **Header-based blockchain awareness** — `HeaderSyncService` + `SPVCheckpoint`. SPV against block headers, not network calls to a trusted node.
@@ -242,6 +246,13 @@ Three observations from shipping this.
 **Atomicity is the underrated property.** The fee headline is easy. The practical user-facing benefit is that the payments either all happen or none do.
 
 **Transactions are data, not events.** Tapping the Bitcoin logo in PayView surfaces the raw hex. AirDrop it, paste it, paper-print it, hand it over. The receipt comes back as a Merkle proof against the receiver's local headers. The transaction itself is just bytes — Satoshi said this in 2008, Wright reasserts it for the high-volume case, and Henceforth implements it as the default surface rather than a buried air-gap feature.
+
+---
+
+## References
+
+1. Satoshi Nakamoto, *[Bitcoin: A Peer-to-Peer Electronic Cash System](https://bitcoin.org/bitcoin.pdf)*, 2008. §2 (chain of digital signatures), §5 (network broadcast), §7 (combining and splitting value).
+2. Craig Wright, *Batching, Headers, and Throughput: Operating a Bitcoin SV Wallet with Offline Synchronisation and High-Volume Microtransactions*, Craig's Substack, 2026-05-02.
 
 ---
 
