@@ -18,6 +18,8 @@ Satoshi's framing from §2 of the [white paper](https://bitcoin.org/bitcoin.pdf)
 
 A Bitcoin transaction is a chain of digital signatures serialised to bytes. Not an event. Not a message to a service. Just data: structured, signed, self-contained. Any byte channel can carry it — TCP, AirDrop, USB stick, QR code, paper.
 
+![The original peer-to-peer design. Alice sends the transaction directly to Bob (the IP-to-IP arrow); the node mesh's job is to confirm — Bob retrieves a Merkle proof from the network and sends a receipt back to Alice. The mesh verifies; it doesn't carry.](/articles/transactions-in-henceforth/small-world-network.jpg)
+
 Two consequences fall out:
 
 1. **Broadcasting is one possible delivery mechanism, not the only one.** "Each node broadcasts new transactions to all nodes" (§5) describes a network behaviour, not a hard requirement on the sender.
