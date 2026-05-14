@@ -51,11 +51,16 @@ The peer-to-peer hand-off works in both directions. Henceforth surfaces a send-s
 
 ### Send side — tap the Bitcoin logo
 
-Above the recipient field, PayView shows a small Bitcoin logo. Tapping it opens `RawTransactionPopUpView`, which renders the constructed transaction's hex in a monospaced block:
+Above the recipient field on PayView (single sends) and at the top of MultiPaySheet (the `send-many` review surface), Henceforth shows a small Bitcoin logo. Tapping it opens `RawTransactionPopUpView`, which renders the constructed transaction's hex in a monospaced block:
 
 ```
 01000000019b8a4c7f...8b5f0000000000ffffffff02...
 ```
+
+<Screenshot
+  src="/articles/transactions-in-henceforth/raw-transaction-popup.png"
+  alt="MultiPaySheet for an eight-recipient send-many, with the raw-transaction popup overlaid after tapping the Bitcoin logo. The hex of the 770,000-sat batched payment is shown in full before the user authorises broadcast."
+/>
 
 The hex is wrapped in a SwiftUI `ShareLink`. Tapping the text opens the system share sheet:
 
@@ -216,7 +221,26 @@ ok.
 
 The user has defined a personal word, `weekly-bills`, that captures their weekly payment routine in a single token. Running it costs one biometric tap. Editing it is editing the word's body. Saving the definition in a `.fs` file makes it portable across devices.
 
+<Screenshot
+  src="/articles/transactions-in-henceforth/multipaysheet.png"
+  alt="MultiPaySheet review surface — 8 recipients, 770,000 sats total, one Face ID approval. The user reviews the output set, taps the Bitcoin logo to inspect the raw hex if they want, then long-presses PAY to broadcast."
+/>
+
 Multi-output sending is not a feature that has to be added to a UI. It is what falls out of treating the payment primitive as a stack operation.
+
+<Notebox>
+**On chain.** The `weekly-bills` word above was broadcast to BSV mainnet on 2026-05-14 — same eight amounts (320,000 / 95,000 / 42,500 / 14,000 / 8,500 / 22,000 / 18,000 / 250,000 = **770,000 sats**), one input from the wallet, eight payment outputs plus change. One Face ID approval, one ARC submission, one mempool entry.
+
+**txid:** `12ac140a0006e5c57f0a4347dfc6e54ae3db1e57d64e7bc45a1572d849c1880e`
+[whatsonchain](https://whatsonchain.com/tx/12ac140a0006e5c57f0a4347dfc6e54ae3db1e57d64e7bc45a1572d849c1880e)
+
+The illustrative `1Land…kqW / 1Groc…xR2 / …` addresses above stand in for my own eight receive addresses on chain; every other property — the eight amounts, the atomicity, the 464-byte wire size, the single confirmation — is exactly what the broadcast produced.
+</Notebox>
+
+<Screenshot
+  src="/articles/transactions-in-henceforth/txid-paid.png"
+  alt="The PAID receipt after broadcast: TXID rendered as both hex and a QR code so it can be scanned into any block explorer. 770,000 PAID."
+/>
 
 ---
 
