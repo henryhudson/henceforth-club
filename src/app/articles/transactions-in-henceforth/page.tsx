@@ -5,7 +5,10 @@ const articleTitle = "Transactions in Henceforth";
 const articleDescription =
   "Three surfaces, one primitive — basic sends, multi-output payments, and raw-transaction hand-passing in the Henceforth wallet. Implementing Satoshi's framing and Wright's batching architecture.";
 const articleUrl = "https://henceforth.club/articles/transactions-in-henceforth";
-const articleImage = "https://henceforth.club/articles/transactions-in-henceforth/opengraph-image.png";
+// Version-tag the og:image URL so X's image cache (keyed on URL string)
+// treats it as a fresh asset when we replace the underlying card. Bump
+// the v= number whenever opengraph-image.png is regenerated.
+const articleImage = "https://henceforth.club/articles/transactions-in-henceforth/opengraph-image.png?v=2";
 
 // Explicit openGraph + twitter blocks override the site-level defaults
 // from the root layout. Without these, og:title / og:description /
