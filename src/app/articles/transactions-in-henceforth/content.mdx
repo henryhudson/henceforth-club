@@ -1,0 +1,250 @@
+# Transactions in Henceforth
+
+**Three surfaces, one primitive — from a single tap to a batched eight-recipient settlement to a raw-hex hand-off across an air gap.**
+
+*Henry Hudson · Henceforth · 2026*
+
+---
+
+## 1. Background — transactions are data, not events
+
+Satoshi's framing from §2 of the white paper:
+
+> "We define an electronic coin as a chain of digital signatures. Each owner transfers the coin to the next by digitally signing a hash of the previous transaction and the public key of the next owner and adding these to the end of the coin."
+
+A Bitcoin transaction is a chain of digital signatures serialised to bytes. Not an event. Not a message to a service. Just data: structured, signed, self-contained. Any byte channel can carry it — TCP, AirDrop, USB stick, QR code, paper.
+
+Two consequences fall out:
+
+1. **Broadcasting is one possible delivery mechanism, not the only one.** "Each node broadcasts new transactions to all nodes" (§5) describes a network behaviour, not a hard requirement on the sender.
+2. **The receiver verifies the chain themselves.** "The recipient performs a similar check to verify all previous transactions in the chain, satisfying themselves that the chain of ownership is valid" (§2). The sender doesn't have to be online for the verification to happen.
+
+Henceforth surfaces this primitive across three modes — each fitted to a different situation, all producing the same on-wire artefact:
+
+| Surface | Trigger | Best for |
+|---|---|---|
+| **PayView** | Tap-to-pay button | One recipient, one amount, one Face ID |
+| **Terminal `send` / `send-many`** | Stack operation | Programmable batches, defined words, automation |
+| **Raw transaction popup** | Tap the Bitcoin logo at the top of PayView | Air-gap hand-off, peer-to-peer settlement, ad-hoc out-of-band delivery |
+
+The rest of this article walks each surface and the math, atomicity, and architecture that sit under all three.
+
+---
+
+## 2. PayView — the simple send
+
+Most payments are one recipient, one amount. PayView is the GUI surface for that case: enter an address (or paymail), enter an amount, confirm. The wallet selects a UTXO, signs the input with the user's private key, constructs the change output back to a freshly-derived Type42 address, and broadcasts via ARC.
+
+Before signing, PayView lays the output set out for the user — recipient, amount, change return, fee. The user approves a labelled batch, not a hash. Approval is one Face ID tap.
+
+> **Note.** The user currently reviews outputs but does not (yet) see the byte-level decomposition of inputs being consumed. The `TransactionReviewView` surface exists and is wired into the BRC-100 pending-broadcast queue; hoisting it as an overlay over the active PayView path is the residual polish item — the surface is built and tested, it just isn't yet the default.
+
+---
+
+## 3. The Bitcoin logo at the top — raw transactions by hand
+
+The peer-to-peer hand-off works in both directions. Henceforth surfaces a send-side and a receive-side for raw transaction bytes — and a receipt loop that closes the round trip without trusting a third party.
+
+### Send side — tap the Bitcoin logo
+
+Above the recipient field, PayView shows a small Bitcoin logo. Tapping it opens `RawTransactionPopUpView`, which renders the constructed transaction's hex in a monospaced block:
+
+```
+01000000019b8a4c7f...8b5f0000000000ffffffff02...
+```
+
+The hex is wrapped in a SwiftUI `ShareLink`. Tapping the text opens the system share sheet:
+
+- Copy to clipboard
+- AirDrop to another device
+- Save to Files (becomes a `.txt` you can attach anywhere)
+- Send via Mail, Messages, or any third-party share-extension target
+- Drop into a peer-to-peer messenger
+
+Any channel that can move ASCII can move the transaction.
+
+This is the **manual** version of the air-gap broadcast pattern that Cold Mode automates. With Cold Mode enabled, transactions go to a Pending Broadcasts queue for later release from a network-connected device. Without Cold Mode, tapping the Bitcoin logo gives the user the same raw artefact inline — useful for ad-hoc out-of-band delivery, for verifying a transaction looks right before broadcast, or for sharing with a counterparty who needs to validate the on-chain shape before settlement.
+
+### Receive side — Decode Transaction
+
+Receiving a raw transaction over a side channel is only safe if you can read it before you act on it. Henceforth ships a `DecodeTransactionView` for exactly that: paste a hex string into a monospaced editor (or tap *Paste from clipboard*), tap **Decode**, and a `DecodedTransactionSheet` renders the parsed transaction — version, locktime, every input with its outpoint and unlocking script, every output with its address and amount, the fee.
+
+The decoder uses SwiftBSV to parse — the same library the wallet uses to build and sign. There is no network call. The decode is a pure local function on bytes the user pastes in.
+
+A **Broadcast** button at the bottom of the decoded sheet commits the transaction directly to ARC (same GorillaPool → TAAL failover the rest of the wallet uses). The txid shown on success is computed locally from the raw bytes — the wallet doesn't need to wait for the API to tell it the txid; it already has all the information it needs from the transaction itself.
+
+Concretely, a recipient who has been handed a raw transaction can:
+
+1. Open Settings → Bitcoin → Decode Transaction.
+2. Paste the hex.
+3. Inspect the output set — addresses, amounts, totals — before doing anything irreversible.
+4. Tap Broadcast (or refuse).
+
+The same view is useful for any raw hex the user encounters in the wild — a transaction quoted in a forum post, a block explorer link, a paymail server response. Decode-on-demand is a primitive, not a single-purpose tool.
+
+### The receipt loop
+
+What comes back from the broadcaster (or the recipient who chose to broadcast on the sender's behalf) is an `HFReceiptBundle` — Henceforth's receipt format containing:
+
+- The raw transaction
+- The TSC (BRC-74) Merkle proof
+- The containing block header
+
+The signer imports the bundle through `SPVService.verifyTransaction(fromBundle:)`, which validates Merkle inclusion against the signer's **local** header at the same height — no network call, no third-party trust. The bundle's own header is a reference, not a trust source. Decode-time consistency checks (`proof.target` ≡ `blockHash`, `header.hash` ≡ `blockHash`) catch tampering before the heavier PoW verification runs.
+
+This is the Satoshi loop, materialised:
+
+> "The recipient performs a similar check to verify all previous transactions in the chain, satisfying themselves that the chain of ownership is valid."
+
+The receiver verifies the chain. The sender doesn't have to be online for the verification to happen. The transaction is just data — and so is the receipt.
+
+Wright's 2026 paper *Batching, Headers, and Throughput: Operating a Bitcoin SV Wallet with Offline Synchronisation and High-Volume Microtransactions* presses this further into a full operating model. An air-gapped signer can never see the chain directly, so it must receive headers (`HFHeaderBundle`) and receipts (`HFReceiptBundle`) from an online watcher — passed across an explicit boundary. Henceforth ships both bundle formats; the Settings → Bitcoin → Air-Gap Tools UI surfaces export/import for each, routed by `.hf*` file extension and reachable via the system share sheet (AirDrop included).
+
+The Bitcoin-logo tap is the ergonomic, single-payment version of the same architecture. You don't have to flip Cold Mode on; you don't have to be in the Air-Gap Tools panel. You're already in PayView, you've already built the transaction — the raw hex is one tap away.
+
+---
+
+## 4. Terminal `send` — the programmable single
+
+The terminal exposes the same single-recipient send as a stack operation:
+
+```
+14000 s" 1Cof...p3J" send
+```
+
+`send` takes an amount and a counted address string and routes the payment through PayView — the user still reviews outputs before Face ID, the wallet still constructs change against a fresh address, ARC still broadcasts. The difference is that the call composes.
+
+Two recipients at the same amount, in one transaction:
+
+```
+14000 s" 1Cof...p3J 1Cof2...q4K" send
+```
+
+Pass a space-separated address string and `send` splits the amount equally across all recipients. Same single-Face-ID approval, same atomic delivery, one transaction on chain.
+
+---
+
+## 5. Terminal `send-many` — N amounts to N addresses
+
+When each recipient takes a different amount, `send-many` is the right word. Amounts go on the stack first, address string last:
+
+```
+320000 95000 42500 14000 8500 22000 18000 250000
+s" 1Land...kqW 1Groc...xR2 1Util...mB7 1Cof...p3J
+   1News...t9K 1Gym...sV4 1Strm...e6W 1Cold...zY1"
+send-many
+```
+
+The word reads the address string first to derive N (eight, in this case), then pops exactly N amounts beneath it. The address string declares N implicitly — no redundant count parameter that could disagree with the address list.
+
+A successful invocation consumes the entire stack contribution and leaves no residue. If any validation step fails (one bad address, one zero amount, total exceeding wallet balance), the entire stack is restored to its pre-call state. The user can inspect, correct the input, and retry.
+
+---
+
+## 6. The mathematics of overhead
+
+Section 7 of the white paper is conservative on output count:
+
+> "Normally there will be either a single input from a larger previous transaction or multiple inputs combining smaller amounts, and at most two outputs: one for the payment, and one returning the change."
+
+*At most two.* The phrasing described 2008's dominant case but was never a protocol limit. Bitcoin transactions accept an arbitrary number of outputs subject only to the standard maximum transaction size.
+
+Henceforth carries the per-byte costs as named constants:
+
+```
+p2pkhInputSize   = 148    // input + signature + pubkey + index
+p2pkhOutputSize  = 34     // value + script-length + P2PKH script
+txOverheadSize   = 10     // version + locktime + counters
+```
+
+A 1-input, N-output transaction: `192 + 34N` bytes.
+N separate single-payment transactions: `226N` bytes.
+
+At N = 8 recipients:
+
+|                              | Single tx, 8 outputs | Eight separate txs | Ratio  |
+|------------------------------|---------------------:|-------------------:|-------:|
+| Wire bytes                   | 464                  | 1,808              | 0.26×  |
+| Fee at 0.05 sat/byte         | 24 sats              | 91 sats            | 0.26×  |
+| ARC submissions              | 1                    | 8                  | 0.125× |
+| Biometric prompts            | 1                    | 8                  | 0.125× |
+| Mempool entries              | 1                    | 8                  | 0.125× |
+| Atomicity                    | all-or-nothing       | per-payment        | —      |
+
+For payments dominated by economically large transfers — rent, mortgage, salary — a 67-satoshi fee difference is irrelevant. For micropayments, where individual amounts may themselves be in the low thousands of satoshis, paying four times the fee to avoid batching is the difference between economical and uneconomical workflows.
+
+---
+
+## 7. Atomicity is the underrated property
+
+The fee saving is the easy headline. The structural benefit is that the eight payments either all happen or none do.
+
+A freelancer running their `weekly-bills` word cannot end up with rent paid and groceries unpaid because of an intermittent ARC failure between the second and third submissions — there is no second submission. ARC accepts the 464-byte transaction or rejects it; either way the state of all eight payments is known with one confirmation.
+
+The structural savings compound:
+
+- **One biometric prompt** — not eight authentications for what is conceptually one decision.
+- **One ARC submission** — one round trip; if GorillaPool fails, one failover to TAAL — not eight.
+- **One mempool entry** — the eight payments are seen by the network together, settled together, confirmed together.
+- **One line in transaction history** — "Friday bills: 770,000 sats, 8 recipients" instead of eight near-simultaneous outgoing entries the user has to mentally re-group.
+
+From the network's perspective, the freelancer paid 770,000 satoshis from one input to eight payees, with change returned to themselves. Every recipient sees a normal P2PKH output addressed to them, indistinguishable from a single-purpose payment.
+
+---
+
+## 8. Why this belongs in a terminal
+
+A graphical UI for "pay eight recipients in one transaction" is not impossible — it just requires a custom screen, a custom data entry pattern, and a custom approval flow, all of which are downstream of someone deciding that batched payment is a feature worth UI investment.
+
+Henceforth's terminal makes the same operation a one-liner without any of that downstream design work. And it composes:
+
+```
+: weekly-bills ( -- )
+  320000 95000 42500 14000 8500 22000 18000 250000
+  s" 1Land...kqW 1Groc...xR2 1Util...mB7 1Cof...p3J
+     1News...t9K 1Gym...sV4 1Strm...e6W 1Cold...zY1"
+  send-many ;
+
+> weekly-bills
+Confirm send-many to 8 recipients (770,000 sats)
+ok.
+```
+
+The user has defined a personal word, `weekly-bills`, that captures their weekly payment routine in a single token. Running it costs one biometric tap. Editing it is editing the word's body. Saving the definition in a `.fs` file makes it portable across devices.
+
+Multi-output sending is not a feature that has to be added to a UI. It is what falls out of treating the payment primitive as a stack operation.
+
+---
+
+## 9. The wider context
+
+Wright frames a high-volume wallet as a system of components, none removable without loss: offline signer, header sync, watch-only monitoring, batching, consolidation, fresh-address strategy, and a non-negotiable pre-signing verification step. Henceforth's current mapping:
+
+- **Offline signer** — `WalletCard.coldModeEnabled` + Pending Broadcasts. The signer never goes online; the watcher broadcasts.
+- **Header-based blockchain awareness** — `HeaderSyncService` + `SPVCheckpoint`. SPV against block headers, not network calls to a trusted node.
+- **Offline header transfer** — `HFHeaderBundle`. The watcher exports headers as a signed bundle; the signer imports them through the same `commitValidatedHeaderRun` path that validates online sync.
+- **Merkle-proof export for offline verify** — `HFReceiptBundle`. The receipt-back flow described in §3 above.
+- **Watch-only address monitoring** — `HFAddressPack` + `MempoolMonitorService`. The signer derives addresses; the watcher monitors them.
+- **Batching on the send side** — `send-many`.
+- **Consolidation on the receive side** — `ConsolidateUTXO`, plus a fragmentation-aware UTXO selection policy that drains the dust pile as a side effect of normal sends.
+- **Fresh address per payment** — Type42 (BRC-42) rotation, automatic post-transaction.
+
+The send side and the receive side are inseparable. A wallet that doesn't batch its outgoing payments will, over time, also fail to consolidate its incoming UTXOs — the two problems compound. Henceforth implements both halves.
+
+---
+
+## 10. Closing
+
+Three observations from shipping this.
+
+**The two-output convention is sticky.** Every wallet that exposes only a single-recipient pay screen silently asserts that the two-output case is the unit of payment. For genuinely one-to-one workflows, fine. For weekly bills, payroll, micropayment distributions, royalty splits, multi-party settlements — the convention costs real fees and forces users to manually orchestrate what the protocol already supports atomically.
+
+**Atomicity is the underrated property.** The fee headline is easy. The practical user-facing benefit is that the payments either all happen or none do.
+
+**Transactions are data, not events.** Tapping the Bitcoin logo in PayView surfaces the raw hex. AirDrop it, paste it, paper-print it, hand it over. The receipt comes back as a Merkle proof against the receiver's local headers. The transaction itself is just bytes — Satoshi said this in 2008, Wright reasserts it for the high-volume case, and Henceforth implements it as the default surface rather than a buried air-gap feature.
+
+---
+
+*Henceforth on iOS & macOS:* [apps.apple.com/app/henceforth](https://apps.apple.com/app/henceforth/id1602896145)
+
+*— Henry Hudson · [@henceforth_app](https://x.com/henceforth_app)*
