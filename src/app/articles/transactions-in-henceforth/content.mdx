@@ -109,6 +109,9 @@ This is the Satoshi loop, materialised:
 
 The receiver verifies the chain. The sender doesn't have to be online for the verification to happen. The transaction is just data — and so is the receipt.
 
+<ReceiptLoop />
+
+
 Wright's 2026 paper, *Batching, Headers, and Throughput*, presses this further into a full operating model. An air-gapped signer can never see the chain directly, so it must receive headers (`HFHeaderBundle`) and receipts (`HFReceiptBundle`) from an online watcher — passed across an explicit boundary. Henceforth ships both bundle formats; the Settings → Bitcoin → Air-Gap Tools UI surfaces export/import for each, routed by `.hf*` file extension and reachable via the system share sheet (AirDrop included).
 
 The Bitcoin-logo tap is the ergonomic, single-payment version of the same architecture. You don't have to flip Cold Mode on; you don't have to be in the Air-Gap Tools panel. You're already in PayView, you've already built the transaction — the raw hex is one tap away.
@@ -181,6 +184,8 @@ At N = 8 recipients:
 | Biometric prompts            | 1                    | 8                  | 0.125× |
 | Mempool entries              | 1                    | 8                  | 0.125× |
 | Atomicity                    | all-or-nothing       | per-payment        | —      |
+
+<TransactionGeometry />
 
 For payments dominated by economically large transfers — rent, mortgage, salary — a 67-satoshi fee difference is irrelevant. For micropayments, where individual amounts may themselves be in the low thousands of satoshis, paying four times the fee to avoid batching is the difference between economical and uneconomical workflows.
 

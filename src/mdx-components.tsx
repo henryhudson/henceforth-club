@@ -3,7 +3,9 @@ import type { ReactNode } from "react";
 import { Forthbox } from "@/components/article/Forthbox";
 import { Notebox } from "@/components/article/Notebox";
 import { PullQuote } from "@/components/article/PullQuote";
+import { ReceiptLoop } from "@/components/article/ReceiptLoop";
 import { Screenshot } from "@/components/article/Screenshot";
+import { TransactionGeometry } from "@/components/article/TransactionGeometry";
 import { Word } from "@/components/article/Word";
 
 export function useMDXComponents(components: MDXComponents): MDXComponents {
@@ -103,7 +105,9 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     Forthbox,
     Notebox,
     PullQuote,
+    ReceiptLoop,
     Screenshot,
+    TransactionGeometry,
     Word,
     ...components,
   };
