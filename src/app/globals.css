@@ -95,6 +95,36 @@ body::before {
   color: var(--foreground);
 }
 
+/* ── Paper Theme (scoped to /articles/*) ──────── */
+/* Token overrides only — every component that reads --background,
+   --foreground, --card-bg, --card-border, --muted via Tailwind theme
+   classes (bg-background, text-foreground, etc.) automatically picks
+   these up inside .paper. Accent colours and terminal palette stay
+   unchanged so code blocks remain dark green-on-black panels embedded
+   in the cream surface, and the orange/amber accents read on both
+   themes. The body::before noise overlay reads as warm paper grain
+   on the cream surface, which is a feature, not a bug. */
+.paper {
+  --background: #faf6ea;
+  --foreground: #1c1813;
+  --card-bg: #f1ead5;
+  --card-border: #d9cfb8;
+  --card-border-hover: #b9ad8e;
+  --muted: #6e6149;
+}
+
+/* Extend cream to the body so macOS rubber-band overscroll, navbar
+   blur backdrop, and any out-of-flow elements see the paper surface
+   too. Body sits outside .paper scope, so we hard-code the value. */
+body:has(.paper) {
+  background: #faf6ea;
+}
+
+.paper ::selection {
+  background: rgba(232, 115, 30, 0.22);
+  color: #1c1813;
+}
+
 /* ── Terminal Components ──────────────────────── */
 
 .terminal-window {
