@@ -5,7 +5,7 @@
 *Henry Hudson · Henceforth · 2026*
 
 <Notebox>
-**Based on findings from Craig Wright.** The work documented here implements components of the system described in Craig Wright, *Batching, Headers, and Throughput: Operating a Bitcoin SV Wallet with Offline Synchronisation and High-Volume Microtransactions*, Craig's Substack, 2026-05-02. The article frames a wallet capable of high-volume operation as built on three pillars — header-based blockchain awareness (SPV), batch construction of transactions, and structured UTXO management for both sending and receiving. Henceforth had the first and most of the third before this paper was written; the `send` and `send-many` words documented here close the second. §10 below maps the full architecture against the current implementation, naming the gaps explicitly.
+**Based on findings from Craig Wright.** The work documented here implements components of the system described in Craig Wright ([@CsTominaga](https://x.com/CsTominaga)), *[Batching, Headers, and Throughput: Operating a Bitcoin SV Wallet with Offline Synchronisation and High-Volume Microtransactions](https://singulargrit.substack.com/p/batching-headers-and-throughput-operating)*, Craig's Substack, 2026-05-02. The article frames a wallet capable of high-volume operation as built on three pillars — header-based blockchain awareness (SPV), batch construction of transactions, and structured UTXO management for both sending and receiving. Henceforth had the first and most of the third before this paper was written; the `send` and `send-many` words documented here close the second. §10 below maps the full architecture against the current implementation, naming the gaps explicitly.
 </Notebox>
 
 ---
@@ -306,7 +306,7 @@ Three observations from shipping this.
 ## References
 
 1. Satoshi Nakamoto, *[Bitcoin: A Peer-to-Peer Electronic Cash System](https://bitcoin.org/bitcoin.pdf)*, 2008. §2 (chain of digital signatures), §5 (network broadcast), §7 (combining and splitting value).
-2. Craig Wright, *Batching, Headers, and Throughput: Operating a Bitcoin SV Wallet with Offline Synchronisation and High-Volume Microtransactions*, Craig's Substack, 2026-05-02.
+2. Craig Wright ([@CsTominaga](https://x.com/CsTominaga)), *[Batching, Headers, and Throughput: Operating a Bitcoin SV Wallet with Offline Synchronisation and High-Volume Microtransactions](https://singulargrit.substack.com/p/batching-headers-and-throughput-operating)*, Craig's Substack, 2026-05-02.
 
 ---
 
