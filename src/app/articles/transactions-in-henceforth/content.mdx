@@ -218,7 +218,21 @@ There's a security argument adjacent to atomicity. One signed bundle of eight pa
 
 A graphical UI for "pay eight recipients in one transaction" is not impossible — it just requires a custom screen, a custom data entry pattern, and a custom approval flow, all of which are downstream of someone deciding that batched payment is a feature worth UI investment.
 
-Henceforth's terminal makes the same operation a one-liner without any of that downstream design work. And it composes:
+Henceforth's terminal makes the same operation a one-liner without any of that downstream design work. Picture a freelancer's Friday — eight regular outflows that need to happen, in BSV:
+
+| Recipient | Address (truncated) | Amount (sats) |
+|---|---|---:|
+| Landlord (weekly rent share) | `1Land...kqW` | 320,000 |
+| Groceries (corner store paymail) | `1Groc...xR2` | 95,000 |
+| Electricity + internet | `1Util...mB7` | 42,500 |
+| Coffee subscription | `1Cof...p3J` | 14,000 |
+| Newspaper (digital, weekly) | `1News...t9K` | 8,500 |
+| Gym (off-peak) | `1Gym...sV4` | 22,000 |
+| Streaming bundle | `1Strm...e6W` | 18,000 |
+| Cold wallet (weekly auto-savings) | `1Cold...zY1` | 250,000 |
+| **Total** | | **770,000** |
+
+Eight payments to eight different recipients. In an ordinary wallet that's eight pay-screen sessions, eight Face ID taps, eight ARC submissions. In Henceforth it's one defined FORTH word that composes the whole routine into a single token:
 
 ```
 : weekly-bills ( -- )
