@@ -10,6 +10,13 @@ export const metadata: Metadata = {
 
 const articles = [
   {
+    href: "/articles/trust-local-but-verify",
+    title: "Trust Local, But Verify",
+    blurb:
+      "How Henceforth manages UTXOs and transaction history. The wallet's source of truth is the local view of the chain that we've already verified — the network's job is to hand us new evidence, not to clobber stored balance because some service had a momentary stale view.",
+    date: "2026",
+  },
+  {
     href: "/articles/transactions-in-henceforth",
     title: "Transactions in Henceforth",
     blurb:
