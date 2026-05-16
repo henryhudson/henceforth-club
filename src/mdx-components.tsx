@@ -1,5 +1,6 @@
 import type { MDXComponents } from "mdx/types";
 import type { ReactNode } from "react";
+import { Diagram } from "@/components/article/Diagram";
 import { Forthbox } from "@/components/article/Forthbox";
 import { Notebox } from "@/components/article/Notebox";
 import { PullQuote } from "@/components/article/PullQuote";
@@ -102,6 +103,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
         )}
       </figure>
     ),
+    Diagram,
     Forthbox,
     Notebox,
     PullQuote,

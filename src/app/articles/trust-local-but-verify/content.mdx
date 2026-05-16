@@ -1,0 +1,406 @@
+# Trust Local, But Verify: How Henceforth Manages UTXOs and Transaction History
+
+**The wallet's source of truth is the local view of the chain that we've already verified. The network's job is to hand us new evidence; our job is to integrate that evidence additively — never to clobber a known-good stored balance because some service had a momentary stale view.**
+
+*Henry Hudson · Henceforth · 2026*
+
+<Notebox>
+**Based on findings from Craig Wright.** The architecture documented here implements components of the system described across four pieces in Craig Wright's ([@CsTominaga](https://x.com/CsTominaga)) Singular Grit Substack: *[Batching, Headers, and Throughput](https://singulargrit.substack.com/p/batching-headers-and-throughput-operating)*, *[The Home Node That Never Validates](https://singulargrit.substack.com/p/the-home-node-that-never-validates)*, *[Small Worlds, Large Errors](https://singulargrit.substack.com/p/small-worlds-large-errors)*, and *[The Myth of the Sovereign Node](https://singulargrit.substack.com/p/the-myth-of-the-sovereign-node)*. Together these establish a precise vocabulary: validation is block creation, performed by miners; verification is local checking, performed by wallets; the route that matters is direct submission to a miner, not gossip among home machines; "I checked this for myself" is the only authority a wallet ever holds. This piece documents how Henceforth's UTXO and transaction-history management implements that vocabulary literally — every removal from local state comes from chain evidence, every addition comes from chain evidence, the user's stored balance is what we have *verified*, never what we were *told*.
+</Notebox>
+
+---
+
+## 1. The invariant
+
+Satoshi's framing from §2 of the [white paper](https://bitcoin.org/bitcoin.pdf):
+
+<Notebox>
+"We define an electronic coin as a chain of digital signatures. Each owner transfers the coin to the next by digitally signing a hash of the previous transaction and the public key of the next owner and adding these to the end of the coin."
+</Notebox>
+
+A transaction once included in a block is a fact. Silence from a service is not its negation. Funds change as a consequence of new facts arriving, never as a consequence of old facts going missing from a response.
+
+This is the invariant the wallet rests on:
+
+1. **Funds can change.** A UTXO can be spent. New UTXOs can appear.
+2. **Transaction history cannot be retracted.** Once a transaction is observed and verified, the only further evidence the chain can produce about it is a deeper confirmation.
+
+Any wallet design that's allowed to *shrink* the stored balance because the network response was incomplete has, by construction, broken (1) and (2) — it's letting the network's *silence* stand in for a fact, when only the network's *speech* should count.
+
+---
+
+## 2. The math underneath
+
+Trust local, but verify: how is that even possible? The sentence collapses to wishful thinking unless the wallet can independently check the claims it gets from a chain service. Three cryptographic primitives carry the weight, and together they pin the answer to mathematics rather than authority.
+
+### Signatures
+
+Every transaction input is a *(previous outpoint, unlocking script)* pair. The unlocking script contains an ECDSA signature computed over the transaction's commitment hash (the sighash). The signature verifies — anywhere, by anyone — against the public key in the previous output's locking script. The math is one-way: producing the signature requires the private key; verifying it requires only the public key.
+
+WhatsOnChain cannot produce a signature for an outpoint that locks against a public key only the user's wallet can derive. The chain itself rejects any transaction whose signatures don't verify; the wallet rejects any candidate transaction whose math doesn't hold; neither needs WoC's permission to do so.
+
+### Merkle proofs
+
+A block's `merkleroot` is a 32-byte commitment to the entire transaction set in that block, computed via repeated SHA-256 hashing pairwise up a binary tree. A TSC merkle proof (BRC-74) is the list of sibling hashes along the path from a transaction's leaf to the root. Given the txid, the proof, and the root — three values, all locally checkable — anyone can recompute the path and compare. Either it reconstructs or it doesn't.
+
+WoC supplies the proof. The wallet verifies it against the `merkleroot` of a header *the wallet itself has validated*. WoC cannot forge a proof that lands a transaction in a block it didn't really land in, because every reconstruction step is a SHA-256 hash and the final result is checked against bytes the wallet already trusts.
+
+### Proof of work
+
+Every block header includes a `nonce` and a difficulty target encoded in `bits`. The header is valid iff `SHA-256(SHA-256(header))` interpreted as a little-endian integer is less than the target. Finding a nonce that satisfies the inequality takes (on current mainnet) on the order of 10²⁰ hash operations — a quantity whose dollar cost is the entire raison d'être of the mining industry.
+
+The wallet validates the PoW on every header it integrates. WoC cannot forge a header because doing so would require redoing the work — work that takes mining hardware days to weeks per block, not a stale replica's milliseconds.
+
+### Our own transactions: WoC is told, not asked
+
+When the user broadcasts a transaction from this wallet, the resulting outputs are known by construction. The wallet built the locking scripts, computed the txid, derived the change address, signed the inputs. The change UTXO is added to local state at sign time — before broadcast, before any network confirmation. We don't ask WoC whether the outpoint exists; we *tell* the chain it exists, and ask only that the chain confirm it.
+
+That confirmation, when it arrives, is the merkle proof. The proof verifies inclusion locally (same Merkle reconstruction as above), promotes the local UTXO from "pending" to "confirmed", and advances the watermark. WoC never tells the wallet anything new about an output the wallet itself authored — it tells the wallet when the output finally appears in a block, which is information the wallet already half-knew (it had the bytes; now it has the inclusion proof too).
+
+This is why self-broadcasts and external broadcasts traverse different code paths. A self-broadcast doesn't go through the observed-spend pass; `SubmitTransaction.swift` adds the change output to `unspentTransactions` directly, before any network refresh. External broadcasts — a payment to one of our addresses by a peer — have to surface through `/history` because we couldn't possibly know about them otherwise. Both end up verified by the same Merkle reconstruction. Only one of them ever required WoC to be the *source* of the information.
+
+### What this reduces WoC's role to
+
+These primitives give the wallet a strict rule: **trust nothing about a transaction until the math says it's verified.** WoC's role narrows to two things — handing us *candidate* answers we wouldn't otherwise know to ask about (which addresses have new activity, which TXIDs to look up), and providing the merkle proofs we need to verify those candidates. Both are convenience layers.
+
+The cryptographic kernel — signature verification, Merkle reconstruction, PoW check — runs on the device, against bytes only the user's local state vouches for. WoC can rate-limit us. WoC can give us stale data. WoC can in principle lie outright. The wallet's UTXO state advances only when the math says it can.
+
+This is what makes "trust local, but verify" precise rather than aspirational. The wallet *does* talk to WoC. It just doesn't *trust* what WoC says — it uses what WoC sends as input to a verification step the wallet can fail. When the verification fails the answer is silently dropped; when it passes the answer was redundant — it was already true mathematically, WoC just happened to be the messenger. The rest of this article is the engineering scaffolding that holds this property up across rate limits, partial failures, replica lag, and cross-device sync. The math is the floor; the rest is plumbing.
+
+---
+
+## 3. The bug class we closed
+
+Before May 2026, Henceforth had a balance-reconciliation enum with two modes:
+
+```swift
+enum BalanceReconciliationMode {
+    case authoritative   // computed = new truth → overwrite stored
+    case lowerBound      // max(stored, computed) → never shrink
+}
+```
+
+The launch path, the WoC sweep, the post-broadcast path, the BRC-100 internalisation path — every one of them passed a mode. Some passed `.authoritative` when "all addresses queried successfully" was true. The shape was reasonable on paper: *if every address came back cleanly, the sum is the new truth*.
+
+The shape doesn't survive contact with a real chain service. WhatsOnChain has rate limits, mempool-propagation lags, and rare moments where one of its replicas is behind the others. "Every address came back successfully" turns out not to be the same statement as "every address returned the same view of the chain that the chain itself contains." A successful HTTP response with a stale snapshot reads as *truth*; `.authoritative` overwrites; `confirmedSatoshis` drops; the user sees their balance bounce `69 → 32 → 41` on launch and refresh.
+
+<Notebox>
+**The failure mode is structural, not transient.** The bug is not "WoC sometimes lies." It's "the wallet treats a network response as authoritative truth at a layer where the architecture allows that response to *reduce* the trusted state." Once that layer exists, every WoC blip is a balance bug waiting to happen.
+</Notebox>
+
+---
+
+## 4. Two writers, two semantics
+
+The May 2026 refactor deleted the enum. In its place: two methods on `FORTH` with explicit names that force every caller to declare what it trusts.
+
+| Method | Semantic | Use from |
+|---|---|---|
+| `reconcileWalletBalanceFromUTXOs` | `max(stored, computed)` — floor. Never reduces stored. | Any network-fetch or disk-load path. Safe by construction. |
+| `setWalletBalanceFromArray` | Overwrite from sum. Trusts the live UTXO array. | Code that just *modified* the local UTXO array itself — post-broadcast, observed-spend, BRC-100 action internalisation. |
+
+The split is the architectural commitment. The floor method can be called from anywhere without thinking; misuse is impossible — the worst case is the stored balance stays where it was. The overwrite method requires the caller to be able to justify, in code, why the array it's looking at is the result of an action it controls. The method name and docstring make that justification load-bearing.
+
+<Diagram
+  caption={<>Five call sites, two semantics. Misuse is hard because the method names won&apos;t let a caller forget which one it&apos;s calling.</>}
+  html={`<svg viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Diagram showing five call sites routing into the two-method reconcile API">
+  <text x="360" y="22" text-anchor="middle" class="muted">Where each call site goes after the refactor</text>
+
+  <rect class="box" x="20" y="60" width="220" height="40" rx="6"/>
+  <text x="130" y="85" text-anchor="middle">WoC /unspent sweep</text>
+
+  <rect class="box" x="20" y="110" width="220" height="40" rx="6"/>
+  <text x="130" y="135" text-anchor="middle">Disk load (preloadWalletData)</text>
+
+  <rect class="box" x="20" y="160" width="220" height="40" rx="6"/>
+  <text x="130" y="185" text-anchor="middle">WalletView reload</text>
+
+  <rect class="box" x="20" y="220" width="220" height="40" rx="6"/>
+  <text x="130" y="245" text-anchor="middle">Post-broadcast (Submit/Tx)</text>
+
+  <rect class="box" x="20" y="270" width="220" height="40" rx="6"/>
+  <text x="130" y="295" text-anchor="middle">Observed-spend pass</text>
+
+  <rect class="box" x="20" y="320" width="220" height="32" rx="6"/>
+  <text x="130" y="340" text-anchor="middle">BRC-100 internaliseAction</text>
+
+  <rect class="boxAccent" x="270" y="100" width="290" height="60" rx="8"/>
+  <text x="415" y="130" text-anchor="middle">reconcileWalletBalanceFromUTXOs</text>
+  <text x="415" y="148" text-anchor="middle" class="muted">max(stored, computed) — floor</text>
+
+  <rect class="boxAccent" x="270" y="240" width="290" height="60" rx="8"/>
+  <text x="415" y="270" text-anchor="middle">setWalletBalanceFromArray</text>
+  <text x="415" y="288" text-anchor="middle" class="muted">overwrite from sum</text>
+
+  <rect class="box" x="585" y="100" width="125" height="60" rx="6"/>
+  <text x="647" y="130" text-anchor="middle">Stored balance</text>
+  <text x="647" y="148" text-anchor="middle" class="muted">never reduces</text>
+
+  <rect class="box" x="585" y="240" width="125" height="60" rx="6"/>
+  <text x="647" y="270" text-anchor="middle">Stored balance</text>
+  <text x="647" y="288" text-anchor="middle" class="muted">matches array</text>
+
+  <path d="M240 80 C 255 80, 260 110, 270 120" />
+  <path d="M240 130 C 255 130, 260 130, 270 130" />
+  <path d="M240 180 C 255 180, 260 140, 270 140" />
+
+  <path d="M240 240 C 255 240, 260 260, 270 260" class="flowAccent"/>
+  <path d="M240 290 C 255 290, 260 270, 270 270" class="flowAccent"/>
+  <path d="M240 336 C 255 336, 260 280, 270 280" class="flowAccent"/>
+
+  <line x1="560" y1="130" x2="585" y2="130" />
+  <line x1="560" y1="270" x2="585" y2="270" class="flowAccent"/>
+</svg>`}
+/>
+
+---
+
+## 5. The watermark
+
+Two writers handle *how* the stored balance updates. `WalletSyncWatermark` handles *what we've verified, and when*. It's a per-wallet value type that rides the wallet's existing primary-address-keyed iCloud Drive file — cross-device sync of verification state is a free side-effect.
+
+<Diagram
+  caption={<>Four fields. The first three accumulate evidence; the fourth is the strict signal that PayView&apos;s staleness banner reads. <code>lastVerifiedAt</code> advances <em>only</em> when an entire pass returned cleanly — partial success keeps per-address progress but holds back the &ldquo;fully verified&rdquo; timestamp.</>}
+  html={`<svg viewBox="0 0 720 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Anatomy of WalletSyncWatermark">
+  <text x="360" y="22" text-anchor="middle" class="muted">WalletSyncWatermark — the trust frontier</text>
+
+  <rect class="boxAccent" x="60" y="50" width="600" height="310" rx="10"/>
+
+  <text x="80" y="80" font-weight="bold">lastVerifiedBlockHeight: Int</text>
+  <text x="80" y="100" class="muted">Highest block height the most recent fully-successful pass observed.</text>
+  <text x="80" y="118" class="muted">Advances atomically when every queried address returned cleanly.</text>
+
+  <text x="80" y="150" font-weight="bold">knownTXIDs: Set&lt;String&gt;</text>
+  <text x="80" y="170" class="muted">Every TXID this wallet has integrated. The /history delta query</text>
+  <text x="80" y="188" class="muted">subtracts this set from each response — work scales with NEW activity,</text>
+  <text x="80" y="206" class="muted">not total wallet history. Monotonically grows. Only wallet wipe shrinks it.</text>
+
+  <text x="80" y="236" font-weight="bold">addressBlockHeights: [String: Int]</text>
+  <text x="80" y="256" class="muted">Per-address ceiling. Each entry advances independently on its</text>
+  <text x="80" y="274" class="muted">address's successful pass. Soft per-address policy — one bad</text>
+  <text x="80" y="292" class="muted">address doesn't hold the others back.</text>
+
+  <text x="80" y="322" font-weight="bold">lastVerifiedAt: Date</text>
+  <text x="80" y="342" class="muted">Strict signal — advances only when every queried address succeeded.</text>
+</svg>`}
+/>
+
+Merges across devices follow the additive-only convention used elsewhere in the wallet's iCloud sync: `max` on heights, `union` on TXID sets, `max` on timestamps. Two devices advancing concurrently *converge* rather than clobber. Whichever one writes second does `existing.merged(with: localCopy)` and the result is no worse than either contributor.
+
+---
+
+## 6. The four-phase launch sequence
+
+The launch coordinator runs four phases in order. The same iCloud-merge step that begins the launch sequence also runs on every visit to the wallets list (WalletsView's `.onAppear`) — every wallet interaction in the app originates from that view, so all downstream screens inherit a fresh local baseline before any network call. The in-wallet refresh button consults the network directly without re-running the full launch sequence; it relies on the WalletsView gate having merged iCloud on the user's most recent navigation through the list.
+
+<Diagram
+  caption={<>Phase 1 (iCloud) blocks; the user sees &ldquo;Syncing iCloud data…&rdquo;. Phase 2 (deltas) is non-blocking; the chip says &ldquo;Checking for updates…&rdquo;. Phase 3 commits the watermark atomically and transitions to <code>.live</code> on full success or <code>.staleNoNetwork</code> on a partial pass — the latter preserves the prior <code>lastVerifiedAt</code> so PayView&apos;s banner reads &ldquo;last verified N hours ago&rdquo; instead of &ldquo;never.&rdquo;</>}
+  html={`<svg viewBox="0 0 720 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Four-phase sync state machine">
+  <rect class="box" x="20" y="80" width="170" height="60" rx="8"/>
+  <text x="105" y="108" text-anchor="middle" font-weight="bold">loadingICloud</text>
+  <text x="105" y="126" text-anchor="middle" class="muted">iCloud baseline</text>
+
+  <rect class="box" x="210" y="80" width="200" height="60" rx="8"/>
+  <text x="310" y="108" text-anchor="middle" font-weight="bold">verifyingDeltas</text>
+  <text x="310" y="126" text-anchor="middle" class="muted">/history pass</text>
+
+  <rect class="boxAccent" x="430" y="40" width="140" height="60" rx="8"/>
+  <text x="500" y="68" text-anchor="middle" font-weight="bold">.live</text>
+  <text x="500" y="86" text-anchor="middle" class="muted">every address ✓</text>
+
+  <rect class="box" x="430" y="120" width="140" height="60" rx="8"/>
+  <text x="500" y="148" text-anchor="middle" font-weight="bold">.staleNoNetwork</text>
+  <text x="500" y="166" text-anchor="middle" class="muted">partial / failed</text>
+
+  <rect class="box" x="590" y="80" width="130" height="60" rx="8"/>
+  <text x="655" y="108" text-anchor="middle">Watermark</text>
+  <text x="655" y="126" text-anchor="middle" class="muted">saved to iCloud</text>
+
+  <path d="M190 110 L 210 110" class="flowAccent"/>
+  <path d="M410 105 C 420 90, 425 75, 430 70" class="flowAccent"/>
+  <path d="M410 115 C 420 130, 425 145, 430 150"/>
+
+  <path d="M570 70 C 580 80, 585 90, 590 100" class="flowAccent"/>
+  <path d="M570 150 C 580 140, 585 130, 590 120"/>
+</svg>`}
+/>
+
+---
+
+## 7. Removal by evidence, not by absence
+
+The hardest property to preserve under a rate-limited chain service is: *do not delete a UTXO from local state unless the chain itself has shown us evidence the UTXO is spent.* The pre-refactor wallet's *conservative merge* heuristic — "if we queried this address and the UTXO didn't come back, remove it" — fails this test exactly when WoC has a stale view of one of its replicas.
+
+The architectural fix is to read forward, not to interpret silence. For every address where we currently hold UTXOs, the verification pass in `wocGetUnspentTransactions.swift` walks `/history`, subtracts `knownTXIDs`, fetches `/tx/{txid}` for what's left, and scans the inputs. An input whose outpoint matches one of our UTXOs is *provably* spent. Anything else is silence — and silence isn't evidence.
+
+<Diagram
+  caption={<>The observed-spend pass turns &ldquo;transaction history is append-only&rdquo; into a removal rule. The only way a UTXO leaves <code>unspentTransactions</code> via the sync path is by appearing in the inputs of a transaction we&apos;ve fetched and integrated. Stale WoC responses produce no removal — they produce a no-op until a future pass catches up.</>}
+  html={`<svg viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Observed-spend pass flow">
+  <rect class="box" x="20" y="40" width="170" height="60" rx="8"/>
+  <text x="105" y="64" text-anchor="middle" font-weight="bold">For each address</text>
+  <text x="105" y="82" text-anchor="middle" class="muted">where we hold UTXOs</text>
+
+  <rect class="box" x="220" y="40" width="170" height="60" rx="8"/>
+  <text x="305" y="64" text-anchor="middle" font-weight="bold">GET /history</text>
+  <text x="305" y="82" text-anchor="middle" class="muted">subtract knownTXIDs</text>
+
+  <rect class="box" x="420" y="40" width="170" height="60" rx="8"/>
+  <text x="505" y="64" text-anchor="middle" font-weight="bold">For each new TXID</text>
+  <text x="505" y="82" text-anchor="middle" class="muted">GET /tx/{txid}</text>
+
+  <rect class="boxAccent" x="220" y="160" width="170" height="60" rx="8"/>
+  <text x="305" y="184" text-anchor="middle" font-weight="bold">Scan tx.vin</text>
+  <text x="305" y="202" text-anchor="middle" class="muted">match outpoints</text>
+
+  <rect class="box" x="420" y="130" width="170" height="50" rx="8"/>
+  <text x="505" y="152" text-anchor="middle">Match → remove UTXO</text>
+  <text x="505" y="168" text-anchor="middle" class="muted">setBalanceFromArray</text>
+
+  <rect class="box" x="420" y="190" width="170" height="50" rx="8"/>
+  <text x="505" y="212" text-anchor="middle">No match → no-op</text>
+  <text x="505" y="228" text-anchor="middle" class="muted">balance unchanged</text>
+
+  <line x1="190" y1="70" x2="220" y2="70" />
+  <line x1="390" y1="70" x2="420" y2="70" />
+  <path d="M505 100 C 505 130, 350 130, 305 160" />
+  <line x1="390" y1="180" x2="420" y2="155" class="flowAccent"/>
+  <line x1="390" y1="200" x2="420" y2="215"/>
+
+  <text x="360" y="270" text-anchor="middle" class="muted">No "address queried but UTXO missing" heuristic. Evidence in, removal out.</text>
+</svg>`}
+/>
+
+This is what makes external broadcasts detectable. If a peer device, a watch-only on another platform, or another wallet rooted at the same seed spends a UTXO, the spending transaction appears in `/history` for the address we share. The pass fetches it, finds our outpoint in its inputs, removes the UTXO, and recomputes the balance via `setWalletBalanceFromArray` — legitimately, because the removal came from *chain evidence*, not from *missing-in-response*.
+
+A second tightening, shipped after the initial article: every fetched `/tx/{txid}` is now SPV-verified against the locally-validated header chain before its inputs scan against our outpoints. An unverifiable transaction (a mempool sighting with no merkle proof yet, or a tx whose claimed block is above `validatedTipHeight`) is still recorded in `myTransactions` so the next sweep skips refetching, but produces zero UTXO removals. The "trust the answer, not the answerer" property — once §11's acknowledged gap — is now literal: a WoC `/tx` response that doesn't reconstruct a valid Merkle proof against our headers carries no authority to change the wallet's state.
+
+---
+
+## 8. The white paper alignment
+
+The architecture lines up against three sections of the [Bitcoin white paper](https://bitcoin.org/bitcoin.pdf):
+
+| § | Statement | Implementation |
+|---|---|---|
+| §2 | An electronic coin is a chain of digital signatures. | UTXO state is derived from transactions, not from a service's summary. `setWalletBalanceFromArray` trusts the array because the array's contents are signed chain bytes the wallet itself integrated. |
+| §5 | Each node broadcasts new transactions to all nodes. | Broadcast is the network's mechanism, not a precondition of the wallet's correctness. The sender's local view stays trustable even when the network surface is rate-limited or unreliable. |
+| §8 | Simplified Payment Verification — a user can verify by keeping a copy of block headers. | The header sync service maintains a chain-linked local header store anchored to a hard-coded checkpoint. The observed-spend pass's `/tx/{txid}` fetches are merkle-verifiable against those headers. Trust the answer, not the answerer. |
+
+---
+
+## 9. The Wright alignment
+
+Four Wright pieces bear directly on the design. Each is named, the load-bearing claim is paraphrased, and the implementation that carries it is pointed to.
+
+### A. [The Home Node That Never Validates](https://singulargrit.substack.com/p/the-home-node-that-never-validates)
+
+<Notebox>
+"The home node verifies. The miner validates. The home node reads. The miner writes. … A million witnesses can watch a miner write a block. They do not write it by watching."
+</Notebox>
+
+Wright's distinction between *validation* (block creation, performed by miners under proof-of-work cost) and *verification* (local checking, performed by anyone who keeps a copy of the headers) is the vocabulary the architecture rests on. Henceforth is a wallet, not a node. It contains no mining code, constructs no blocks, performs no proof-of-work. What it does is *verify*: it keeps a locally-validated header chain, fetches transactions by hash from chain services, and checks their inclusion via merkle proofs against headers anchored in a hard-coded checkpoint. The watermark literalises this: `lastVerifiedBlockHeight` records what we've checked, not what we've enforced.
+
+Wright's framing of *local rejection as exit, not command* shows up directly in two places. The PayView staleness banner doesn't "veto" anything — it tells the user the device's view may have drifted from chain reality, and offers the user a way to refresh. The phase machine's `.staleNoNetwork` state similarly degrades trust locally without ever pretending to control miners. Both are exit signals, in the home-node article's sense.
+
+| Claim | Implementation |
+|---|---|
+| Wallets verify; they do not validate | `SPVService`, `HeaderSyncService`; no mining code anywhere in the codebase |
+| The mempool is a local waiting room, not a law court | `myTransactions` is local state; `MempoolMonitorService` is a polling layer, not a global view |
+| Direct paths to miners are the route that matters | ARC broadcast (GorillaPool with TAAL failover) — direct miner submission, no p2p relay dependence |
+| Local rejection is exit, not command | The staleness banner, the phase pill, the watermark itself — informational, never coercive |
+
+### B. [Small Worlds, Large Errors](https://singulargrit.substack.com/p/small-worlds-large-errors)
+
+<Notebox>
+"The public network and the miner graph overlap, but they are not identical. Treating them as identical is the source of the argument's false strength."
+</Notebox>
+
+Wright's four-layer model — block creation, transaction access, block propagation, local verification — gives the wallet's role a precise place. Henceforth lives in *layer 4* (local verification) and uses *layer 2* (transaction access) for delivery, via ARC. Layers 1 and 3 belong to miners and pools; the wallet doesn't pretend to occupy them.
+
+The architectural payoff of refusing to occupy layers 1 and 3 is honesty. A wallet that pretends to validate (in Wright's productive sense) acquires a phantom responsibility — code paths that exist to honour an authority it doesn't actually have. Henceforth doesn't carry that weight. Every behaviour the wallet displays is something it can mechanically justify with a verification pass, a merkle proof against locally-validated headers, or a watermark advance. None of the architecture's correctness assumptions depend on the public-gossip topology being healthy. Broadcast goes through a miner-facing hub (ARC). Header sync rides a stream from a chain-indexing service (WhatsOnChain over WSS) whose data the wallet still merkle-verifies locally before promotion. The transaction-history delta walks `/history` on the same chain-indexing service, but again — the wallet trusts the merkle-verified inclusion, not the service's say-so about a TXID's existence.
+
+<Diagram
+  caption={<>The wallet occupies the two layers it can honestly own. The miner layers are not pretended at. The trust the user places in the wallet is precisely the trust we can earn at layers 2 and 4 — direct submission for sending, locally-verifiable proofs for receiving.</>}
+  html={`<svg viewBox="0 0 720 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Four-layer trust hierarchy mapped to Henceforth components">
+  <text x="360" y="22" text-anchor="middle" class="muted">Wright's four-layer model → Henceforth components</text>
+
+  <rect class="box" x="60" y="42" width="600" height="60" rx="6"/>
+  <text x="80" y="66" font-weight="bold">Layer 1 — Block creation (miners)</text>
+  <text x="80" y="86" class="muted">Henceforth has no role here</text>
+
+  <rect class="boxAccent" x="60" y="114" width="600" height="60" rx="6"/>
+  <text x="80" y="138" font-weight="bold">Layer 2 — Transaction access</text>
+  <text x="80" y="158" class="muted">ARCService → GorillaPool / TAAL (direct miner submission)</text>
+
+  <rect class="box" x="60" y="186" width="600" height="60" rx="6"/>
+  <text x="80" y="210" font-weight="bold">Layer 3 — Block propagation (miners)</text>
+  <text x="80" y="230" class="muted">Henceforth has no role here</text>
+
+  <rect class="boxAccent" x="60" y="258" width="600" height="60" rx="6"/>
+  <text x="80" y="282" font-weight="bold">Layer 4 — Local verification</text>
+  <text x="80" y="302" class="muted">HeaderSyncService · SPVService · WalletSyncWatermark</text>
+</svg>`}
+/>
+
+### C. [The Myth of the Sovereign Node](https://singulargrit.substack.com/p/the-myth-of-the-sovereign-node)
+
+<Notebox>
+"Validation alone does not alter network state. Block production does."
+</Notebox>
+
+Wright's piece is a corrective against the BTC-Core-era conflation of *running validation software* with *governing the network*. The architectural implication for a wallet is small but specific: the wallet's stored state is an artefact of *what this device has verified for this user*, never a claim about the chain at large. The watermark's vocabulary follows: `lastVerifiedBlockHeight`, `knownTXIDs`, `addressBlockHeights` — all four fields scope to the wallet, never to the chain. A peer device may have a different watermark, and that's not a disagreement about reality; it's two devices reporting their own verification frontiers, which converge via the additive merge described in §5.
+
+### D. [Batching, Headers, and Throughput](https://singulargrit.substack.com/p/batching-headers-and-throughput-operating)
+
+The technical specification the rest of the wallet rests on. Wright frames three pillars — header-based SPV awareness, batch construction, and structured UTXO management for both directions of value flow. Three of his specific architectural choices are worth pulling out because they do load-bearing work that isn't obvious until you've tried to build the wallet without them.
+
+**Offline header transfer (§III) lives in `HFHeaderBundle`.** Wright's air-gap workflow assumes the online machine periodically batches block headers and hands them to the offline machine via removable media. Henceforth implements this for the two-iPhone Cold Mode case: the online phone exports its validated header run as an `.hfheaders` AirDrop bundle, the offline phone imports it, and the import path runs the full chain-link + PoW + checkpoint-anchor validation against the bundle before promoting any of it into the local store. The trust anchor is not "AirDrop preserved the bytes" — it's that the offline machine's checkpoint hash matches what the bundle chain-links back to. Bytes that don't anchor get rejected at the import boundary, not after.
+
+**Fragmentation-aware UTXO selection (§V) lives in `Wallet.selectUTXOs`.** Wright observes that micropayment-heavy systems accumulate hundreds or thousands of small UTXOs, and any selection policy that ignores fragmentation produces transactions that fail by size before they fail by economics. Henceforth's policy switches when the wallet exceeds 100 UTXOs or when 40+ UTXOs each average under 5,000 sats: the dust cap raises from 10 to 50, the sort order flips from largest-first to smallest-first, and smart-change splitting disables. The 100KB standard-tx ceiling throws `txTooLarge` before biometric authentication, so the user never approves a payment the network will reject.
+
+**"The send is the consolidation event" (§V continued).** The cleanest piece of Wright's framing in practice. Henceforth has no dedicated consolidate-to-yourself ritual the user has to remember to perform; every `send` the user types consumes the available inputs and emits a single change UTXO back to a freshly-derived Type42 address. The wallet consolidates as a side-effect of normal use. `ConsolidateUTXO.swift` exists for the case where consolidating without spending matters, but the everyday path is the side-effect path — the wallet stays unfragmented because the user keeps spending.
+
+<Notebox>
+**Coverage summary for the remaining BHT sections.** §II (headers, not blocks) — `HeaderSyncService` + `SPVCheckpoint.mainnet`. §IV.1 (deterministic address generation) — Type42 (BRC-42) derivation by default, with `HFAddressPack` for signed batch export. §IV.3 (Merkle proof verification) — `SPVService.verifyTransaction`, no network fallback. §VI (batching) — FORTH `send-many` + `MultiPaySheet`. §VIII (visual pre-signing review, non-negotiable) — annotated in `StandardTransaction.swift`, `SendMany.swift`, `MultiPaySheet.swift`; `RawTransactionPopUpView` exposes byte-level hex when the user wants it. §X.2 (fresh addresses per payment) — `currentReceiveAddress` rotation via `rotateReceivingAddressIfNeeded`. §XI (offline consolidation) — Cold Mode air-gap workflow.
+</Notebox>
+
+---
+
+## 10. What this eliminates, by construction
+
+The properties that hold after the refactor — not by code review, but by the shape of the API surface itself:
+
+- **No clobber from the network.** Every network-fetch path is bound to `reconcileWalletBalanceFromUTXOs`, which can only raise the floor. There is no code path through which `confirmedSatoshis` can be reduced by a WoC response. The `69 → 32 → 41` flicker class is structurally impossible.
+- **No clobber from disk.** The launch-time disk load — which may be older than the in-memory state from a parallel iCloud merge — goes through the same floor method. Disk is a baseline, not a ceiling.
+- **External spends propagate.** A broadcast from another wallet rooted at the same seed appears in `/history` for a shared address; the observed-spend pass detects it via input scanning and removes the UTXO; the balance updates legitimately via `setWalletBalanceFromArray`.
+- **Cross-device verification state syncs.** When iPhone advances a per-address watermark, Mac's next launch reads it and skips re-fetching `/history` from height 0. The merge semantics handle concurrent advances without a coordinator.
+- **Partial progress is preserved.** A WoC failure on one address out of five doesn't undo the other four's progress. `lastVerifiedAt` holds back, but per-address watermarks each advance independently.
+- **Rate-limit independence.**
+
+Before the refactor, every launch was a fresh round of "ask the chain service for everything." A rate-limit response (HTTP 429 from WoC, ARC-policy-endpoint slowness on a busy moment) reached *into* the wallet's reconcile path and could degrade what the user saw on screen. The wallet's correctness was effectively a function of WhatsOnChain's recent-minutes performance.
+
+After the refactor, the wallet's source of truth is local: the iCloud-persisted UTXO file, the iCloud-persisted watermark, the in-memory state derived from both. The chain service is consulted only for evidence past the watermark — new TXIDs in `/history`, new merkle proofs for transactions we haven't yet integrated. If WoC rate-limits us, the verification pass aborts cleanly to `.staleNoNetwork` with the prior `lastVerifiedAt` intact, the user sees the staleness banner, and the displayed balance — which has not changed — remains the last value the architecture verified. Rate limits now affect cost and speed; they do not affect correctness.
+
+This is the practical payoff of the four Wright principles compounded together. The wallet uses direct miner submission (Home Node), trusts the chain service only at locally-verifiable layer 2 / layer 4 surfaces (Small Worlds), keeps its sovereignty scoped to "what this device has verified" rather than claiming any chain-wide authority (Sovereign Node), and operates on headers + merkle proofs + watermarks rather than re-querying state every launch (BHT). The four together produce a wallet whose user-facing reliability is decoupled from the chain service's recent moods.
+
+---
+
+## 11. What it does not (yet) do
+
+The architecture has a structural property — additive-only state — that opens up two follow-on optimisations that are not in this commit:
+
+1. **Server-side `/history` filtering.** WoC's history endpoint doesn't accept a `since:` parameter; the wallet currently fetches full history and filters client-side against `knownTXIDs`. This is correct but wasteful for active wallets. A future BlockchainDataProvider call can use ChainPoint or paginate by height to cut the bytes on the wire.
+2. **Multi-source cross-verification of chain-tip and history.** The wallet still relies on WhatsOnChain as its primary source for headers (via WSS), `/history`, and `/tx/{txid}`. A May 2026 hardening added cross-source verification against JungleBus at two of the three surfaces (chain tip via `getChainTipCrossVerified()`, address history via `getHistoryCrossVerified()`) in telemetry mode — divergence is logged but does not yet halt sync. Halting on persistent divergence is the next ship.
+
+Neither gap affects correctness today. The watermark architecture is safety-complete (§7 above), and cross-source divergence is logged but does not yet drive a behaviour change. The history-pagination optimisation is a *cost* tightening; the cross-source halt-on-divergence will be an *observability* tightening — neither changes what the wallet trusts, only how it consults the network.
+
+---
+
+## 12. Summary
+
+The wallet's state moves in two directions, and the architecture handles each one differently:
+
+- **Up** — new evidence (a new UTXO from a payment, a fresh chain tip from a verification pass) raises the floor. Floor methods only.
+- **Down** — observed evidence of a spend (an input we recognise in a transaction we've fetched) shrinks the local view. Overwrite methods, but only from code that just modified the array itself.
+
+Network responses are evidence inputs; the watermark is the only thing that advances trust; the user-visible balance follows the watermark, not the network's most recent answer. Trust local. Verify the network. Never let silence stand in for a fact.
