@@ -92,7 +92,7 @@ The shape doesn't survive contact with a real chain service. WhatsOnChain has ra
 
 ## 4. Two writers, two semantics
 
-The May 2026 refactor deleted the enum. In its place: two methods on `FORTH` with explicit names that force every caller to declare what it trusts.
+The May 2026 refactor deleted the enum. In its place: two methods with explicit names that force every caller to declare what it trusts.
 
 | Method | Semantic | Use from |
 |---|---|---|
@@ -387,12 +387,12 @@ This is the practical payoff of the four Wright principles compounded together. 
 
 ## 11. What it does not (yet) do
 
-The architecture has a structural property — additive-only state — that opens up two follow-on optimisations that are not in this commit:
+The architecture has a structural property — additive-only state — that opens up two follow-on optimisations:
 
 1. **Server-side `/history` filtering.** WoC's history endpoint doesn't accept a `since:` parameter; the wallet currently fetches full history and filters client-side against `knownTXIDs`. This is correct but wasteful for active wallets. A future BlockchainDataProvider call can use ChainPoint or paginate by height to cut the bytes on the wire.
-2. **Multi-source cross-verification of chain-tip and history.** The wallet still relies on WhatsOnChain as its primary source for headers (via WSS), `/history`, and `/tx/{txid}`. A May 2026 hardening added cross-source verification against JungleBus at two of the three surfaces (chain tip via `getChainTipCrossVerified()`, address history via `getHistoryCrossVerified()`) in telemetry mode — divergence is logged but does not yet halt sync. Halting on persistent divergence is the next ship.
+2. **Halt-on-divergence for cross-source verification.** A May 2026 hardening promoted cross-source verification against JungleBus from telemetry mode to the default `getHistory` path — every history fetch now returns the merged union of WhatsOnChain and JungleBus, with divergence logged. `BlockchainDataProvider` is an `actor` so the two fetches run in genuine parallel rather than serialised through the main thread. What remains: halting sync on *persistent* divergence (today divergence merely surfaces in the merged result; the wallet does not refuse to advance the watermark when the two sources disagree on a transaction's inclusion). Cross-tip cross-verification via `getChainTipCrossVerified()` is similarly available but not yet wired into the header-sync gate.
 
-Neither gap affects correctness today. The watermark architecture is safety-complete (§7 above), and cross-source divergence is logged but does not yet drive a behaviour change. The history-pagination optimisation is a *cost* tightening; the cross-source halt-on-divergence will be an *observability* tightening — neither changes what the wallet trusts, only how it consults the network.
+Neither gap affects correctness today. The watermark architecture is safety-complete (§7 above), and the merged-union return means any txid either source claims is investigated before the watermark advances. The history-pagination optimisation is a *cost* tightening; the halt-on-divergence will be a *safety* tightening for the failure mode where two normally-agreeing sources are concurrently compromised in incompatible ways — a rare condition the wallet currently logs but doesn't block on.
 
 ---
 
