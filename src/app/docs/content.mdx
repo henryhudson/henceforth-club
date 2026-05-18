@@ -857,6 +857,24 @@ The wallet is built on a hierarchical deterministic (HD) key structure, meaning 
 
 > **Security.** Private keys and seed phrases are stored exclusively in the iOS Keychain, protected by the device's Secure Enclave. They never leave the device.
 
+#### Trust-domain separation (Swift code organisation)
+
+The Swift code that runs the wallet is partitioned into three independent trust domains, each owned by its own `@MainActor @Observable` type. A façade type, `FORTH`, holds one instance of each and is the only place that orchestrates across them.
+
+- **`ForthInterpreter`** — the Forth-2012 execution surface: two stacks, the user vocabulary, control flow, terminal text, KEY/ACCEPT, memory blocks, script recording.
+- **`WalletState`** — the wallet/payment surface: UTXO and transaction caches, payment-approval cache, PayView / MultiPaySheet / FeeRetry coordination, fee quotes, WoC viewmodels, the ARC service seam.
+- **`SPVHeaderStore`** — the SPV header chain: `blockHeaders`, `validatedTipHeight`, `latestBlockHeight`, the `txVersion` activation gate, the header-fetch viewmodel.
+
+`WalletState` and `SPVHeaderStore` each hold a peer-reference to `ForthInterpreter` for legitimate terminal-IO reach (emitting an error, reading a stack value, writing to the terminal buffer). Deliberately there is **no peer-reference between `WalletState` and `SPVHeaderStore`** — payment code that tries to read `blockHeaders` directly is refused by the compiler, because the property simply isn't reachable from a `WalletState` extension. The handful of legitimate cross-domain reads (the wallet's transaction builder needs `latestBlockHeight` for the OP_VER gate) route through an explicit `FORTH.shared?.headers.latestBlockHeight` bridge, visible at every call site and reviewable by audit.
+
+Three invariants previously honoured by policy are now enforced by the type system:
+
+- `SPVHeaderStore.blockHeaders` and `validatedTipHeight` are `private(set)`. The four legitimate writers each have a named mutator: `commitValidatedRun` (chain-validated runs, atomic with tip advance), `recordDisplayHeader` (display-only WoC fetches, never advances the trust tip), `bootstrapFromPersistence` (atomic load on launch), `resetToCheckpoint` (wipe + reseed on checkpoint upgrade or `forceResync`).
+- `WalletState.lastPaymentApproval` is `private(set)`. The only setter is `setLastPaymentApproval`, called by the biometric gate after a successful Face ID prompt or by `recordPaymentApproval` for upstream-stamped approvals.
+- `BlockchainDataProvider` is an `actor` rather than a `@MainActor class`. The cross-source verifier's `async let primary / secondary` for WhatsOnChain and JungleBus history fetches now runs in genuine parallel on the cooperative thread pool rather than serialised through the main thread.
+
+The motivation is straightforward: the three domains have very different blast radii on compromise. A bug in interpreter code is a UX glitch. A bug in wallet code is potentially lost funds. A bug in SPV code is silent acceptance of fake "confirmed" status. Partitioning them so the compiler refuses cross-domain reach makes each domain's invariants reviewable in isolation and removes the entire class of "interpreter code accidentally mutating wallet state" failures that the prior single-class shape allowed.
+
 #### Address Discovery
 
 The wallet discovers addresses with funds using a shared Type42 scanner (`scanType42Addresses`). The scanner is *derivationType-independent* — it always tries Type42 first if the master key exists in Keychain, regardless of what `derivationType` says on the wallet card.
