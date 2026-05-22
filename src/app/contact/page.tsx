@@ -3,7 +3,7 @@ import FadeIn from "@/components/FadeIn";
 
 export const metadata: Metadata = {
   title: "Contact",
-  description: "Get in touch — find us on X.",
+  description: "Get in touch — by email or on X.",
 };
 
 const profiles = [
@@ -41,6 +41,15 @@ function XIcon({ className }: { className?: string }) {
   );
 }
 
+function EmailIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.6}>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M3 7l9 7 9-7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export default function ContactPage() {
   return (
     <div className="py-20 sm:py-28">
@@ -54,19 +63,50 @@ export default function ContactPage() {
               Contact
             </h1>
             <p className="mt-6 text-lg leading-relaxed text-muted max-w-2xl">
-              Find us on X. Follow for updates, or send a DM.
+              Email for anything serious; find us on X for everything else.
             </p>
           </div>
         </FadeIn>
 
-        <div className="mt-16 grid gap-6 sm:grid-cols-3">
+        <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <FadeIn>
+            <a
+              href="mailto:henry@henceforth.club"
+              className="card-glow card-glow-warm block rounded-2xl border border-card-border bg-card-bg p-8 hover:border-card-border-hover transition-all group h-full"
+            >
+              <EmailIcon className="h-5 w-5 text-muted/50 group-hover:text-foreground transition-colors" />
+              <h2 className="mt-4 text-xl font-bold text-accent-warm">
+                Email
+              </h2>
+              <p className="mt-1 text-sm text-muted/50 break-all">
+                henry@henceforth.club
+              </p>
+              <p className="mt-4 text-sm leading-relaxed text-muted">
+                Direct contact for Henceforth, ScriptedSupply, and anything
+                that needs more than 280 characters.
+              </p>
+              <span className="mt-6 inline-flex items-center gap-2 text-sm text-muted/50 group-hover:text-foreground transition-colors">
+                Send an email
+                <svg
+                  className="h-4 w-4 transition-transform group-hover:translate-x-1"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </span>
+            </a>
+          </FadeIn>
+
           {profiles.map((profile, i) => (
-            <FadeIn key={profile.handle} delay={i * 0.1}>
+            <FadeIn key={profile.handle} delay={(i + 1) * 0.1}>
               <a
                 href={profile.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`card-glow ${profile.glowClass} block rounded-2xl border border-card-border bg-card-bg p-8 hover:border-card-border-hover transition-all group`}
+                className={`card-glow ${profile.glowClass} block rounded-2xl border border-card-border bg-card-bg p-8 hover:border-card-border-hover transition-all group h-full`}
               >
                 <XIcon className="h-5 w-5 text-muted/50 group-hover:text-foreground transition-colors" />
                 <h2 className={`mt-4 text-xl font-bold ${profile.color}`}>
