@@ -529,11 +529,13 @@ Henceforth accepts integers as binary, octal, decimal and hexadecimal. Just chan
 
 ### Data Conversion
 
-Henceforth has two stacks: the integer stack (main) and the data stack (for raw bytes, used by Bitcoin Script operations). These words bridge between them.
+Henceforth has three stacks: the integer stack (main, inspected via `.s`), the data stack (raw bytes for Bitcoin Script operations, inspected via `.ds`), and the return stack (Forth-2012 `>R` / `R>` / `R@`, inspected via `.rs`). These words bridge the integer and data stacks.
 
-<Word name="hex2data" stack="( -- )">Converts the following hex string to bytes and pushes them onto the data stack. Usage: `hex2data 48656c6c6f`.</Word>
+<Word name="hex>data" stack="( c-addr u -- )">Converts a hex string from the integer stack `(c-addr u)` to bytes on the data stack. Compose with `S"`: `S" deadbeef " hex>data`. Legacy spelling `hex2data` still parses as a silent alias for backwards compatibility with pre-2026-05-19 scripts.</Word>
 
-<Word name="data2hex" stack="( -- )">Converts the top data stack item to a hex string and displays it on the terminal.</Word>
+<Word name="chars>data" stack="( c-addr u -- )">Converts a UTF-8 string from the integer stack `(c-addr u)` to bytes on the data stack. Compose with `S"`: `S" hello " chars>data`. No auto-detect between hex and UTF-8 — silent hex interpretation of a UTF-8-intended OP_RETURN payload would broadcast wrong bytes to chain. Use `hex>data` for hex decoding, `chars>data` for raw UTF-8 bytes.</Word>
+
+<Word name="data>hex" stack="( -- )">Pops the top of the data stack and displays it as a lowercase hex string on the terminal. Legacy spelling `data2hex` still parses as a silent alias for backwards compatibility.</Word>
 
 <Word name=".ds" stack="( -- )">Displays the contents of the data stack.</Word>
 
