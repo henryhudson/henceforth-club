@@ -51,7 +51,6 @@ The chapters that follow walk every public type in the SDK from the bottom up:
 
 ### Future
 
-- Direct support for BEEF (BRC-62) and BUMP (BRC-74) construction, not just verification.
 - Streaming Merkle-tree construction for very large blocks.
 - More extensive opcode tests — the Hayes-style suite that covers Henceforth's FORTH side has no exact analogue here yet.
 - A formal benchmark suite tracking ECDSA verification and SHA-256 throughput across iPhone generations.
@@ -776,6 +775,30 @@ let txid: String = built.transaction.txID
 Signs a single input with the supplied private key. Repeat for every input. The signature uses `SighashType.BSV.ALL | FORKID` by default.
 
 > **Build, then sign — always in that order.** `build` computes input/output structure and locks down the transaction shape. Signing earlier produces signatures over a transaction that no longer exists by the time `build` mutates the input set.
+
+### Parsing a Transaction
+
+`Transaction.deserialize(_:)` is the inverse of `serialized()` — it reconstructs the value type from wire bytes. Those bytes are almost never yours: they arrive from a peer, a block, a pasted hex string, a QR code, a dApp handing you a transaction to inspect. So `deserialize` is a *throwing* function, and failure is part of its contract.
+
+<Forthbox title="Transaction — Parsing wire bytes">
+```swift
+let raw: Data = ...   // from the network, a file, a paste — untrusted
+
+do {
+    let tx = try Transaction.deserialize(raw)
+    // tx.inputs, tx.outputs, tx.txID — safe to read
+} catch {
+    // DeserializationError — truncated or structurally invalid; reject it
+}
+```
+</Forthbox>
+
+Every read inside the parser is bounds-checked before it runs. A buffer that ends in the middle of a script, an input count that claims more inputs than the remaining bytes can hold, a length prefix that overflows `Int` — each throws `DeserializationError` rather than reading past the end:
+
+- `.unexpectedEndOfStream` — a read ran off the end of the buffer. The input is truncated.
+- `.malformedData` — a length or count field declares a value too large to represent. The input is structurally invalid, not merely short.
+
+> **A bounds check written in trapping arithmetic is not a bounds check.** The obvious guard — `guard offset + Int(length) <= data.count` — isn't defensive: when `length` is an attacker-controlled varint above `Int.max`, the `Int(_:)` conversion *traps while evaluating the guard's own condition*, before the comparison ever runs. The crash happens inside the check meant to prevent it. SwiftBSV converts with `Int(exactly:)` and adds with `addingReportingOverflow` — both report failure instead of trapping — so the check itself can never crash. The BEEF envelope parser (`BEEFParser.parse`, BRC-62) is held to the same contract.
 
 <a id="spv" />
 
