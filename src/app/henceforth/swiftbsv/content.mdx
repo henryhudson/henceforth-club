@@ -694,7 +694,8 @@ builder.inputFromPubKeyHash(
 )
 builder.outputToAddress(value: 50_000, address: bob)
 
-let built = try builder.build(useAllInputs: true)
+// var because build and signInTx are also mutating
+var built = try builder.build(useAllInputs: true)
 
 // Sign every input
 for i in 0..<built.transaction.inputs.count {
