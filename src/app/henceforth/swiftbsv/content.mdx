@@ -1,6 +1,6 @@
 # SwiftBSV
 
-A pure-Swift SDK for Bitcoin SV. SwiftBSV powers the wallet inside Henceforth and ships as a standalone Swift Package for any iOS or macOS app that needs Bitcoin keys, transactions, scripts, or SPV verification.
+A pure-Swift SDK for Bitcoin SV. SwiftBSV powers the wallet inside Henceforth and ships as a standalone Swift Package for any iOS or macOS app that needs Bitcoin keys, transactions, scripts, or SPV verification. Primitive types (`PrivateKey`, `PublicKey`, `Address`, `Bip32`, SPV models, BEEF/BUMP) are `Sendable`; mutable builder and script types are not.
 
 <a id="about" />
 
@@ -15,7 +15,7 @@ Add it to a Swift package via the dependency stanza shown in the *Integration* c
 ### Status
 
 - **Swift tools 5.9+**, builds cleanly under **Swift 6** with strict concurrency.
-- **Sendable** throughout the public surface — pass values across actor boundaries without `@unchecked` or `@preconcurrency` workarounds.
+- **Sendable** for all value-type primitives — `Address`, `PrivateKey`, `PublicKey`, `Point`, `Bip32`, `Network`, `BInt`, all SPV models, `BEEF`, `BUMP`. Mutable types (`TxBuilder`, `Transaction`, `Script`) are not `Sendable` — pass the final `Transaction.serialized()` `Data` across actor boundaries instead.
 - **No deprecated dependencies.** CryptoSwift 1.9.x and Boilertalk's secp256k1 binding are the only third-party packages.
 - **CI green** on macOS 15 + Xcode 16 via GitHub Actions on every push to `main`.
 
@@ -38,7 +38,7 @@ The chapters that follow walk every public type in the SDK from the bottom up:
 
 ### What SwiftBSV Is
 
-- **Idiomatic Swift.** Value types where they make sense, classes only where mutation lifecycle demands it (`TxBuilder`, `Bip39`). No `NS` prefixes leaking through, no implicit globals, no completion-handler closures where `async`/`await` would do.
+- **Idiomatic Swift.** Value types where they make sense (`TxBuilder` is a `struct`; `Bip39` is a `class`). No `NS` prefixes leaking through, no implicit globals, no completion-handler closures where `async`/`await` would do.
 - **Compile-time safe.** Optionals where failure is part of the contract (parsing a malformed WIF, decoding a truncated DER signature). Throwing functions where the caller must handle it. No `try!`, no `fatalError` in the production path.
 - **Wire-compatible with the rest of BSV.** ECIES emits `BIE1`-format ciphertext readable by `@bsv/sdk`. BSM signatures verify against any other Bitcoin Signed Message implementation. Transaction binary matches whatever a node will accept.
 - **Small surface, deep semantics.** Every public type has a single clear responsibility. The *whole* library fits in your head once you've read this book.
@@ -94,7 +94,7 @@ Bitcoin keys are 256-bit integers. Swift's `Int` tops out at 64 bits, so SwiftBS
 <Forthbox title="BInt — Constructing 256-bit values">
 ```swift
 let n = BInt("01abcdef", radix: 16)!     // hex literal
-let m = BInt(decimalString: "10000000000000000000000")!
+let m = BInt("10000000000000000000000")!        // decimal string
 let sum = n + m                           // operator overloading
 let neg = -m                              // unary minus
 
@@ -127,7 +127,7 @@ You only handle `Point` directly in two places: when you write your own opcode-l
 
 ### Crypto — Hash and HMAC Helpers
 
-The `Crypto` enum bundles the hash functions Bitcoin uses, plus an HMAC helper. Static functions only — no state, no instance.
+The `Crypto` final class bundles the hash functions Bitcoin uses, plus an HMAC helper. Static functions only — no state, no instance.
 
 <Forthbox title="Crypto — Hash functions">
 ```swift
@@ -139,32 +139,33 @@ let hash160: Data   = Crypto.sha256ripemd160(bytes)     // 20 bytes (address has
 let sha512: Data    = Crypto.sha512(bytes)              // 64 bytes
 
 let key: Data = "secret".data(using: .utf8)!
-let mac: Data = Crypto.hmacsha256(key: key, data: bytes)
-let mac2: Data = Crypto.hmacsha512(key: key, data: bytes)
+let mac: Data = Crypto.hmacsha512(key: key, data: bytes)  // 64 bytes
 ```
 </Forthbox>
 
 > **Why double SHA-256?** Bitcoin double-hashes nearly everything: transaction IDs, block header hashes, the message-digest step of ECDSA. The doubling defends against length-extension attacks on Merkle–Damgård hash functions and gives a second pass of avalanche even if a structural weakness in the inner hash is later discovered. `Crypto.sha256sha256` encapsulates this so you don't accidentally single-hash where the protocol calls for double-hashing.
 
-#### verifySigData
+#### verifySignature
 
-A combined hash-and-verify helper:
+A general DER-signature verifier:
 
-<Forthbox title="Crypto.verifySigData">
+<Forthbox title="Crypto.verifySignature">
 ```swift
-let data: Data = ...                  // arbitrary message bytes
+let message: Data = ...               // 32-byte hash (pre-computed by caller)
 let sig: Data = ...                   // DER-encoded signature
 let pub: PublicKey = ...
 
-let ok: Bool = Crypto.verifySigData(
-    for: data,
-    signature: sig,
+let ok: Bool = Crypto.verifySignature(
+    sig,
+    message: message,
     publicKey: pub
 )
 ```
 </Forthbox>
 
-The function double-SHA-256s the input before verifying — matching Bitcoin's `checksig` semantics — so you pass the raw payload, not a pre-computed hash.
+The function verifies the bytes as given — it does *not* double-SHA-256 the input. Pass a pre-computed hash. For the Bitcoin transaction-signature variant that strips the sighash byte and constructs the digest from the transaction context, use `Crypto.verifySigData(for:inputIndex:utxo:sigData:pubKeyData:)` directly.
+
+> **Two verifiers, different inputs.** `Crypto.verifySignature` is the general DER verifier — you supply the hash. `Crypto.verifySigData` is the transaction-input verifier used by `OP_CHECKSIG`: it takes the full `Transaction`, the input index, and the UTXO, computes the sighash internally, and verifies the wire-format signature (DER + sighash byte). Use `verifySignature` for ECIES, BSM, and any protocol where you manage the hash yourself.
 
 <a id="keys-and-addresses" />
 
@@ -296,7 +297,7 @@ A 12-word or 24-word phrase from the BIP-39 word list. The phrase encodes 128 or
 let phrase: String = Bip39.create(strength: .high)
 
 // 12-word phrase (128 bits of entropy)
-let short: String = Bip39.create(strength: .low)
+let short: String = Bip39.create(strength: .normal)
 
 // From specific entropy (e.g. dice-rolled 32 bytes)
 let custom: String = Bip39.create(entropy: myEntropy)
@@ -397,11 +398,11 @@ let derived: PrivateKey? = Type42.derivePrivateKey(
 
 <Forthbox title="Type42 — derivePublicKey">
 ```swift
-// Both parties have only public keys. Useful for watch-only
-// wallets that prepare invoices without holding the spending key.
+// Derive a child public key. Requires your own private key for
+// the ECDH step (ECDH needs one private key and one public key).
 let derivedPub: PublicKey? = Type42.derivePublicKey(
-    publicKey: myPublicKey,
-    counterpartyPublicKey: theirPublicKey,
+    publicKey: theirPublicKey,
+    ownPrivateKey: myPrivateKey,
     invoiceNumber: "invoice-2026-01-001"
 )
 ```
@@ -446,46 +447,36 @@ let secret: [UInt8]? = Type42.ecdhSharedSecret(
 
 The result is the compressed serialization of the curve point obtained by multiplying the counterparty's public key by your private key. Symmetric: they get the same point by multiplying your public key by their private key.
 
-> **Don't use the raw shared point as a key.** The compressed point has structure — the leading byte is parity, leaving only 256 bits of variable material. For symmetric encryption you should run it through a KDF (BSV uses SHA-512 of the X coordinate to derive an IV, an AES key, and an HMAC key — see the ECIES section).
+> **Don't use the raw shared point as a key.** The compressed point has structure — the leading byte is parity, leaving only 256 bits of variable material. For symmetric encryption you should run it through a KDF (BSV uses SHA-512 of the full 33-byte compressed point to derive an IV, an AES key, and an HMAC key — see the ECIES section).
 
 <a id="signatures" />
 
 ## Signatures and ECIES
 
-### Signature — ECDSA Values
+### ECDSA Signing
 
-A `Signature` bundles `(r, s)`, the sighash type, and a recovery hint. It encodes to two distinct wire formats depending on context:
+`ECDSA` is a `public final class` with two main static methods. `sign` returns a 64-byte compact signature (`Data`); `verifySignature` accepts a DER-encoded signature and throws on structural parse failures.
 
-- **DER** for general ECDSA — variable-length, 70–72 bytes typically.
-- **Tx format** for transaction signatures — DER plus a single-byte sighash flag suffix.
-
-<Forthbox title="Signature — Construction & encoding">
+<Forthbox title="ECDSA — sign & verifySignature">
 ```swift
 let key = PrivateKey(network: .mainnet)
-let messageHash = Crypto.sha256sha256(message)
+let messageHash = Crypto.sha256sha256(message)  // 32-byte hash
 
-// Sign produces a Signature value
-let sig = ECDSA.sign(
-    hash: messageHash,
-    privateKey: key
-)
+// Returns 64-byte compact signature (r || s, not DER)
+let compactSig: Data = ECDSA.sign(messageHash, privateKey: key.data)
 
-// DER bytes — for verification by libsecp256k1, openssl, etc.
-let der: Data = sig.toDer()
-
-// Transaction format — DER + sighash byte for OP_CHECKSIG
-let txFormat: Data = sig.toTxFormat()
-
-// Verify
-let ok = ECDSA.verify(
-    hash: messageHash,
-    signature: sig,
-    publicKey: key.publicKey
+// Verify a DER-encoded signature (used by OP_CHECKSIG path)
+let ok: Bool = try ECDSA.verifySignature(
+    derSig,
+    message: messageHash,
+    publicKeyData: key.publicKey.toDer()
 )
 ```
 </Forthbox>
 
-> **Sighash byte width.** `toTxFormat` narrows the sighash to the low 8 bits via `UInt8(nHashType.sighash & 0xff)`. Bitcoin's wire format takes a single byte; passing the full 32-bit sighash word would corrupt every transaction.
+For signing transactions and producing DER-encoded signatures suitable for embedding in `scriptSig`, use the higher-level `Crypto.sign` and `TxBuilder.signInTx` — those wrap the secp256k1 DER path. The raw `ECDSA.sign` is the compact-signature path used internally by the compact-signing pipeline.
+
+> **Internal `Signature` type.** The `Signature` struct (bundling `r`, `s`, sighash type, recovery hint, `.toDer()`, `.toTxFormat()`) is **internal to the library** — not part of the public API. `TxBuilder` handles DER encoding and sighash-byte appending internally; you never construct a `Signature` directly.
 
 ### Sighash Types
 
@@ -544,25 +535,27 @@ BSM signatures encode a 1-byte recovery header that selects which of up to four 
 
 <Forthbox title="BIE1 wire format">
 ```
-"BIE1"  ||  ephemeralPubKey  ||  ciphertext  ||  HMAC
-   4              33                  N           32
+"BIE1"  ||  senderPubKey  ||  ciphertext  ||  HMAC
+   4           33               N            32
 ```
 </Forthbox>
 
-The ephemeral public key is 33 bytes (compressed). The HMAC is 32 bytes (HMAC-SHA-256). The ciphertext is AES-256-CBC over the plaintext, padded with PKCS#7. Total overhead is 69 bytes regardless of message length.
+The sender public key is 33 bytes (compressed). The HMAC is 32 bytes (HMAC-SHA-256). The ciphertext is AES-128-CBC over the plaintext, padded with PKCS#7. Total overhead is 69 bytes regardless of message length.
 
 #### Key Derivation
 
-The shared secret is the X coordinate of `ephemeralPrivKey * recipientPubKey`. From it:
+The shared secret is the compressed encoding (33 bytes) of the ECDH point `senderPrivKey * recipientPubKey`. From it:
 
 <Forthbox title="ECIES — key derivation">
 ```
-key = SHA-512(sharedX)
+key = SHA-512(sharedPoint)   // full 33-byte compressed point, not just X
 iv  = key[0:16]    // AES-CBC IV
 kE  = key[16:32]   // AES-CBC key (128-bit)
 kM  = key[32:64]   // HMAC-SHA-256 key
 ```
 </Forthbox>
+
+> **Hash the full 33-byte compressed point, not just the X coordinate.** The KDF feeds the complete compressed representation (`02`/`03` prefix + 32-byte X) into SHA-512. Both `@bsv/sdk`'s `electrumEncrypt` and the canonical Electrum implementation do the same. Hashing only X produces incompatible IV/kE/kM.
 
 > **16-byte AES key with a 32-byte HMAC key.** The Electrum format derives a 128-bit AES key (`kE` is 16 bytes) and a 256-bit HMAC key. This matches Electrum's historical choice, not the strongest possible parameter set — but it is the format every BSV implementation has shipped. Don't change the slicing; you'll break interop.
 
@@ -572,46 +565,22 @@ kM  = key[32:64]   // HMAC-SHA-256 key
 ```swift
 import SwiftBSV
 
+let sender = PrivateKey(network: .mainnet)
 let recipient = PrivateKey(network: .mainnet)
 let recipientPub = recipient.publicKey
 
-// Sender does not need their own keypair — ECIES generates an
-// ephemeral one per message. Pass nil for senderPrivateKey.
+// senderPrivateKey is required — BIE1 always embeds the sender's pubkey.
 let plaintext: Data = "secret".data(using: .utf8)!
 let cipher: Data = try ECIESEncryption.encrypt(
     plaintext: plaintext,
-    recipientPublicKey: recipientPub,
-    senderPrivateKey: nil
+    senderPrivateKey: sender,
+    recipientPublicKey: recipientPub
 )
 
-// Recipient — only needs their own private key
+// Recipient — only needs their own private key.
 let recovered: Data = try ECIESEncryption.decrypt(
     ciphertext: cipher,
-    privateKey: recipient
-)
-```
-</Forthbox>
-
-#### Authenticated Sender Mode
-
-Pass a sender private key when you want the recipient to know who sent the message. The protocol still uses an ephemeral key for confidentiality, but the HMAC is keyed in a way the recipient can validate against the named sender.
-
-<Forthbox title="ECIES — Authenticated sender mode">
-```swift
-let sender = PrivateKey(network: .mainnet)
-let cipher = try ECIESEncryption.encrypt(
-    plaintext: data,
-    recipientPublicKey: recipientPub,
-    senderPrivateKey: sender
-)
-
-// Recipient supplies their own private key + the expected
-// sender public key. HMAC failure means either the message
-// was tampered or the sender wasn't who you expected.
-let recovered = try ECIESEncryption.decrypt(
-    ciphertext: cipher,
-    privateKey: recipient,
-    senderPublicKey: sender.publicKey
+    recipientPrivateKey: recipient
 )
 ```
 </Forthbox>
@@ -620,10 +589,12 @@ let recovered = try ECIESEncryption.decrypt(
 
 `ECIESError` is a small enum:
 
+- `.ecdhFailed` — ECDH shared-secret computation failed
+- `.encryptionFailed` — AES-CBC encryption failed
+- `.decryptionFailed` — AES-CBC decryption failed (typically padding error)
+- `.invalidCiphertext` — wrong magic prefix, truncated input, or non-canonical encoding
 - `.invalidPublicKey` — the embedded sender public key didn't deserialize as a valid curve point
-- `.hmacMismatch` — ciphertext failed authentication
-- `.invalidCiphertextFormat` — wrong magic prefix, truncated input, or non-canonical encoding
-- `.encryptionFailed` / `.decryptionFailed` — AES-CBC failure (typically padding)
+- `.hmacVerificationFailed` — ciphertext failed authentication
 
 <a id="scripts" />
 
@@ -638,9 +609,8 @@ A Bitcoin `Script` is a sequence of `Chunk`s — each chunk is either a single o
 let priv = PrivateKey(network: .mainnet)
 let addr = priv.address
 
-// Build by hand
-var script = Script()
-_ = script
+// Build by hand — Script is a class; append/appendData throw.
+let script = try Script()
     .append(.OP_DUP)
     .append(.OP_HASH160)
     .appendData(Crypto.sha256ripemd160(priv.publicKey.toBuffer()))
@@ -670,6 +640,8 @@ The full enumeration is exhaustive — BSV restored every opcode that BTC remove
 
 > **Script vs FORTH.** Henceforth's FORTH terminal is the human-facing interface to script construction — you type `OP_DUP OP_HASH160 ... OP_CHECKSIG` and the recorder emits the bytes. SwiftBSV's `Script` type is the programmatic interface, used by `TxBuilder` and by anyone embedding script construction inside a Swift host.
 
+> **OP_PUSHDATA4 length encoding.** When `appendData` emits an `OP_PUSHDATA4` prefix (payloads ≥ 65536 bytes), the 4-byte length is written in little-endian order, matching the Bitcoin Script wire format.
+
 <a id="transactions" />
 
 ## Transactions and TxBuilder
@@ -694,7 +666,10 @@ SwiftBSV exposes `Transaction`, `TransactionInput`, and `TransactionOutput` as v
 
 ### TxBuilder — Fluent Construction
 
-`TxBuilder` is a class (not a struct) because building a transaction is a sequence of mutations against an evolving state, and a class lets you chain calls that all return `self`.
+`TxBuilder` is a `struct`. The API is split by intent:
+
+- **Configuration setters** (`setVersion`, `setFeePerKb`, `setChangeAddress`, `setChangeScript`, `setNLockTime`) are *non-mutating* and return a new copy. Use them with let-bindings and chain-and-capture.
+- **State-mutating ops** (`inputFromX`, `outputToX`, `build`, `signInTx`) are `mutating`. They modify `self` in place; the binding must be `var`.
 
 <Forthbox title="TxBuilder — A complete pay-to-address transaction">
 ```swift
@@ -705,19 +680,19 @@ let utxo: TransactionOutput = ...   // from your UTXO source
 let prevTxid: Data           = ...
 let prevVout: UInt32         = 0
 
-let builder = TxBuilder()
-
-_ = builder
+// var because inputFromPubKeyHash/outputToAddress/build are mutating
+var builder = TxBuilder()
     .setVersion(2)
-    .setFeePerKb(50)
+    .setFeePerKb(50)            // UInt64 satoshis per kilobyte
     .setChangeAddress(alice.address)
-    .inputFromPubKeyHash(
-        txHashBuffer: prevTxid,
-        txOutNum: prevVout,
-        txOut: utxo,
-        pubKey: alice.publicKey
-    )
-    .outputToAddress(value: 50_000, address: bob)
+
+builder.inputFromPubKeyHash(
+    txHashBuffer: prevTxid,
+    txOutNum: prevVout,
+    txOut: utxo,
+    pubKey: alice.publicKey
+)
+builder.outputToAddress(value: 50_000, address: bob)
 
 let built = try builder.build(useAllInputs: true)
 
@@ -738,9 +713,10 @@ let txid: String = built.transaction.txID
 
 <Forthbox title="TxBuilder — Setters & inputs">
 ```swift
+// Non-mutating — return a new TxBuilder copy
 .setVersion(_ version: UInt32)
 .setNLockTime(_ nLockTime: UInt32)
-.setFeePerKb(_ fee: Float)
+.setFeePerKb(_ fee: UInt64)          // satoshis per kilobyte
 .setChangeAddress(_ changeAddress: Address)
 .setChangeScript(_ changeScript: Script)
 
@@ -799,6 +775,46 @@ Every read inside the parser is bounds-checked before it runs. A buffer that end
 - `.malformedData` — a length or count field declares a value too large to represent. The input is structurally invalid, not merely short.
 
 > **A bounds check written in trapping arithmetic is not a bounds check.** The obvious guard — `guard offset + Int(length) <= data.count` — isn't defensive: when `length` is an attacker-controlled varint above `Int.max`, the `Int(_:)` conversion *traps while evaluating the guard's own condition*, before the comparison ever runs. The crash happens inside the check meant to prevent it. SwiftBSV converts with `Int(exactly:)` and adds with `addingReportingOverflow` — both report failure instead of trapping — so the check itself can never crash. The BEEF envelope parser (`BEEFParser.parse`, BRC-62) is held to the same contract.
+
+### BEEF and BUMP Parsing (BRC-62 / BRC-74)
+
+SwiftBSV ships a complete BEEF/BUMP parser. BEEF bundles transactions with their Merkle proofs for offline SPV verification. BUMP is the compact binary Merkle path format those proofs use.
+
+<Forthbox title="BEEFParser — Parse a BEEF envelope">
+```swift
+// From hex string
+let beef: BEEF = try BEEFParser.parse(hex: hexString)
+
+// From raw bytes
+let beef2: BEEF = try BEEFParser.parse(data: rawData)
+
+// Access the parsed structure
+let bumps: [BUMP]             = beef.bumps
+let txs: [BEEFTransaction]   = beef.transactions
+let hasBUMP: Bool             = txs.first?.hasBUMP ?? false
+let bumpIndex: UInt64?        = txs.first?.bumpIndex
+```
+</Forthbox>
+
+`BEEFParser.ParseError` cases: `.invalidVersion(UInt32)`, `.invalidData`, `.unexpectedEnd`.
+
+<Forthbox title="BUMP — Navigating a Merkle path">
+```swift
+let bump: BUMP = beef.bumps[0]
+// bump.blockHeight, bump.treeHeight, bump.levels: [BUMPLevel]
+
+for level in bump.levels {
+    for leaf in level.leaves {
+        // leaf.offset, leaf.hash, leaf.txid, leaf.duplicate
+    }
+}
+
+// Extract transaction IDs referenced in this BUMP
+let txids: [String] = bump.txids
+```
+</Forthbox>
+
+All BEEF and BUMP types (`BEEF`, `BEEFTransaction`, `BUMP`, `BUMPLevel`, `BUMPLeaf`) are `Sendable` structs — safe to pass across actor boundaries.
 
 <a id="spv" />
 
@@ -915,7 +931,7 @@ let ok = verifier.verifyMerkleProof(
 let tsc = TSCMerkleProof(
     index: 42,
     txOrId: "...",
-    target: header.merkleroot,
+    target: header.hash,            // block hash, not merkle root
     nodes: ["...", "..."],
     targetType: "merkleroot",
     proofType: "branch",
@@ -1037,12 +1053,14 @@ import SwiftBSV
 
 #### Swift 6 Concurrency Notes
 
-Every public type that crosses an actor boundary in real code is `Sendable`. You can pass `PrivateKey`, `PublicKey`, `Address`, `Bip32`, `Signature`, `MerkleProof`, and `ChainValidationResult` freely between `@MainActor` and detached `Task` contexts.
+`Sendable` types you can pass freely across actor boundaries: `PrivateKey`, `PublicKey`, `Address`, `Bip32`, `Network`, `SighashType`, `BInt`, all SPV models (`MerkleProof`, `ChainValidationResult`, `TSCMerkleProof`, `WOCMerkleProof`), `BEEF`, `BUMP`, `BEEFTransaction`, `BUMPLevel`, `BUMPLeaf`.
 
 A small number of types remain non-`Sendable` because mutation is part of their interface:
 
-- `TxBuilder` — holds an evolving `Transaction`; mutate it on one isolation domain and pass the resulting `Transaction` (which *is* `Sendable`) across boundaries.
-- `Bip39` — a static-only entry point in practice; the class itself is not constructible.
+- `TxBuilder` — holds an evolving `Transaction`; mutate it on one isolation domain and pass the resulting `Transaction.serialized()` `Data` across boundaries.
+- `Transaction`, `TransactionInput`, `TransactionOutput` — mutable types; not `Sendable`.
+- `Script` — a `class` with mutable internal state; not `Sendable`.
+- `Bip39` — a static-only entry point in practice; construction is a no-op.
 
 > **No `@preconcurrency import SwiftBSV` required.** Earlier Henceforth code carried `@preconcurrency import` on five files because not every type was `Sendable`. The current build is clean. If you find yourself needing `@preconcurrency` against SwiftBSV, file an issue: it's a bug in the library, not your consumer.
 
