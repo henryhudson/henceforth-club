@@ -459,7 +459,6 @@ Henceforth accepts integers as binary, octal, decimal and hexadecimal. Just chan
 
 <Word name="\\" stack="(--)">Line comment. Everything after `\` to the end of the line is ignored. Supported in `.fs` files.</Word>
 
-<Word name=".s" stack="(--)">Show stack on terminal.</Word>
 
 <Word name=".rs" stack="(--)">Displays the return stack on the terminal. Henceforth extension — Forth-2012 only specifies `.s` for the data stack.</Word>
 
@@ -467,7 +466,7 @@ Henceforth accepts integers as binary, octal, decimal and hexadecimal. Just chan
 
 <Word name="bye" stack="(--)">Clears everything, resets to default settings.</Word>
 
-<Word name="." stack="(--)">Start print. Everything between quotes is printed.</Word>
+<Word name='."' stack="(--)">Start print. Everything between quotes is printed.</Word>
 
 <Word name='"' stack="(--)">Ends print.</Word>
 
@@ -744,8 +743,8 @@ All 140+ Bitcoin Script opcodes are exposed as FORTH words. Below are the catego
 
 #### Stack
 
-<Word name="op_toaltstack" stack="(n--)" forth=">r">Moves the top of stack to the alt stack.</Word>
-<Word name="op_fromaltstack" stack="(--n)" forth="r>">Moves the top of alt stack to the main stack.</Word>
+<Word name="op_toaltstack" stack="(n--)" forth="&gt;r">Moves the top of stack to the alt stack.</Word>
+<Word name="op_fromaltstack" stack="(--n)" forth="r&gt;">Moves the top of alt stack to the main stack.</Word>
 <Word name="op_2drop" stack="(n n1--)" forth="2drop">Discards the top two elements.</Word>
 <Word name="op_2dup" stack="(n n1 -- n n1 n n1)" forth="2dup">Duplicates the top two values.</Word>
 <Word name="op_3dup" stack="(n n1 n2 -- n n1 n2 n n1 n2)">Duplicates the top three values. Composite FORTH: `2dup over`.</Word>
@@ -799,7 +798,7 @@ All 140+ Bitcoin Script opcodes are exposed as FORTH words. Below are the catego
 <Word name="op_negate" stack="(n -- -n)" forth="negate">Flips sign.</Word>
 <Word name="op_abs" stack="(n -- |n|)" forth="abs">Absolute value.</Word>
 <Word name="op_not" stack="(n -- f)" forth="0=">Logical NOT. Returns 1 if 0, else 0.</Word>
-<Word name="op_0notequal" stack="(n -- f)" forth="0<>">True if not zero.</Word>
+<Word name="op_0notequal" stack="(n -- f)" forth="0&lt;&gt;">True if not zero.</Word>
 <Word name="op_add" stack="(n n1 -- n3)" forth="+">Sum.</Word>
 <Word name="op_sub" stack="(n n1 -- n3)" forth="-">Difference.</Word>
 <Word name="op_mul" stack="(n n1 -- n3)" forth="*">Product.</Word>
@@ -813,11 +812,11 @@ All 140+ Bitcoin Script opcodes are exposed as FORTH words. Below are the catego
 <Word name="op_boolor" stack="(n n1 -- f)" forth="||">True if either non-zero.</Word>
 <Word name="op_numequal" stack="(n n1 -- f)" forth="=">Numeric equality.</Word>
 <Word name="op_numequalverify" stack="(n n1 -- f)">OP_NUMEQUAL then OP_VERIFY. Script-specific composite.</Word>
-<Word name="op_numnotequal" stack="(n n1 -- f)" forth="<>">Numeric inequality.</Word>
+<Word name="op_numnotequal" stack="(n n1 -- f)" forth="&lt;&gt;">Numeric inequality.</Word>
 <Word name="op_lessthan" stack="(n n1 -- f)" forth="<">True if n &lt; n1.</Word>
-<Word name="op_greaterthan" stack="(n n1 -- f)" forth=">">True if n &gt; n1.</Word>
+<Word name="op_greaterthan" stack="(n n1 -- f)" forth="&gt;">True if n &gt; n1.</Word>
 <Word name="op_lessthanorequal" stack="(n n1 -- f)" forth="<=">True if n &lt;= n1.</Word>
-<Word name="op_greaterthanorequal" stack="(n n1 -- f)" forth=">=">True if n &gt;= n1.</Word>
+<Word name="op_greaterthanorequal" stack="(n n1 -- f)" forth="&gt;=">True if n &gt;= n1.</Word>
 <Word name="op_min" stack="(n n1 -- n)" forth="min">Smaller value.</Word>
 <Word name="op_max" stack="(n n1 -- n)" forth="max">Larger value.</Word>
 <Word name="op_within" stack="(n n1 n2 -- f)" forth="within">True if n is between n1 and n2.</Word>
@@ -1006,7 +1005,7 @@ Three serialisable JSON formats carry data across the air-gap, exchanged via Air
 - **`.hfreceipt`** — proof that a specific transaction was included in the blockchain. Carries (txid, raw tx hex, block height, block hash, TSC Merkle proof, containing header). `verifyTransaction(fromBundle:)` validates inclusion against the importer's own local header with no network call. After SPV passes, the importer re-derives output ownership and refuses receipts that don't pay this wallet.
 - **`.hfaddrpack`** — pre-derived receive addresses pushed signer → watcher. Each entry has the address, derivation scheme, and the scheme-specific derivation reference. Signed by the wallet's m/0/0 BIP32 identity key with DER ECDSA.
 
-**Settings → Bitcoin → Air-Gap Tools** exposes three exporters and a single import button (routed by file extension). In v1.0, `.hfaddrpack` import validates the signature; persistence into a watch-only store is staged for v1.0.2.
+**Settings → Bitcoin → Air-Gap Tools** exposes three exporters and a single import button (routed by file extension). In v1.0, `.hfaddrpack` import validates the signature; persistence into a watch-only store is a follow-up in a later release.
 
 <a id="wallet-data-mgmt" />
 
@@ -1102,6 +1101,8 @@ Passwordless authentication: web service displays `hfauth:` QR with challenge + 
 
 `henceforth://wallet/{method}?params=...` URL scheme exposes key derivation, signing, encryption, and certificate management (BRC-52/53). All sensitive operations require user approval via on-screen confirmation + biometric.
 
+*Status: the URL scheme and signing infrastructure are implemented, but the full BRC-100 sign-in workflow is still in development and not yet available for general use.*
+
 ##### Certificate Proofs (BRC-52/53)
 
 - **Per-field HMAC keyring, ECDH-bound** — each field's HMAC key is encrypted with an ECDH shared secret derived between the prover's and verifier's BRC-42 identity keys. A leaked proof is useless against any other party.
@@ -1120,7 +1121,7 @@ Leo Brodie, author of *Starting Forth* — a great textbook, suitable for both n
 
 ### BITSRFR
 
-Fellow surfer of the binary ocean who has made FORTH tutorials and is building a Swift command line FORTH application.
+Fellow surfer of the binary ocean who has made FORTH tutorials and built a Swift command line FORTH application.
 
 [YouTube](https://www.youtube.com/user/JoeKreydt) · [cruxFORTH on GitHub](https://github.com/josephkreydt/cruxForth)
 
