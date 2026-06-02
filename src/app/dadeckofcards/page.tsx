@@ -18,8 +18,9 @@ const accordionSections = [
         </p>
         <p>
           Every interaction is designed to feel like physical cards — dealing,
-          fanning, flipping, and gathering. No ads, no subscriptions, just a
-          clean deck in your pocket.
+          fanning, flipping, and gathering. No ads — just a clean deck in your
+          pocket, free to play. Online multiplayer is an inexpensive optional
+          subscription.
         </p>
       </>
     ),
@@ -35,8 +36,9 @@ const accordionSections = [
           and card state syncing automatically.
         </p>
         <p>
-          You can also play solo in Free Play mode — useful for learning a
-          new game or just shuffling through a deck.
+          You can also play solo in Free Play mode — always free, useful for
+          learning a new game or just shuffling through a deck. Online
+          multiplayer is unlocked with an inexpensive subscription.
         </p>
       </>
     ),
@@ -324,9 +326,11 @@ export default function DaDeckOfCardsPage() {
 
                 <h3>One platform, no ads</h3>
                 <p>
-                  iPhone and iPad only. Free, no ads, no subscription, no
-                  analytics SDKs that don&apos;t earn their keep. Game Center
-                  handles matchmaking; the app handles cards.
+                  iPhone and iPad only. Free to play, with no ads and no
+                  analytics SDKs that don&apos;t earn their keep. Online
+                  multiplayer is an inexpensive optional subscription — from
+                  $0.99 a month or $9.99 a year. Game Center handles
+                  matchmaking; the app handles cards.
                 </p>
               </TechModal>
             </div>
@@ -345,7 +349,7 @@ export default function DaDeckOfCardsPage() {
               className="mx-auto mb-6 rounded-2xl shadow-lg shadow-accent/10"
             />
             <p className="text-xs text-muted/50 mb-6 tracking-wider uppercase">
-              Available now — Free
+              Available now — Free to play
             </p>
             <a
               href="https://apps.apple.com/app/deck-of-cards/id1520654142"
