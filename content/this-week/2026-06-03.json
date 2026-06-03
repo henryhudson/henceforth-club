@@ -1,93 +1,131 @@
 {
   "week": "2026-06-03",
-  "windowLabel": "27 May – 3 June 2026",
+  "windowLabel": "27 May – 3 Jun 2026",
+  "headline": "Back from the break, and straight into a fight",
   "mode": "normal",
   "generatedAt": "2026-06-03T05:00:00.000Z",
   "recessReturnISO": null,
   "stats": {
-    "divisions": 23,
-    "questions": 2427,
-    "distinctAskers": 540
+    "divisions": 4,
+    "questions": 2247,
+    "distinctAskers": 236
   },
   "departments": [
-    { "department": "HM Treasury", "count": 312 },
-    { "department": "Home Office", "count": 287 },
-    { "department": "Department of Health and Social Care", "count": 241 },
-    { "department": "Ministry of Justice", "count": 198 },
-    { "department": "Department for Education", "count": 176 },
-    { "department": "Cabinet Office", "count": 153 },
-    { "department": "Department for Work and Pensions", "count": 141 },
-    { "department": "Foreign, Commonwealth & Development Office", "count": 129 },
-    { "department": "Ministry of Defence", "count": 118 },
-    { "department": "Department for Transport", "count": 97 },
-    { "department": "Department for Energy Security and Net Zero", "count": 84 },
-    { "department": "Department for Business and Trade", "count": 76 },
-    { "department": "Ministry of Housing, Communities and Local Government", "count": 68 },
-    { "department": "Department for Science, Innovation and Technology", "count": 54 },
-    { "department": "Office for Environmental Protection", "count": 29 },
-    { "department": "Leader of the House", "count": 19 },
-    { "department": "Parliamentary Under-Secretary of State", "count": 12 },
-    { "department": "Solicitor General", "count": 7 },
-    { "department": "Advocate General for Scotland", "count": 4 },
-    { "department": "Northern Ireland Office", "count": 3 }
+    { "department": "Department of Health and Social Care", "count": 282 },
+    { "department": "Ministry of Defence", "count": 216 },
+    { "department": "Cabinet Office", "count": 177 },
+    { "department": "Department for Transport", "count": 163 },
+    { "department": "Treasury", "count": 152 },
+    { "department": "Department for Education", "count": 150 },
+    { "department": "Home Office", "count": 147 },
+    { "department": "Ministry of Housing, Communities and Local Government", "count": 138 },
+    { "department": "Department for Environment, Food and Rural Affairs", "count": 129 },
+    { "department": "Ministry of Justice", "count": 116 },
+    { "department": "Department for Work and Pensions", "count": 109 },
+    { "department": "Department for Business and Trade", "count": 107 },
+    { "department": "14 other departments", "count": 361 }
+  ],
+  "body": [
+    "The Commons spent the first half of the week dark — MPs were still on their Whitsun break until Sunday. They were back at their desks by Monday and, by Tuesday night, they were voting. Even in a three-day week, 236 of them found time to lodge 2,247 written questions.",
+    "Every recorded vote — all four of them — was on the Armed Forces Bill, the five-yearly measure that keeps the Armed Forces Act 2006 on the statute book. At committee stage the government swatted away four new clauses in quick succession: defeated 171 to 302, 170 to 301, 80 to 298 and, most heavily, 99 to 371. No rebellion worth the name; the whips held the line every time, and the bill moved on to report stage.",
+    "Two bills with rather more public bite reached report stage the same day. The Representation of the People Bill would hand the vote to 16- and 17-year-olds; the Public Office (Accountability) Bill would put a statutory ‘duty of candour’ on officials, forcing transparency in inquiries and investigations. And on the floor of the House — not upstairs in committee — MPs took the Steel Industry (Nationalisation) Bill, which would let the government step in and take over a steelmaker outright.",
+    "In the written questions, where most of Parliament’s quieter work happens, Health drew the most fire: 282 questions to the Department of Health and Social Care, ahead of Defence (216) and the Cabinet Office (177). But sheer volume can mislead. The subject that pulled in the most separate members wasn’t health at all — it was youth unemployment, raised by five different MPs, ahead of NHS databases and special educational needs on four apiece. That breadth, more than any departmental total, is the truer gauge of what the House was collectively worried about. The questions that got answers ranged from NHS dental-contract variation to whether mandatory ‘Advice and Guidance’ in GP referral pathways is safe for patients."
+  ],
+  "feature": {
+    "title": "The police handling of the Henry Nowak stabbing",
+    "asker": "Rupert Lowe",
+    "party": "Restore Britain",
+    "department": "Home Office",
+    "count": 8,
+    "status": "all tabled 2 June — awaiting answer",
+    "summary": "The most-pressed single subject of the week never appeared under any official heading. Rupert Lowe (Restore Britain) tabled eight written questions to the Home Office over the police response to the fatal stabbing of Henry Nowak — pressing on whether attending officers misidentified the dying victim as a suspect, why he was handcuffed while seriously injured, and whether first-aid and casualty-care protocols were followed. He is also demanding that all body-worn video, radio traffic, emergency-call recordings and officer decision logs be preserved and disclosed to the family, and asking whether the Home Secretary has raised the handling with the Chief Constable of Hampshire and Isle of Wight Constabulary. None have been answered yet.",
+    "questions": [
+      "What assessment has the Department made of the justification recorded by officers for handcuffing Henry Nowak while seriously injured, and whether it complied with national use-of-force guidance?",
+      "Has the Department reviewed national police training on avoiding the misidentification of victims as suspects in serious-violence incidents, in light of his death?",
+      "Will the Home Secretary commit to making public all police communications, decision records and reporting logs connected to the death of Henry Nowak?",
+      "Has she discussed the handling of the incident with the Chief Constable of Hampshire and Isle of Wight Constabulary?"
+    ]
+  },
+  "topTopics": [
+    { "heading": "Democratic Republic of the Congo: Ebola", "count": 12 },
+    { "heading": "Pupils: Asthma", "count": 12 },
+    { "heading": "NHS: Databases", "count": 11 },
+    { "heading": "Political Parties: Finance", "count": 11 },
+    { "heading": "Military Aircraft: Training", "count": 11 },
+    { "heading": "Multinational Companies: Taxation", "count": 11 },
+    { "heading": "Animal Experiments", "count": 10 },
+    { "heading": "Peacekeeping Operations: Strait of Hormuz", "count": 10 },
+    { "heading": "Civil Servants: Workplace Pensions", "count": 10 },
+    { "heading": "Unemployment: Young People", "count": 8 }
+  ],
+  "qa": [
+    {
+      "heading": "Dental Services: Contracts",
+      "asker": "Andrew Snowden",
+      "party": "Conservative",
+      "constituency": "Fylde",
+      "department": "Department of Health and Social Care",
+      "question": "Has the Department assessed the impact of variation in Unit of Dental Activity (UDA) values between NHS dental contracts within the same Integrated Care Board area?",
+      "answer": "From 1 April 2023, commissioning responsibility for primary care dentistry transferred to integrated care boards, including the duty to assess local oral health needs and set commissioning priorities. NHS England has issued an Assurance Framework to support boards in doing so."
+    },
+    {
+      "heading": "General Practitioners: Contracts",
+      "asker": "Dr Roz Savage",
+      "party": "Liberal Democrat",
+      "constituency": "South Cotswolds",
+      "department": "Department of Health and Social Care",
+      "question": "What assessment has been made of the patient-safety implications of mandating 'Advice and Guidance' as a required step in GP referral pathways under the 2026/27 GP contract?",
+      "answer": "The contract does not change the clinical threshold for referral to specialist care. GPs should continue to make a clinical decision to refer for specialist care where that is in the patient's best interests, and to request specialist advice where appropriate."
+    },
+    {
+      "heading": "Shipping: UK Emissions Trading Scheme",
+      "asker": "Joe Robertson",
+      "party": "Conservative",
+      "constituency": "Isle of Wight East",
+      "department": "Department for Transport",
+      "question": "What criteria does the Department use to define the 'unique challenges' faced by Scottish island communities under the shipping Emissions Trading Scheme?",
+      "answer": "There are over 90 inhabited island and peninsula communities in Scotland that rely on ferry services, each with distinct geographic contexts and with populations ranging from fewer than 10 to just over 21,000 inhabitants."
+    }
   ],
   "highlights": {
     "votes": [
       {
-        "row": {
-          "id": 1847,
-          "title": "National Insurance Contributions (Employer Rates) Bill — Third Reading",
-          "date": "2026-05-28",
-          "ayes": 312,
-          "noes": 178
-        },
-        "blurb": "The government's flagship employer NI rate adjustment cleared the Commons at third reading. Labour held firm, with just three rebels abstaining. Conservatives voted unanimously against, arguing the change stifles hiring at the precise moment the economy needs it. The bill now heads to the Lords, where cross-bench peers are expected to table amendments on the threshold mechanism."
+        "row": { "id": 2357, "title": "Armed Forces Bill — New Clause 2", "date": "2026-06-02", "ayes": 171, "noes": 302 },
+        "blurb": "First of four swings at the Armed Forces Bill at committee stage — defeated by 131. The whips held; no rebellion worth the name."
       },
       {
-        "row": {
-          "id": 1851,
-          "title": "Investigatory Powers (Amendment) Act 2016 — Sunset Clause Extension",
-          "date": "2026-05-29",
-          "ayes": 289,
-          "noes": 241
-        },
-        "blurb": "Razor-thin majority extended the bulk data retention powers by another three years. A sizeable Labour rebel bloc joined the Liberal Democrats in opposition, citing the lack of independent judicial sign-off. The vote exposed genuine cross-party discomfort with surveillance legislation, and the government's majority of 48 was its narrowest of the session."
+        "row": { "id": 2358, "title": "Armed Forces Bill — New Clause 5", "date": "2026-06-02", "ayes": 170, "noes": 301 },
+        "blurb": "Almost a carbon copy of the previous vote — 170 for, 301 against. The government batted away the second new clause minutes later."
       },
       {
-        "row": {
-          "id": 1863,
-          "title": "Agriculture (Sustainable Farming) Bill — New Clause 12",
-          "date": "2026-06-01",
-          "ayes": 198,
-          "noes": 301
-        },
-        "blurb": "An SNP amendment requiring a binding annual emissions target for UK agriculture fell at committee stage. The government argued the clause duplicated existing Climate Change Act obligations. Behind the scenes, farming unions lobbied hard against it, fearing punitive compliance costs for smaller holdings. The Scottish Government is expected to pursue an equivalent measure at Holyrood."
+        "row": { "id": 2360, "title": "Armed Forces Bill — New Clause 13", "date": "2026-06-02", "ayes": 80, "noes": 298 },
+        "blurb": "The most lopsided of the night: just 80 MPs backed it against 298. A clear read on where the House stood."
+      },
+      {
+        "row": { "id": 2359, "title": "Armed Forces Bill — New Clause 6", "date": "2026-06-02", "ayes": 99, "noes": 371 },
+        "blurb": "The biggest wall of noes — 371. Four swings at the bill, four misses for the amenders."
       }
     ],
     "questions": [],
     "bills": [
       {
-        "row": {
-          "id": 3214,
-          "title": "Digital Identity and Data Use Bill",
-          "house": "Commons",
-          "stage": "Report Stage",
-          "lastUpdate": "2026-06-02"
-        },
-        "blurb": "The digital ID framework crept through report stage with a raft of government amendments clarifying the role of the new Office for Digital Identities. Critics worry the accreditation scheme still lacks teeth — the enforcement penalty cap was raised from £250k to £1m after sustained pressure from the DCMS committee, but privacy advocates argue even this is a rounding error for large platforms."
+        "row": { "id": 9101, "title": "Representation of the People Bill", "house": "Commons", "stage": "Report stage", "lastUpdate": "2026-06-02" },
+        "blurb": "Votes at 16. The bill extends the franchise to 16- and 17-year-olds, alongside changes to voter registration and the conduct of elections and recall petitions. It reached report stage this week."
       },
       {
-        "row": {
-          "id": 3198,
-          "title": "Renters' Rights Bill",
-          "house": "Lords",
-          "stage": "Committee Stage",
-          "lastUpdate": "2026-05-30"
-        },
-        "blurb": "Peers spent most of Tuesday dissecting the 'no-fault eviction' abolition clause. Landlord-aligned crossbenchers tabled amendments carving out exceptions for family members reclaiming property. The government resisted, but acknowledged 'technical drafting work' was ongoing. The bill remains on track for Royal Assent before the summer recess — if the Lords don't insist on their amendments."
+        "row": { "id": 9102, "title": "Public Office (Accountability) Bill", "house": "Commons", "stage": "Report stage", "lastUpdate": "2026-06-02" },
+        "blurb": "A statutory 'duty of candour' — requiring public authorities and officials to act with transparency and frankness, and be held to it in inquiries and investigations. Also at report stage."
+      },
+      {
+        "row": { "id": 9103, "title": "Steel Industry (Nationalisation) Bill", "house": "Commons", "stage": "Committee of the whole House", "lastUpdate": "2026-06-02" },
+        "blurb": "Gives the Secretary of State the power to step in and transfer the securities or assets of a steel undertaking — i.e. nationalise a steelmaker. Taken on the floor of the House, not upstairs in committee — a tell for how charged the steel question is."
+      },
+      {
+        "row": { "id": 4065, "title": "Armed Forces Bill", "house": "Commons", "stage": "Report stage", "lastUpdate": "2026-06-03" },
+        "blurb": "The five-yearly bill that keeps the Armed Forces Act 2006 alive, and amends the law on reserve forces, visiting forces and the MoD Police. Fresh off four defeated committee amendments (above), it reached report stage."
       }
     ]
   },
-  "intro": "Parliament had a bruising week — 23 divisions, a surveillance vote that nearly ambushed the government, and 2,427 written questions covering everything from RAAC concrete in schools to the UK's posture on contested Arctic shipping lanes. The chamber was occasionally heated but rarely surprised anyone who has been watching since autumn. Carry on.",
+  "intro": "For the first half of the week the Commons was dark — MPs were still on their Whitsun holidays until Sunday. They filed back in on Monday and got straight to work: four votes on the Armed Forces Bill, a 'votes at 16' bill and a duty-of-candour bill both reaching report stage, and 2,247 written questions from 236 MPs on everything from Ebola in the Congo to NHS dentistry. Health, as ever, drew the most fire.",
   "status": "published"
 }

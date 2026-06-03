@@ -22,6 +22,7 @@ export const DADECKOFCARDS_NAV: NavItem[] = [
 
 export const HANSARD_NAV: NavItem[] = [
   { href: "/hansard", label: "Hansard" },
+  { href: "/hansard/this-week", label: "This Week in Parliament" },
 ];
 
 // In-page anchor TOC for the long single-page docs at /docs. Used in the

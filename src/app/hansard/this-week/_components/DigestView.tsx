@@ -2,68 +2,40 @@ import Link from 'next/link'
 import type { DigestData } from '@/lib/this-week/types'
 import DepartmentChart from './DepartmentChart'
 
-function StatCard({ value, label }: { value: string | number; label: string }) {
+function FeatureBlock({ feature }: { feature: NonNullable<DigestData['feature']> }) {
   return (
-    <div className="flex flex-col rounded-xl border border-card-border bg-card-bg/50 p-5">
-      <span className="text-3xl font-bold text-foreground">
-        {typeof value === 'number' ? value.toLocaleString() : value}
-      </span>
-      <span className="mt-1 text-xs tracking-wide text-muted/60 uppercase">{label}</span>
-    </div>
-  )
-}
-
-function VoteCard({ vote }: { vote: DigestData['highlights']['votes'][number] }) {
-  const { row, blurb } = vote
-  const margin = row.ayes - row.noes
-  const total = row.ayes + row.noes
-  const ayePct = total > 0 ? Math.round((row.ayes / total) * 100) : 50
-  const result = margin > 0 ? 'Passed' : 'Rejected'
-  const resultColour = margin > 0 ? 'text-accent-green' : 'text-red-400'
-
-  return (
-    <div className="rounded-xl border border-card-border bg-card-bg/50 p-6 flex flex-col gap-4">
-      <div className="flex items-start justify-between gap-4">
-        <h3 className="text-sm font-semibold text-foreground leading-snug flex-1">{row.title}</h3>
-        <span className={`shrink-0 text-xs font-semibold ${resultColour}`}>{result}</span>
-      </div>
-      {/* Aye/Noe bar */}
-      <div>
-        <div className="flex overflow-hidden rounded-full h-1.5">
-          <div
-            className="bg-accent-green"
-            style={{ width: `${ayePct}%` }}
-          />
-          <div className="flex-1 bg-red-400/40" />
-        </div>
-        <div className="mt-1.5 flex justify-between text-[10px] text-muted/60">
-          <span>Ayes {row.ayes.toLocaleString()}</span>
-          <span>Noes {row.noes.toLocaleString()}</span>
-        </div>
-      </div>
-      <p className="text-xs leading-relaxed text-muted">{blurb}</p>
-      <p className="text-[10px] text-muted/40">
-        {new Date(row.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
-      </p>
-    </div>
-  )
-}
-
-function BillCard({ bill }: { bill: DigestData['highlights']['bills'][number] }) {
-  const { row, blurb } = bill
-  return (
-    <div className="rounded-xl border border-card-border bg-card-bg/50 p-6 flex flex-col gap-3">
-      <div className="flex items-start justify-between gap-4">
-        <h3 className="text-sm font-semibold text-foreground leading-snug flex-1">{row.title}</h3>
-        <span className="shrink-0 rounded-full border border-card-border px-2 py-0.5 text-[10px] text-muted/70 whitespace-nowrap">
-          {row.house}
+    <div className="my-12 rounded-2xl border-2 border-emerald-700/25 bg-white p-7 shadow-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-bold tracking-widest text-emerald-700 uppercase">Story of the Week</span>
+        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
+          {feature.count} questions
         </span>
       </div>
-      <p className="text-[11px] text-accent-green/80">{row.stage}</p>
-      <p className="text-xs leading-relaxed text-muted">{blurb}</p>
-      <p className="text-[10px] text-muted/40">
-        Updated{' '}
-        {new Date(row.lastUpdate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+      <h2 className="mt-3 text-2xl font-bold leading-snug text-stone-900">{feature.title}</h2>
+      <p className="mt-1 text-xs text-stone-500">
+        {[feature.asker, feature.party].filter(Boolean).join(' · ')} → {feature.department} · {feature.status}
+      </p>
+      <p className="mt-4 text-base leading-relaxed text-stone-700">{feature.summary}</p>
+      {feature.questions.length > 0 && (
+        <ul className="mt-5 space-y-2.5 border-l-2 border-emerald-700/20 pl-4">
+          {feature.questions.map((q, i) => (
+            <li key={i} className="text-sm italic leading-relaxed text-stone-600">{q}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function QAQuote({ item }: { item: NonNullable<DigestData['qa']>[number] }) {
+  const attribution = [item.asker, item.party, item.constituency].filter(Boolean).join(' · ')
+  return (
+    <div className="mt-8 border-l-2 border-stone-300 pl-5">
+      <p className="text-base font-medium leading-snug text-stone-900">{item.question}</p>
+      <p className="mt-2 text-[15px] leading-relaxed text-stone-600">{item.answer}</p>
+      <p className="mt-2 text-xs text-stone-400">
+        {attribution ? `${attribution} · ` : ''}
+        {item.department}
       </p>
     </div>
   )
@@ -80,16 +52,31 @@ function RecessView({ digest }: { digest: DigestData }) {
     : null
 
   return (
-    <div className="flex flex-col items-center text-center py-16 gap-6">
-      <p className="text-xs tracking-widest text-muted/50 uppercase">This week in Parliament</p>
-      <h2 className="text-2xl font-bold text-foreground">{digest.windowLabel}</h2>
-      <div className="max-w-lg rounded-xl border border-card-border bg-card-bg/50 p-8">
-        <p className="text-sm leading-relaxed text-muted">{digest.intro}</p>
-        {returnDate && (
-          <p className="mt-4 text-xs text-accent-green/80">
-            Parliament returns: {returnDate}
-          </p>
-        )}
+    <div className="my-12 text-center">
+      <p className="text-[15px] leading-relaxed text-stone-700">{digest.intro}</p>
+      {returnDate && <p className="mt-4 text-sm text-emerald-700">Parliament returns: {returnDate}</p>}
+    </div>
+  )
+}
+
+function EngagementCTA() {
+  return (
+    <div className="mt-16 border-t border-stone-200 pt-10">
+      <p className="text-xl font-bold text-stone-900">Is this what you would have asked?</p>
+      <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-stone-600">
+        Tell us what you&rsquo;d want your MP to put to the government this week &mdash; and see exactly
+        what they actually asked, and how they voted, in the Hansard app.
+      </p>
+      <div className="mt-6 flex flex-col sm:flex-row items-start sm:items-center gap-6">
+        <Link
+          href="/hansard"
+          className="inline-flex items-center gap-2 rounded-full border border-emerald-600/30 bg-emerald-50 px-6 py-3 text-sm font-medium text-emerald-800 transition-colors hover:bg-emerald-100"
+        >
+          See what your MP asked &rarr; Hansard
+        </Link>
+        <a href="#" className="text-sm text-stone-500 transition-colors hover:text-stone-800">
+          Follow for next week &rarr;
+        </a>
       </div>
     </div>
   )
@@ -99,105 +86,61 @@ export default function DigestView({ digest }: { digest: DigestData }) {
   const isRecess = digest.mode === 'recess'
 
   return (
-    <div className="py-20 sm:py-28">
-      <div className="mx-auto max-w-6xl px-6">
-        {/* Header */}
-        <div className="max-w-3xl">
-          <p className="text-xs tracking-widest text-accent-green/70 uppercase">
-            This Week in Parliament
-          </p>
-          <h1 className="mt-6 text-4xl sm:text-6xl text-foreground font-bold">
-            {digest.windowLabel}
-          </h1>
-        </div>
+    <div className="min-h-screen bg-[#faf9f6] py-16 text-stone-900 sm:py-24">
+      <article className="mx-auto max-w-3xl px-6">
+        {/* Masthead */}
+        <p className="text-xs tracking-widest text-emerald-700 uppercase">This Week in Parliament</p>
+        <h1 className="mt-4 text-3xl font-bold leading-tight sm:text-5xl">
+          {digest.headline ?? digest.windowLabel}
+        </h1>
+        <p className="mt-3 text-sm text-stone-500">House of Commons · {digest.windowLabel}</p>
+
+        {/* Standfirst */}
+        {digest.intro && (
+          <p className="mt-8 text-xl leading-relaxed text-stone-700">{digest.intro}</p>
+        )}
+
+        {/* Lead story */}
+        {digest.feature && <FeatureBlock feature={digest.feature} />}
 
         {isRecess ? (
-          <div className="mt-12">
-            <RecessView digest={digest} />
-          </div>
+          <RecessView digest={digest} />
         ) : (
           <>
-            {/* Stats */}
-            <div className="mt-10 grid grid-cols-2 sm:grid-cols-3 gap-4">
-              <StatCard value={digest.stats.divisions} label="Divisions" />
-              <StatCard value={digest.stats.questions.toLocaleString()} label="Written Questions" />
-              <StatCard value={digest.stats.distinctAskers} label="Members asking" />
-            </div>
+            {/* Body prose */}
+            {digest.body?.map((para, i) => (
+              <p key={i} className="mt-6 text-[17px] leading-relaxed text-stone-800">
+                {para}
+              </p>
+            ))}
 
-            {/* Intro */}
-            <div className="mt-12">
-              <div className="section-line" />
-              <p className="mt-8 text-xs tracking-widest text-muted/50 uppercase">Overview</p>
-              <p className="mt-4 text-sm leading-relaxed text-muted max-w-2xl">{digest.intro}</p>
-            </div>
-
-            {/* Department chart */}
+            {/* Chart figure */}
             {digest.departments.length > 0 && (
-              <div className="mt-12">
-                <div className="section-line" />
-                <p className="mt-8 text-xs tracking-widest text-muted/50 uppercase">
-                  Questions by Department
-                </p>
-                <p className="mt-2 text-xs text-muted/50">
-                  Top departments by written question volume this week
-                </p>
-                <div className="mt-6">
-                  <DepartmentChart departments={digest.departments} />
-                </div>
-              </div>
+              <figure className="mt-12">
+                <DepartmentChart departments={digest.departments} />
+                <figcaption className="mt-3 text-xs text-stone-500">
+                  Written questions by government department, {digest.windowLabel}.
+                </figcaption>
+              </figure>
             )}
 
-            {/* Votes */}
-            {digest.highlights.votes.length > 0 && (
-              <div className="mt-12">
-                <div className="section-line" />
-                <p className="mt-8 text-xs tracking-widest text-muted/50 uppercase">
-                  Notable Divisions
+            {/* Q&A pull-quotes */}
+            {digest.qa && digest.qa.length > 0 && (
+              <section className="mt-14">
+                <h2 className="text-xs tracking-widest text-stone-400 uppercase">In their own words</h2>
+                <p className="mt-2 text-sm text-stone-500">
+                  A few questions &mdash; and the answers ministers actually gave.
                 </p>
-                <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {digest.highlights.votes.map(v => (
-                    <VoteCard key={v.row.id} vote={v} />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Bills */}
-            {digest.highlights.bills.length > 0 && (
-              <div className="mt-12">
-                <div className="section-line" />
-                <p className="mt-8 text-xs tracking-widest text-muted/50 uppercase">
-                  Bills in Progress
-                </p>
-                <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                  {digest.highlights.bills.map(b => (
-                    <BillCard key={b.row.id} bill={b} />
-                  ))}
-                </div>
-              </div>
+                {digest.qa.map((q, i) => (
+                  <QAQuote key={i} item={q} />
+                ))}
+              </section>
             )}
           </>
         )}
 
-        {/* CTAs */}
-        <div className="mt-20">
-          <div className="section-line mb-10" />
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-            <Link
-              href="/hansard"
-              className="inline-flex items-center gap-2 rounded-full border border-accent-green/40 bg-accent-green/10 px-6 py-3 text-sm text-accent-green hover:bg-accent-green/20 transition-colors"
-            >
-              Get Hansard — 99p →
-            </Link>
-            <a
-              href="#"
-              className="text-sm text-muted/60 hover:text-muted transition-colors"
-            >
-              Follow for next week →
-            </a>
-          </div>
-        </div>
-      </div>
+        <EngagementCTA />
+      </article>
     </div>
   )
 }

@@ -22,8 +22,8 @@ export default function DepartmentChart({ departments }: Props) {
   const maxCount = rows[0]?.count ?? 1
   const BAR_HEIGHT = 20
   const ROW_GAP = 10
-  const LABEL_WIDTH = 260
-  const CHART_WIDTH = 480
+  const LABEL_WIDTH = 310
+  const CHART_WIDTH = 460
   const COUNT_WIDTH = 50
   const rowH = BAR_HEIGHT + ROW_GAP
   const svgHeight = rows.length * rowH
@@ -44,8 +44,8 @@ export default function DepartmentChart({ departments }: Props) {
           const isOthers = d.department === 'Others'
           // Truncate long department names
           const label =
-            d.department.length > 32
-              ? d.department.slice(0, 30) + '…'
+            d.department.length > 40
+              ? d.department.slice(0, 38) + '…'
               : d.department
 
           return (
@@ -56,8 +56,8 @@ export default function DepartmentChart({ departments }: Props) {
                 y={y + BAR_HEIGHT / 2 + 1}
                 textAnchor="end"
                 dominantBaseline="middle"
-                fontSize={9.5}
-                fill={isOthers ? '#6b7280' : '#8b949e'}
+                fontSize={10}
+                fill={isOthers ? '#a8a29e' : '#44403c'}
               >
                 {label}
               </text>
@@ -67,7 +67,7 @@ export default function DepartmentChart({ departments }: Props) {
                 y={y + 2}
                 width={CHART_WIDTH}
                 height={BAR_HEIGHT - 4}
-                fill="#1e2530"
+                fill="#ece9e4"
                 rx={3}
               />
               {/* Bar fill */}
@@ -76,9 +76,9 @@ export default function DepartmentChart({ departments }: Props) {
                 y={y + 2}
                 width={barW}
                 height={BAR_HEIGHT - 4}
-                fill={isOthers ? '#2d3748' : '#3da87a'}
+                fill={isOthers ? '#d6d3d1' : '#047857'}
                 rx={3}
-                opacity={isOthers ? 0.6 : 0.8}
+                opacity={isOthers ? 0.7 : 0.9}
               />
               {/* Count */}
               <text
@@ -87,7 +87,7 @@ export default function DepartmentChart({ departments }: Props) {
                 textAnchor="start"
                 dominantBaseline="middle"
                 fontSize={9}
-                fill={isOthers ? '#4b5563' : '#8b949e'}
+                fill={isOthers ? '#a8a29e' : '#78716c'}
               >
                 {d.count.toLocaleString()}
               </text>
