@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>This Week in Parliament — Design Spec — 2026-06-03</title>
+<style>
+  :root { --bg:#fafaf8; --fg:#18181b; --muted:#6b6b73; --rule:#e5e5e1;
+    --aside-bg:#f4f3ee; --accent:#c2410c; --code-bg:#f1efe8;
+    --ok:#5a6a44; --warn:#b45309; }
+  html,body{background:var(--bg);color:var(--fg);
+    font-family:ui-monospace,"Space Mono",SFMono-Regular,Menlo,Monaco,monospace;
+    line-height:1.6;margin:0;}
+  body{max-width:900px;margin:0 auto;padding:56px 24px 96px;font-size:15px;}
+  h1{font-size:30px;line-height:1.15;margin:0 0 12px;letter-spacing:-0.01em;}
+  h2.phase{font-size:22px;margin:54px 0 16px;border-top:2px solid var(--rule);padding-top:26px;}
+  h3.item{font-size:17px;margin:28px 0 8px;}
+  p{margin:10px 0;} p strong{font-weight:700;}
+  .byline{color:var(--muted);font-style:italic;margin:0 0 24px;}
+  hr{border:none;border-top:1px solid var(--rule);margin:36px 0;}
+  aside{background:var(--aside-bg);border-left:3px solid var(--accent);
+    padding:14px 18px;margin:18px 0;border-radius:0 6px 6px 0;}
+  aside p{margin:6px 0;}
+  aside.insight{border-left-color:var(--ok);}
+  code,kbd{font-family:inherit;background:var(--code-bg);padding:1px 6px;
+    border-radius:3px;font-size:0.9em;}
+  pre{background:var(--code-bg);border-radius:6px;padding:14px 16px;overflow-x:auto;font-size:0.84em;line-height:1.5;}
+  ol,ul{padding-left:22px;} li{margin:5px 0;}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:0.9em;}
+  th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--rule);vertical-align:top;}
+  th{font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;font-size:0.8em;}
+  .ok{color:var(--ok);font-weight:700;} .warn{color:var(--warn);font-weight:700;}
+  .pill{font-size:0.78em;color:var(--muted);}
+  .lock{display:inline-block;font-size:0.72em;font-weight:700;padding:1px 7px;border-radius:10px;
+    background:var(--ok);color:#fff;text-transform:uppercase;letter-spacing:0.03em;}
+  .scope{display:inline-block;font-size:0.72em;font-weight:700;padding:1px 7px;border-radius:10px;
+    background:var(--warn);color:#fff;text-transform:uppercase;letter-spacing:0.03em;}
+</style>
+</head>
+<body>
+<h1>This Week in Parliament <span class="scope">phase 1</span></h1>
+<p class="byline">2026-06-03 · design spec · A weekly, recess-aware digest of what the House of Commons voted on and was asked, published to <code>henceforth.club/hansard/this-week</code> and Twitter every Wednesday before noon PMQs. Phase 1 of a civic-pressure flywheel; this round is the <em>audience-building digest only</em> — the MP-pressure mechanism is the documented north star, not built here.</p>
+
+<aside><p><strong>One-line summary:</strong> a Vercel Cron pulls the week's Commons divisions and written questions from the official Parliament APIs, computes headline stats and a <em>questions-by-department</em> chart, ranks a handful of highlights and has an LLM write short blurbs in a cheeky-but-credible voice — then lands it as a <strong>draft the owner reviews and approves</strong> before it publishes to a Next.js page and is posted (manually) to Twitter. It runs every week, switching to a "they're on their holidays" treatment during recess (verified against Parliament's published recess calendar, never guessed).</p></aside>
+
+<aside class="insight"><p><strong>Why this is marketing content, not an app feature.</strong> This lives entirely in the <code>henceforth-club</code> Next.js site — <em>not</em> the Hansard iOS app. Its job is top-of-funnel: build an audience (Twitter following + SEO-able web archive) and drive 99p app downloads. No Swift is touched. The eventual pay-off — turning that audience's demand into organised pressure on MPs — is Phase 2/3.</p></aside>
+
+<h3 class="item">Locked decisions <span class="lock">confirmed with owner</span></h3>
+<table>
+<tr><th>Question</th><th>Decision</th></tr>
+<tr><td>What we're building</td><td><strong>External marketing content</strong> — a weekly web + Twitter digest. Not an iOS feature.</td></tr>
+<tr><td>Goal</td><td><strong>Build an audience</strong> to nurture toward the paid app. Audience = Twitter following + website visitors.</td></tr>
+<tr><td>Channels</td><td><strong>Website + Twitter only.</strong> No email, no newsletter platform, no subscribe form, no list. (Owner explicitly trimmed these.)</td></tr>
+<tr><td>Home</td><td><code>henceforth.club/hansard/this-week</code> (canonical) + per-week archive. New route under the existing <code>/hansard</code> section of the Next.js 16 / React 19 / Tailwind 4 site on Vercel.</td></tr>
+<tr><td>Content shape</td><td><strong>Curated highlights + a data hero</strong>: headline stats ("650 MPs · 4,012 written questions · 23 votes") and a <strong>questions-by-department chart</strong>, plus ranked notable votes / questions / bills with short blurbs.</td></tr>
+<tr><td>Topic breakdown</td><td><strong>By answering department</strong> (from the API's <code>answeringBodyName</code> — free + exact). Semantic ("NHS waiting lists" etc.) topic classification is <strong>deferred</strong>.</td></tr>
+<tr><td>Automation level</td><td><strong>C — Assisted draft.</strong> Cron generates a draft; owner reviews + approves; then it publishes. Nothing auto-publishes unattended.</td></tr>
+<tr><td>Schedule</td><td><strong>Every Wednesday, <code>0 5 * * 3</code> (05:00 UTC)</strong> so the draft is ready before a 07:00 post and well before noon PMQs, year-round across DST.</td></tr>
+<tr><td>Window</td><td><strong>Since last Wednesday</strong> ("since the PM last took questions") — a Wed-to-Wed window, not a calendar week.</td></tr>
+<tr><td>Recess</td><td><strong>Always runs.</strong> Three modes — normal / quiet-sitting / recess — gated on Parliament's published recess calendar. Recess gets the cheeky "on holiday 🏖️" treatment; a merely-quiet sitting week does <em>not</em> (credibility).</td></tr>
+<tr><td>Voice</td><td><strong>Informative with a cheeky edge</strong>, baked into the LLM prompt for consistency.</td></tr>
+<tr><td>North star (deferred)</td><td>Aggregate audience demand → apply pressure on MPs to ask the questions users want (constituent → own-MP). Phase 2/3.</td></tr>
+</table>
+
+<h2 class="phase">1 · Goals &amp; non-goals</h2>
+<p><strong>Goal.</strong> Ship a repeatable weekly pipeline that, every Wednesday morning, turns the previous parliamentary week into a published, shareable digest — a web page at <code>/hansard/this-week</code> and a Twitter-ready chart image + thread — with the owner approving each issue before it goes live. The digest must be accurate (numbers and the chart come straight from official API data), skimmable, on-brand (cheeky-but-credible), and never publish an empty or misleading page (recess-aware, human-gated).</p>
+<p><strong>Non-goals (this phase).</strong> No email, newsletter platform, subscribe form, or owned list. No constituency capture (it returns with the pressure mechanism). No semantic topic classification — department breakdown only. No auto-posting to Twitter (owner posts manually). No changes to the Hansard iOS app or any Swift. No personalisation / per-MP digests. No comments, accounts, or user data of any kind.</p>
+
+<h2 class="phase">2 · Architecture — one source of truth</h2>
+<p>A pure data flow with the official Parliament APIs as the single authority. Effects (HTTP fetches, the LLM call, writing the draft, deploying) sit at the edges; the middle — stats, the department histogram, highlight ranking, mode selection, window maths — is total functions over plain data, so the numbers cannot disagree with what Parliament actually did, and every transform is unit-testable.</p>
+<pre>  Wednesday 05:00 UTC — Vercel Cron
+        │   window = (last Wednesday 00:00 .. this Wednesday 05:00), London-aware
+        ▼
+  Fetch (effects, at the edge):
+    • Commons Votes API        → divisions in window
+    • Written Questions API    → questions in window (+ answeringBodyName, asker)
+    • Bills API                → bills with stage movement in window
+    • Recess calendar          → is the House sitting this window?
+        ▼
+  Compute (pure, tested):
+    DigestData {
+      window, mode: normal | quiet | recess,
+      stats: { mps, questions, divisions, distinctAskers },
+      departmentHistogram: [ { body, count } ],     ← the chart
+      highlights: { votes[], questions[], bills[] }  ← ranked, top-N
+    }
+        ▼
+  Narrate (effect — one bounded LLM call):
+    short blurbs per highlight + a mode-appropriate intro, cheeky house voice
+        ▼
+  Draft  →  owner reviews  →  APPROVE  →  publish (ISR page) + chart image
+                                          → owner posts to Twitter (manual)</pre>
+<aside class="insight"><p><strong>Why diff-and-count instead of editorial logic:</strong> the chart is just a histogram of <code>answeringBodyName</code>; the headline numbers are counts over the window; "mode" is a function of (activity level, recess-calendar). None of it needs to understand politics, so none of it can get the politics wrong — the only judgement calls (which highlights, how to phrase them) are quarantined into the ranking heuristic and the single LLM step, both downstream of verified numbers.</p></aside>
+
+<h2 class="phase">3 · Components</h2>
+
+<h3 class="item">3.1 · The page — <code>/hansard/this-week</code></h3>
+<p>A Next.js App Router route under the existing <code>/hansard</code> section. Canonical issue at <code>/hansard/this-week</code>; permalinked archive at <code>/hansard/this-week/[week]</code> (e.g. <code>2026-06-03</code>). ISR-rendered from the approved <code>DigestData</code>; SEO metadata + a generated OpenGraph/chart image reusing the existing <code>hansard/opengraph-image.tsx</code> pattern.</p>
+<pre>┌───────────────────────────────────────────────┐
+│  THIS WEEK IN PARLIAMENT   ·  28 May–3 Jun 2026 │
+│                                                 │
+│  650 MPs · 4,012 written questions · 23 votes   │  ← hero stats
+│                                                 │
+│     ◐ questions by department (chart)           │  ← shareable hero
+│     Health 612 · Treasury 540 · Home 488 …      │
+│                                                 │
+│  ── Biggest votes ─────────────────────────     │
+│   • [Title] — Ayes 320 / Noes 295 · Passed      │  ← curated highlights
+│     one-line blurb (cheeky-but-credible)        │
+│  ── Notable questions ─────────────────────     │
+│   • [MP] asked [Dept] about … — blurb           │
+│  ── Bills moving ──────────────────────────     │
+│   • [Bill] — stage                              │
+│                                                 │
+│  [ Get Hansard — 99p ]   [ Follow for next week ]│  ← CTAs (no email)
+└───────────────────────────────────────────────┘</pre>
+<p>The bottom CTA drives the two things this phase optimises for: app downloads and Twitter follows. No form, no email capture.</p>
+
+<h3 class="item">3.2 · The weekly generator (the Cron pipeline)</h3>
+<p>A Vercel Cron-triggered serverless function (the <code>/api</code> surface already exists in the repo). On each run it executes the §2 flow and writes a <strong>draft</strong> — it does not publish. Data fetches are re-implemented in TypeScript against the public REST APIs (the Swift clients in the iOS app are reference only). The LLM step uses Anthropic (same provider as the existing daily-review automation), one bounded call per issue.</p>
+
+<h3 class="item">3.3 · The three modes &amp; recess detection</h3>
+<table>
+<tr><th>Mode</th><th>Trigger</th><th>Treatment</th></tr>
+<tr><td><strong>normal</strong></td><td>House sat; meaningful activity in window.</td><td>Full digest — stats, chart, ranked highlights.</td></tr>
+<tr><td><strong>quiet</strong></td><td>House sat (per calendar) but little happened.</td><td>Lighter digest, "slow week in the Commons." <strong>Not</strong> "on holiday" — they were there.</td></tr>
+<tr><td><strong>recess</strong></td><td>Recess calendar confirms the House did not sit.</td><td>Cheeky "Parliament's on its holidays 🏖️" — 0 votes / 0 new questions, a countdown to their return date, optional one throwback stat or "what's coming when they're back."</td></tr>
+</table>
+<aside class="insight"><p><strong>Recess is verified, not inferred from emptiness.</strong> A genuinely quiet sitting week and a recess week both look near-empty in the data — but only one is "they're on holiday." Cross-referencing Parliament's <em>published recess dates</em> is what separates a credible joke from a factual error. The recess calendar source (an API endpoint or a maintained constant of the published dates) is resolved at build; it also supplies the accurate "back on [date]" line.</p></aside>
+
+<h3 class="item">3.4 · Draft → approve → publish (the "C" loop)</h3>
+<p>The human-in-the-loop is the whole point of mode C. Two implementation options, decided at planning time:</p>
+<table>
+<tr><th>Option</th><th>How approval works</th><th>Trade-off</th></tr>
+<tr><td><strong>(a) git-PR</strong></td><td>The Cron commits the draft <code>DigestData</code> (JSON/MDX) to a branch and opens a PR. <em>The owner's PR review IS the approval.</em> Merge → Vercel deploys → page live.</td><td>No database; fully versioned; native to how the owner already works. Needs a GitHub token in the Cron and a PR-automation step.</td></tr>
+<tr><td><strong>(b) KV + admin</strong></td><td>Draft stored in Vercel KV; a protected preview route shows it with an "Approve &amp; Publish" button that flips <code>status: draft→published</code>.</td><td>Self-contained; needs an auth-gated admin route and a small KV store.</td></tr>
+</table>
+<p><strong>Recommendation:</strong> start with <strong>(a) git-PR</strong> — zero new infrastructure, the digest history lives in git, and reviewing a PR is already the owner's daily-review muscle. Fall back to (b) only if Cron→GitHub automation proves fiddly.</p>
+
+<h2 class="phase">4 · Scheduling &amp; the parliamentary week</h2>
+<p>Cron expression <code>0 5 * * 3</code> — 05:00 UTC every Wednesday. Because Vercel Cron is UTC and the UK observes DST, this lands ~05:00 London in winter (GMT) and ~06:00 in summer (BST) — both comfortably before a 07:00 post and far before noon PMQs, with no per-season cron juggling. Precise weekly scheduling requires <strong>Vercel Pro</strong> (Hobby crons are best-effort daily); the site is already on a paid plan for the daily reviews.</p>
+<p>The window is <strong>last Wednesday 00:00 London → this Wednesday 05:00 London</strong>. Window maths must be DST-correct (compute in <code>Europe/London</code>, not naive UTC arithmetic) — a unit-tested pure function. If the owner finds a same-morning review too tight to rely on weekly, the alternative is generating <strong>Tuesday evening</strong> and reviewing at leisure; the pipeline is identical, only the cron expression changes.</p>
+
+<h2 class="phase">5 · Data sources</h2>
+<aside class="warn" style="border-left-color:var(--warn)"><p><strong>Exact endpoints, query params, and field names are verified against the live APIs during implementation — not assumed here.</strong> The shapes below are the intent; the plan's first task is to confirm them.</p></aside>
+<table>
+<tr><th>Source</th><th>Used for</th><th>Notes</th></tr>
+<tr><td>Commons Votes API (<code>commonsvotes-api.parliament.uk</code>)</td><td>Divisions in window — counts + notable votes (title, aye/no, outcome).</td><td>Already used by the Hansard iOS app; date-filterable.</td></tr>
+<tr><td>Written Questions API (<code>questions-statements-api.parliament.uk</code>)</td><td>Question counts, distinct askers, <code>answeringBodyName</code> for the chart, notable questions.</td><td>The department histogram depends on <code>answeringBodyName</code> being present per question — confirm at build.</td></tr>
+<tr><td>Bills API (<code>bills-api.parliament.uk</code>)</td><td>Bills with stage movement in window.</td><td>Already used by the app.</td></tr>
+<tr><td>Recess / sitting calendar</td><td>Mode selection + accurate "back on [date]".</td><td>Source TBD-at-build: a Parliament endpoint if one exists, else a maintained constant of the published recess dates.</td></tr>
+<tr><td>Anthropic (Claude)</td><td>Highlight blurbs + mode-appropriate cheeky intro.</td><td>One bounded call per issue; same provider as the daily reviews.</td></tr>
+</table>
+
+<h2 class="phase">6 · House voice</h2>
+<p>Informative with a cheeky edge — credible enough that the numbers are trusted, with enough personality to be shareable. Encoded as a reusable system prompt for the LLM step, with the mode passed in (a recess intro is openly playful; a normal-week intro is wry but straight). The voice never editorialises the <em>numbers</em> — only the framing.</p>
+
+<h2 class="phase">7 · Distribution</h2>
+<p><strong>Website</strong> is canonical and permanent (archive + SEO). <strong>Twitter</strong> is the reach channel: the generator produces a chart image; the owner posts it natively with the 2-3 sharpest items and a link to the page (native value first — X throttles link posts, so the thread must stand alone). Auto-posting is explicitly out of scope this phase.</p>
+
+<h2 class="phase">8 · Error handling</h2>
+<ul>
+<li><strong>Fetch or LLM failure</strong> → the draft simply doesn't complete. Because publishing is human-gated, a failed/partial run can <em>never</em> ship a broken page or post. Retry next week or re-run manually.</li>
+<li><strong>Idempotency</strong> → the generator is keyed by week; re-running the same Wednesday overwrites that week's draft, never duplicates.</li>
+<li><strong>Partial data</strong> → if one source is down (e.g. Bills API), the digest renders the sections it has and notes the gap, rather than failing whole.</li>
+<li><strong>Recess-calendar miss</strong> → if recess status can't be determined, fall back to <strong>quiet</strong> mode (never assert "on holiday" without confirmation).</li>
+</ul>
+
+<h2 class="phase">9 · Testing</h2>
+<p>The pure core is the test surface (vitest):</p>
+<ul>
+<li><strong>Window maths</strong> — last-Wed→this-Wed in <code>Europe/London</code>, including the two DST changeover weeks.</li>
+<li><strong>Stats &amp; department histogram</strong> — counts and grouping over fixture API payloads.</li>
+<li><strong>Mode selection</strong> — normal / quiet / recess given (activity, recess-calendar) combinations, incl. the "quiet sitting week must not say holiday" case.</li>
+<li><strong>Highlight ranking</strong> — deterministic top-N over fixtures.</li>
+<li><strong>Page render</strong> — renders from a <code>DigestData</code> fixture for each mode (component/snapshot).</li>
+</ul>
+<p>The LLM step and live fetches are mocked in tests; a thin live-smoke check (real APIs, no publish) can be run manually before the first real issue.</p>
+
+<h2 class="phase">10 · North star — deferred <span class="scope">phase 2 / 3</span></h2>
+<p>The reason the audience matters: <strong>apply organised pressure on MPs to ask the questions users want.</strong> The highest-leverage unit is a verified constituent contacting their <em>own</em> MP, and legitimacy (real constituents, not bots) is the whole asset. Phase 1 deliberately does <strong>not</strong> capture constituency (no email/form this round), so Phase 2 owns the demand-capture (a constituency-aware "what do you want asked?" surface) and Phase 3 the pressure mechanism (constituent→own-MP action, a public demand tally, escalation to official petitions — <code>petition.parliament.uk</code> is already integrated in the app). Phase 1's only obligation to the north star is to not foreclose it — and a separate web capture surface slots in cleanly later.</p>
+
+<h2 class="phase">11 · Decided at planning time</h2>
+<ul>
+<li>Approval mechanism: git-PR (recommended) vs KV+admin.</li>
+<li>Recess-calendar source: Parliament endpoint vs maintained constant.</li>
+<li>Exact API endpoints / params / field names (verified live).</li>
+<li>Chart rendering lib for the page (e.g. lightweight SVG / Recharts) and the share-image generator.</li>
+<li>Generation cadence if same-morning review is too tight (Wed 05:00 vs Tue evening).</li>
+</ul>
+
+<hr />
+<p class="pill">henceforth.club · design spec · This Week in Parliament · Phase 1 of the civic-pressure flywheel · 2026-06-03</p>
+</body>
+</html>
