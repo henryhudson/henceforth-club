@@ -10,8 +10,12 @@ export function buildStats(divisions: number, qs: QuestionRow[]): DigestStats {
 }
 const QUIET_QUESTION_THRESHOLD = 200
 export function selectMode(x: { isRecess: boolean; divisions: number; questions: number }): Mode {
-  if (x.isRecess) return 'recess'
-  if (x.divisions === 0 && x.questions < QUIET_QUESTION_THRESHOLD) return 'quiet'
+  // A near-empty window. Recess mode ("on holiday") only fires when the House
+  // genuinely did nothing — a straddle week (back from recess, but with real
+  // votes/questions) is a normal week, not a holiday. Credibility over the joke.
+  const quiet = x.divisions === 0 && x.questions < QUIET_QUESTION_THRESHOLD
+  if (x.isRecess && quiet) return 'recess'
+  if (quiet) return 'quiet'
   return 'normal'
 }
 export function rankVotes(rows: DivisionRow[], n = 5): DivisionRow[] {

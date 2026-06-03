@@ -10,8 +10,11 @@ it('department histogram counts and sorts desc', () => {
 it('distinct askers counts unique askerId', () => {
   expect(buildStats(5, [q(1,'A',7), q(2,'B',7), q(3,'C',9)]).distinctAskers).toBe(2)
 })
-it('recess wins regardless of activity', () => {
+it('a quiet recess window is recess', () => {
   expect(selectMode({ isRecess: true, divisions: 0, questions: 0 })).toBe('recess')
+})
+it('a recess straddle with real activity is normal, not a holiday', () => {
+  expect(selectMode({ isRecess: true, divisions: 4, questions: 2247 })).toBe('normal')
 })
 it('a sitting week with little activity is quiet, NOT recess', () => {
   expect(selectMode({ isRecess: false, divisions: 0, questions: 3 })).toBe('quiet')

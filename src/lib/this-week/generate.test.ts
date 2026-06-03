@@ -45,8 +45,10 @@ describe('generateDigest', () => {
       narrate: fakeNarrate,
     })
 
-    // mode is 'recess' because the nonSitting fixture overlaps
-    expect(result.mode).toBe('recess')
+    // The recess row overlaps the window, but there were real votes and
+    // questions — a straddle week is 'normal' (not a holiday). The recess
+    // return date is still captured (asserted below).
+    expect(result.mode).toBe('normal')
 
     // stats
     expect(result.stats.questions).toBe(3)
