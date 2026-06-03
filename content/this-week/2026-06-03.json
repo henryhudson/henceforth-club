@@ -1,0 +1,93 @@
+{
+  "week": "2026-06-03",
+  "windowLabel": "27 May – 3 June 2026",
+  "mode": "normal",
+  "generatedAt": "2026-06-03T05:00:00.000Z",
+  "recessReturnISO": null,
+  "stats": {
+    "divisions": 23,
+    "questions": 2427,
+    "distinctAskers": 540
+  },
+  "departments": [
+    { "department": "HM Treasury", "count": 312 },
+    { "department": "Home Office", "count": 287 },
+    { "department": "Department of Health and Social Care", "count": 241 },
+    { "department": "Ministry of Justice", "count": 198 },
+    { "department": "Department for Education", "count": 176 },
+    { "department": "Cabinet Office", "count": 153 },
+    { "department": "Department for Work and Pensions", "count": 141 },
+    { "department": "Foreign, Commonwealth & Development Office", "count": 129 },
+    { "department": "Ministry of Defence", "count": 118 },
+    { "department": "Department for Transport", "count": 97 },
+    { "department": "Department for Energy Security and Net Zero", "count": 84 },
+    { "department": "Department for Business and Trade", "count": 76 },
+    { "department": "Ministry of Housing, Communities and Local Government", "count": 68 },
+    { "department": "Department for Science, Innovation and Technology", "count": 54 },
+    { "department": "Office for Environmental Protection", "count": 29 },
+    { "department": "Leader of the House", "count": 19 },
+    { "department": "Parliamentary Under-Secretary of State", "count": 12 },
+    { "department": "Solicitor General", "count": 7 },
+    { "department": "Advocate General for Scotland", "count": 4 },
+    { "department": "Northern Ireland Office", "count": 3 }
+  ],
+  "highlights": {
+    "votes": [
+      {
+        "row": {
+          "id": 1847,
+          "title": "National Insurance Contributions (Employer Rates) Bill — Third Reading",
+          "date": "2026-05-28",
+          "ayes": 312,
+          "noes": 178
+        },
+        "blurb": "The government's flagship employer NI rate adjustment cleared the Commons at third reading. Labour held firm, with just three rebels abstaining. Conservatives voted unanimously against, arguing the change stifles hiring at the precise moment the economy needs it. The bill now heads to the Lords, where cross-bench peers are expected to table amendments on the threshold mechanism."
+      },
+      {
+        "row": {
+          "id": 1851,
+          "title": "Investigatory Powers (Amendment) Act 2016 — Sunset Clause Extension",
+          "date": "2026-05-29",
+          "ayes": 289,
+          "noes": 241
+        },
+        "blurb": "Razor-thin majority extended the bulk data retention powers by another three years. A sizeable Labour rebel bloc joined the Liberal Democrats in opposition, citing the lack of independent judicial sign-off. The vote exposed genuine cross-party discomfort with surveillance legislation, and the government's majority of 48 was its narrowest of the session."
+      },
+      {
+        "row": {
+          "id": 1863,
+          "title": "Agriculture (Sustainable Farming) Bill — New Clause 12",
+          "date": "2026-06-01",
+          "ayes": 198,
+          "noes": 301
+        },
+        "blurb": "An SNP amendment requiring a binding annual emissions target for UK agriculture fell at committee stage. The government argued the clause duplicated existing Climate Change Act obligations. Behind the scenes, farming unions lobbied hard against it, fearing punitive compliance costs for smaller holdings. The Scottish Government is expected to pursue an equivalent measure at Holyrood."
+      }
+    ],
+    "questions": [],
+    "bills": [
+      {
+        "row": {
+          "id": 3214,
+          "title": "Digital Identity and Data Use Bill",
+          "house": "Commons",
+          "stage": "Report Stage",
+          "lastUpdate": "2026-06-02"
+        },
+        "blurb": "The digital ID framework crept through report stage with a raft of government amendments clarifying the role of the new Office for Digital Identities. Critics worry the accreditation scheme still lacks teeth — the enforcement penalty cap was raised from £250k to £1m after sustained pressure from the DCMS committee, but privacy advocates argue even this is a rounding error for large platforms."
+      },
+      {
+        "row": {
+          "id": 3198,
+          "title": "Renters' Rights Bill",
+          "house": "Lords",
+          "stage": "Committee Stage",
+          "lastUpdate": "2026-05-30"
+        },
+        "blurb": "Peers spent most of Tuesday dissecting the 'no-fault eviction' abolition clause. Landlord-aligned crossbenchers tabled amendments carving out exceptions for family members reclaiming property. The government resisted, but acknowledged 'technical drafting work' was ongoing. The bill remains on track for Royal Assent before the summer recess — if the Lords don't insist on their amendments."
+      }
+    ]
+  },
+  "intro": "Parliament had a bruising week — 23 divisions, a surveillance vote that nearly ambushed the government, and 2,427 written questions covering everything from RAAC concrete in schools to the UK's posture on contested Arctic shipping lanes. The chamber was occasionally heated but rarely surprised anyone who has been watching since autumn. Carry on.",
+  "status": "published"
+}
