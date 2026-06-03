@@ -6,20 +6,18 @@ export const size = ogSize
 export const contentType = ogContentType
 export const alt = 'This Week in Parliament — Hansard digest'
 
-const ACCENT = '#3da87a'
-const ACCENT_GLOW = 'rgba(61, 168, 122, 0.22)'
+const INK = '#1c1a16'
+const MUTED = '#6b6358'
+const ACCENT = '#047857'
+const BG = '#faf9f6'
 
 export default function OG() {
   const digest = loadLatestPublishedDigest()
-
-  const windowLabel = digest?.windowLabel ?? 'This Week in Parliament'
-  const divisions = digest?.stats.divisions ?? 0
-  const questions = digest?.stats.questions ?? 0
-  const distinctAskers = digest?.stats.distinctAskers ?? 0
-
-  // Top 5 departments for bar chart
-  const departments = (digest?.departments ?? []).slice(0, 5)
-  const maxCount = departments[0]?.count ?? 1
+  const windowLabel = digest?.windowLabel ?? ''
+  const headline = digest?.headline ?? 'This Week in Parliament'
+  const stats = digest?.stats
+  const feature = digest?.feature
+  const isRecess = digest?.mode === 'recess'
 
   return new ImageResponse(
     (
@@ -30,141 +28,63 @@ export default function OG() {
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          padding: '80px',
-          background: '#06080a',
-          color: '#e6edf3',
+          padding: 72,
+          background: BG,
+          color: INK,
           fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-          backgroundImage: `
-            radial-gradient(circle at 0% 0%, ${ACCENT_GLOW}, transparent 45%),
-            radial-gradient(circle at 100% 100%, ${ACCENT_GLOW}, transparent 55%),
-            linear-gradient(to right, rgba(255,255,255,0.04) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(255,255,255,0.04) 1px, transparent 1px)
-          `,
-          backgroundSize: 'auto, auto, 60px 60px, 60px 60px',
         }}
       >
-        {/* Top bar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div
-            style={{
-              width: 12,
-              height: 12,
-              borderRadius: 999,
-              background: ACCENT,
-              boxShadow: `0 0 20px ${ACCENT}`,
-            }}
-          />
-          <div style={{ fontSize: 22, letterSpacing: 4, color: ACCENT, textTransform: 'uppercase' }}>
-            henceforth.club / hansard
-          </div>
-        </div>
-
-        {/* Main content: left = headline, right = bar chart */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 80, flex: 1, paddingTop: 48 }}>
-          {/* Left: label + stats */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 24, flex: 1 }}>
-            <div style={{ fontSize: 28, color: '#6b7280', letterSpacing: 2, textTransform: 'uppercase' }}>
+        {/* Eyebrow */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ width: 12, height: 12, borderRadius: 999, background: ACCENT }} />
+            <div style={{ fontSize: 22, letterSpacing: 4, color: ACCENT, textTransform: 'uppercase' }}>
               This Week in Parliament
             </div>
-            <div
-              style={{
-                fontSize: 68,
-                fontWeight: 700,
-                lineHeight: 1.05,
-                color: '#ffffff',
-                letterSpacing: -1,
-              }}
-            >
-              {windowLabel}
-            </div>
-            {/* Stat row */}
-            {digest && digest.mode !== 'recess' && (
-              <div style={{ display: 'flex', gap: 40, marginTop: 16 }}>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: 44, fontWeight: 700, color: ACCENT }}>
-                    {divisions}
-                  </span>
-                  <span style={{ fontSize: 16, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 2 }}>
-                    Divisions
-                  </span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: 44, fontWeight: 700, color: ACCENT }}>
-                    {questions.toLocaleString()}
-                  </span>
-                  <span style={{ fontSize: 16, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 2 }}>
-                    Questions
-                  </span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: 44, fontWeight: 700, color: ACCENT }}>
-                    {distinctAskers}
-                  </span>
-                  <span style={{ fontSize: 16, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 2 }}>
-                    Askers
-                  </span>
-                </div>
-              </div>
-            )}
-            {digest?.mode === 'recess' && (
-              <div style={{ fontSize: 32, color: '#6b7280', marginTop: 8 }}>
-                Parliament is in recess
-              </div>
-            )}
           </div>
+          <div style={{ fontSize: 22, color: MUTED }}>{windowLabel}</div>
+        </div>
 
-          {/* Right: department bar chart */}
-          {departments.length > 0 && (
+        {/* Headline + stats + story hook */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 26, flex: 1, justifyContent: 'center' }}>
+          <div style={{ display: 'flex', fontSize: 62, fontWeight: 700, lineHeight: 1.08, color: INK, maxWidth: 1040 }}>
+            {headline}
+          </div>
+          {stats && !isRecess && (
+            <div style={{ display: 'flex', fontSize: 30, color: MUTED }}>
+              {stats.distinctAskers} MPs · {stats.questions.toLocaleString()} written questions · {stats.divisions} votes
+            </div>
+          )}
+          {isRecess && (
+            <div style={{ display: 'flex', fontSize: 30, color: MUTED }}>Parliament is on recess 🏖️</div>
+          )}
+          {feature && (
             <div
               style={{
                 display: 'flex',
-                flexDirection: 'column',
-                gap: 10,
-                width: 340,
-                paddingTop: 8,
+                alignItems: 'center',
+                gap: 16,
+                marginTop: 6,
+                padding: '16px 22px',
+                borderRadius: 14,
+                border: `2px solid rgba(4,120,87,0.25)`,
+                background: '#ffffff',
               }}
             >
-              <div style={{ fontSize: 14, color: '#4b5563', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 8 }}>
-                Top Departments
+              <div style={{ display: 'flex', fontSize: 17, fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: 2 }}>
+                Story of the week
               </div>
-              {departments.map(d => {
-                const pct = Math.round((d.count / maxCount) * 100)
-                const short =
-                  d.department.length > 28 ? d.department.slice(0, 26) + '…' : d.department
-                return (
-                  <div key={d.department} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <div style={{ fontSize: 12, color: '#6b7280' }}>{short}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div
-                        style={{
-                          height: 8,
-                          width: `${pct * 2.8}px`,
-                          background: ACCENT,
-                          borderRadius: 4,
-                          opacity: 0.8,
-                        }}
-                      />
-                      <span style={{ fontSize: 12, color: '#4b5563' }}>{d.count}</span>
-                    </div>
-                  </div>
-                )
-              })}
+              <div style={{ display: 'flex', fontSize: 23, color: INK, maxWidth: 760 }}>
+                {feature.title} · {feature.count} questions
+              </div>
             </div>
           )}
         </div>
 
-        {/* Bottom bar */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            fontSize: 22,
-            color: '#6b7280',
-          }}
-        >
-          <div>iOS · Henceforth Bitcoin Limited</div>
-          <div style={{ color: ACCENT }}>/hansard/this-week</div>
+        {/* Footer */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 22, color: MUTED }}>
+          <div style={{ display: 'flex' }}>henceforth.club</div>
+          <div style={{ display: 'flex', color: ACCENT }}>/hansard/this-week</div>
         </div>
       </div>
     ),

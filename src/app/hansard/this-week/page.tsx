@@ -8,9 +8,15 @@ export const revalidate = 3600
 export function generateMetadata(): Metadata {
   const digest = loadLatestPublishedDigest()
   if (!digest) return { title: 'This Week in Parliament' }
+  const title = `This Week in Parliament — ${digest.windowLabel}`
+  const description =
+    digest.intro?.slice(0, 180) ??
+    'A weekly digest of what the UK House of Commons voted on and was asked.'
   return {
-    title: `This Week in Parliament — ${digest.windowLabel}`,
-    description: digest.intro.slice(0, 160),
+    title,
+    description,
+    openGraph: { title, description, type: 'article', url: '/hansard/this-week' },
+    twitter: { card: 'summary_large_image', title, description },
   }
 }
 
