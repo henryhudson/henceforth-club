@@ -8,7 +8,7 @@ function FeatureBlock({ feature }: { feature: NonNullable<DigestData['feature']>
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-bold tracking-widest text-emerald-700 uppercase">Story of the Week</span>
         <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
-          {feature.count} questions
+          {feature.kicker ?? `${feature.count} questions`}
         </span>
       </div>
       <h2 className="mt-3 text-2xl font-bold leading-snug text-stone-900">{feature.title}</h2>
@@ -38,6 +38,53 @@ function QAQuote({ item }: { item: NonNullable<DigestData['qa']>[number] }) {
         {item.department}
       </p>
     </div>
+  )
+}
+
+function VotesSection({ votes }: { votes: DigestData['highlights']['votes'] }) {
+  return (
+    <section className="mt-14">
+      <h2 className="text-xs tracking-widest text-stone-400 uppercase">How they voted</h2>
+      <p className="mt-2 text-sm text-stone-500">Every recorded division on the floor of the House this week.</p>
+      <ul className="mt-5 divide-y divide-stone-200">
+        {votes.map(({ row, blurb }) => {
+          const carried = row.ayes > row.noes
+          return (
+            <li key={row.id} className="py-3">
+              <div className="flex items-baseline justify-between gap-4">
+                <span className="text-[15px] font-medium text-stone-900">{row.title}</span>
+                <span className="shrink-0 text-sm tabular-nums text-stone-600">
+                  {row.ayes}&ndash;{row.noes}{' '}
+                  <span className={carried ? 'font-semibold text-emerald-700' : 'font-semibold text-stone-400'}>
+                    {carried ? 'carried' : 'rejected'}
+                  </span>
+                </span>
+              </div>
+              {blurb && <p className="mt-1 text-sm leading-relaxed text-stone-500">{blurb}</p>}
+            </li>
+          )
+        })}
+      </ul>
+    </section>
+  )
+}
+
+function BillsSection({ bills }: { bills: DigestData['highlights']['bills'] }) {
+  return (
+    <section className="mt-12">
+      <h2 className="text-xs tracking-widest text-stone-400 uppercase">Bills on the move</h2>
+      <ul className="mt-4 space-y-3">
+        {bills.map(({ row, blurb }) => (
+          <li key={row.id}>
+            <p className="text-[15px] font-medium text-stone-900">
+              {row.title}{' '}
+              <span className="text-xs font-normal text-stone-400">&middot; {row.house} &middot; {row.stage}</span>
+            </p>
+            {blurb && <p className="mt-0.5 text-sm leading-relaxed text-stone-500">{blurb}</p>}
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 
@@ -136,6 +183,10 @@ export default function DigestView({ digest }: { digest: DigestData }) {
                 ))}
               </section>
             )}
+
+            {/* Divisions + bills — the boring-but-necessary record */}
+            {digest.highlights.votes.length > 0 && <VotesSection votes={digest.highlights.votes} />}
+            {digest.highlights.bills.length > 0 && <BillsSection bills={digest.highlights.bills} />}
           </>
         )}
 

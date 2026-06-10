@@ -1,0 +1,152 @@
+{
+  "week": "2026-06-10",
+  "windowLabel": "3 Jun – 10 Jun 2026",
+  "headline": "Belfast: a near-fatal knife attack, and the question it forced on the Commons",
+  "mode": "normal",
+  "generatedAt": "2026-06-10T05:00:00.000Z",
+  "recessReturnISO": null,
+  "stats": {
+    "divisions": 8,
+    "questions": 2161,
+    "distinctAskers": 251
+  },
+  "departments": [
+    { "department": "Department of Health and Social Care", "count": 320 },
+    { "department": "Department for Transport", "count": 218 },
+    { "department": "Home Office", "count": 172 },
+    { "department": "Department for Environment, Food and Rural Affairs", "count": 159 },
+    { "department": "Ministry of Housing, Communities and Local Government", "count": 158 },
+    { "department": "Ministry of Defence", "count": 155 },
+    { "department": "Treasury", "count": 130 },
+    { "department": "Department for Business and Trade", "count": 125 },
+    { "department": "Cabinet Office", "count": 123 },
+    { "department": "Department for Education", "count": 110 },
+    { "department": "Department for Energy Security and Net Zero", "count": 100 },
+    { "department": "Department for Work and Pensions", "count": 91 },
+    { "department": "14 other departments", "count": 300 }
+  ],
+  "body": [
+    "It began with a knife to the throat. Shortly after 10:30pm on Monday 8 June, a man in his forties was set upon with a blade on Kinnaird Avenue in north Belfast. Footage showed the attacker on top of him, the knife at his neck, until three passers-by — one carrying a hurley — dragged the man off and pinned him until police arrived. The victim was rushed to hospital with life-threatening injuries: deep wounds to his throat, face, eyes and back. He remains in a serious condition, fighting for his life. The throat wounds led some outlets to describe it as an attempted beheading; the Police Service of Northern Ireland recovered a kitchen knife and charged a 30-year-old man with attempted murder, possession of a bladed article and threats to kill. The charge is attempted murder because the victim is alive — were he to die, it would become murder. He has not been named, and we do not name him here.",
+    "The attack lit a fuse. The anger and fear in north Belfast were immediate and real — but so was the disorder that followed the next night, when protests called online turned violent across the city and beyond: a bus hijacked and burned on the Newtownards Road, vehicles and barricades set alight, a police car torched in Portadown, and homes set on fire with families inside. That violence was condemned from every side — First Minister Michelle O’Neill, Deputy First Minister Emma Little-Pengelly, DUP leader Gavin Robinson and Justice Minister Naomi Long alike — and the PSNI appealed for calm. Running alongside the genuine grief was a current of false claims: that the victim had died, that he was a child, that it was an ISIS-style attack. The PSNI corrected ‘inaccurate online posts regarding the victim’s condition’; none of the rest stood up either. The facts were grave enough without them.",
+    "When it reached Westminster on Tuesday, the constitution shaped everything. Policing and justice in Northern Ireland are devolved — they sit with the PSNI, the Stormont Justice Minister Naomi Long and the Executive, not the Northern Ireland Secretary. So when the DUP’s Westminster leader Gavin Robinson rose with an Urgent Question — ‘North Belfast: Violent Attack’ — the ground Hilary Benn could actually answer on was the reserved one: immigration, asylum and the border. Robinson pressed on the suspect’s status, reported to be a five-year UK visa, and on community cohesion; Carla Lockhart pressed on abuse of the system ‘via the land border with the Republic of Ireland’. These are real questions, and the House put them squarely. Asked the sharpest of them — whether the man charged had entered the UK legally — Benn said he could not confirm it.",
+    "For all that, the busiest the division bell got this week had nothing to do with Belfast. Six of the eight recorded votes were on the Steel Industry (Nationalisation) Bill, in committee on the floor of the House — exactly where we left it seven days ago. The government swatted away opposition amendment after opposition amendment: New Clause 8 fell 145 to 251, New Clause 4 by 157 to 287, and New Clause 2 most heavily of all, 65 to 251. The whips never wobbled. The other two divisions were quieter machinery: a Combined Authorities (Mayoral Elections) order carried 356 to 86, and a deferred division approved cuts to England’s delinked farm payments, 302 to 155.",
+    "In the written questions — 2,161 of them this week, from 251 members — Health drew the most fire as ever (320), but the broadest single subject, measured by how many different MPs raised it, was the unglamorous business of electric-vehicle charging points, pressed by five. The week’s most pointed cluster was a name: ten questions on Lord Mandelson, as Mike Wood and Lisa Smart kept tugging at the threads of his vetting, his appointment and the Humble Address the House has demanded on it. Elsewhere the Home Office confirmed it had received ‘over 200,000 responses’ to its earned-settlement consultation on the path to permanent residence — a reminder that the immigration argument the Belfast Urgent Question tipped into is already grinding through the Commons in slower, quieter form."
+  ],
+  "feature": {
+    "title": "The Urgent Question — and the answer the Secretary of State couldn’t give",
+    "asker": "Gavin Robinson",
+    "party": "DUP",
+    "department": "Northern Ireland Office",
+    "count": 0,
+    "kicker": "Urgent Question · 9 Jun",
+    "status": "answered by the Northern Ireland Secretary",
+    "summary": "With policing and justice devolved to Stormont and the PSNI, Westminster’s hold on the Belfast attack is narrow — which is why the Commons’ set-piece on it, an Urgent Question from the DUP’s Gavin Robinson, turned on the reserved questions of immigration, asylum and the border rather than the investigation itself (charged as attempted murder; the victim, a man in his forties, is fighting life-threatening injuries and has not been named). Robinson pressed on the suspect’s reported five-year visa and on community cohesion; Carla Lockhart on the land border with the Republic. These are legitimate questions, and the House pressed them — but the one that mattered most, whether the man charged had entered the UK legally, drew only that Hilary Benn could not confirm it.",
+    "questions": [
+      "Gavin Robinson (DUP, Belfast East), who tabled the UQ — the attack’s implications for public safety, immigration enforcement and community cohesion, noting the suspect’s reported five-year visa.",
+      "Carla Lockhart (DUP, Upper Bann) — what the Government is doing to prevent abuse of the immigration system via the land border with the Republic of Ireland.",
+      "Hilary Benn, Northern Ireland Secretary, answering — unable to confirm whether the man charged had entered the UK illegally, and urging calm: it is communities that suffer when disorder follows."
+    ]
+  },
+  "topTopics": [
+    { "heading": "HM Coastguard: Conditions of Employment", "count": 10 },
+    { "heading": "Lord Mandelson", "count": 10 },
+    { "heading": "Prostate Cancer: Screening", "count": 8 },
+    { "heading": "Electric Vehicles: Charging Points", "count": 7 },
+    { "heading": "Police: Equality", "count": 7 },
+    { "heading": "Construction: Training", "count": 7 },
+    { "heading": "Members: Correspondence", "count": 6 },
+    { "heading": "Agriculture: UK Trade with EU", "count": 5 },
+    { "heading": "Tyres: Waste Disposal", "count": 5 },
+    { "heading": "Youth Diversion Orders", "count": 5 }
+  ],
+  "qa": [
+    {
+      "heading": "Immigration",
+      "asker": "Mike Martin",
+      "party": "Liberal Democrat",
+      "constituency": "Tunbridge Wells",
+      "department": "Home Office",
+      "question": "When does the Department plan to respond to the Earned Settlement consultation that closed on 12 February 2026?",
+      "answer": "The earned settlement model, proposed in ‘A Fairer Pathway to Settlement’, was subject to a public consultation which opened on 20 November 2025 and closed on 12 February 2026. We received over 200,000 responses and are now in the process of carefully considering the feedback received. The final model will be subject to economic and equality impact assessments, which we have committed to publish in due course."
+    },
+    {
+      "heading": "Dental Services: Finance",
+      "asker": "Martin Wrigley",
+      "party": "Liberal Democrat",
+      "constituency": "Newton Abbot",
+      "department": "Department of Health and Social Care",
+      "question": "Will NHS dentistry funding keep pace with inflation and population growth across the current Spending Review period?",
+      "answer": "The 2025 Spending Review sets departmental budgets for day-to-day spending up to 2028/29 and for capital for five years to 2029/30. The Government wants to ensure that every penny we allocate for dentistry is spent on dentistry, and that the ringfenced dental budget is spent on the patients who need it most."
+    },
+    {
+      "heading": "Agriculture: UK Trade with EU",
+      "asker": "Tim Farron",
+      "party": "Liberal Democrat",
+      "constituency": "Westmorland and Lonsdale",
+      "department": "Department for Environment, Food and Rural Affairs",
+      "question": "What estimate has the Department made of the number of small and medium-sized enterprises that may need to change production processes, certification, labelling or IT systems under the new UK–EU agreement?",
+      "answer": "The precise impacts of the agreement will depend on the outcome of the negotiations. As technical negotiations progress, this Government expects to follow normal processes for any necessary legislative changes and assess impacts accordingly, and will work with businesses to ensure a smooth transition."
+    }
+  ],
+  "highlights": {
+    "votes": [
+      {
+        "row": { "id": 2364, "title": "Steel Industry (Nationalisation) Bill — New Clause 8", "date": "2026-06-08", "ayes": 145, "noes": 251 },
+        "blurb": "The closest of six swings at the steel bill — defeated by 106. The government’s narrowest margin of the week, and still comfortable."
+      },
+      {
+        "row": { "id": 2363, "title": "Steel Industry (Nationalisation) Bill — New Clause 2", "date": "2026-06-08", "ayes": 65, "noes": 251 },
+        "blurb": "The most lopsided steel vote: just 65 ayes against 251. The whips held the government line all the way through committee."
+      },
+      {
+        "row": { "id": 2362, "title": "Steel Industry (Nationalisation) Bill — Amendment 12", "date": "2026-06-08", "ayes": 81, "noes": 266 },
+        "blurb": "Monday night’s opener on the bill that would let ministers take over a steelmaker outright — amendment lost 81 to 266."
+      },
+      {
+        "row": { "id": 2367, "title": "Steel Industry (Nationalisation) Bill — New Clause 4", "date": "2026-06-09", "ayes": 157, "noes": 287 },
+        "blurb": "The biggest opposition turnout against the bill all week — 157 ayes — and still 130 short. Defeated."
+      },
+      {
+        "row": { "id": 2366, "title": "Steel Industry (Nationalisation) Bill — New Clause 12", "date": "2026-06-09", "ayes": 94, "noes": 297 },
+        "blurb": "Tuesday’s grind continued: 94 to 297. Four more amendments, four more misses for the amenders."
+      },
+      {
+        "row": { "id": 2365, "title": "Steel Industry (Nationalisation) Bill — Amendment 20", "date": "2026-06-09", "ayes": 90, "noes": 290 },
+        "blurb": "90 ayes, 290 noes. The committee stage closed with the bill intact and the government’s position untouched."
+      },
+      {
+        "row": { "id": 2368, "title": "Draft Combined Authorities (Mayoral Elections) (Amendment) Order 2026", "date": "2026-06-09", "ayes": 356, "noes": 86 },
+        "blurb": "The week’s biggest majority — 356 to 86 — nodding through changes to how combined-authority mayors are elected."
+      },
+      {
+        "row": { "id": 2361, "title": "Draft Agriculture (Delinked Payments) (Reductions) (England) Regulations 2026", "date": "2026-06-03", "ayes": 302, "noes": 155 },
+        "blurb": "A deferred division approving further cuts to England’s delinked farm payments — carried 302 to 155."
+      }
+    ],
+    "questions": [],
+    "bills": [
+      {
+        "row": { "id": 4123, "title": "Steel Industry (Nationalisation) Bill", "house": "Commons", "stage": "Committee of the whole House", "lastUpdate": "2026-06-09" },
+        "blurb": "Lets the Secretary of State step in and take over a steel undertaking. Six committee divisions this week, every opposition amendment defeated."
+      },
+      {
+        "row": { "id": 4080, "title": "Representation of the People Bill", "house": "Commons", "stage": "Report stage", "lastUpdate": "2026-06-09" },
+        "blurb": "Votes at 16. The franchise-extension bill is still working through report stage, a week on from where we found it."
+      },
+      {
+        "row": { "id": 4030, "title": "Railways Bill", "house": "Commons", "stage": "Ways and Means resolution", "lastUpdate": "2026-06-09" },
+        "blurb": "The framework to bring train operators into public ownership cleared a money-resolution hurdle on its way through the Commons."
+      },
+      {
+        "row": { "id": 4140, "title": "National Security (State Threats) Bill", "house": "Commons", "stage": "1st reading", "lastUpdate": "2026-06-09" },
+        "blurb": "A new state-threats bill was introduced and read a first time — formal first step, debate to come."
+      },
+      {
+        "row": { "id": 4065, "title": "Armed Forces Bill", "house": "Commons", "stage": "Report stage", "lastUpdate": "2026-06-09" },
+        "blurb": "Last week’s much-amended five-yearly bill that keeps the Armed Forces Act alive moved on to report stage."
+      }
+    ]
+  },
+  "intro": "A man in his forties is fighting life-threatening injuries in a Belfast hospital after a knife was held to his throat in the street on Monday night — an attack three passers-by ran in to stop. Within a day it had become a political emergency: serious disorder across the city, a flood of claims true and false, and an Urgent Question that put the Northern Ireland Secretary on the spot over immigration and the border — close to the only part of this Westminster can answer for. It was the gravest story of the week; it was also a week in which MPs voted eight times, six of them on steel.",
+  "status": "published"
+}

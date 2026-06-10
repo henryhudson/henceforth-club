@@ -30,6 +30,9 @@ export interface FeatureStory {
   party: string | null
   department: string
   count: number
+  /** Optional pill label (e.g. "Urgent Question · 9 Jun"). Falls back to "{count} questions"
+   *  when the lead story is a written-question cluster rather than an oral proceeding. */
+  kicker?: string
   status: string
   summary: string
   questions: string[]

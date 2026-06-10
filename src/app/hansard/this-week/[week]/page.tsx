@@ -11,8 +11,9 @@ export function generateStaticParams(): Params[] {
   return listPublishedWeeks().map(week => ({ week }))
 }
 
-export function generateMetadata({ params }: { params: Params }): Metadata {
-  const digest = loadDigest(params.week)
+export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
+  const { week } = await params
+  const digest = loadDigest(week)
   if (!digest) return { title: 'This Week in Parliament' }
   return {
     title: `This Week in Parliament — ${digest.windowLabel}`,
@@ -20,8 +21,9 @@ export function generateMetadata({ params }: { params: Params }): Metadata {
   }
 }
 
-export default function WeekPage({ params }: { params: Params }) {
-  const digest = loadDigest(params.week)
+export default async function WeekPage({ params }: { params: Promise<Params> }) {
+  const { week } = await params
+  const digest = loadDigest(week)
   if (!digest || digest.status !== 'published') notFound()
   return <DigestView digest={digest} />
 }
