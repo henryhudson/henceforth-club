@@ -23,6 +23,7 @@ export async function narrate(input: NarrateInput, client = new Anthropic()): Pr
     model: 'claude-opus-4-8', max_tokens: 1024, system: SYSTEM,
     messages: [{ role: 'user', content: JSON.stringify(input) }],
   })
-  const text = (res.content.find((b: any) => b.type === 'text') as any)?.text ?? '{}'
+  const block = res.content.find((b) => b.type === 'text')
+  const text = block && 'text' in block ? block.text : '{}'
   return JSON.parse(text) as NarrateOutput
 }

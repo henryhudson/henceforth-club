@@ -6,7 +6,7 @@ const items = [
 ]
 it('keeps only bills updated within the window', async () => {
   const f = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ totalResults: 2, items }) })
-  const rows = await fetchMovedBills({ startISO: '2026-05-27', endISO: '2026-06-03', label: '' }, f as any)
+  const rows = await fetchMovedBills({ startISO: '2026-05-27', endISO: '2026-06-03', label: '' }, f as unknown as typeof fetch)
   expect(rows.map(b => b.id)).toEqual([4065])
   expect(rows[0].stage).toBe('Report stage')
 })

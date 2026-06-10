@@ -2,6 +2,12 @@ import type { QuestionRow } from '../types'
 import type { Window } from '../window'
 const BASE = 'https://questions-statements-api.parliament.uk/api/writtenquestions/questions'
 const PAGE = 100
+interface RawQuestion {
+  id: number; askingMemberId: number
+  askingMember?: { name?: string | null; party?: string | null; memberFrom?: string | null } | null
+  answeringBodyName: string; heading: string; questionText: string
+}
+interface QuestionsResponse { totalResults: number; results: { value: RawQuestion }[] }
 export async function fetchQuestions(w: Window, f: typeof fetch = fetch): Promise<QuestionRow[]> {
   const rows: QuestionRow[] = []
   let skip = 0, total = Infinity
@@ -9,7 +15,7 @@ export async function fetchQuestions(w: Window, f: typeof fetch = fetch): Promis
     const q = `tabledWhenFrom=${w.startISO}&tabledWhenTo=${w.endISO}&house=Commons&expandMember=true&skip=${skip}&take=${PAGE}`
     const res = await f(`${BASE}?${q}`)
     if (!res.ok) throw new Error(`questions ${res.status}`)
-    const data = (await res.json()) as any
+    const data = (await res.json()) as QuestionsResponse
     total = data.totalResults
     for (const r of data.results) {
       const v = r.value

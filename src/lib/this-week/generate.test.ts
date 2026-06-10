@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest'
 import { generateDigest } from './generate'
 import type { DivisionRow, QuestionRow, BillRow } from './types'
 import type { NonSittingRow } from './sources/recess'
-import type { Window } from './window'
 
 const now = new Date('2026-05-28T12:00:00Z')
 
@@ -27,7 +26,7 @@ const nonSitting: NonSittingRow[] = [
   { StartDate: '2026-05-22', EndDate: '2026-05-29', Category: 'Recess - Commons', CategoryCode: 'R', House: 'Commons' },
 ]
 
-const fakeNarrate = async (_input: any) => ({
+const fakeNarrate = async () => ({
   intro: 'Parliament went on holiday.',
   votes: ['v1', 'v2'],
   questions: [],
@@ -37,11 +36,11 @@ const fakeNarrate = async (_input: any) => ({
 describe('generateDigest', () => {
   it('orchestrates all sources and returns a valid DigestData draft', async () => {
     const result = await generateDigest(now, {
-      fetchDivisions: async (_w: Window) => divisions,
-      fetchDivisionCount: async (_w: Window) => divisionCount,
-      fetchQuestions: async (_w: Window) => questions,
-      fetchMovedBills: async (_w: Window) => bills,
-      fetchNonSitting: async (_w: Window) => nonSitting,
+      fetchDivisions: async () => divisions,
+      fetchDivisionCount: async () => divisionCount,
+      fetchQuestions: async () => questions,
+      fetchMovedBills: async () => bills,
+      fetchNonSitting: async () => nonSitting,
       narrate: fakeNarrate,
     })
 
@@ -82,11 +81,11 @@ describe('generateDigest', () => {
 
   it('degrades gracefully when a source rejects', async () => {
     const result = await generateDigest(now, {
-      fetchDivisions: async (_w: Window) => { throw new Error('network') },
-      fetchDivisionCount: async (_w: Window) => { throw new Error('network') },
-      fetchQuestions: async (_w: Window) => questions,
-      fetchMovedBills: async (_w: Window) => bills,
-      fetchNonSitting: async (_w: Window) => [],
+      fetchDivisions: async () => { throw new Error('network') },
+      fetchDivisionCount: async () => { throw new Error('network') },
+      fetchQuestions: async () => questions,
+      fetchMovedBills: async () => bills,
+      fetchNonSitting: async () => [],
       narrate: fakeNarrate,
     })
 

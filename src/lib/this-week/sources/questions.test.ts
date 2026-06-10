@@ -7,7 +7,7 @@ it('paginates all pages and maps to QuestionRow[]', async () => {
   const f = vi.fn()
     .mockResolvedValueOnce({ ok: true, json: async () => page(100) })
     .mockResolvedValueOnce({ ok: true, json: async () => page(50) })
-  const rows = await fetchQuestions({ startISO: '2026-05-27', endISO: '2026-06-03', label: '' }, f as any)
+  const rows = await fetchQuestions({ startISO: '2026-05-27', endISO: '2026-06-03', label: '' }, f as unknown as typeof fetch)
   expect(rows.length).toBe(150)
   expect(f.mock.calls[0][0]).toContain('house=Commons')
   expect(f.mock.calls[0][0]).toContain('tabledWhenFrom=2026-05-27')

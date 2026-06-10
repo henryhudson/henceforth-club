@@ -72,7 +72,7 @@ export default function ScriptedSupplyPage() {
       <section className="relative mx-auto max-w-6xl px-6 pt-20 pb-32 sm:pt-28">
         <div className="text-center mb-12">
           <p className="text-xs sm:text-sm text-accent-orange/80 tracking-[0.3em] mb-6 animate-in delay-1">
-            // A HENCEFORTH WHITEPAPER · IN DEVELOPMENT
+            {"// A HENCEFORTH WHITEPAPER · IN DEVELOPMENT"}
           </p>
           <h1 className="text-5xl sm:text-7xl font-bold text-foreground mb-6 tracking-tight animate-in delay-2">
             Scripted{" "}
@@ -118,7 +118,7 @@ export default function ScriptedSupplyPage() {
         <div className="mx-auto max-w-4xl px-6 py-24">
           <FadeIn>
             <p className="text-xs text-accent-orange/70 tracking-[0.3em] mb-4">
-              // THE PROBLEM
+              {"// THE PROBLEM"}
             </p>
             <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-8 leading-tight">
               Procurement runs on{" "}
@@ -179,7 +179,7 @@ export default function ScriptedSupplyPage() {
         <div className="mx-auto max-w-4xl px-6 py-24">
           <FadeIn>
             <p className="text-xs text-accent-orange/70 tracking-[0.3em] mb-4">
-              // THE FIX
+              {"// THE FIX"}
             </p>
             <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-8 leading-tight">
               What if validation and execution were{" "}
@@ -239,7 +239,7 @@ export default function ScriptedSupplyPage() {
         <div className="mx-auto max-w-5xl px-6 py-24">
           <FadeIn>
             <p className="text-xs text-accent-orange/70 tracking-[0.3em] mb-4">
-              // THE DIFFERENTIATOR
+              {"// THE DIFFERENTIATOR"}
             </p>
             <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-8 leading-tight">
               Contracts a procurement officer{" "}
@@ -291,7 +291,7 @@ export default function ScriptedSupplyPage() {
         <div className="mx-auto max-w-6xl px-6 py-24">
           <FadeIn>
             <p className="text-xs text-accent-orange/70 tracking-[0.3em] mb-4">
-              // CAPABILITIES
+              {"// CAPABILITIES"}
             </p>
             <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-12 leading-tight">
               What the platform does.
@@ -321,7 +321,7 @@ export default function ScriptedSupplyPage() {
         <div className="mx-auto max-w-4xl px-6 py-24">
           <FadeIn>
             <p className="text-xs text-accent-orange/70 tracking-[0.3em] mb-4">
-              // THE WHITEPAPER
+              {"// THE WHITEPAPER"}
             </p>
             <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-8 leading-tight">
               22 pages. The full architecture.
@@ -332,7 +332,7 @@ export default function ScriptedSupplyPage() {
             <p className="text-foreground/80 text-lg leading-relaxed mb-10 max-w-2xl">
               The thesis, the architectural fix, the asymmetric deployment, the
               Forth contract language, the privacy model, the worked economic
-              example, and the pilot terms. Build on Craig Wright's foundational
+              example, and the pilot terms. Build on Craig Wright&apos;s foundational
               paper, expanded with the adoption and legibility layers it leaves
               open.
             </p>
@@ -371,7 +371,7 @@ export default function ScriptedSupplyPage() {
         <div className="mx-auto max-w-4xl px-6 py-24">
           <FadeIn>
             <p className="text-xs text-accent-orange/70 tracking-[0.3em] mb-4">
-              // PILOT
+              {"// PILOT"}
             </p>
             <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-8 leading-tight">
               Looking for anchor customer{" "}
@@ -449,8 +449,7 @@ export default function ScriptedSupplyPage() {
             — A BITCOIN SV PLATFORM FOR IOS AND MACOS
           </p>
           <p className="text-[10px] text-muted/40 tracking-wider">
-            // scripted supply is in development. nothing on this page is a
-            commitment to ship.
+            {"// scripted supply is in development. nothing on this page is a commitment to ship."}
           </p>
         </div>
       </section>
