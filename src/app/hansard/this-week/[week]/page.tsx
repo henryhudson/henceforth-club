@@ -15,9 +15,14 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   const { week } = await params
   const digest = loadDigest(week)
   if (!digest) return { title: 'This Week in Parliament' }
+  const title = `This Week in Parliament — ${digest.windowLabel}`
+  const description = (digest.intro ?? '').slice(0, 180)
+  const url = `/hansard/this-week/${week}`
   return {
-    title: `This Week in Parliament — ${digest.windowLabel}`,
-    description: digest.intro.slice(0, 160),
+    title,
+    description,
+    openGraph: { title, description, type: 'article', url },
+    twitter: { card: 'summary_large_image', title, description },
   }
 }
 
