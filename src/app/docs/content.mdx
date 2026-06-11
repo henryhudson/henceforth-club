@@ -524,6 +524,8 @@ Henceforth accepts integers as binary, octal, decimal and hexadecimal. Just chan
 
 <Word name="pay" stack="(--)">Presents the pay sheet, where you can send Bitcoin.</Word>
 
+<Word name="receive" stack="(--)">Shows where to get paid: prints the active wallet's current receiving address and presents it as a QR code. Reports only — the address rotates automatically after it receives a payment, never from this word.</Word>
+
 <Word name=".fs">Filename followed by `.fs` extension will load that file's contents into Henceforth.</Word>
 
 <Word name="startup.fs">A special file that runs automatically when Henceforth launches. Created as a blank template on first launch. Add your custom word definitions, aliases, and INCLUDE calls here so they are available every session.</Word>
@@ -564,7 +566,7 @@ Henceforth has three stacks: the integer stack (main, inspected via `.s`), the d
 
 ### Networking
 
-<Word name="wocbitcoinprice" stack="( -- n)">Fetches the bitcoin price in USD and adds it to the stack in pennies.</Word>
+<Word name="wocbitcoinprice" stack="( -- n)">Fetches the bitcoin price in USD and adds it to the stack in pennies. The friendlier spelling `price` dispatches to the same handler.</Word>
 
 <Word name="woccirculatingsupply" stack="(--)">Fetches the circulating supply of bitcoin.</Word>
 
