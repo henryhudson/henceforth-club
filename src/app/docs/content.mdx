@@ -572,7 +572,7 @@ Henceforth has three stacks: the integer stack (main, inspected via `.s`), the d
 
 <Word name="wocaddressinfo" stack="(--)">Takes an address and displays its information to the terminal.</Word>
 
-<Word name="wocgetbalance" stack="(--)">Takes an address and displays its balance information to the terminal.</Word>
+<Word name="wocgetbalance" stack="(c-addr u -- )">Takes an address string (from `s"`) and displays that address's confirmed balance to the terminal. Usage: `s" 1A1zP1..." wocgetbalance`. For the active wallet's balance as a stack value, use `balance`.</Word>
 
 <Word name="wocgethistory" stack="(--)">Takes an address and displays its history information to the terminal.</Word>
 
@@ -596,7 +596,7 @@ The transaction builder words allow programmatic construction of Bitcoin transac
 
 <Word name="tx-set-fee" stack="(n -- )">Sets the fee rate in satoshis per kilobyte for the current transaction. Usage: `500 tx-set-fee`.</Word>
 
-<Word name="tx-add-output" stack="(n -- )">Adds a P2PKH output to the transaction. Expects the amount in satoshis on the stack and the destination address as the next word. Usage: `1000 tx-add-output 1A1zP1...`.</Word>
+<Word name="tx-add-output" stack="(n c-addr u -- )">Adds a P2PKH output to the transaction. Takes the amount in satoshis plus an address string (from `s"`) — the same convention as `send`. One address per call. Usage: `1000 s" 1A1zP1..." tx-add-output`.</Word>
 
 <Word name="tx-add-data" stack="( -- )">Adds an OP_RETURN data output to the current transaction.</Word>
 

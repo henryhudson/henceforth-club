@@ -205,7 +205,7 @@ function TerminalDemo() {
         <p className="text-terminal-green">1,250,000 sats ok.</p>
         <p>
           <span className="text-accent-warm glow-warm">$</span>{" "}
-          <span className="text-foreground">tx-new 10000 make-p2pkh-script tx-add-output tx-broadcast</span>
+          <span className="text-foreground">tx-new 10000 s&quot; 1A1z...fNa&quot; tx-add-output tx-broadcast</span>
         </p>
         <p className="text-terminal-green">Transaction broadcast. txid: 3a7f...c9e1 ok.</p>
         <p>
