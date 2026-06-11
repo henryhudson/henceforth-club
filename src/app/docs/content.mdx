@@ -498,6 +498,10 @@ Henceforth accepts integers as binary, octal, decimal and hexadecimal. Just chan
 
 <Word name="vlist" stack="(--)">Displays a list of every built-in word Henceforth offers. The Forth-2012 standard name is `words` (TOOLS 15.6.1.2465); both spellings dispatch to the same handler.</Word>
 
+<Word name="see" stack='( "<spaces>name" --)'>Shows what a word does: user-defined words print their source; built-in words print their stack diagram and description (TOOLS 15.6.1.2194). Usage: `see pay-rent`.</Word>
+
+<Word name="help" stack='( "<spaces>name" --)'>Prints a word's stack diagram and description. Bare `help` opens the vocabulary browser. Henceforth extension.</Word>
+
 <Word name="forth" stack="(--)">Resets vocabulary to standard built-in words, removing all user definitions.</Word>
 
 <Word name='c"' stack="( -- c-addr)">Creates a counted string literal. Returns the address of a counted string (length byte followed by characters).</Word>
@@ -573,6 +577,14 @@ Henceforth has three stacks: the integer stack (main, inspected via `.s`), the d
 <Word name="wocgethistory" stack="(--)">Takes an address and displays its history information to the terminal.</Word>
 
 <Word name="wocgetblockbyheight" stack="(n--)">Takes a block height from the stack and searches WhatsOnChain for info on that block.</Word>
+
+The three words below are *awaitable*: each suspends the line while its network query runs and resumes with the value pushed, so chain state lands on the stack instead of being prose in the transcript — `: pay-rent balance 1000 > if 1000 s" 1A1zP1..." send then ;` is both a Forth word and a payment policy. One query may be in flight at a time; while it runs the terminal shows `awaiting balance… (esc cancels)` and Escape cancels it. A query that cannot answer halts the line with an error — never a sentinel value that could silently flip an `if`.
+
+<Word name="balance" stack="( -- sats)">Queries the chain for the active wallet's total balance and pushes it in satoshis. The line suspends while the query runs and resumes when the value lands. A failed or partial query halts the line with an error — never a silent low number.</Word>
+
+<Word name="tx-confirmations" stack="(c-addr u -- n)">Takes a txid string (from `s"`) and pushes the transaction's confirmation count. Pushes 0 when the transaction is known but still unconfirmed in the mempool. An unknown txid halts the line with an error.</Word>
+
+<Word name="spv-verified?" stack="(c-addr u -- flag)">Takes a txid string (from `s"`) and pushes -1 when the transaction's Merkle proof verifies against the locally-validated header chain, 0 when it does not. A header-chain gap prints SPV PENDING alongside the 0; a proof-fetch failure halts the line with an error.</Word>
 
 <a id="ref-tx-builder" />
 
