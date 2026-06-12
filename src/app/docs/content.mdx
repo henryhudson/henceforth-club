@@ -548,6 +548,10 @@ Henceforth has three stacks: the integer stack (main, inspected via `.s`), the d
 
 <Word name=">addr" stack="(n -- )">Marks the top-of-stack integer value as a Bitcoin address string for transaction building.</Word>
 
+<Word name=">scriptnum" stack="( n -- )">Moves an integer from the integer stack to the script (data) stack as a minimally-encoded script number. Usage: `5 >scriptnum`.</Word>
+
+<Word name="scriptnum>" stack="( -- n)">Decodes the top of the script stack as a script number (at most 4 bytes) and moves it to the integer stack.</Word>
+
 <a id="ref-strings" />
 
 ### String Operations
@@ -681,6 +685,8 @@ Script recording is a macro assembler for Bitcoin Script. When recording is acti
 
 <Word name="script-list" stack="( -- )">List all saved scripts.</Word>
 
+<Word name="script-step" stack="( -- )">Executes the next opcode of the loaded script buffer against the live script context and renders the stack — single-stepping through real Bitcoin Script. Reset by `script-load`, `script-begin`, `script-clear`, and `clear`.</Word>
+
 > **Raw bytes require a `0x` prefix during recording.** A bare hex-looking token such as `ff` is *not* emitted as the byte `0xff` — it is parsed according to the current `BASE` and pushed to the integer stack. To emit raw opcode bytes into the script buffer, use an explicit `0x`-prefixed literal (e.g. `0xdeadbeef`).
 
 <a id="ref-script-bridge" />
@@ -725,6 +731,16 @@ Pre-built script templates for common Bitcoin transaction patterns.
 > pay
 > ```
 
+<a id="ref-script-exec" />
+
+### Script Execution Context
+
+`OP_CHECKSIG` and `OP_CHECKMULTISIG` require a transaction context to verify against. These two words arm that context so signature-checking opcodes work in the terminal.
+
+<Word name="checksig-fixture" stack="( -- sig pubkey)">Builds and signs a synthetic transaction with a fixed keypair, arms the script context for OP_CHECKSIG, and pushes a genuinely valid signature and public key — the P2PKH walk verifies VALID with zero setup. Never fakes a result.</Word>
+
+<Word name="script-tx-context" stack="( satoshis n -- )">Loads a real transaction into the script context: rawtx and lockscript bytes from the data stack, satoshis and input index from the integer stack. Any on-chain transaction becomes replayable opcode-by-opcode. Usage: `0x<rawtx> 0x<lockscript> <satoshis> <input-index> script-tx-context`.</Word>
+
 <a id="ref-opcodes" />
 
 ### OPCodes
@@ -735,122 +751,122 @@ All 140+ Bitcoin Script opcodes are exposed as FORTH words. Below are the catego
 
 #### Push Data
 
-<Word name="op_0 … op_16" stack="( -- 0..16)">Push the corresponding integer 0..16 onto the stack. Equivalent to typing a numeric literal in FORTH.</Word>
-<Word name="op_false" stack="( -- 0)" forth="false">Zero (false flag) pushed to stack.</Word>
-<Word name="op_pushdata1" stack="(--)">The byte after will contain how many bytes are to be pushed.</Word>
-<Word name="op_pushdata2" stack="(--)">The next two bytes will contain how many bytes will be pushed.</Word>
-<Word name="op_pushdata4" stack="(--)">The next four bytes will contain how many bytes will be pushed.</Word>
-<Word name="op_1negate" stack="( -- -1)">Minus one pushed to the stack. (FORTH equivalent: `-1`.)</Word>
+<Word name="op_0 … op_16" stack="( - x)">Push the corresponding integer onto the script stack. Equivalent to typing a numeric literal in FORTH.</Word>
+<Word name="op_false" stack="( - x)" forth="false">Pushes the empty byte vector (Script canonical zero / FALSE). Alias for OP_0.</Word>
+<Word name="op_pushdata1" stack="( - )">Frames a length-prefixed data push during script recording. At the prompt a 0x literal pushes its bytes directly.</Word>
+<Word name="op_pushdata2" stack="( - )">Frames a length-prefixed data push during script recording. At the prompt a 0x literal pushes its bytes directly.</Word>
+<Word name="op_pushdata4" stack="( - )">Frames a length-prefixed data push during script recording. At the prompt a 0x literal pushes its bytes directly.</Word>
+<Word name="op_1negate" stack="( - -1)">Pushes the script number -1 onto the script stack. (FORTH equivalent: `-1`.)</Word>
 
 #### Control Flow
 
-<Word name="op_nop" stack="(--)">Does nothing.</Word>
-<Word name="op_ver" stack="( -- version)">Pushes the transaction version. Returns 1 (legacy) or 2 (Chronicle, post block 943,816).</Word>
-<Word name="op_if" stack="(f--)" forth="if">Executes code depending on the expression's flag.</Word>
-<Word name="op_notif" stack="(n--)">Executes code depending on the inverted flag. Composite FORTH: `0= if`.</Word>
-<Word name="op_verif" stack="( threshold -- flag)">Pushes TRUE if tx version >= threshold. Chronicle upgrade.</Word>
-<Word name="op_vernotif" stack="( threshold -- flag)">Pushes TRUE if tx version &lt; threshold. Chronicle upgrade.</Word>
-<Word name="op_else" stack="(--)" forth="else">Executes if the preceding OP_IF, OP_NOTIF, or OP_ELSE were not executed.</Word>
-<Word name="op_endif" stack="(--)" forth="then">Ends the if/else statement.</Word>
-<Word name="op_verify" stack="(f--)">Marks the transaction as INVALID if the flag is false. Script-specific — no FORTH analogue.</Word>
-<Word name="op_return" stack="(--)">Ends script. Often used to add data to the blockchain. Script-specific.</Word>
+<Word name="op_nop" stack="( - )">Does nothing. Consensus no-op.</Word>
+<Word name="op_ver" stack="( - version)">Pushes the transaction version (4-byte little-endian) onto the script stack. Chronicle upgrade of the historically-reserved opcode.</Word>
+<Word name="op_if" stack="( x - )" forth="if">Consumes the top item as a consensus boolean and gates the script opcodes that follow.</Word>
+<Word name="op_notif" stack="( x - )">Runs the following branch when the top item is false. Mirror image of OP_IF. Composite FORTH: `0= if`.</Word>
+<Word name="op_verif" stack="( threshold - bool)">Pushes 1 if the transaction version is at least the threshold. Chronicle upgrade.</Word>
+<Word name="op_vernotif" stack="( threshold - bool)">Pushes 1 if the transaction version is below the threshold. Chronicle upgrade.</Word>
+<Word name="op_else" stack="( - )" forth="else">Flips the active branch — runs its body when the preceding OP_IF or OP_NOTIF branch did not run.</Word>
+<Word name="op_endif" stack="( - )" forth="then">Closes the innermost OP_IF / OP_NOTIF block.</Word>
+<Word name="op_verify" stack="( x - )">Pops the top item and fails the script when it is false. Script-specific — no FORTH analogue.</Word>
+<Word name="op_return" stack="( - )">Marks the script as failed. In a locking script the data after it is provably unspendable — the standard way to record data on-chain.</Word>
 
 #### Stack
 
-<Word name="op_toaltstack" stack="(n--)" forth="&gt;r">Moves the top of stack to the alt stack.</Word>
-<Word name="op_fromaltstack" stack="(--n)" forth="r&gt;">Moves the top of alt stack to the main stack.</Word>
-<Word name="op_2drop" stack="(n n1--)" forth="2drop">Discards the top two elements.</Word>
-<Word name="op_2dup" stack="(n n1 -- n n1 n n1)" forth="2dup">Duplicates the top two values.</Word>
-<Word name="op_3dup" stack="(n n1 n2 -- n n1 n2 n n1 n2)">Duplicates the top three values. Composite FORTH: `2dup over`.</Word>
-<Word name="op_2over" stack="(n n1 n2 n3 -- n n1 n2 n3 n n1)" forth="2over">Copies items 3 and 4 deep onto the top.</Word>
-<Word name="op_2rot" stack="(n n1 n2 n3 n4 n5 -- n2 n3 n4 n5 n n1)">Rotates items 5 and 6 to the top. Composite FORTH: chain of three `rot`s.</Word>
-<Word name="op_2swap" stack="(n n1 n2 n3 -- n2 n3 n n1)" forth="2swap">Swaps the order of the top two pairs.</Word>
-<Word name="op_ifdup" stack="(n -- 0 | n n)" forth="?dup">Duplicates the top value if it is NOT zero.</Word>
-<Word name="op_depth" stack="(--n)" forth="depth">Pushes the number of items on the stack.</Word>
-<Word name="op_drop" stack="(n--)" forth="drop">Discards the top item.</Word>
-<Word name="op_dup" stack="(n -- n n)" forth="dup">Duplicates the top item.</Word>
-<Word name="op_nip" stack="(n n1 -- n1)" forth="nip">Discards the second item.</Word>
-<Word name="op_over" stack="(n n1 -- n n1 n)" forth="over">Copies the second item over the top.</Word>
-<Word name="op_pick" stack="(xu ... x0 u -- xu ... x0 xu)" forth="pick">Copies the u-th item to the top.</Word>
-<Word name="op_roll" stack="(xu xu-1 ... x0 u -- xu-1 ... x0 xu)" forth="roll">Moves the u-th item to the top.</Word>
-<Word name="op_rot" stack="(n n1 n2 -- n1 n2 n)" forth="rot">Rotates the top three items left.</Word>
-<Word name="op_swap" stack="(n n1 -- n1 n)" forth="swap">Swaps the top two items.</Word>
-<Word name="op_tuck" stack="(n n1 -- n1 n n1)" forth="tuck">Copies the top item in front of the second.</Word>
+<Word name="op_toaltstack" stack="( x - )" forth="&gt;r">Pops the top item off the main stack and pushes it onto the alt stack.</Word>
+<Word name="op_fromaltstack" stack="( - x)" forth="r&gt;">Pops the top item off the alt stack and pushes it onto the main stack.</Word>
+<Word name="op_2drop" stack="( x1 x2 - )" forth="2drop">Drops the top two items from the script stack.</Word>
+<Word name="op_2dup" stack="( x1 x2 - x1 x2 x1 x2)" forth="2dup">Duplicates the top two items.</Word>
+<Word name="op_3dup" stack="( x1 x2 x3 - x1 x2 x3 x1 x2 x3)">Duplicates the top three items. Composite FORTH: `2dup over`.</Word>
+<Word name="op_2over" stack="( x1 x2 x3 x4 - x1 x2 x3 x4 x1 x2)" forth="2over">Copies the third and fourth items to the top.</Word>
+<Word name="op_2rot" stack="( x1 x2 x3 x4 x5 x6 - x3 x4 x5 x6 x1 x2)">Moves the fifth and sixth items to the top. Composite FORTH: chain of three `rot`s.</Word>
+<Word name="op_2swap" stack="( x1 x2 x3 x4 - x3 x4 x1 x2)" forth="2swap">Swaps the top two pairs.</Word>
+<Word name="op_ifdup" stack="( x - 0 | x x)" forth="?dup">Duplicates the top item only if it is non-zero.</Word>
+<Word name="op_depth" stack="( - n)" forth="depth">Pushes the number of items currently on the script stack.</Word>
+<Word name="op_drop" stack="( x - )" forth="drop">Drops the top item from the script stack.</Word>
+<Word name="op_dup" stack="( x - x x)" forth="dup">Duplicates the top item on the script stack.</Word>
+<Word name="op_nip" stack="( x1 x2 - x2)" forth="nip">Removes the second-from-top item, keeping the top.</Word>
+<Word name="op_over" stack="( x1 x2 - x1 x2 x1)" forth="over">Copies the second-from-top item to the top.</Word>
+<Word name="op_pick" stack="( ... n - ... xn)" forth="pick">Pops n and copies the n-th item (0-based from top) to the top.</Word>
+<Word name="op_roll" stack="( xn ... x0 n - xn-1 ... x0 xn)" forth="roll">Moves the n-th item (0-based from top) to the top.</Word>
+<Word name="op_rot" stack="( x1 x2 x3 - x2 x3 x1)" forth="rot">Rotates the top three items left so the third becomes the top.</Word>
+<Word name="op_swap" stack="( x1 x2 - x2 x1)" forth="swap">Swaps the top two items on the script stack.</Word>
+<Word name="op_tuck" stack="( x1 x2 - x2 x1 x2)" forth="tuck">Copies the top item below the second-from-top item.</Word>
 
 #### Size & Separator
 
-<Word name="op_size" stack="(x -- x n)">Pushes the byte length of the top stack element without consuming it. Script-specific.</Word>
-<Word name="op_codeseparator" stack="(--)">Marks the beginning of signature-checked data. All signature checks only use data after the most recent OP_CODESEPARATOR. Script-specific.</Word>
-<Word name="op_true" stack="( -- 1)" forth="true">Pushes 1 onto the stack. Alias for OP_1.</Word>
+<Word name="op_size" stack="( x -- x n)">Pushes the byte length of the top stack element without consuming it. Script-specific.</Word>
+<Word name="op_codeseparator" stack="( -- )">Marks the beginning of signature-checked data. All signature checks only use data after the most recent OP_CODESEPARATOR. Script-specific.</Word>
+<Word name="op_true" stack="( -- 1)" forth="true">Pushes the script number 1 onto the script stack. Alias for OP_1.</Word>
 
 #### Splice (Chronicle restored)
 
-<Word name="op_cat" stack="(--)">Concatenates the two byte strings. Script-specific — FORTH has no native byte-string concat.</Word>
-<Word name="op_split" stack="(n n1--)">Splits byte sequence n at n1.</Word>
-<Word name="op_num2bin" stack="(n n1--)">Converts value n into a byte sequence of length n1.</Word>
-<Word name="op_bin2num" stack="(n--)">Converts byte sequence n into a numerical value.</Word>
-<Word name="op_substr" stack="(start length --) data: (data -- substring)">Extracts a substring by start index and length. Chronicle upgrade (0xb3).</Word>
-<Word name="op_left" stack="(n --) data: (data -- left)">Extracts the leftmost N bytes. Chronicle upgrade (0xb4).</Word>
-<Word name="op_right" stack="(n --) data: (data -- right)">Extracts the rightmost N bytes. Chronicle upgrade (0xb5).</Word>
+<Word name="op_cat" stack="( x1 x2 - x1x2)">Concatenates the top two byte vectors into one (x1 then x2). Script-specific — FORTH has no native byte-string concat.</Word>
+<Word name="op_split" stack="( x n - x1 x2)">Splits the byte vector at position n into a left and right half.</Word>
+<Word name="op_num2bin" stack="( x n - bytes)">Encodes a script number as a byte vector of length n (little-endian, sign bit).</Word>
+<Word name="op_bin2num" stack="( x - num)">Re-encodes a byte vector as a minimal script number, failing if it exceeds four bytes.</Word>
+<Word name="op_substr" stack="( x start len - substring)">Extracts a substring of the byte vector by start index and length. Chronicle upgrade (0xb3).</Word>
+<Word name="op_left" stack="( x n - prefix)">Extracts the leftmost n bytes of the byte vector. Chronicle upgrade (0xb4).</Word>
+<Word name="op_right" stack="( x n - suffix)">Extracts the rightmost n bytes of the byte vector. Chronicle upgrade (0xb5).</Word>
 
 #### Bitwise
 
-<Word name="op_invert" stack="(n -- n)" forth="invert">Flips all the bits in the input.</Word>
-<Word name="op_and" stack="(n1 n2 -- AND)" forth="and">Bitwise AND.</Word>
-<Word name="op_or" stack="(n1 n2 -- OR)" forth="or">Bitwise OR.</Word>
-<Word name="op_xor" stack="(n1 n2 -- XOR)" forth="xor">Bitwise XOR.</Word>
-<Word name="op_equal" stack="(n n1 -- f)" forth="=">1 if equal, 0 if not.</Word>
-<Word name="op_equalverify" stack="(n1 n2 -- f)">OP_EQUAL then OP_VERIFY. Script-specific composite.</Word>
-<Word name="op_reserved1, op_reserved2" stack="(--)">Renders transaction invalid unless in an unexecuted OP_IF.</Word>
+<Word name="op_invert" stack="( x - ~x)" forth="invert">Inverts every bit of the top byte vector.</Word>
+<Word name="op_and" stack="( x1 x2 - and)" forth="and">Bitwise AND of the top two byte vectors (must be same length).</Word>
+<Word name="op_or" stack="( x1 x2 - or)" forth="or">Bitwise OR of the top two byte vectors (must be same length).</Word>
+<Word name="op_xor" stack="( x1 x2 - xor)" forth="xor">Bitwise XOR of the top two byte vectors (must be same length).</Word>
+<Word name="op_equal" stack="( x1 x2 - bool)" forth="=">Pops two byte vectors and pushes 1 if identical, otherwise the empty vector.</Word>
+<Word name="op_equalverify" stack="( x1 x2 - )">OP_EQUAL then OP_VERIFY — fails the script unless the top two items are equal. Script-specific composite.</Word>
+<Word name="op_reserved1, op_reserved2" stack="( - )">Reserved opcodes. Render the script invalid unless inside an unexecuted branch.</Word>
 
 #### Arithmetic
 
-<Word name="op_1add" stack="(n -- n+1)" forth="1+">Adds 1.</Word>
-<Word name="op_1sub" stack="(n -- n-1)" forth="1-">Subtracts 1.</Word>
-<Word name="op_2mul" stack="(n -- n*2)" forth="2*">Doubles.</Word>
-<Word name="op_2div" stack="(n -- n/2)" forth="2/">Halves.</Word>
-<Word name="op_negate" stack="(n -- -n)" forth="negate">Flips sign.</Word>
-<Word name="op_abs" stack="(n -- |n|)" forth="abs">Absolute value.</Word>
-<Word name="op_not" stack="(n -- f)" forth="0=">Logical NOT. Returns 1 if 0, else 0.</Word>
-<Word name="op_0notequal" stack="(n -- f)" forth="0&lt;&gt;">True if not zero.</Word>
-<Word name="op_add" stack="(n n1 -- n3)" forth="+">Sum.</Word>
-<Word name="op_sub" stack="(n n1 -- n3)" forth="-">Difference.</Word>
-<Word name="op_mul" stack="(n n1 -- n3)" forth="*">Product.</Word>
-<Word name="op_div" stack="(n n1 -- n3)" forth="/">Quotient.</Word>
-<Word name="op_mod" stack="(n n1 -- n3)" forth="mod">Remainder.</Word>
-<Word name="op_lshift" stack="(n n1 -- n3)" forth="lshift">Bitwise left shift.</Word>
-<Word name="op_rshift" stack="(n n1 -- n3)" forth="rshift">Bitwise right shift.</Word>
-<Word name="op_lshiftnum" stack="(n shift -- result)">Numeric left shift preserving sign. Distinct from `op_lshift` which is bitwise on bytes. Chronicle upgrade (0xb6).</Word>
-<Word name="op_rshiftnum" stack="(n shift -- result)">Numeric right shift preserving sign. Chronicle upgrade (0xb7).</Word>
-<Word name="op_booland" stack="(n n1 -- f)" forth="&&">True if both non-zero.</Word>
-<Word name="op_boolor" stack="(n n1 -- f)" forth="||">True if either non-zero.</Word>
-<Word name="op_numequal" stack="(n n1 -- f)" forth="=">Numeric equality.</Word>
-<Word name="op_numequalverify" stack="(n n1 -- f)">OP_NUMEQUAL then OP_VERIFY. Script-specific composite.</Word>
-<Word name="op_numnotequal" stack="(n n1 -- f)" forth="&lt;&gt;">Numeric inequality.</Word>
-<Word name="op_lessthan" stack="(n n1 -- f)" forth="<">True if n &lt; n1.</Word>
-<Word name="op_greaterthan" stack="(n n1 -- f)" forth="&gt;">True if n &gt; n1.</Word>
-<Word name="op_lessthanorequal" stack="(n n1 -- f)" forth="<=">True if n &lt;= n1.</Word>
-<Word name="op_greaterthanorequal" stack="(n n1 -- f)" forth="&gt;=">True if n &gt;= n1.</Word>
-<Word name="op_min" stack="(n n1 -- n)" forth="min">Smaller value.</Word>
-<Word name="op_max" stack="(n n1 -- n)" forth="max">Larger value.</Word>
-<Word name="op_within" stack="(n n1 n2 -- f)" forth="within">True if n is between n1 and n2.</Word>
+<Word name="op_1add" stack="( x - sum)" forth="1+">Adds one to the top script number.</Word>
+<Word name="op_1sub" stack="( x - difference)" forth="1-">Subtracts one from the top script number.</Word>
+<Word name="op_2mul" stack="( x - product)" forth="2*">Doubles the top script number (Genesis-restored).</Word>
+<Word name="op_2div" stack="( x - quotient)" forth="2/">Halves the top script number (Genesis-restored).</Word>
+<Word name="op_negate" stack="( x - -x)" forth="negate">Flips the sign of the top script number.</Word>
+<Word name="op_abs" stack="( x - |x|)" forth="abs">Replaces the top script number with its absolute value.</Word>
+<Word name="op_not" stack="( x - bool)" forth="0=">Pushes 1 if the top item is zero, otherwise the empty vector.</Word>
+<Word name="op_0notequal" stack="( x - bool)" forth="0&lt;&gt;">Pushes 1 if the top script number is non-zero, otherwise the empty vector.</Word>
+<Word name="op_add" stack="( x1 x2 - sum)" forth="+">Pops two script numbers and pushes their sum.</Word>
+<Word name="op_sub" stack="( x1 x2 - difference)" forth="-">Pops two script numbers and pushes the second minus the first.</Word>
+<Word name="op_mul" stack="( x1 x2 - product)" forth="*">Pops two script numbers and pushes their product (Genesis-restored).</Word>
+<Word name="op_div" stack="( x1 x2 - quotient)" forth="/">Pops two script numbers and pushes the second divided by the first (Genesis-restored).</Word>
+<Word name="op_mod" stack="( x1 x2 - modulus)" forth="mod">Pops two script numbers and pushes the remainder of the second divided by the first (Genesis-restored).</Word>
+<Word name="op_lshift" stack="( x n - shifted)" forth="lshift">Shifts the byte vector left by n bits (Genesis-restored).</Word>
+<Word name="op_rshift" stack="( x n - shifted)" forth="rshift">Shifts the byte vector right by n bits (Genesis-restored).</Word>
+<Word name="op_lshiftnum" stack="( x shift - result)">Numeric left shift preserving sign. Distinct from `op_lshift` which is bitwise on bytes. Chronicle upgrade (0xb6).</Word>
+<Word name="op_rshiftnum" stack="( x shift - result)">Numeric right shift preserving sign. Chronicle upgrade (0xb7).</Word>
+<Word name="op_booland" stack="( x1 x2 - bool)" forth="&&">Pushes 1 if both of the top two script numbers are non-zero, otherwise the empty vector.</Word>
+<Word name="op_boolor" stack="( x1 x2 - bool)" forth="||">Pushes 1 if either of the top two script numbers is non-zero, otherwise the empty vector.</Word>
+<Word name="op_numequal" stack="( x1 x2 - bool)" forth="=">Pushes 1 if the top two script numbers are equal, otherwise the empty vector.</Word>
+<Word name="op_numequalverify" stack="( x1 x2 - )">OP_NUMEQUAL then OP_VERIFY — fails the script unless the numbers are equal. Script-specific composite.</Word>
+<Word name="op_numnotequal" stack="( x1 x2 - bool)" forth="&lt;&gt;">Pushes 1 if the top two script numbers differ, otherwise the empty vector.</Word>
+<Word name="op_lessthan" stack="( x1 x2 - bool)" forth="<">Pushes 1 if the second script number is less than the first.</Word>
+<Word name="op_greaterthan" stack="( x1 x2 - bool)" forth="&gt;">Pushes 1 if the second script number is greater than the first.</Word>
+<Word name="op_lessthanorequal" stack="( x1 x2 - bool)" forth="<=">Pushes 1 if the second script number is less than or equal to the first.</Word>
+<Word name="op_greaterthanorequal" stack="( x1 x2 - bool)" forth="&gt;=">Pushes 1 if the second script number is greater than or equal to the first.</Word>
+<Word name="op_min" stack="( x1 x2 - min)" forth="min">Pops two script numbers and pushes the smaller.</Word>
+<Word name="op_max" stack="( x1 x2 - max)" forth="max">Pops two script numbers and pushes the larger.</Word>
+<Word name="op_within" stack="( x min max - bool)" forth="within">Pushes 1 if x is at least min and less than max (min inclusive, max exclusive).</Word>
 
 #### Crypto
 
-<Word name="op_ripemd160" stack="(--)">RIPEMD-160 hash.</Word>
-<Word name="op_sha1" stack="(--)">SHA-1 hash.</Word>
-<Word name="op_sha256" stack="(--)">SHA-256 hash.</Word>
-<Word name="op_hash160" stack="(--)">SHA-256 followed by RIPEMD-160 (address hash).</Word>
-<Word name="op_hash256" stack="(--)">Double SHA-256 (Bitcoin transaction hash).</Word>
-<Word name="op_checksig" stack="(--)">Verifies an ECDSA signature against a public key.</Word>
-<Word name="op_checksigverify" stack="(--)">OP_CHECKSIG then OP_VERIFY.</Word>
-<Word name="op_checkmultisig" stack="(--)">Verifies a set of signatures against a set of public keys.</Word>
-<Word name="op_checkmultisigverify" stack="(--)">OP_CHECKMULTISIG then OP_VERIFY.</Word>
+<Word name="op_ripemd160" stack="( x - hash)">Pops the top byte vector and pushes its RIPEMD-160 hash (20 bytes).</Word>
+<Word name="op_sha1" stack="( x - hash)">Pops the top byte vector and pushes its SHA-1 hash (20 bytes).</Word>
+<Word name="op_sha256" stack="( x - hash)">Pops the top byte vector and pushes its SHA-256 hash (32 bytes).</Word>
+<Word name="op_hash160" stack="( x - hash)">Pops the top byte vector and pushes RIPEMD-160(SHA-256(x)) — the 20-byte hash inside every P2PKH address.</Word>
+<Word name="op_hash256" stack="( x - hash)">Pops the top byte vector and pushes SHA-256(SHA-256(x)) — the 32-byte double hash used for transaction and block IDs.</Word>
+<Word name="op_checksig" stack="( sig pubkey - bool)">Pops a public key and a signature and pushes 1 if the signature is valid over the spending transaction. Needs a transaction context — load one with `checksig-fixture` (a signed demo pair) or `script-tx-context` (a real transaction).</Word>
+<Word name="op_checksigverify" stack="( sig pubkey - )">OP_CHECKSIG then OP_VERIFY — fails the script unless the signature is valid against the armed transaction context.</Word>
+<Word name="op_checkmultisig" stack="( x sig1...sigM M pub1...pubN N - bool)">Verifies M signatures against N public keys over the armed transaction context. Consumes an extra dummy item (the historic off-by-one).</Word>
+<Word name="op_checkmultisigverify" stack="( x sig1...sigM M pub1...pubN N - )">OP_CHECKMULTISIG then OP_VERIFY — fails the script unless the M-of-N check passes.</Word>
 
 #### Lock Time / Reserved
 
-<Word name="op_nop2, op_nop3, op_pubkeyhash, op_pubkey, op_invalidopcode" stack="(--)">Reserved or pseudo-opcodes for locktime and pubkey-class operations.</Word>
-<Word name="op_nop1, op_nop4..6, op_nop9, op_nop10" stack="(--)">Reserved NOPs.</Word>
+<Word name="op_nop2, op_nop3, op_pubkeyhash, op_pubkey, op_invalidopcode" stack="( - )">Reserved or pseudo-opcodes. OP_NOP2/NOP3 are no-ops in BSV Genesis; pubkeyhash, pubkey, and invalidopcode are pseudo-opcode placeholders.</Word>
+<Word name="op_nop1, op_nop4..6, op_nop9, op_nop10" stack="( - )">Reserved NOPs.</Word>
 
 > **Chronicle upgrade (block 943,816).** NOP4–8 (0xb3–0xb7) were repurposed as `op_substr`, `op_left`, `op_right`, `op_lshiftnum`, and `op_rshiftnum`. The transaction version (`op_ver`) auto-switches from 1 to 2 at the activation block.
 

@@ -135,9 +135,10 @@ const FORTH_GRAMMAR = {
             // pre-2026-05-19 legacy spellings (hex2data, data2hex) so
             // articles written before the rename still highlight. Longer
             // alternatives are placed before shorter overlapping ones
-            // (e.g. data>script before >script) so the regex engine
-            // picks the full token rather than the trailing slice.
-            "(?i)(?<=^|\\s)(tx-[a-z-]+|script-[a-z-]+|bap-[a-z-]+|hex>data|chars>data|data>hex|hex2data|data2hex|data>script|text>script|file>script|>data|>addr|>script|make-[a-z0-9-]+|pay|receive|price|send|send-many|balance|spv-verified\\?|sign-msg|verify-msg|encrypt-msg|decrypt-msg|SCRIPT-BEGIN|SCRIPT-END|woc[a-z]+|op_[a-z0-9_]+|OP_[A-Z0-9_]+)(?=\\s|$)",
+            // (e.g. data>script before >script; >scriptnum before >script;
+            // checksig-fixture is explicit because script-[a-z-]+ would
+            // not match the checksig- prefix).
+            "(?i)(?<=^|\\s)(tx-[a-z-]+|script-[a-z-]+|bap-[a-z-]+|hex>data|chars>data|data>hex|hex2data|data2hex|data>script|text>script|file>script|checksig-fixture|>scriptnum|scriptnum>|>data|>addr|>script|make-[a-z0-9-]+|pay|receive|price|send|send-many|balance|spv-verified\\?|sign-msg|verify-msg|encrypt-msg|decrypt-msg|SCRIPT-BEGIN|SCRIPT-END|woc[a-z]+|op_[a-z0-9_]+|OP_[A-Z0-9_]+)(?=\\s|$)",
         },
       ],
     },
