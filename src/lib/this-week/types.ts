@@ -59,3 +59,17 @@ export interface DigestData {
   intro: string
   status: 'draft' | 'published'
 }
+
+/** Thin projection of a digest for the client archive (calendar + search).
+ *  Keeps only what the browser renders — never the full DigestData. */
+export interface DigestSummary {
+  week: string            // YYYY-MM-DD Wednesday anchor = permalink slug
+  windowLabel: string
+  headline: string        // headline ?? windowLabel
+  mode: Mode
+  topics: string[]        // topTopics headings
+  feature: string | null  // feature?.title ?? null
+}
+
+export interface YearCell { weekIndex: number; summary: DigestSummary | null }
+export interface YearCalendar { year: number; cells: YearCell[] }

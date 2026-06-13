@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
-import type { DigestData } from './types'
+import type { DigestData, DigestSummary } from './types'
+import { toSummary } from './calendar'
 
 const CONTENT_DIR = path.join(process.cwd(), 'content', 'this-week')
 
@@ -37,4 +38,9 @@ export function selectPublished(digests: readonly (DigestData | null)[]): Digest
 /** All published digests, newest first — the archive index. */
 export function listPublishedDigests(): DigestData[] {
   return selectPublished(listPublishedWeeks().map(loadDigest))
+}
+
+/** All published issues as summaries, newest first. */
+export function listPublishedSummaries(): DigestSummary[] {
+  return listPublishedDigests().map(toSummary)
 }
