@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>This Week in Parliament — Archive Browse — Design Spec — 2026-06-13</title>
+<style>
+  :root { --bg:#fafaf8; --fg:#18181b; --muted:#6b6b73; --rule:#e5e5e1;
+    --aside-bg:#f4f3ee; --accent:#c2410c; --code-bg:#f1efe8;
+    --ok:#5a6a44; --warn:#b45309; }
+  html,body{background:var(--bg);color:var(--fg);
+    font-family:ui-monospace,"Space Mono",SFMono-Regular,Menlo,Monaco,monospace;
+    line-height:1.6;margin:0;}
+  body{max-width:900px;margin:0 auto;padding:56px 24px 96px;font-size:15px;}
+  h1{font-size:30px;line-height:1.15;margin:0 0 12px;letter-spacing:-0.01em;}
+  h2.phase{font-size:22px;margin:54px 0 16px;border-top:2px solid var(--rule);padding-top:26px;}
+  h3.item{font-size:17px;margin:28px 0 8px;}
+  p{margin:10px 0;} p strong{font-weight:700;}
+  .byline{color:var(--muted);font-style:italic;margin:0 0 24px;}
+  hr{border:none;border-top:1px solid var(--rule);margin:36px 0;}
+  aside{background:var(--aside-bg);border-left:3px solid var(--accent);
+    padding:14px 18px;margin:18px 0;border-radius:0 6px 6px 0;}
+  aside p{margin:6px 0;}
+  aside.insight{border-left-color:var(--ok);}
+  code,kbd{font-family:inherit;background:var(--code-bg);padding:1px 6px;
+    border-radius:3px;font-size:0.9em;}
+  pre{background:var(--code-bg);border-radius:6px;padding:14px 16px;overflow-x:auto;font-size:0.84em;line-height:1.5;}
+  ol,ul{padding-left:22px;} li{margin:5px 0;}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:0.9em;}
+  th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--rule);vertical-align:top;}
+  th{font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;font-size:0.8em;}
+  .ok{color:var(--ok);font-weight:700;} .warn{color:var(--warn);font-weight:700;}
+  .pill{font-size:0.78em;color:var(--muted);}
+  .lock{display:inline-block;font-size:0.72em;font-weight:700;padding:1px 7px;border-radius:10px;
+    background:var(--ok);color:#fff;text-transform:uppercase;letter-spacing:0.03em;}
+  .scope{display:inline-block;font-size:0.72em;font-weight:700;padding:1px 7px;border-radius:10px;
+    background:var(--warn);color:#fff;text-transform:uppercase;letter-spacing:0.03em;}
+</style>
+</head>
+<body>
+<h1>This Week in Parliament — Archive Browse <span class="scope">phase 1.1</span></h1>
+<p class="byline">2026-06-13 · design spec · Redesign of <code>henceforth.club/hansard/this-week</code> from a flat list into a findable archive: the 4 most recent issues as a hero, then a year-of-weeks calendar with text search. Follow-up to <code>2026-06-03-this-week-in-parliament-design.html</code> (the generation pipeline) and the archive-index commit <code>8897428</code> (which made the bare URL a directory of permalinks).</p>
+
+<aside><p><strong>One-line summary:</strong> the archive page becomes three stacked zones — a <strong>hero</strong> (newest issue large + the prior 3 small), a <strong>year-of-weeks calendar</strong> (one cell per ISO week, recess weeks amber, hover → headline, click → permalink, switch years), and a <strong>client-side text search</strong> that dims non-matching weeks. The server reads the filesystem and projects each digest to a thin <code>DigestSummary</code> for the client; the calendar layout and the search predicate are pure, unit-tested functions.</p></aside>
+
+<aside class="insight"><p><strong>Why a calendar, not a grid.</strong> The data has exactly one issue per ISO week — a regular time series, not an unordered pile. A grid treats 52/year as a list to mitigate with filters; a week-calendar treats it as what it is, and earns a domain story for free: the parliamentary recesses (summer, conference, Christmas) render as amber runs, so the rhythm of Parliament becomes the navigation. Search is the one general-purpose escape hatch on top, not the primary finder.</p></aside>
+
+<h3 class="item">Locked decisions <span class="lock">confirmed with owner</span></h3>
+<table>
+<tr><th>Question</th><th>Decision</th></tr>
+<tr><td>Top zone</td><td><strong>C · Hero + 3.</strong> Newest issue as a large highlighted card; the prior 3 as a smaller row. Each links to its dated permalink.</td></tr>
+<tr><td>Browse zone</td><td><strong>B · Year-of-weeks calendar.</strong> One cell per ISO week, GitHub-contributions style. Sitting weeks accent-green, recess weeks amber, empty weeks faint. Hover → headline; click → permalink.</td></tr>
+<tr><td>Year navigation</td><td>Calendar shows <strong>one year at a time</strong> with a year switcher; defaults to the most recent year. Switcher hidden when only one year exists.</td></tr>
+<tr><td>Filter</td><td><strong>Client-side text search</strong> over <code>headline</code> + top topics (+ feature title). Matching weeks stay highlighted; non-matching dim. Empty query = everything shown.</td></tr>
+<tr><td>Calendar coverage</td><td><strong>All published issues</strong>, including the recent 4 (so the current year has no gap at the top). The hero is quick-access, not an exclusion filter.</td></tr>
+<tr><td>Client payload</td><td><strong><code>DigestSummary</code> projection</strong> — week, windowLabel, headline, mode, top topics, feature title. The full <code>DigestData</code> never reaches the browser.</td></tr>
+<tr><td>Scope</td><td>Replaces the flat-list <code>this-week/page.tsx</code> from <code>8897428</code>. <strong>Untouched:</strong> <code>[week]</code> permalinks, per-week + bare OG cards, <code>DigestView</code>, the cron and generation pipeline.</td></tr>
+</table>
+
+<h2 class="phase">1 · Goals &amp; non-goals</h2>
+<p><strong>Goal.</strong> Make a year's worth of weekly issues findable from <code>/hansard/this-week</code> without an endless scroll: surface the recent run prominently, let a reader navigate the back-catalogue by time at a glance, and give them a search box for the one case time-navigation doesn't cover ("where did they discuss X?"). Keep the page fast (static hero, small client payload) and on-brand (the existing parchment/stone/emerald palette).</p>
+<p><strong>Non-goals.</strong> No change to permalinks, OG cards, <code>DigestView</code>, the cron, or generation. No server-side search index or pagination API — search is client-side over the in-memory summaries (the dataset is small and bounded). No semantic topic classification beyond the <code>topTopics</code> the digest already carries. No accounts, comments, or analytics. No multi-select faceting (topic chips were considered and deferred — YAGNI).</p>
+
+<h2 class="phase">2 · Page architecture</h2>
+<p>The page stays a <strong>server component</strong> — it reads the filesystem, so it cannot be a client component. It does the read once, projects to summaries, splits off the recent 4, renders the hero server-side (static HTML, no JS), and hands the full summary array to a single client island for the interactive calendar + search.</p>
+<pre>  /hansard/this-week  (server component, revalidate 3600)
+        │  listPublishedSummaries()           ← fs read + projection (pure-cored)
+        │  split: recent4 = summaries[0..3], all = summaries
+        ▼
+  ┌─ RecentHero  (server, static) ──────────────┐
+  │   hero(newest) + 3 small cards → permalinks  │
+  └──────────────────────────────────────────────┘
+  ┌─ ArchiveCalendar  (client island) ──────────┐
+  │   search box  →  matchesQuery(summary, q)     │  pure predicate
+  │   year switch →  calendarByYear(all)[year]    │  pure layout
+  │   week cells  →  <Link> to /this-week/{week}  │
+  └──────────────────────────────────────────────┘</pre>
+<p>The split keeps the heavy, static part out of the JS bundle and confines interactivity to the one component that needs it.</p>
+
+<h2 class="phase">3 · Components</h2>
+<h3 class="item"><code>_components/RecentHero.tsx</code> <span class="pill">server</span></h3>
+<p>Takes the 4 most recent summaries. Renders the newest as a large card (window label, headline, intro/feature line) and the next 3 as a compact row. Pure presentational; no state. Degrades correctly when fewer than 4 issues exist (renders what there is).</p>
+<h3 class="item"><code>_components/ArchiveCalendar.tsx</code> <span class="pill">client</span></h3>
+<p>Holds the search string and selected year in <code>useState</code>. Renders the search input, the year switcher (when &gt;1 year), and the week grid for the selected year. Each published cell is a <code>next/link</code> to its permalink with the headline as its accessible label / tooltip. When the query is non-empty, cells failing <code>matchesQuery</code> get a dimmed style; matching cells keep full contrast. No data fetching — everything is derived from props via the pure helpers.</p>
+
+<h2 class="phase">4 · Data layer (pure seams)</h2>
+<p>Added to <code>src/lib/this-week/</code>. Each is a total function over plain data, unit-tested without a DOM or filesystem.</p>
+<ul>
+<li><strong><code>DigestSummary</code></strong> (in <code>types.ts</code>): <code>{ week, windowLabel, headline, mode, topics: string[], feature: string | null }</code>.</li>
+<li><strong><code>toSummary(d: DigestData): DigestSummary</code></strong> — the projection. <code>topics</code> from <code>topTopics.map(t =&gt; t.heading)</code>; <code>feature</code> from <code>feature?.title ?? null</code>; <code>headline</code> from <code>headline ?? windowLabel</code>.</li>
+<li><strong><code>listPublishedSummaries(): DigestSummary[]</code></strong> — <code>listPublishedDigests().map(toSummary)</code> (newest first). The only fs-touching addition; thin wrapper over the existing store read.</li>
+<li><strong><code>calendarByYear(summaries): YearCalendar[]</code></strong> — groups by the calendar year of <code>week</code> and places each issue at its ISO-week index (1–53), London-aware to match <code>window.ts</code>. Returns years newest-first, each with a fixed-length cell array (present weeks carry their summary; absent weeks are empty). Month boundaries derived for labels.</li>
+<li><strong><code>matchesQuery(s: DigestSummary, q: string): boolean</code></strong> — case-insensitive substring over <code>headline</code> + <code>topics</code> + <code>feature</code>. Empty/whitespace query returns <code>true</code> (everything matches).</li>
+</ul>
+
+<h2 class="phase">5 · Calendar &amp; search behaviour</h2>
+<p><strong>Cells.</strong> Sitting issue → emerald; recess issue (<code>mode === 'recess'</code>) → amber; no issue → faint neutral, non-interactive. Hover/focus reveals the headline (native <code>title</code> + visually-hidden text for SR); click navigates to the permalink.</p>
+<p><strong>Search.</strong> Typing filters via <code>matchesQuery</code>; non-matching <em>published</em> cells drop to a dimmed style (they stay in place — the calendar shape is the point — they just recede). A small count ("7 of 52 match") gives feedback. Clearing the box restores full contrast.</p>
+<p><strong>Year switch.</strong> Prev/next (and/or a select) move between years from <code>calendarByYear</code>; search persists across the switch so a query spans the whole archive visually.</p>
+
+<h2 class="phase">6 · Error &amp; empty states</h2>
+<ul>
+<li><strong>Zero published issues</strong> → <code>notFound()</code> (unchanged from the current page).</li>
+<li><strong>Fewer than 4 issues</strong> → hero renders what exists; calendar shows the single (current) year, switcher hidden.</li>
+<li><strong>A draft/missing week</strong> → already excluded upstream by <code>listPublishedDigests</code>; the calendar never links a non-published cell (the same 404-avoidance the archive-index commit established).</li>
+</ul>
+
+<h2 class="phase">7 · Testing</h2>
+<p>Swift-free; <code>vitest</code> over the pure functions — the load-bearing logic, asserted without a DOM.</p>
+<table>
+<tr><th>Unit</th><th>Assertions</th></tr>
+<tr><td><code>toSummary</code> / <code>listPublishedSummaries</code></td><td>Projects exactly the summary fields; <code>headline</code>/<code>feature</code> fallbacks; topics mapped from headings; order preserved (newest first).</td></tr>
+<tr><td><code>calendarByYear</code></td><td>Correct year grouping; week placed at the right index; year-boundary cases (late-Dec vs early-Jan); a 53-week year; absent weeks empty.</td></tr>
+<tr><td><code>matchesQuery</code></td><td>Case-insensitive headline hit; topic hit; feature hit; empty/whitespace query matches all; non-match returns false.</td></tr>
+</table>
+<p>Interactivity (dim on no-match, hover headline) is a thin render over <code>matchesQuery</code>, so the predicate test <em>is</em> the behavioural assertion. A component/snapshot test is out of scope for v1 unless the calendar render proves fiddly.</p>
+
+<h2 class="phase">8 · Files</h2>
+<ul>
+<li><span class="warn">replace</span> <code>src/app/hansard/this-week/page.tsx</code> — hero + client island.</li>
+<li><span class="ok">add</span> <code>src/app/hansard/this-week/_components/RecentHero.tsx</code> (server).</li>
+<li><span class="ok">add</span> <code>src/app/hansard/this-week/_components/ArchiveCalendar.tsx</code> (client).</li>
+<li><span class="ok">extend</span> <code>src/lib/this-week/store.ts</code> (<code>toSummary</code>, <code>listPublishedSummaries</code>, <code>calendarByYear</code>, <code>matchesQuery</code>) + <code>types.ts</code> (<code>DigestSummary</code>, <code>YearCalendar</code>).</li>
+<li><span class="ok">add</span> <code>src/lib/this-week/calendar.test.ts</code> (or extend <code>store.test.ts</code>).</li>
+<li><strong>untouched:</strong> <code>[week]/*</code>, both <code>opengraph-image.tsx</code>, <code>DigestView.tsx</code>, <code>api/this-week/route.ts</code>.</li>
+</ul>
+
+<h2 class="phase">9 · Decided at planning time</h2>
+<ul>
+<li>Exact ISO-week math (reuse vs extend <code>window.ts</code> helpers) and whether cells are keyed by ISO week or by ordinal Wednesday.</li>
+<li>Year switcher control: prev/next arrows, a <code>select</code>, or both.</li>
+<li>Whether the recent-4 hero and the current year's first cells visually cross-reference (e.g. subtle "you are here").</li>
+<li>Mobile calendar density (cell size / horizontal scroll vs wrap).</li>
+</ul>
+</body>
+</html>
