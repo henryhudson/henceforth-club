@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Starting Henceforth — /learn tutorials section · design · 2026-06-13</title>
+<style>
+  :root { --bg:#fafaf8; --fg:#18181b; --muted:#6b6b73; --rule:#e5e5e1;
+    --aside-bg:#f4f3ee; --accent:#c2410c; --code-bg:#f1efe8;
+    --ok:#5a6a44; --warn:#b45309; }
+  html,body{background:var(--bg);color:var(--fg);
+    font-family:ui-monospace,"Space Mono",SFMono-Regular,Menlo,Monaco,monospace;
+    line-height:1.6;margin:0;}
+  body{max-width:900px;margin:0 auto;padding:56px 24px 96px;font-size:15px;}
+  h1{font-size:30px;line-height:1.15;margin:0 0 12px;letter-spacing:-0.01em;}
+  h2.phase{font-size:22px;margin:54px 0 16px;border-top:2px solid var(--rule);padding-top:26px;}
+  h3.item{font-size:17px;margin:28px 0 8px;}
+  p{margin:10px 0;} p strong{font-weight:700;}
+  .byline{color:var(--muted);font-style:italic;margin:0 0 24px;}
+  aside{background:var(--aside-bg);border-left:3px solid var(--accent);
+    padding:14px 18px;margin:18px 0;border-radius:0 6px 6px 0;}
+  aside p{margin:6px 0;}
+  code,kbd{font-family:inherit;background:var(--code-bg);padding:1px 6px;
+    border-radius:3px;font-size:0.9em;}
+  pre{background:var(--code-bg);border-radius:6px;padding:14px 16px;overflow-x:auto;font-size:0.84em;line-height:1.5;}
+  ol,ul{padding-left:22px;} li{margin:5px 0;}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:0.9em;}
+  th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--rule);vertical-align:top;}
+  th{font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;font-size:0.8em;}
+  .lock{display:inline-block;font-size:0.72em;font-weight:700;padding:1px 7px;border-radius:10px;
+    background:var(--ok);color:#fff;text-transform:uppercase;letter-spacing:0.03em;}
+  .q{display:inline-block;font-size:0.72em;font-weight:700;padding:1px 7px;border-radius:10px;
+    background:var(--warn);color:#fff;text-transform:uppercase;letter-spacing:0.03em;}
+</style>
+</head>
+<body>
+<h1>Starting Henceforth — the <code>/learn</code> tutorials section</h1>
+<p class="byline">Design spec · 2026-06-13 · henceforth.club. Turns the existing <code>/learn</code> stub ("First episode coming soon") into a real episode gallery + per-episode pages for the <em>Starting Henceforth</em> video series. Strategy: <strong>teach, then convert</strong> — the free episodes earn the app's $9.99 price by showing the real machine. Spec only; the build is its own plan. Companion-validated mockups live in <code>.superpowers/brainstorm/</code>.</p>
+
+<aside>
+<p><strong>Two surfaces, two jobs.</strong> X/Twitter is the <em>reach engine</em> (muted-autoplay, fast-scroll feed — the episode cut is optimised there, and that work belongs to the separate episode-polish thread). henceforth.club is the <em>premium home</em>: full control of the chalk-on-black aesthetic, the depth X can't carry, and the conversion to a paid app. The site does <strong>not</strong> link back out to X — X sends people here; here sends them to the App Store.</p>
+</aside>
+
+<h2 class="phase">Context — what exists today</h2>
+<ul>
+<li><code>src/app/learn/page.tsx</code> — a stub: warm-accent hero, a "First episode coming soon" line, and a Brodie-books section (<em>Starting FORTH</em> / <em>Thinking FORTH</em>). Registered in <code>AppSubnav</code> under the <code>warm</code> (amber) accent.</li>
+<li><strong>The articles pattern is the template to mirror.</strong> <code>src/app/articles/page.tsx</code> is a gallery driven by a <code>const articles = [...]</code> array; each article is <code>articles/&lt;slug&gt;/{page.tsx, content.mdx, opengraph-image.png}</code> with an explicit <code>openGraph</code>/<code>twitter</code> metadata override and a version-tagged OG URL (<code>?v=2</code>) so X re-unfurls a fresh card.</li>
+<li>Design system: "Phosphor Noir" — dark <code>#06080a</code>, Space Mono everywhere, amber <code>#fbbf24</code> Henceforth accent, terminal-green <code>#7ee787</code>, <code>FadeIn</code> (Motion) scroll reveals, <code>card-glow-warm</code> hover borders, <code>section-line</code> rules.</li>
+<li>Reusable assets already in the repo: <code>src/lib/og.tsx</code> (next/og card template), <code>src/lib/rehype-pretty-forth.mjs</code> + <code>src/lib/shiki-theme.ts</code> (Forth syntax colouring), <code>components/MiniTerminal.tsx</code> (a working in-browser FORTH calculator — <strong>deliberately not used here</strong>, see D2).</li>
+<li>The episode source material lives in the FORTHapp repo: <code>Tools/StartingHenceforth/episodes/*.json</code> (storyboards, incl. the dog's <code>speak</code> narration) and <code>output/&lt;episode&gt;.mp4</code> (rendered video). Episode 1 ("What is Henceforth?") is done; Episode 2 ("The Stack") is near-ready.</li>
+</ul>
+
+<h2 class="phase">Decisions <span class="lock">locked</span> (companion-validated)</h2>
+
+<h3 class="item">D1 — Direction: gallery index + per-episode pages</h3>
+<p>The <code>/learn</code> index becomes a poster-card <strong>gallery</strong> (hero → episode grid with "soon" placeholders for unmade episodes → Brodie books kept below). Each made episode gets its own page. Rejected: a single cinematic "watch" page (fewest URLs, but no per-episode shareable links and weaker SEO) and a course-syllabus index (reads empty while only 1–2 episodes are live).</p>
+
+<h3 class="item">D2 — Episode page: watch + <em>code along in the real app</em></h3>
+<p>The page plays the episode and hands the viewer the exact commands to type into Henceforth on their own phone or Mac. <strong>No simulated terminal on the site</strong> — a toy teaches a toy; the real app holds the same machine that spends money. The <code>MiniTerminal</code> component is intentionally left for its Ctrl+<code>`</code> easter-egg role and not embedded in lessons.</p>
+<p>Layout — <strong>sticky player + code-along rail</strong>:</p>
+<table>
+<tr><th>Surface</th><th>Layout</th></tr>
+<tr><td>Desktop</td><td>Two columns. Left: video player that <code>position: sticky</code>-pins while you scroll, with <strong>Get Henceforth</strong> (App Store · Mac App Store) directly beneath. Right: the code-along rail + content blocks.</td></tr>
+<tr><td>Phone</td><td>Single stacked column — player on top, tap-to-copy commands below ("switch to Henceforth and type it").</td></tr>
+</table>
+<p>Block order (validated selections): title/dek → hero player → Get Henceforth → <strong>Code along</strong> (the real commands, each tap-to-copy) → What you'll learn (3 concepts) → Transcript (collapsible, auto-derived) → prev/next → <strong>$9.99 App Store CTA</strong>. Dropped from the proposal: the live MiniTerminal and any on-site "watch on X" link.</p>
+
+<h3 class="item">D3 — Self-host the video on-site; designed poster-card thumbnails</h3>
+<p>Episode MP4s are <strong>self-hosted</strong> under <code>public/learn/&lt;slug&gt;/</code> (no YouTube/Vimeo embed) for full control of the look and no platform chrome. The gallery thumbnail and each episode's social card are <strong>one generated asset</strong>: a designed poster card (episode number · title · motif) rendered through the existing <code>og.tsx</code> template — so the thumbnail <em>is</em> the OG share image. Rejected thumbnail styles: raw video stills (varied but off-brand-inconsistent) and a pure chalk motif (beautiful but near-identical across episodes).</p>
+
+<h3 class="item">D4 — Positioning: teach-then-convert, paid app ($9.99)</h3>
+<p>Henceforth is <strong>$9.99</strong>, not free (correct every CTA accordingly). The App Store CTA lands <em>after</em> the teaching, where the value is earned; copy is "you've seen what it does — get the machine," not "download." The $9.99 is a single <strong>universal purchase</strong> covering iPhone, iPad, and Mac.</p>
+
+<h2 class="phase">Architecture</h2>
+
+<h3 class="item">Routes &amp; data</h3>
+<p>Episodes are uniform, structured data — unlike the bespoke-prose articles — so they are <strong>manifest-driven</strong> rather than per-folder MDX:</p>
+<table>
+<tr><th>Path</th><th>Role</th></tr>
+<tr><td><code>src/lib/episodes.ts</code></td><td>Typed <code>Episode[]</code> manifest — the single source of truth (see shape below).</td></tr>
+<tr><td><code>src/app/learn/page.tsx</code></td><td>Gallery index (server component). Hero + episode grid from the manifest + Brodie books retained below.</td></tr>
+<tr><td><code>src/app/learn/[slug]/page.tsx</code></td><td>Episode page (server component). <code>generateStaticParams()</code> over published episodes; renders the shared episode template; explicit <code>openGraph</code>/<code>twitter</code> metadata override (article pattern) so X unfurls the episode poster, not the site banner.</td></tr>
+<tr><td><code>src/app/learn/[slug]/opengraph-image.tsx</code></td><td>Per-episode poster card via <code>og.tsx</code>. Doubles as the gallery thumbnail. Version with <code>?v=</code> on the metadata URL when regenerated (X cache is keyed on URL string).</td></tr>
+<tr><td><code>public/learn/&lt;slug&gt;/episode.mp4</code></td><td>Self-hosted video. Copied from FORTHapp <code>Tools/StartingHenceforth/output/</code> (site cut; the X cut is a separate render owned by the episode-polish thread).</td></tr>
+</table>
+
+<h3 class="item">Episode manifest shape</h3>
+<pre>type Episode = {
+  number: number;            // 1..10
+  slug: string;              // "what-is-henceforth", "the-stack"
+  title: string;             // "The Stack"
+  dek: string;               // one-line summary under the title
+  published: boolean;        // false → renders as a "soon" tile, no page
+  durationSec?: number;      // 25
+  music?: { season: string; piece: string };   // "Summer", "Vivaldi · Presto (RV 315 iii)"
+  concepts?: string[];       // "What you'll learn" bullets
+  codeAlong?: string[];      // ["3 4 + .", "2 4 6 8 . . . .", "10 20 30 . . . ."]
+  transcript?: string[];     // dog's speak lines, lifted from the FORTHapp episode JSON
+  video?: { mp4: string; poster: string };
+};</pre>
+<p><strong>Transcript derivation is nearly free:</strong> the dog's narration already exists as the <code>speak</code> steps in the FORTHapp episode JSON. An authoring step (small Node script in <code>scripts/</code>, or a one-time copy) extracts <code>steps[].text where type==="speak"</code> into <code>transcript</code>. No transcription work; good for accessibility + SEO.</p>
+
+<h3 class="item">Components (all under <code>src/components/learn/</code>)</h3>
+<table>
+<tr><th>Component</th><th>Responsibility</th></tr>
+<tr><td><code>EpisodeCard</code></td><td>Gallery tile: poster thumbnail, episode number, title, music label; "soon" variant for unpublished. <code>card-glow-warm</code> hover.</td></tr>
+<tr><td><code>EpisodePlayer</code> (client)</td><td>HTML5 <code>&lt;video&gt;</code> with <code>poster</code>, minimal chalk-on-black controls, no autoplay. <code>position: sticky</code> on desktop. Respects <code>prefers-reduced-motion</code>.</td></tr>
+<tr><td><code>CodeAlong</code> (client)</td><td>Ordered command rows; each tap-to-copy via <code>navigator.clipboard</code> with a copied-state tick. Forth colouring reuses the <code>rehype-pretty-forth</code> / <code>shiki-theme</code> token vocabulary (operators amber, numbers green, comments grey) for visual consistency with <code>/docs</code>.</td></tr>
+<tr><td><code>GetHenceforth</code></td><td>App Store + Mac App Store buttons, "$9.99 · one universal purchase · iPhone · iPad · Mac". Store badges only — no deep-link.</td></tr>
+<tr><td><code>Transcript</code></td><td>Collapsible (<code>&lt;details&gt;</code>) list of the dog's lines.</td></tr>
+</table>
+
+<h2 class="phase">Acceptance criteria</h2>
+<ol>
+<li><code>/learn</code> renders a gallery: hero, an episode grid (Ep 1 made; Ep 2+ as "soon" tiles), Brodie books retained below. No "coming soon" placeholder copy remains.</li>
+<li><code>/learn/what-is-henceforth</code> (Ep 1) renders the episode page: sticky player (desktop), Get Henceforth, a code-along rail whose rows copy to clipboard, What-you'll-learn, a collapsible transcript, prev/next, and the $9.99 CTA.</li>
+<li>The episode MP4 plays from <code>public/learn/&lt;slug&gt;/</code> with the poster card as its frame-zero.</li>
+<li>Unfurling an episode URL on X shows that episode's poster card (not the site banner) — explicit per-page <code>openGraph</code>/<code>twitter</code> metadata, versioned image URL.</li>
+<li>The gallery thumbnail and the OG card are the same generated asset.</li>
+<li>Mobile: the page stacks; player on top, tap-to-copy commands legible and copyable.</li>
+<li>No simulated terminal and no outbound X link appear anywhere in the section.</li>
+<li><code>npm run build</code> is clean; the new routes appear in the sitemap; Lighthouse a11y has alt text on posters and a labelled video.</li>
+</ol>
+
+<h2 class="phase">Non-goals (out of scope for this spec)</h2>
+<ul>
+<li><strong>The X-optimised video cut</strong> (aspect ratio, silent-legibility, length) and any Episode-2 editorial polish — those belong to the separate <em>episode-polish</em> thread.</li>
+<li>YouTube/Vimeo hosting; an in-page interactive terminal; an on-site "discuss on X" link.</li>
+<li>Per-episode comment threads, progress tracking, or auth.</li>
+<li>Auto-syncing the manifest from the FORTHapp repo at build time (v1 is a manual author/copy step; automate later if it earns it).</li>
+</ul>
+
+<h2 class="phase">Resolved <span class="lock">Henry · 2026-06-13</span></h2>
+<ol>
+<li><strong>App SKU:</strong> one price — a single <strong>universal purchase</strong> ($9.99) covers iPhone, iPad, and Mac.</li>
+<li><strong>First deploy:</strong> <strong>Episode 1 only.</strong> Episode 2 isn't finished — it renders as a "soon" tile until its polish thread lands.</li>
+<li><strong>Deep-link:</strong> <strong>no.</strong> Store badges only; no <code>henceforth://</code> launch button.</li>
+<li><strong>Captions:</strong> <strong>none.</strong> The dog narrates on-screen, so a WebVTT track is redundant. The collapsible on-page transcript still ships (skim + SEO).</li>
+</ol>
+
+<h2 class="phase">Implementation arc (high-level — detailed plan follows via writing-plans)</h2>
+<table>
+<tr><th>#</th><th>Step</th></tr>
+<tr><td>1</td><td><code>episodes.ts</code> manifest + transcript-extraction author step; seed Ep 1 (Ep 2 stays an unpublished "soon" entry).</td></tr>
+<tr><td>2</td><td>Episode-poster template in <code>og.tsx</code>; <code>[slug]/opengraph-image.tsx</code>; copy MP4s into <code>public/learn/</code>.</td></tr>
+<tr><td>3</td><td>Components: <code>EpisodeCard</code>, <code>EpisodePlayer</code>, <code>CodeAlong</code>, <code>GetHenceforth</code>, <code>Transcript</code>.</td></tr>
+<tr><td>4</td><td>Rewrite <code>learn/page.tsx</code> into the gallery (books retained); build <code>learn/[slug]/page.tsx</code> with metadata overrides + <code>generateStaticParams</code>.</td></tr>
+<tr><td>5</td><td>Sitemap, a11y pass, <code>npm run build</code> verify. (Deploy is a <code>git push</code> — Henry's call.)</td></tr>
+</table>
+
+</body>
+</html>
