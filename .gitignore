@@ -46,6 +46,10 @@ next-env.d.ts
 # Superpowers brainstorm artifacts (visual companion mockups)
 .superpowers/
 
+# Local-only working files (assets + research scratchpads, never shipped)
+marketing/
+src/app/scriptedsupply/RESEARCH-NOTES.md
+
 # Generated video assets (see scripts/render-hansard-video.sh)
 scripts/.frames/
 scripts/anthem.oga
