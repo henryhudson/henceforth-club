@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>This Week in Parliament — archive browse · implementation plan · 2026-06-13</title>
+<style>
+  :root {
+    --bg: #f4f1ea; --ink: #1c1a16; --muted: #6b6358; --rule: #d8d0c0;
+    --accent: #a8431f; --accent-soft: #c4a572; --card: #fbf9f4;
+    --code-bg: #1e1e1e; --code-ink: #e8e8e8; --ok: #2f6f3e; --warn: #a8431f;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 0 0 80px; background: var(--bg); color: var(--ink);
+    font-family: Georgia, 'Iowan Old Style', 'Times New Roman', serif; font-size: 17px; line-height: 1.65; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 56px 32px; }
+  header.doc { margin-bottom: 40px; border-bottom: 2px solid var(--rule); padding-bottom: 24px; }
+  .eyebrow { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-bottom: 10px; }
+  h1 { font-size: 34px; line-height: 1.15; margin: 0 0 12px; font-weight: 700; letter-spacing: -0.01em; }
+  h2 { font-size: 24px; margin: 44px 0 14px; padding-top: 18px; border-top: 1px solid var(--rule); }
+  h3 { font-size: 19px; margin: 28px 0 10px; }
+  .lede { font-size: 19px; color: var(--muted); margin: 0; }
+  p { margin: 14px 0; }
+  code { font-family: 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace; font-size: 0.86em; background: rgba(0,0,0,0.06); padding: 2px 6px; border-radius: 4px; }
+  pre { background: var(--code-bg); color: var(--code-ink); padding: 18px 20px; border-radius: 8px; overflow-x: auto; margin: 12px 0; }
+  pre code { background: none; padding: 0; font-size: 13px; line-height: 1.6; }
+  .task { display: flex; gap: 12px; align-items: flex-start; margin: 10px 0; padding: 12px 16px; background: var(--card); border: 1px solid var(--rule); border-radius: 8px; box-shadow: var(--shadow); }
+  .task input[type=checkbox] { margin-top: 5px; width: 16px; height: 16px; flex-shrink: 0; accent-color: var(--ok); }
+  .task .body { flex: 1; }
+  .task .body strong { display: block; margin-bottom: 3px; }
+  .meta { font-size: 13px; color: var(--muted); }
+  .pill { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 8px; border-radius: 999px; margin-left: 6px; }
+  .pill.tdd { background: #cfe3d4; color: #1f5a32; }
+  .pill.build { background: #f0e0c0; color: #6f5318; }
+  table { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 14.5px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  .gate { background: #fdf2ec; border: 1px solid var(--accent); border-radius: 8px; padding: 14px 18px; margin: 18px 0; }
+  .gate strong { color: var(--accent); }
+  ul { margin: 12px 0; padding-left: 24px; } li { margin: 6px 0; }
+  .files code { font-size: 0.92em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="doc">
+  <div class="eyebrow">Henceforth.club · Plan · This Week in Parliament — archive browse · 2026-06-13</div>
+  <h1>Make <code>/hansard/this-week</code> a findable archive</h1>
+  <p class="lede">Replace the flat list with a hero (newest + 3), a year-of-weeks calendar, and client-side text search. Spec: <code>docs/superpowers/specs/2026-06-13-this-week-archive-design.html</code>.</p>
+  <p class="meta" style="margin-top:16px;"><strong>For agentic workers:</strong> execute task-by-task; tick each <code>&lt;input&gt;</code> as you go. Tests: <code>npm run test</code> (vitest, node env, <code>src/**/*.test.ts</code> only — no jsdom/RTL, so component behaviour is verified via <code>npm run build</code> + <code>npm run dev</code>, per the project's testing philosophy). Build gate: <code>npm run build</code>. Commit per task, never amend. <strong>Do not <code>git push</code></strong> — push auto-deploys to Vercel; deployment is Henry's call.</p>
+</header>
+
+<p><strong>Goal:</strong> A year's worth of weekly issues is findable from <code>/hansard/this-week</code> — recent run up top, time-navigable calendar below, search for the rest — without an endless scroll.</p>
+<p><strong>Architecture:</strong> Server page reads the filesystem once, projects each digest to a thin <code>DigestSummary</code>, renders the hero statically, and hands the summaries to a single client island (<code>ArchiveCalendar</code>). Calendar layout and the search predicate are pure functions in the store, unit-tested in node.</p>
+<p><strong>Tech stack:</strong> Next.js 16 (App Router, server/client components), React 19, Tailwind v4, vitest (node). Existing palette: <code>stone</code>/<code>emerald</code> on <code>#faf9f6</code>.</p>
+
+<h2>File structure</h2>
+<table class="files">
+<thead><tr><th>Path</th><th>Create / Modify</th><th>Responsibility</th></tr></thead>
+<tbody>
+<tr><td><code>src/lib/this-week/types.ts</code></td><td>Modify</td><td>Add <code>DigestSummary</code>, <code>YearCell</code>, <code>YearCalendar</code>.</td></tr>
+<tr><td><code>src/lib/this-week/store.ts</code></td><td>Modify</td><td>Add <code>toSummary</code>, <code>listPublishedSummaries</code>, <code>matchesQuery</code>, <code>calendarByYear</code> (+ private <code>isoWeek</code>/<code>isoWeeksInYear</code>).</td></tr>
+<tr><td><code>src/lib/this-week/calendar.test.ts</code></td><td>Create</td><td>Vitest for the four pure functions.</td></tr>
+<tr><td><code>src/app/hansard/this-week/_components/RecentHero.tsx</code></td><td>Create</td><td>Server: newest issue large + prior 3 small.</td></tr>
+<tr><td><code>src/app/hansard/this-week/_components/ArchiveCalendar.tsx</code></td><td>Create</td><td>Client: search box + year switch + week grid.</td></tr>
+<tr><td><code>src/app/hansard/this-week/page.tsx</code></td><td>Modify</td><td>Compose hero + calendar; drop the flat list.</td></tr>
+</tbody>
+</table>
+
+<h2>Task 1 — Types <span class="pill build">build</span></h2>
+<div class="task"><input type="checkbox"><div class="body"><strong>Add summary + calendar types to <code>types.ts</code></strong>
+<pre><code>export interface DigestSummary {
+  week: string            // YYYY-MM-DD Wednesday anchor = permalink slug
+  windowLabel: string
+  headline: string        // headline ?? windowLabel
+  mode: Mode
+  topics: string[]        // topTopics headings
+  feature: string | null  // feature?.title ?? null
+}
+export interface YearCell { weekIndex: number; summary: DigestSummary | null }
+export interface YearCalendar { year: number; cells: YearCell[] }</code></pre>
+</div></div>
+
+<h2>Task 2 — <code>toSummary</code> / <code>listPublishedSummaries</code> <span class="pill tdd">tdd</span></h2>
+<div class="task"><input type="checkbox"><div class="body"><strong>Write failing test (<code>calendar.test.ts</code>)</strong> — projection keeps the right fields and fallbacks.
+<pre><code>import { describe, it, expect } from 'vitest'
+import { toSummary, matchesQuery, calendarByYear } from './store'
+import type { DigestData } from './types'
+
+const base = (over: Partial&lt;DigestData&gt;): DigestData =&gt; ({
+  week: '2026-06-10', windowLabel: '3–10 Jun 2026', mode: 'normal',
+  generatedAt: '', recessReturnISO: null,
+  stats: { divisions: 0, questions: 0, distinctAskers: 0 }, departments: [],
+  highlights: { votes: [], questions: [], bills: [] }, intro: '', status: 'published', ...over,
+})
+
+it('toSummary projects fields with fallbacks', () =&gt; {
+  const s = toSummary(base({ headline: undefined, topTopics: [{ heading: 'NHS', count: 3 }], feature: undefined }))
+  expect(s.headline).toBe('3–10 Jun 2026')   // falls back to windowLabel
+  expect(s.topics).toEqual(['NHS'])
+  expect(s.feature).toBeNull()
+})</code></pre>
+</div></div>
+<div class="task"><input type="checkbox"><div class="body"><strong>Implement in <code>store.ts</code></strong>
+<pre><code>export function toSummary(d: DigestData): DigestSummary {
+  return {
+    week: d.week, windowLabel: d.windowLabel,
+    headline: d.headline ?? d.windowLabel, mode: d.mode,
+    topics: (d.topTopics ?? []).map(t =&gt; t.heading),
+    feature: d.feature?.title ?? null,
+  }
+}
+export function listPublishedSummaries(): DigestSummary[] {
+  return listPublishedDigests().map(toSummary)
+}</code></pre>
+</div></div>
+<div class="task"><input type="checkbox"><div class="body"><strong>Run <code>npm run test</code> → green.</strong></div></div>
+
+<h2>Task 3 — <code>matchesQuery</code> <span class="pill tdd">tdd</span></h2>
+<div class="task"><input type="checkbox"><div class="body"><strong>Failing test</strong>
+<pre><code>const s = toSummary(base({ headline: 'Belfast knife attack', topTopics: [{ heading: 'Justice', count: 1 }] }))
+it('matchesQuery: case-insensitive, empty matches all, topic + headline hits', () =&gt; {
+  expect(matchesQuery(s, '')).toBe(true)
+  expect(matchesQuery(s, '   ')).toBe(true)
+  expect(matchesQuery(s, 'BELFAST')).toBe(true)
+  expect(matchesQuery(s, 'justice')).toBe(true)
+  expect(matchesQuery(s, 'housing')).toBe(false)
+})</code></pre>
+</div></div>
+<div class="task"><input type="checkbox"><div class="body"><strong>Implement</strong>
+<pre><code>export function matchesQuery(s: DigestSummary, q: string): boolean {
+  const needle = q.trim().toLowerCase()
+  if (!needle) return true
+  return [s.headline, s.feature ?? '', ...s.topics].join(' ').toLowerCase().includes(needle)
+}</code></pre>
+</div></div>
+<div class="task"><input type="checkbox"><div class="body"><strong>Run <code>npm run test</code> → green.</strong></div></div>
+
+<h2>Task 4 — <code>calendarByYear</code> + ISO week <span class="pill tdd">tdd</span></h2>
+<div class="task"><input type="checkbox"><div class="body"><strong>Failing test</strong> — placement, grouping, empties, ISO-year boundary.
+<pre><code>it('calendarByYear groups by ISO year, fills cells, leaves gaps null', () =&gt; {
+  const cal = calendarByYear([toSummary(base({ week: '2026-06-10' })), toSummary(base({ week: '2026-06-03' }))])
+  expect(cal[0].year).toBe(2026)
+  const filled = cal[0].cells.filter(c =&gt; c.summary).map(c =&gt; c.summary!.week)
+  expect(filled).toEqual(['2026-06-03', '2026-06-10'].sort())  // both present
+  expect(cal[0].cells.length).toBeGreaterThanOrEqual(52)
+})
+it('ISO year boundary: 2021-01-01 belongs to ISO year 2020 (week 53)', () =&gt; {
+  const cal = calendarByYear([toSummary(base({ week: '2021-01-01' }))])
+  expect(cal[0].year).toBe(2020)
+  expect(cal[0].cells.length).toBe(53)
+})</code></pre>
+</div></div>
+<div class="task"><input type="checkbox"><div class="body"><strong>Implement (pure; parse as UTC to avoid TZ drift)</strong>
+<pre><code>function isoWeek(dateISO: string): { year: number; week: number } {
+  const [y, m, d] = dateISO.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d))
+  const day = dt.getUTCDay() || 7
+  dt.setUTCDate(dt.getUTCDate() + 4 - day)            // shift to the week's Thursday
+  const yearStart = new Date(Date.UTC(dt.getUTCFullYear(), 0, 1))
+  const week = Math.ceil(((dt.getTime() - yearStart.getTime()) / 86400000 + 1) / 7)
+  return { year: dt.getUTCFullYear(), week }
+}
+function isoWeeksInYear(year: number): number {
+  return isoWeek(`${year}-12-28`).week                // Dec 28 is always in the last ISO week
+}
+export function calendarByYear(summaries: readonly DigestSummary[]): YearCalendar[] {
+  const byYear = new Map&lt;number, Map&lt;number, DigestSummary&gt;&gt;()
+  for (const s of summaries) {
+    const { year, week } = isoWeek(s.week)
+    if (!byYear.has(year)) byYear.set(year, new Map())
+    byYear.get(year)!.set(week, s)
+  }
+  return [...byYear.keys()].sort((a, b) =&gt; b - a).map(year =&gt; ({
+    year,
+    cells: Array.from({ length: isoWeeksInYear(year) }, (_, i) =&gt; ({
+      weekIndex: i + 1, summary: byYear.get(year)!.get(i + 1) ?? null,
+    })),
+  }))
+}</code></pre>
+</div></div>
+<div class="task"><input type="checkbox"><div class="body"><strong>Run <code>npm run test</code> → all green. Commit:</strong> <code>feat(this-week): summary projection, search predicate, calendar layout</code></div></div>
+
+<h2>Task 5 — <code>RecentHero</code> (server) <span class="pill build">build</span></h2>
+<div class="task"><input type="checkbox"><div class="body"><strong>Create <code>_components/RecentHero.tsx</code></strong> — props <code>{ recent: DigestSummary[] }</code>. First item: large card (windowLabel eyebrow, <code>headline</code>, <code>feature</code> line) linking to <code>/hansard/this-week/{week}</code>. Items 2–4: compact row of <code>&lt;Link&gt;</code> cards (windowLabel + headline). Match <code>DigestView</code> chrome (<code>bg-[#faf9f6]</code>, <code>emerald-700</code> eyebrows, <code>stone</code> text). Renders whatever exists when &lt; 4.</div></div>
+
+<h2>Task 6 — <code>ArchiveCalendar</code> (client) <span class="pill build">build</span></h2>
+<div class="task"><input type="checkbox"><div class="body"><strong>Create <code>_components/ArchiveCalendar.tsx</code></strong> — <code>'use client'</code>; props <code>{ summaries: DigestSummary[] }</code>. <code>useState</code> for <code>query</code> and <code>yearIdx</code>. Derive <code>const years = calendarByYear(summaries)</code> (via <code>useMemo</code>). Render: search <code>&lt;input&gt;</code>; year switch (prev/next + label) shown only when <code>years.length &gt; 1</code>; the selected year's <code>cells</code> as a wrapped grid of square cells. Cell styling: <code>summary &amp;&amp; mode==='recess'</code> → amber; other <code>summary</code> → emerald; <code>summary===null</code> → faint neutral, non-interactive. Filled cells are <code>&lt;Link href={`/hansard/this-week/${c.summary.week}`}&gt;</code> with <code>title</code>=headline + an <code>.sr-only</code> label; when <code>query.trim()</code> and <code>!matchesQuery(c.summary, query)</code>, add a dimmed class. Show "<em>N of M match</em>" when query non-empty.</div></div>
+
+<h2>Task 7 — Compose the page <span class="pill build">build</span></h2>
+<div class="task"><input type="checkbox"><div class="body"><strong>Rewrite <code>page.tsx</code></strong>
+<pre><code>import { notFound } from 'next/navigation'
+import { listPublishedSummaries } from '@/lib/this-week/store'
+import RecentHero from './_components/RecentHero'
+import ArchiveCalendar from './_components/ArchiveCalendar'
+
+export const revalidate = 3600
+export function generateMetadata() { /* unchanged: title/description/og for the archive */ }
+
+export default function ThisWeekArchivePage() {
+  const summaries = listPublishedSummaries()
+  if (summaries.length === 0) notFound()
+  return (
+    &lt;div className="min-h-screen bg-[#faf9f6] py-16 text-stone-900 sm:py-24"&gt;
+      &lt;main className="mx-auto max-w-3xl px-6"&gt;
+        &lt;RecentHero recent={summaries.slice(0, 4)} /&gt;
+        &lt;ArchiveCalendar summaries={summaries} /&gt;
+      &lt;/main&gt;
+    &lt;/div&gt;
+  )
+}</code></pre>
+Keep the existing <code>generateMetadata</code> body (archive title/description/OG).</div></div>
+
+<h2>Task 8 — Verify &amp; commit <span class="pill build">build</span></h2>
+<div class="gate"><strong>Gate:</strong> <code>npm run test</code> green · <code>npm run build</code> exit 0 · <code>/hansard/this-week</code> prerenders and <code>[week]</code> permalinks still build · spot-check rendered HTML lists permalinks. Then commit <code>feat(this-week): hero + year-of-weeks calendar + search archive</code>. <strong>Do not push.</strong></div>
+<div class="task"><input type="checkbox"><div class="body"><strong>Run gate, fix anything, commit.</strong></div></div>
+
+<h2>Decided here (from spec §9)</h2>
+<ul>
+<li><strong>Cell key:</strong> ISO week (robust, handles 52/53 + year boundary) — implemented in Task 4.</li>
+<li><strong>Year switch:</strong> prev/next + a year label (no <code>&lt;select&gt;</code> for v1).</li>
+<li><strong>Mobile:</strong> cells <code>flex-wrap</code> (no horizontal scroll); square cells shrink to fit.</li>
+</ul>
+</div>
+</body>
+</html>
