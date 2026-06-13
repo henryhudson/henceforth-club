@@ -1,23 +1,21 @@
 import { ImageResponse } from 'next/og'
 import { ogSize, ogContentType } from '@/lib/og'
-import { loadLatestPublishedDigest } from '@/lib/this-week/store'
+import { listPublishedDigests } from '@/lib/this-week/store'
 
 export const size = ogSize
 export const contentType = ogContentType
-export const alt = 'This Week in Parliament — Hansard digest'
+export const alt = 'This Week in Parliament — the weekly archive'
 
 const INK = '#1c1a16'
 const MUTED = '#6b6358'
 const ACCENT = '#047857'
 const BG = '#faf9f6'
 
+// Stable directory card for /hansard/this-week. Unlike a single week's card, this
+// represents the archive itself and never tracks "latest" — so a link shared to the
+// bare URL stays a directory preview instead of silently becoming a different article.
 export default function OG() {
-  const digest = loadLatestPublishedDigest()
-  const windowLabel = digest?.windowLabel ?? ''
-  const headline = digest?.headline ?? 'This Week in Parliament'
-  const stats = digest?.stats
-  const feature = digest?.feature
-  const isRecess = digest?.mode === 'recess'
+  const count = listPublishedDigests().length
 
   return new ImageResponse(
     (
@@ -35,56 +33,29 @@ export default function OG() {
         }}
       >
         {/* Eyebrow */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{ width: 12, height: 12, borderRadius: 999, background: ACCENT }} />
-            <div style={{ fontSize: 22, letterSpacing: 4, color: ACCENT, textTransform: 'uppercase' }}>
-              This Week in Parliament
-            </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 12, height: 12, borderRadius: 999, background: ACCENT }} />
+          <div style={{ fontSize: 22, letterSpacing: 4, color: ACCENT, textTransform: 'uppercase' }}>
+            This Week in Parliament
           </div>
-          <div style={{ fontSize: 22, color: MUTED }}>{windowLabel}</div>
         </div>
 
-        {/* Headline + stats + story hook */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 26, flex: 1, justifyContent: 'center' }}>
-          <div style={{ display: 'flex', fontSize: 62, fontWeight: 700, lineHeight: 1.08, color: INK, maxWidth: 1040 }}>
-            {headline}
+        {/* Title + tagline */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 22, flex: 1, justifyContent: 'center' }}>
+          <div style={{ display: 'flex', fontSize: 72, fontWeight: 700, lineHeight: 1.05, color: INK }}>
+            The weekly archive
           </div>
-          {stats && !isRecess && (
-            <div style={{ display: 'flex', fontSize: 30, color: MUTED }}>
-              {stats.distinctAskers} MPs · {stats.questions.toLocaleString()} written questions · {stats.divisions} votes
-            </div>
-          )}
-          {isRecess && (
-            <div style={{ display: 'flex', fontSize: 30, color: MUTED }}>Parliament is on recess 🏖️</div>
-          )}
-          {feature && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 16,
-                marginTop: 6,
-                padding: '16px 22px',
-                borderRadius: 14,
-                border: `2px solid rgba(4,120,87,0.25)`,
-                background: '#ffffff',
-              }}
-            >
-              <div style={{ display: 'flex', fontSize: 17, fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: 2 }}>
-                Story of the week
-              </div>
-              <div style={{ display: 'flex', fontSize: 23, color: INK, maxWidth: 760 }}>
-                {feature.title} · {feature.count} questions
-              </div>
-            </div>
-          )}
+          <div style={{ display: 'flex', fontSize: 30, color: MUTED, maxWidth: 1000 }}>
+            Every issue of what the House of Commons voted on and was asked.
+          </div>
         </div>
 
         {/* Footer */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 22, color: MUTED }}>
           <div style={{ display: 'flex' }}>henceforth.club</div>
-          <div style={{ display: 'flex', color: ACCENT }}>/hansard/this-week</div>
+          <div style={{ display: 'flex', color: ACCENT }}>
+            {count > 0 ? `${count} issues · /hansard/this-week` : '/hansard/this-week'}
+          </div>
         </div>
       </div>
     ),

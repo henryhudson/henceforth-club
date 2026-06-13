@@ -89,7 +89,7 @@ export default async function OG({ params }: { params: Promise<{ week: string }>
         {/* Footer */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 22, color: MUTED }}>
           <div style={{ display: 'flex' }}>henceforth.club</div>
-          <div style={{ display: 'flex', color: ACCENT }}>/hansard/this-week</div>
+          <div style={{ display: 'flex', color: ACCENT }}>/hansard/this-week/{week}</div>
         </div>
       </div>
     ),

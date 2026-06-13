@@ -27,12 +27,14 @@ export function loadDigest(week: string): DigestData | null {
   }
 }
 
-/** Load the most recently published digest. Returns null if none exist. */
-export function loadLatestPublishedDigest(): DigestData | null {
-  const weeks = listPublishedWeeks()
-  for (const week of weeks) {
-    const digest = loadDigest(week)
-    if (digest && digest.status === 'published') return digest
-  }
-  return null
+/** Pure: keep only published digests, dropping drafts and load failures while
+ *  preserving input order. Keeping this separate from the filesystem read lets
+ *  the archive's "never link a draft (it would 404)" rule be asserted directly. */
+export function selectPublished(digests: readonly (DigestData | null)[]): DigestData[] {
+  return digests.filter((d): d is DigestData => d?.status === 'published')
+}
+
+/** All published digests, newest first — the archive index. */
+export function listPublishedDigests(): DigestData[] {
+  return selectPublished(listPublishedWeeks().map(loadDigest))
 }
