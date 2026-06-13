@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import FadeIn from "@/components/FadeIn";
+import EpisodeCard from "@/components/learn/EpisodeCard";
+import { episodes } from "@/lib/episodes";
 
 export const metadata: Metadata = {
   title: "Learn",
   description:
-    "Starting Henceforth — video tutorials teaching FORTH and the Henceforth Bitcoin wallet from first principles. Plus Leo Brodie's classic FORTH books.",
+    "Starting Henceforth — a video series teaching FORTH and the Henceforth Bitcoin wallet from first principles, ending in Bitcoin Script. Plus Leo Brodie's classic FORTH books.",
 };
 
 const books = [
@@ -41,15 +43,18 @@ export default function LearnPage() {
           </h1>
           <p className="mt-6 text-lg leading-relaxed text-muted">
             Starting Henceforth — a video series teaching FORTH and the
-            Henceforth Bitcoin wallet from first principles.
+            Henceforth Bitcoin wallet from first principles. Watch an episode,
+            then code along in the app.
           </p>
         </FadeIn>
 
-        <FadeIn delay={0.15}>
-          <p className="mt-12 text-center text-sm text-muted/60">
-            First episode coming soon.
-          </p>
-        </FadeIn>
+        <div className="mt-12 grid gap-4 sm:grid-cols-2">
+          {episodes.map((episode, i) => (
+            <FadeIn key={episode.slug} delay={0.1 + i * 0.08} className="h-full">
+              <EpisodeCard episode={episode} />
+            </FadeIn>
+          ))}
+        </div>
 
         <div className="mt-24">
           <div className="section-line" />

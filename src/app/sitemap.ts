@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { publishedEpisodes } from "@/lib/episodes";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = "https://henceforth.club";
@@ -76,6 +77,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 0.7,
     },
+    ...publishedEpisodes().map((e) => ({
+      url: `${baseUrl}/learn/${e.slug}`,
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    })),
     {
       url: `${baseUrl}/contact`,
       lastModified: new Date(),
