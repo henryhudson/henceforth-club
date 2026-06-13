@@ -43,6 +43,9 @@ next-env.d.ts
 # Claude Code local settings
 .claude/
 
+# Superpowers brainstorm artifacts (visual companion mockups)
+.superpowers/
+
 # Generated video assets (see scripts/render-hansard-video.sh)
 scripts/.frames/
 scripts/anthem.oga
