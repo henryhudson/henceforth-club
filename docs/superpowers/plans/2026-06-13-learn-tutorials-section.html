@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Starting Henceforth — /learn section · implementation plan · 2026-06-13</title>
+<style>
+  :root {
+    --bg: #f4f1ea; --ink: #1c1a16; --muted: #6b6358; --rule: #d8d0c0;
+    --accent: #a8431f; --accent-soft: #c4a572; --card: #fbf9f4;
+    --code-bg: #1e1e1e; --code-ink: #e8e8e8; --ok: #2f6f3e; --warn: #a8431f;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 0 0 80px; background: var(--bg); color: var(--ink);
+    font-family: Georgia, 'Iowan Old Style', 'Times New Roman', serif; font-size: 17px; line-height: 1.65; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 56px 32px; }
+  header.doc { margin-bottom: 40px; border-bottom: 2px solid var(--rule); padding-bottom: 24px; }
+  .eyebrow { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-bottom: 10px; }
+  h1 { font-size: 34px; line-height: 1.15; margin: 0 0 12px; font-weight: 700; letter-spacing: -0.01em; }
+  h2 { font-size: 24px; margin: 44px 0 14px; padding-top: 18px; border-top: 1px solid var(--rule); }
+  h3 { font-size: 19px; margin: 28px 0 10px; }
+  .lede { font-size: 19px; color: var(--muted); margin: 0; }
+  p { margin: 14px 0; }
+  code { font-family: 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace; font-size: 0.86em; background: rgba(0,0,0,0.06); padding: 2px 6px; border-radius: 4px; }
+  pre { background: var(--code-bg); color: var(--code-ink); padding: 18px 20px; border-radius: 8px; overflow-x: auto; margin: 12px 0; }
+  pre code { background: none; padding: 0; font-size: 13px; line-height: 1.6; }
+  .task { display: flex; gap: 12px; align-items: flex-start; margin: 10px 0; padding: 12px 16px; background: var(--card); border: 1px solid var(--rule); border-radius: 8px; box-shadow: var(--shadow); }
+  .task input[type=checkbox] { margin-top: 5px; width: 16px; height: 16px; flex-shrink: 0; accent-color: var(--ok); }
+  .task .body { flex: 1; }
+  .task .body strong { display: block; margin-bottom: 3px; }
+  .meta { font-size: 13px; color: var(--muted); }
+  .pill { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 8px; border-radius: 999px; margin-left: 6px; }
+  .pill.tdd { background: #cfe3d4; color: #1f5a32; }
+  .pill.visual { background: #f0e0c0; color: #6f5318; }
+  .pill.asset { background: #e6dcc8; color: #6b5a2c; }
+  table { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 14.5px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  .gate { background: #fdf2ec; border: 1px solid var(--accent); border-radius: 8px; padding: 14px 18px; margin: 18px 0; }
+  .gate strong { color: var(--accent); }
+  ul { margin: 12px 0; padding-left: 24px; } li { margin: 6px 0; }
+  .files { font-size: 14px; }
+  .files code { font-size: 0.92em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="doc">
+  <div class="eyebrow">Henceforth.club · Plan · Starting Henceforth /learn section · 2026-06-13</div>
+  <h1>Build the <code>/learn</code> tutorials section</h1>
+  <p class="lede">Turn the <code>/learn</code> stub into a Starting-Henceforth episode gallery with per-episode pages — watch + code-along in the real app, self-hosted video, poster-card thumbnails, $9.99 teach-then-convert. Ships Episode 1; Episodes 2+ render as "soon" tiles.</p>
+  <p class="meta" style="margin-top:16px;"><strong>For agentic workers:</strong> REQUIRED SUB-SKILL — use <code>superpowers:subagent-driven-development</code> (recommended) or <code>superpowers:executing-plans</code>. Execute task-by-task; tick each <code>&lt;input&gt;</code> as you go. Tests: <code>npm run test</code> (vitest, node env, <code>src/**/*.test.ts</code> only — there is no jsdom/RTL, so component behaviour is verified visually via <code>npm run dev</code>, per the project's testing philosophy). Build gate: <code>npm run build</code>. Commit per task, never amend. <strong>Do not <code>git push</code></strong> — push auto-deploys to Vercel; deployment is Henry's call. No plan IDs in code/comments.</p>
+</header>
+
+<p><strong>Goal:</strong> A live <code>/learn</code> gallery + a working <code>/learn/what-is-henceforth</code> episode page, building cleanly, shareable on X with a per-episode OG card.</p>
+<p><strong>Architecture:</strong> Manifest-driven (a typed <code>Episode[]</code> in <code>src/lib/episodes.ts</code>) rather than per-folder MDX, since episodes are uniform structured data. A dynamic <code>/learn/[slug]</code> route renders a shared episode template from the manifest; the gallery index and sitemap read the same manifest. The episode poster card reuses the existing <code>ogImage()</code> template and doubles as both the social card and the gallery thumbnail.</p>
+<p><strong>Tech stack:</strong> Next.js 16 (App Router, async <code>params</code>), React 19, Tailwind v4 (<code>@theme inline</code> tokens — <code>text-foreground</code>, <code>text-muted</code>, <code>accent-warm</code>, <code>card-bg</code>, <code>card-border</code>, <code>card-glow-warm</code>), <code>FadeIn</code> (Motion), vitest (node). App Store id <code>1602896145</code>.</p>
+
+<h2>File structure</h2>
+<table class="files">
+<thead><tr><th>Path</th><th>Create / Modify</th><th>Responsibility</th></tr></thead>
+<tbody>
+<tr><td><code>src/lib/episodes.ts</code></td><td>Create</td><td>Typed manifest + <code>getEpisode</code> / <code>publishedEpisodes</code> / <code>adjacentEpisodes</code>. Single source of truth.</td></tr>
+<tr><td><code>src/lib/episodes.test.ts</code></td><td>Create</td><td>Vitest unit tests for the manifest + lookups.</td></tr>
+<tr><td><code>src/app/learn/[slug]/opengraph-image.tsx</code></td><td>Create</td><td>Per-episode poster via <code>ogImage()</code>; also the gallery thumbnail asset.</td></tr>
+<tr><td><code>src/components/learn/EpisodeCard.tsx</code></td><td>Create</td><td>Gallery tile (poster thumb + meta); "soon" variant.</td></tr>
+<tr><td><code>src/components/learn/EpisodePlayer.tsx</code></td><td>Create</td><td>Client <code>&lt;video&gt;</code> with poster, no autoplay.</td></tr>
+<tr><td><code>src/components/learn/CodeAlong.tsx</code></td><td>Create</td><td>Client tap-to-copy command rows.</td></tr>
+<tr><td><code>src/components/learn/GetHenceforth.tsx</code></td><td>Create</td><td>App Store + Mac App Store buttons, $9.99 universal.</td></tr>
+<tr><td><code>src/components/learn/Transcript.tsx</code></td><td>Create</td><td>Collapsible <code>&lt;details&gt;</code> transcript.</td></tr>
+<tr><td><code>src/app/learn/page.tsx</code></td><td>Modify (rewrite)</td><td>Gallery index; Brodie books retained below.</td></tr>
+<tr><td><code>src/app/learn/[slug]/page.tsx</code></td><td>Create</td><td>Episode page: sticky player + code-along rail; metadata override.</td></tr>
+<tr><td><code>public/learn/what-is-henceforth/episode.mp4</code></td><td>Create (asset)</td><td>Self-hosted Episode 1 video.</td></tr>
+<tr><td><code>src/app/sitemap.ts</code></td><td>Modify</td><td>Add <code>/learn</code> + published episode URLs.</td></tr>
+</tbody>
+</table>
+
+<!-- ===================== TASK 1 ===================== -->
+<h2>Task 1 — Episode manifest + lookups <span class="pill tdd">TDD</span></h2>
+<p class="files"><strong>Files:</strong> Create <code>src/lib/episodes.ts</code>, <code>src/lib/episodes.test.ts</code>.</p>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 1 — Write the failing test</strong>
+Create <code>src/lib/episodes.test.ts</code>:
+<pre><code>import { describe, it, expect } from "vitest";
+import { episodes, getEpisode, publishedEpisodes, adjacentEpisodes } from "./episodes";
+
+describe("episodes manifest", () =&gt; {
+  it("finds Episode 1 by slug", () =&gt; {
+    const ep = getEpisode("what-is-henceforth");
+    expect(ep?.number).toBe(1);
+  });
+  it("returns undefined for an unknown slug", () =&gt; {
+    expect(getEpisode("nope")).toBeUndefined();
+  });
+  it("excludes unpublished episodes from publishedEpisodes()", () =&gt; {
+    expect(publishedEpisodes().some((e) =&gt; e.slug === "the-stack")).toBe(false);
+    expect(publishedEpisodes().some((e) =&gt; e.slug === "what-is-henceforth")).toBe(true);
+  });
+  it("gives every published episode the content the page needs", () =&gt; {
+    for (const e of publishedEpisodes()) {
+      expect(e.codeAlong?.length).toBeGreaterThan(0);
+      expect(e.concepts?.length).toBeGreaterThan(0);
+      expect(e.transcript?.length).toBeGreaterThan(0);
+      expect(e.video?.mp4).toBeTruthy();
+    }
+  });
+  it("links neighbours by number across all episodes", () =&gt; {
+    expect(adjacentEpisodes("what-is-henceforth").next?.slug).toBe("the-stack");
+    expect(adjacentEpisodes("what-is-henceforth").prev).toBeUndefined();
+  });
+  it("has unique slugs", () =&gt; {
+    const slugs = episodes.map((e) =&gt; e.slug);
+    expect(new Set(slugs).size).toBe(slugs.length);
+  });
+});</code></pre>
+</div></div>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 2 — Run it; verify it fails</strong>
+Run: <code>npm run test -- src/lib/episodes.test.ts</code> · Expected: FAIL ("Cannot find module './episodes'").</div></div>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 3 — Implement the manifest</strong>
+Create <code>src/lib/episodes.ts</code>. Transcript + code-along lifted from the FORTHapp storyboard <code>Tools/StartingHenceforth/episodes/episode-01.json</code>. NOTE: <code>codeAlong</code> is <em>curated to commands that run in the shipping app</em> — tutorial-only lesson words (<code>program-intro</code>, <code>henceforth?</code>) are deliberately excluded because a fresh install hasn't defined them.
+<pre><code>export type Episode = {
+  number: number;
+  slug: string;
+  title: string;
+  dek: string;
+  published: boolean;
+  durationSec?: number;            // set from the rendered mp4 in Task 8
+  music?: { season: string; piece: string };
+  concepts?: string[];
+  codeAlong?: string[];
+  transcript?: string[];
+  video?: { mp4: string };
+};
+
+export const episodes: Episode[] = [
+  {
+    number: 1,
+    slug: "what-is-henceforth",
+    title: "What is Henceforth?",
+    dek: "A calculator you can teach — that also writes Bitcoin.",
+    published: true,
+    music: { season: "Spring", piece: "Vivaldi · Allegro (RV 269 i)" },
+    concepts: [
+      "FORTH is a calculator you talk to in postfix: 2 3 + .",
+      "You can teach it new words — : double 2 * ; — then reuse them.",
+      "The same machine writes Bitcoin Script, and a payment reads like a sentence.",
+    ],
+    codeAlong: [
+      "2 3 +",
+      ".",
+      ": double  2 * ;",
+      "21 double .",
+      "SCRIPT-BEGIN",
+      "OP_DUP OP_HASH160 OP_EQUALVERIFY OP_CHECKSIG",
+      "SCRIPT-END",
+      ": pay-rent  1000 s\" 1Q88RPbgtGfaDvQYd9Yx3UC86vAhcDSjob\" send ;",
+    ],
+    transcript: [
+      "so — what IS this thing?",
+      "watch. it answers by doing.",
+      "give it two numbers… and +.",
+      "it added them. it's a calculator.",
+      "but here's the good part —",
+      "i just taught it a word.",
+      "double means times two.",
+      "see that? it knows double now.",
+      "words you make. that's the idea.",
+      "now… the other half.",
+      "same prompt. watch closely.",
+      "these are bitcoin words.",
+      "that's the shape of a coin-lock.",
+      "same machine. just more words.",
+      "one last word — read it slow.",
+      "pay rent: send 1000 there.",
+      "it reads like a sentence.",
+      "and it's also a payment.",
+      "that's henceforth.",
+      "one prompt. you teach it. let's go.",
+    ],
+    video: { mp4: "/learn/what-is-henceforth/episode.mp4" },
+  },
+  {
+    number: 2,
+    slug: "the-stack",
+    title: "The Stack",
+    dek: "Numbers live in a pile — newest on top, newest off first.",
+    published: false,
+    music: { season: "Summer", piece: "Vivaldi · Presto (RV 315 iii)" },
+  },
+  {
+    number: 3,
+    slug: "backwards-maths",
+    title: "Why the maths looks backwards",
+    dek: "Postfix, and why the stack is the parentheses.",
+    published: false,
+    music: { season: "Autumn", piece: "Vivaldi · Allegro (RV 293 i)" },
+  },
+];
+
+const byNumber = [...episodes].sort((a, b) =&gt; a.number - b.number);
+
+export function publishedEpisodes(): Episode[] {
+  return byNumber.filter((e) =&gt; e.published);
+}
+
+export function getEpisode(slug: string): Episode | undefined {
+  return episodes.find((e) =&gt; e.slug === slug);
+}
+
+// Neighbours by episode number across ALL episodes (so the page can tease an
+// unpublished "next … soon"). The page decides whether to link based on .published.
+export function adjacentEpisodes(slug: string): { prev?: Episode; next?: Episode } {
+  const i = byNumber.findIndex((e) =&gt; e.slug === slug);
+  if (i === -1) return {};
+  return { prev: byNumber[i - 1], next: byNumber[i + 1] };
+}</code></pre>
+</div></div>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 4 — Run it; verify it passes</strong>
+Run: <code>npm run test -- src/lib/episodes.test.ts</code> · Expected: PASS (6 tests).</div></div>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 5 — Commit</strong>
+<pre><code>git add src/lib/episodes.ts src/lib/episodes.test.ts
+git commit -m "feat(learn): episode manifest + lookups"</code></pre></div></div>
+
+<!-- ===================== TASK 2 ===================== -->
+<h2>Task 2 — Episode poster / OG image route <span class="pill visual">visual</span></h2>
+<p class="files"><strong>Files:</strong> Create <code>src/app/learn/[slug]/opengraph-image.tsx</code>. Reuses the existing <code>ogImage()</code> from <code>src/lib/og.tsx</code> (signature: <code>{ title, tagline, accent, accentGlow, path }</code>) — no new template.</p>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 1 — Write the route</strong>
+<pre><code>import { ogImage, ogSize, ogContentType } from "@/lib/og";
+import { getEpisode, publishedEpisodes } from "@/lib/episodes";
+
+export const size = ogSize;
+export const contentType = ogContentType;
+export const alt = "Starting Henceforth episode";
+
+export function generateStaticParams() {
+  return publishedEpisodes().map((e) =&gt; ({ slug: e.slug }));
+}
+
+export default async function Image({ params }: { params: Promise&lt;{ slug: string }&gt; }) {
+  const { slug } = await params;
+  const ep = getEpisode(slug);
+  const title = ep?.title ?? "Starting Henceforth";
+  const tagline = ep ? `Episode ${ep.number} · Starting Henceforth` : "Starting Henceforth";
+  return ogImage({
+    title,
+    tagline,
+    accent: "#fbbf24",
+    accentGlow: "rgba(251,191,36,0.18)",
+    path: `/learn/${slug}`,
+  });
+}</code></pre>
+<span class="meta">If <code>ogImage</code>'s parameter names differ from <code>{title,tagline,accent,accentGlow,path}</code>, open <code>src/lib/og.tsx</code> and match them exactly — do not invent fields.</span></div></div>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 2 — Visual verify</strong>
+Run <code>npm run dev</code>, open <code>http://localhost:3000/learn/what-is-henceforth/opengraph-image</code>. Expected: a 1200×630 Phosphor-Noir card reading "What is Henceforth?" + "Episode 1 · Starting Henceforth", amber accent. Confirm it's not erroring.</div></div>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 3 — Commit</strong>
+<pre><code>git add src/app/learn/[slug]/opengraph-image.tsx
+git commit -m "feat(learn): per-episode OG poster card"</code></pre></div></div>
+
+<!-- ===================== TASK 3 ===================== -->
+<h2>Task 3 — Leaf components: EpisodeCard, GetHenceforth, Transcript <span class="pill visual">visual</span></h2>
+<p class="files"><strong>Files:</strong> Create <code>src/components/learn/EpisodeCard.tsx</code>, <code>GetHenceforth.tsx</code>, <code>Transcript.tsx</code>. All server components (no hooks).</p>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 1 — EpisodeCard.tsx</strong>
+<pre><code>import Link from "next/link";
+import type { Episode } from "@/lib/episodes";
+
+export default function EpisodeCard({ episode }: { episode: Episode }) {
+  const meta = episode.music ? `${episode.music.season} · ${episode.music.piece}` : "";
+
+  if (!episode.published) {
+    return (
+      &lt;div className="flex flex-col rounded-xl border border-card-border bg-card-bg/30 p-5 opacity-60"&gt;
+        &lt;span className="text-[10px] uppercase tracking-widest text-muted/60"&gt;Episode {episode.number}&lt;/span&gt;
+        &lt;span className="mt-2 text-base font-medium text-foreground"&gt;{episode.title}&lt;/span&gt;
+        &lt;span className="mt-1 text-xs text-muted/50"&gt;Coming soon&lt;/span&gt;
+      &lt;/div&gt;
+    );
+  }
+
+  return (
+    &lt;Link
+      href={`/learn/${episode.slug}`}
+      className="card-glow card-glow-warm group flex flex-col overflow-hidden rounded-xl border border-card-border bg-card-bg/50 transition-colors hover:border-accent-warm"
+    &gt;
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      &lt;img
+        src={`/learn/${episode.slug}/opengraph-image`}
+        alt={`${episode.title} — poster`}
+        className="aspect-[1200/630] w-full object-cover"
+      /&gt;
+      &lt;div className="p-5"&gt;
+        &lt;span className="text-[10px] uppercase tracking-widest text-accent-warm/70"&gt;Episode {episode.number}&lt;/span&gt;
+        &lt;span className="mt-2 block text-base font-medium text-foreground"&gt;{episode.title}&lt;/span&gt;
+        &lt;span className="mt-1 block text-xs text-muted/60"&gt;{meta}&lt;/span&gt;
+      &lt;/div&gt;
+    &lt;/Link&gt;
+  );
+}</code></pre></div></div>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 2 — GetHenceforth.tsx</strong> (same product URL for both badges — the $9.99 purchase is universal)
+<pre><code>const APP_STORE = "https://apps.apple.com/app/henceforth/id1602896145";
+
+export default function GetHenceforth() {
+  return (
+    &lt;div className="rounded-xl border border-accent-warm/30 bg-card-bg/40 p-5"&gt;
+      &lt;p className="text-xs uppercase tracking-widest text-accent-warm/80"&gt;Watch here · code in the app&lt;/p&gt;
+      &lt;p className="mt-2 text-sm leading-relaxed text-muted"&gt;
+        Henceforth is the real terminal — one purchase ($9.99) for iPhone, iPad and Mac.
+        Type the commands below into the app as you watch.
+      &lt;/p&gt;
+      &lt;div className="mt-4 flex flex-wrap gap-3"&gt;
+        &lt;a href={APP_STORE} target="_blank" rel="noopener noreferrer"
+          className="rounded-lg border border-accent-warm/50 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-accent-warm hover:text-accent-warm"&gt;
+          App Store ↗
+        &lt;/a&gt;
+        &lt;a href={APP_STORE} target="_blank" rel="noopener noreferrer"
+          className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-muted transition-colors hover:border-accent-warm hover:text-accent-warm"&gt;
+          Mac App Store ↗
+        &lt;/a&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  );
+}</code></pre></div></div>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 3 — Transcript.tsx</strong>
+<pre><code>export default function Transcript({ lines }: { lines: string[] }) {
+  return (
+    &lt;details className="rounded-xl border border-card-border bg-card-bg/40 p-5"&gt;
+      &lt;summary className="cursor-pointer text-sm font-medium text-foreground"&gt;Transcript&lt;/summary&gt;
+      &lt;ul className="mt-4 space-y-2 text-sm leading-relaxed text-muted"&gt;
+        {lines.map((line, i) =&gt; (
+          &lt;li key={i}&gt;{line}&lt;/li&gt;
+        ))}
+      &lt;/ul&gt;
+    &lt;/details&gt;
+  );
+}</code></pre></div></div>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 4 — Commit</strong>
+<pre><code>git add src/components/learn/EpisodeCard.tsx src/components/learn/GetHenceforth.tsx src/components/learn/Transcript.tsx
+git commit -m "feat(learn): episode card, get-app, transcript components"</code></pre></div></div>
+
+<!-- ===================== TASK 4 ===================== -->
+<h2>Task 4 — Interactive components: EpisodePlayer, CodeAlong <span class="pill visual">visual</span></h2>
+<p class="files"><strong>Files:</strong> Create <code>src/components/learn/EpisodePlayer.tsx</code>, <code>CodeAlong.tsx</code>. Both <code>"use client"</code>.</p>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 1 — EpisodePlayer.tsx</strong> (dumb player; the parent applies sticky positioning)
+<pre><code>"use client";
+
+type Props = { src: string; poster: string; title: string };
+
+export default function EpisodePlayer({ src, poster, title }: Props) {
+  return (
+    &lt;video
+      controls
+      preload="metadata"
+      poster={poster}
+      aria-label={`Starting Henceforth — ${title}`}
+      className="w-full rounded-xl border border-card-border bg-black shadow-lg"
+    &gt;
+      &lt;source src={src} type="video/mp4" /&gt;
+      Your browser doesn’t support the video tag.
+    &lt;/video&gt;
+  );
+}</code></pre></div></div>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 2 — CodeAlong.tsx</strong> (tap-to-copy; plain monospace for v1 — Forth colouring is a later polish, not needed to ship)
+<pre><code>"use client";
+import { useState } from "react";
+
+export default function CodeAlong({ commands }: { commands: string[] }) {
+  const [copied, setCopied] = useState&lt;number | null&gt;(null);
+
+  async function copy(cmd: string, i: number) {
+    try {
+      await navigator.clipboard.writeText(cmd);
+      setCopied(i);
+      setTimeout(() =&gt; setCopied(null), 1200);
+    } catch {
+      /* clipboard blocked — no-op */
+    }
+  }
+
+  return (
+    &lt;ul className="space-y-2"&gt;
+      {commands.map((cmd, i) =&gt; (
+        &lt;li key={i}&gt;
+          &lt;button
+            type="button"
+            onClick={() =&gt; copy(cmd, i)}
+            className="group flex w-full items-center justify-between gap-3 rounded-lg border border-card-border bg-card-bg/50 px-4 py-3 text-left transition-colors hover:border-accent-warm"
+          &gt;
+            &lt;code className="font-mono text-sm text-foreground"&gt;{cmd}&lt;/code&gt;
+            &lt;span className="shrink-0 text-xs text-muted/60 group-hover:text-accent-warm"&gt;
+              {copied === i ? "copied ✓" : "copy"}
+            &lt;/span&gt;
+          &lt;/button&gt;
+        &lt;/li&gt;
+      ))}
+    &lt;/ul&gt;
+  );
+}</code></pre></div></div>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 3 — Commit</strong>
+<pre><code>git add src/components/learn/EpisodePlayer.tsx src/components/learn/CodeAlong.tsx
+git commit -m "feat(learn): video player + tap-to-copy code-along"</code></pre></div></div>
+
+<!-- ===================== TASK 5 ===================== -->
+<h2>Task 5 — Gallery index (rewrite <code>learn/page.tsx</code>) <span class="pill visual">visual</span></h2>
+<p class="files"><strong>Files:</strong> Modify <code>src/app/learn/page.tsx</code> — replace the "First episode coming soon" stub with the episode grid; keep the existing Brodie-books section verbatim below.</p>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 1 — Rewrite the page</strong> (preserve the existing <code>books</code> array + its markup; only the hero/episodes region changes)
+<pre><code>import type { Metadata } from "next";
+import FadeIn from "@/components/FadeIn";
+import EpisodeCard from "@/components/learn/EpisodeCard";
+import { episodes } from "@/lib/episodes";
+
+export const metadata: Metadata = {
+  title: "Learn",
+  description:
+    "Starting Henceforth — a video series teaching FORTH and the Henceforth Bitcoin wallet from first principles, ending in Bitcoin Script.",
+};
+
+const books = [
+  // ↓ keep the existing two-book array exactly as it is in the current file
+];
+
+export default function LearnPage() {
+  return (
+    &lt;div className="py-16 sm:py-24"&gt;
+      &lt;div className="mx-auto max-w-3xl px-6"&gt;
+        &lt;FadeIn&gt;
+          &lt;p className="text-xs uppercase tracking-widest text-accent-warm/70"&gt;Tutorials&lt;/p&gt;
+          &lt;h1 className="mt-6 text-5xl font-bold text-foreground sm:text-7xl"&gt;Learn&lt;/h1&gt;
+          &lt;p className="mt-6 text-lg leading-relaxed text-muted"&gt;
+            Starting Henceforth — a video series teaching FORTH and the Henceforth
+            Bitcoin wallet from first principles. Watch an episode, then code along
+            in the app.
+          &lt;/p&gt;
+        &lt;/FadeIn&gt;
+
+        &lt;div className="mt-12 grid gap-4 sm:grid-cols-2"&gt;
+          {episodes.map((episode, i) =&gt; (
+            &lt;FadeIn key={episode.slug} delay={0.1 + i * 0.08} className="h-full"&gt;
+              &lt;EpisodeCard episode={episode} /&gt;
+            &lt;/FadeIn&gt;
+          ))}
+        &lt;/div&gt;
+
+        {/* ↓ keep the existing "Leo Brodie's books" section unchanged below */}
+      &lt;/div&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+<span class="meta">Copy the real <code>books</code> array and the entire books <code>&lt;div className="mt-24"&gt;…&lt;/div&gt;</code> block from the current file into the marked spots — do not retype them from memory.</span></div></div>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 2 — Visual verify</strong>
+<code>npm run dev</code> → <code>http://localhost:3000/learn</code>. Expected: hero, a 2-col grid (Ep 1 with poster thumb that links; Ep 2 + Ep 3 greyed "Coming soon"), Brodie books still below. No "First episode coming soon" line remains.</div></div>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 3 — Commit</strong>
+<pre><code>git add src/app/learn/page.tsx
+git commit -m "feat(learn): episode gallery index"</code></pre></div></div>
+
+<!-- ===================== TASK 6 ===================== -->
+<h2>Task 6 — Episode page (<code>learn/[slug]/page.tsx</code>) <span class="pill visual">visual</span></h2>
+<p class="files"><strong>Files:</strong> Create <code>src/app/learn/[slug]/page.tsx</code>. Sticky player + Get-app on the left, code-along rail + content on the right; metadata override so X unfurls the episode card.</p>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 1 — Write the page</strong>
+<pre><code>import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import FadeIn from "@/components/FadeIn";
+import EpisodePlayer from "@/components/learn/EpisodePlayer";
+import CodeAlong from "@/components/learn/CodeAlong";
+import GetHenceforth from "@/components/learn/GetHenceforth";
+import Transcript from "@/components/learn/Transcript";
+import { getEpisode, publishedEpisodes, adjacentEpisodes } from "@/lib/episodes";
+
+export function generateStaticParams() {
+  return publishedEpisodes().map((e) =&gt; ({ slug: e.slug }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise&lt;{ slug: string }&gt;;
+}): Promise&lt;Metadata&gt; {
+  const { slug } = await params;
+  const ep = getEpisode(slug);
+  if (!ep) return {};
+  const url = `https://henceforth.club/learn/${slug}`;
+  // Bump ?v= when the poster is regenerated — X caches og:image by URL string.
+  const image = `${url}/opengraph-image.png?v=1`;
+  return {
+    title: ep.title,
+    description: ep.dek,
+    openGraph: {
+      type: "video.other",
+      title: ep.title,
+      description: ep.dek,
+      url,
+      siteName: "Henceforth Club",
+      images: [{ url: image, width: 1200, height: 630 }],
+    },
+    twitter: { card: "summary_large_image", title: ep.title, description: ep.dek, images: [image] },
+  };
+}
+
+export default async function EpisodePage({
+  params,
+}: {
+  params: Promise&lt;{ slug: string }&gt;;
+}) {
+  const { slug } = await params;
+  const ep = getEpisode(slug);
+  if (!ep || !ep.published) notFound();
+
+  const { prev, next } = adjacentEpisodes(slug);
+  const poster = `/learn/${slug}/opengraph-image`;
+
+  return (
+    &lt;div className="py-12 sm:py-16"&gt;
+      &lt;div className="mx-auto max-w-5xl px-6"&gt;
+        &lt;Link href="/learn" className="text-xs text-muted/60 transition-colors hover:text-accent-warm"&gt;
+          ← Starting Henceforth
+        &lt;/Link&gt;
+
+        &lt;div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]"&gt;
+          {/* LEFT — sticky player + get-app */}
+          &lt;div className="lg:sticky lg:top-24 lg:self-start"&gt;
+            &lt;EpisodePlayer src={ep.video!.mp4} poster={poster} title={ep.title} /&gt;
+            &lt;div className="mt-5"&gt;
+              &lt;GetHenceforth /&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+
+          {/* RIGHT — content rail */}
+          &lt;div&gt;
+            &lt;p className="text-xs uppercase tracking-widest text-accent-warm/70"&gt;Episode {ep.number}&lt;/p&gt;
+            &lt;h1 className="mt-3 text-3xl font-bold text-foreground sm:text-4xl"&gt;{ep.title}&lt;/h1&gt;
+            &lt;p className="mt-3 text-base leading-relaxed text-muted"&gt;{ep.dek}&lt;/p&gt;
+
+            &lt;h2 className="mt-10 text-xs uppercase tracking-widest text-accent-warm/70"&gt;Code along&lt;/h2&gt;
+            &lt;p className="mt-2 text-sm text-muted/70"&gt;Tap to copy, then type it into Henceforth.&lt;/p&gt;
+            &lt;div className="mt-4"&gt;
+              &lt;CodeAlong commands={ep.codeAlong ?? []} /&gt;
+            &lt;/div&gt;
+
+            &lt;h2 className="mt-10 text-xs uppercase tracking-widest text-accent-warm/70"&gt;What you’ll learn&lt;/h2&gt;
+            &lt;ul className="mt-4 space-y-2 text-sm leading-relaxed text-muted"&gt;
+              {(ep.concepts ?? []).map((c, i) =&gt; (
+                &lt;li key={i}&gt;✓ {c}&lt;/li&gt;
+              ))}
+            &lt;/ul&gt;
+
+            &lt;div className="mt-10"&gt;
+              &lt;Transcript lines={ep.transcript ?? []} /&gt;
+            &lt;/div&gt;
+
+            &lt;div className="mt-10 flex items-center justify-between border-t border-card-border pt-6 text-sm"&gt;
+              {prev?.published ? (
+                &lt;Link href={`/learn/${prev.slug}`} className="text-muted/70 hover:text-accent-warm"&gt;
+                  ← Ep {prev.number}
+                &lt;/Link&gt;
+              ) : (
+                &lt;span /&gt;
+              )}
+              {next ? (
+                next.published ? (
+                  &lt;Link href={`/learn/${next.slug}`} className="text-muted/70 hover:text-accent-warm"&gt;
+                    Ep {next.number} →
+                  &lt;/Link&gt;
+                ) : (
+                  &lt;span className="text-muted/40"&gt;Ep {next.number} · {next.title} — soon&lt;/span&gt;
+                )
+              ) : (
+                &lt;span /&gt;
+              )}
+            &lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  );
+}</code></pre></div></div>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 2 — Visual verify</strong>
+<code>http://localhost:3000/learn/what-is-henceforth</code>. Expected: title/dek, code-along rows that copy on click (watch for "copied ✓"), concepts, collapsible transcript, "Ep 2 · The Stack — soon" on the right of the nav row. On wide screens the player pins while the rail scrolls. Visit <code>/learn/the-stack</code> → 404 (unpublished). Player shows the poster until the mp4 lands in Task 7.</div></div>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 3 — Commit</strong>
+<pre><code>git add "src/app/learn/[slug]/page.tsx"
+git commit -m "feat(learn): episode page — sticky player + code-along rail"</code></pre></div></div>
+
+<!-- ===================== TASK 7 ===================== -->
+<h2>Task 7 — Self-host the Episode 1 video <span class="pill asset">asset</span></h2>
+<p class="files"><strong>Files:</strong> Create <code>public/learn/what-is-henceforth/episode.mp4</code>; modify <code>src/lib/episodes.ts</code> (set <code>durationSec</code>).</p>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 1 — Locate or render the mp4</strong>
+The render lives in the FORTHapp repo (gitignored). If <code>~/Programming/Main/FORTHapp/Tools/StartingHenceforth/output/episode-01.mp4</code> is absent, render it there: <code>cd ~/Programming/Main/FORTHapp/Tools/StartingHenceforth &amp;&amp; ./render.sh episode-01</code> (needs <code>audio/spring-allegro.flac</code>). Confirm it plays.</div></div>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 2 — Copy into the site</strong>
+<pre><code>mkdir -p public/learn/what-is-henceforth
+cp ~/Programming/Main/FORTHapp/Tools/StartingHenceforth/output/episode-01.mp4 \
+   public/learn/what-is-henceforth/episode.mp4
+ls -lh public/learn/what-is-henceforth/episode.mp4</code></pre>
+<span class="meta">If the file is large (&gt; ~25 MB), flag to Henry before committing — we may want Git LFS or an external bucket. A ~25–80s screen-recording at 1080p is typically a few MB, which is fine to commit (the repo already commits <code>cover.png</code> etc.).</span></div></div>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 3 — Set the real duration</strong>
+<pre><code>ffprobe -v error -show_entries format=duration -of csv=p=0 \
+   public/learn/what-is-henceforth/episode.mp4</code></pre>
+Round to the nearest integer and add it to the Episode 1 entry in <code>src/lib/episodes.ts</code>: <code>durationSec: &lt;value&gt;,</code>. (Optional — only used if a duration label is added to the card later; harmless to set now.)</div></div>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 4 — Visual verify + commit</strong>
+Reload <code>/learn/what-is-henceforth</code> → the video plays from the local file. Then:
+<pre><code>git add public/learn/what-is-henceforth/episode.mp4 src/lib/episodes.ts
+git commit -m "feat(learn): self-host Episode 1 video"</code></pre></div></div>
+
+<!-- ===================== TASK 8 ===================== -->
+<h2>Task 8 — Sitemap + build gate <span class="pill visual">visual</span></h2>
+<p class="files"><strong>Files:</strong> Modify <code>src/app/sitemap.ts</code>.</p>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 1 — Add /learn + published episodes to the sitemap</strong>
+Inside the returned array in <code>src/app/sitemap.ts</code>, add (importing the manifest at the top: <code>import { publishedEpisodes } from "@/lib/episodes";</code>):
+<pre><code>    {
+      url: `${baseUrl}/learn`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    ...publishedEpisodes().map((e) =&gt; ({
+      url: `${baseUrl}/learn/${e.slug}`,
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })),</code></pre></div></div>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 2 — Full build + test gate</strong>
+<pre><code>npm run test
+npm run build</code></pre>
+Expected: tests green; build succeeds; build log lists <code>/learn</code> and <code>/learn/[slug]</code> (and the prerendered <code>what-is-henceforth</code>). Fix any type errors (commonly: a missing <code>await params</code>, or an <code>ogImage</code> field-name mismatch).</div></div>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 3 — Accessibility spot-check</strong>
+Confirm: the poster <code>&lt;img&gt;</code> has alt text, the <code>&lt;video&gt;</code> has an <code>aria-label</code>, headings descend h1→h2, and the code-along copy buttons are real <code>&lt;button&gt;</code>s (keyboard-focusable). Verify <code>/learn/the-stack</code> still 404s.</div></div>
+
+<div class="task"><input type="checkbox"><div class="body"><strong>Step 4 — Commit</strong>
+<pre><code>git add src/app/sitemap.ts
+git commit -m "feat(learn): sitemap entries for the tutorials section"</code></pre></div></div>
+
+<div class="gate"><strong>Deploy is Henry's call.</strong> Everything above is local commits only. When Henry says go, <code>git push</code> triggers the Vercel deploy (~30s). Do not push before then.</div>
+
+<!-- ===================== SELF-REVIEW ===================== -->
+<h2>Plan self-review</h2>
+<ul>
+<li><strong>Spec coverage:</strong> gallery index (T5) · per-episode pages (T6) · manifest (T1) · self-host MP4 (T7) · poster-card that doubles as OG (T2 + used as thumb in T3) · transcript from JSON (T1 data) · code-along real commands (T1, curated) · $9.99 universal CTA (T3) · no fake terminal / no on-site X link (absent by construction) · X-unfurl metadata override (T6) · sitemap/build/a11y (T8). All spec sections map to a task.</li>
+<li><strong>Resolved decisions honoured:</strong> Ep 1 only published (T1) · universal price (T3) · no deep-link (T3 uses store badges only) · no captions (Transcript only, no <code>&lt;track&gt;</code>).</li>
+<li><strong>Type consistency:</strong> <code>Episode</code> fields used in T2/T3/T6 (<code>slug, number, title, dek, music, concepts, codeAlong, transcript, video.mp4, published</code>) all defined in T1. Helper names (<code>getEpisode</code>, <code>publishedEpisodes</code>, <code>adjacentEpisodes</code>) consistent across T1/T2/T6/T8.</li>
+<li><strong>Out of scope (unchanged):</strong> the X-optimised video cut + Episode-2 editorial polish (separate thread); Forth syntax-colouring in the code-along (v1 plain mono); duration label on cards.</li>
+</ul>
+
+</div>
+</body>
+</html>
