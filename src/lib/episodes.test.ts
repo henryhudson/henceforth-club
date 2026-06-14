@@ -12,7 +12,7 @@ describe("episodes manifest", () => {
   });
 
   it("excludes unpublished episodes from publishedEpisodes()", () => {
-    expect(publishedEpisodes().some((e) => e.slug === "the-stack")).toBe(false);
+    expect(publishedEpisodes().some((e) => e.slug === "backwards-maths")).toBe(false);
     expect(publishedEpisodes().some((e) => e.slug === "what-is-henceforth")).toBe(true);
   });
 
