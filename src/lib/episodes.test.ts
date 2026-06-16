@@ -11,9 +11,10 @@ describe("episodes manifest", () => {
     expect(getEpisode("nope")).toBeUndefined();
   });
 
-  it("excludes unpublished episodes from publishedEpisodes()", () => {
-    expect(publishedEpisodes().some((e) => e.slug === "backwards-maths")).toBe(false);
+  it("publishedEpisodes() returns only episodes flagged published", () => {
+    expect(publishedEpisodes().every((e) => e.published)).toBe(true);
     expect(publishedEpisodes().some((e) => e.slug === "what-is-henceforth")).toBe(true);
+    expect(publishedEpisodes().some((e) => e.slug === "backwards-maths")).toBe(true);
   });
 
   it("gives every published episode the content the page needs", () => {
