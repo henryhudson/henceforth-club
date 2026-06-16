@@ -11,12 +11,25 @@ export function generateStaticParams(): Params[] {
   return listPublishedWeeks().map(week => ({ week }))
 }
 
+/** Card blurb: the intro's first full sentence when it's a sensible length,
+ *  else a word-boundary clamp with an ellipsis — never a mid-word cut. */
+function cardDescription(intro: string): string {
+  const text = intro.trim()
+  const m = text.match(/^(.*?[.!?])(\s|$)/)
+  if (m && m[1].length >= 60 && m[1].length <= 240) return m[1]
+  if (text.length <= 200) return text
+  const slice = text.slice(0, 200)
+  return slice.slice(0, slice.lastIndexOf(' ')).trimEnd() + '…'
+}
+
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
   const { week } = await params
   const digest = loadDigest(week)
   if (!digest) return { title: 'This Week in Parliament' }
-  const title = `This Week in Parliament — ${digest.windowLabel}`
-  const description = (digest.intro ?? '').slice(0, 180)
+  const title = digest.headline
+    ? `${digest.headline} — This Week in Parliament`
+    : `This Week in Parliament — ${digest.windowLabel}`
+  const description = cardDescription(digest.intro ?? '')
   const url = `/hansard/this-week/${week}`
   return {
     title,
