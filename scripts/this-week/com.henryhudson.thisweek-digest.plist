@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  This Week in Parliament — weekly digest, Tuesday 20:00 LOCAL time.
+  launchd uses local time, so this stays at 20:00 Europe/London across BST/GMT
+  (no UTC/DST maths needed). Weekday: 0/7=Sun, 1=Mon, 2=Tue, 3=Wed...
+  Adjust the script path below if the repo lives elsewhere on the Mac mini.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.henryhudson.thisweek-digest</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>-lc</string>
+        <string>$HOME/Programming/Main/henceforth-club/scripts/this-week/run-weekly.sh</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key>
+        <integer>2</integer>
+        <key>Hour</key>
+        <integer>20</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/thisweek-digest.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/thisweek-digest.err.log</string>
+</dict>
+</plist>
