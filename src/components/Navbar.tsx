@@ -8,8 +8,6 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  if (pathname?.startsWith("/provenance")) return null;
-
   // Prevent body scroll when the mobile menu is open. Restore whatever
   // overflow value was in place before we touched it, so we don't stomp
   // on other components that may also be managing body scroll.
@@ -20,6 +18,8 @@ export default function Navbar() {
       document.body.style.overflow = prev;
     };
   }, [open]);
+
+  if (pathname?.startsWith("/provenance")) return null;
 
   const links = [
     { href: "/henceforth", label: "Henceforth", hoverColor: "hover:text-accent-warm" },
