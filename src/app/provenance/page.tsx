@@ -6,6 +6,7 @@ import { robots, TITLE, DESCRIPTION } from "./seo";
 import { HERO, ABOUT, VALUES, SUPPLIERS, PREPARED, PRODUCTS, CONTACT } from "./content";
 import ValueIcon from "./_components/ValueIcon";
 import AccreditationRow from "./_components/AccreditationRow";
+import Globe from "./_components/Globe";
 
 export const metadata: Metadata = { title: TITLE, description: DESCRIPTION, robots };
 
@@ -206,13 +207,18 @@ export default function ProvenancePage() {
 
       {/* SUPPLIERS */}
       <Section id="suppliers">
-        <FadeIn>
-          <Eyebrow>Our suppliers</Eyebrow>
-          <Heading>A global network</Heading>
-          <p className="mt-6 max-w-3xl font-sans text-xl font-light leading-relaxed text-foreground/90">
-            {SUPPLIERS}
-          </p>
-        </FadeIn>
+        <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+          <FadeIn>
+            <Eyebrow>Our suppliers</Eyebrow>
+            <Heading>A global network</Heading>
+            <p className="mt-6 max-w-xl font-sans text-lg font-light leading-relaxed text-foreground/90">
+              {SUPPLIERS}
+            </p>
+          </FadeIn>
+          <FadeIn>
+            <Globe />
+          </FadeIn>
+        </div>
       </Section>
 
       {/* CONTACT */}
