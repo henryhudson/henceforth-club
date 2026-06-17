@@ -15,7 +15,7 @@ export default function ValueCard({
       <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[#7cce2a]/15 text-[#330a49]">
         <ValueIcon name={icon} />
       </div>
-      <h3 className="text-lg font-extrabold text-[#330a49]">{title}</h3>
+      <h3 className="text-lg font-extrabold text-[#2a2e33]">{title}</h3>
       <p className="mt-2 leading-relaxed text-muted">{body}</p>
     </div>
   );

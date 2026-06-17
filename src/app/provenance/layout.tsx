@@ -58,22 +58,25 @@ export default function ProvenanceLayout({ children }: { children: ReactNode }) 
 
       <main id="top">{children}</main>
 
-      <footer className="bg-[#330a49] text-white">
+      <footer className="border-t-4 border-[#7cce2a] bg-white">
         <div className="mx-auto max-w-6xl px-6 py-12 text-sm">
           <Image
             src="/provenance/logo.png"
             alt="Provenance Partners"
             width={200}
             height={41}
-            className="h-9 w-auto opacity-90"
+            className="h-9 w-auto"
           />
-          <p className="mt-5 max-w-md text-white/70">{CONTACT.address}</p>
-          <p className="mt-1 text-white/70">
-            <a href={`mailto:${CONTACT.email}`} className="underline-offset-2 hover:underline">
+          <p className="mt-5 max-w-md text-muted">{CONTACT.address}</p>
+          <p className="mt-1">
+            <a
+              href={`mailto:${CONTACT.email}`}
+              className="text-[#330a49] underline-offset-2 hover:underline"
+            >
               {CONTACT.email}
             </a>
           </p>
-          <p className="mt-6 text-xs text-white/45">
+          <p className="mt-6 text-xs text-muted">
             © {new Date().getFullYear()} Provenance Partners Limited. All rights reserved.
           </p>
         </div>

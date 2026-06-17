@@ -27,7 +27,7 @@ function Eyebrow({ children }: { children: ReactNode }) {
 }
 
 function Heading({ children }: { children: ReactNode }) {
-  return <h2 className="text-3xl font-extrabold tracking-tight text-[#330a49] sm:text-4xl">{children}</h2>;
+  return <h2 className="text-3xl font-extrabold tracking-tight text-[#2a2e33] sm:text-4xl">{children}</h2>;
 }
 
 const btnPrimary =
@@ -43,7 +43,7 @@ export default function ProvenancePage() {
         <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 py-16 sm:py-24 lg:grid-cols-2">
           <FadeIn>
             <Eyebrow>{HERO.eyebrow}</Eyebrow>
-            <h1 className="mt-5 text-4xl font-extrabold leading-[1.1] tracking-tight text-[#330a49] sm:text-5xl">
+            <h1 className="mt-5 text-4xl font-extrabold leading-[1.1] tracking-tight text-[#2a2e33] sm:text-5xl">
               {HERO.headline}
             </h1>
             <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">{HERO.sub}</p>
