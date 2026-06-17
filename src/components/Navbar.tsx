@@ -8,6 +8,8 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
+  if (pathname?.startsWith("/provenance")) return null;
+
   // Prevent body scroll when the mobile menu is open. Restore whatever
   // overflow value was in place before we touched it, so we don't stomp
   // on other components that may also be managing body scroll.
