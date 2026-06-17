@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Provenance — modernised brand page at /provenance · design · 2026-06-17</title>
+<style>
+  :root { --bg:#fafaf8; --fg:#18181b; --muted:#6b6b73; --rule:#e5e5e1;
+    --aside-bg:#f4f3ee; --accent:#c2410c; --code-bg:#f1efe8;
+    --ok:#5a6a44; --warn:#b45309; }
+  html,body{background:var(--bg);color:var(--fg);
+    font-family:ui-monospace,"Space Mono",SFMono-Regular,Menlo,Monaco,monospace;
+    line-height:1.6;margin:0;}
+  body{max-width:900px;margin:0 auto;padding:56px 24px 96px;font-size:15px;}
+  h1{font-size:30px;line-height:1.15;margin:0 0 12px;letter-spacing:-0.01em;}
+  h2.phase{font-size:22px;margin:54px 0 16px;border-top:2px solid var(--rule);padding-top:26px;}
+  h3.item{font-size:17px;margin:28px 0 8px;}
+  p{margin:10px 0;} p strong{font-weight:700;}
+  .byline{color:var(--muted);font-style:italic;margin:0 0 24px;}
+  aside{background:var(--aside-bg);border-left:3px solid var(--accent);
+    padding:14px 18px;margin:18px 0;border-radius:0 6px 6px 0;}
+  aside p{margin:6px 0;}
+  code,kbd{font-family:inherit;background:var(--code-bg);padding:1px 6px;
+    border-radius:3px;font-size:0.9em;}
+  pre{background:var(--code-bg);border-radius:6px;padding:14px 16px;overflow-x:auto;font-size:0.84em;line-height:1.5;}
+  ol,ul{padding-left:22px;} li{margin:5px 0;}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:0.9em;}
+  th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--rule);vertical-align:top;}
+  th{font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;font-size:0.8em;}
+  .lock{display:inline-block;font-size:0.72em;font-weight:700;padding:1px 7px;border-radius:10px;
+    background:var(--ok);color:#fff;text-transform:uppercase;letter-spacing:0.03em;}
+  .q{display:inline-block;font-size:0.72em;font-weight:700;padding:1px 7px;border-radius:10px;
+    background:var(--warn);color:#fff;text-transform:uppercase;letter-spacing:0.03em;}
+  .sw{display:inline-block;width:11px;height:11px;border-radius:3px;border:1px solid rgba(0,0,0,0.18);
+    vertical-align:middle;margin-right:6px;}
+</style>
+</head>
+<body>
+<h1>Provenance — a modernised brand page at <code>/provenance</code></h1>
+<p class="byline">Design spec · 2026-06-17 · henceforth.club. An <strong>unlisted, standalone</strong> modernisation of <a href="https://provenance.co.uk/">provenance.co.uk</a> (a B2B fresh-produce supplier), built as a new route inside the henceforth-club Next.js repo and reachable only by typing the URL. Goal: <strong>modernise the design/brand</strong> — dark-purple field, emerald accent, professional (non-mono) type. Palette validated by a 16-agent judge panel (brand · accessibility · cohesion) and the contrast figures below were re-computed independently. Spec only; the build is its own plan.</p>
+
+<aside>
+<p><strong>This does not touch the live site.</strong> provenance.co.uk stays on its WordPress/Elementor host untouched — there is no migration, no DNS change, no SEO/redirect work. This is a developer-edited <em>concept/showcase</em> living quietly at <code>henceforth.club/provenance</code>: not in the nav, not in the sitemap, <code>noindex</code>. X/search never surface it; you hand the URL to whoever you want to see it.</p>
+</aside>
+
+<h2 class="phase">Context — what exists today</h2>
+<ul>
+<li><strong>The live site</strong> (<code>provenance.co.uk</code>) is WordPress + Elementor on LiteSpeed — a single-page B2B brochure for <em>Provenance Partners Limited</em>, a vertically-integrated supplier of globally-sourced exotic vegetables to UK retailers, processors and food-service, founded 2011. Sections: About · Values &amp; Expertise · Products · Accreditations · Suppliers · Contact · a Modern Slavery statement. Sole contact: <code>hello@provenance.co.uk</code>. There is no repo for it; the design lives in a database as page-builder JSON.</li>
+<li><strong>The host</strong> (<code>henceforth-club</code>) is the style/tech guide: Next.js 16 (App Router, Turbopack), React 19, Tailwind v4 via <code>@theme inline</code> in <code>globals.css</code> (no config file), TypeScript strict, Motion for animation, npm, Vercel (push to <code>main</code> auto-deploys). Dark-only "Phosphor Noir" aesthetic, Space Mono everywhere.</li>
+<li><strong>The proven theming mechanism to mirror is <code>.paper</code></strong> (<code>globals.css</code> ~lines 107–126): a scoped wrapper class that overrides <code>--background/--foreground/--card-bg/--card-border/--card-border-hover/--muted</code> on a route subtree, plus a <code>body:has(.paper)</code> overscroll rule and a scoped <code>::selection</code>. Applied via a one-line wrapper in <code>src/app/articles/layout.tsx</code>. <code>/articles</code> already proves a non-dark, re-skinned route can live inside this site without drift.</li>
+<li><strong>Unlisted-route precedent already exists</strong>: <code>/hello-world</code> and <code>/scriptedsupply</code> are reachable only by URL — absent from <code>Navbar.tsx</code> and from <code>app/sitemap.ts</code>. We follow the same pattern and add <code>robots: { index:false }</code> on top.</li>
+<li>Reusable patterns we build on: <code>FadeIn</code> (Motion scroll reveal), <code>.section-line</code> (gradient divider), <code>.card-glow</code> (hover border glow, reads <code>--accent-glow</code>), <code>.hero-gradient</code>/<code>.hero-grid</code> (background), rounded-2xl bordered cards.</li>
+</ul>
+
+<h2 class="phase">Decisions <span class="lock">locked</span> (with Henry, this session)</h2>
+
+<h3 class="item">D1 — Scope: unlisted standalone page, single long scroll</h3>
+<p>One route, <code>/provenance</code>, as a single long landing page with anchored sections (Hero → About → Values &amp; Expertise → Products → Accreditations → Suppliers → Contact). Rejected: a multi-page section with a <code>SectionNav</code> sub-nav (more files, unwarranted for content that rarely changes and is developer-edited).</p>
+
+<h3 class="item">D2 — Standalone chrome (suppress the henceforth.club nav/footer)</h3>
+<p>The root layout wraps every page in henceforth.club's navbar (Henceforth / Deck of Cards / Hansard …) and footer. On <code>/provenance</code> only, that global chrome is <strong>suppressed</strong> so the page reads as a standalone Provenance brand site, not a sub-page of a dev portfolio — with a single discreet <code>↩ henceforth.club</code> backlink in the page's own footer. Implemented by a <code>pathname.startsWith('/provenance')</code> guard in the client chrome components (see Architecture).</p>
+
+<h3 class="item">D3 — Content: the real Provenance content, modernised</h3>
+<p>Use the actual company copy, values, product range, accreditations and contact details (extracted from the live site), with tightened wording. The eight live "value pillars" are <strong>trimmed to six</strong> — the live wall-of-virtues reads as B2B boilerplate; fewer, stronger cards with more air read more premium. Contact is a <strong><code>mailto:</code> button</strong> to <code>hello@provenance.co.uk</code> (matching the existing <code>/contact</code> page) — no form, no backend.</p>
+
+<h3 class="item">D4 — Visual direction: "Quiet Plum, lifted" — dark aubergine + emerald, no mono</h3>
+<p>Dark <strong>purple is the brand colour</strong>; <strong>emerald green is the accent</strong>. From the judge panel's winning "Quiet Plum" direction, with its two consensus weaknesses fixed: (1) the field is <em>lifted</em> so the purple is actually perceptible (the winner's plum measured 1.38:1 — invisible), and (2) henceforth.club's "developer-tool tells" are stripped for this route. Per Henry: <strong>no Space Mono</strong> — "professional, not codie." Editorial serif headlines + clean humanist sans body. Crisp emerald accent for freshness.</p>
+
+<h2 class="phase">Visual system</h2>
+
+<h3 class="item">Palette — scoped tokens (contrast re-computed, WCAG 2.1)</h3>
+<table>
+<tr><th>Token</th><th>Value</th><th>Contrast</th><th>Role</th></tr>
+<tr><td><code>--background</code></td><td><span class="sw" style="background:#1e1526"></span>#1e1526</td><td>—</td><td>aubergine field (lifted out of near-black so purple reads)</td></tr>
+<tr><td><code>--foreground</code></td><td><span class="sw" style="background:#ece8ef"></span>#ece8ef</td><td><strong>14.6:1</strong> AAA</td><td>body &amp; headings</td></tr>
+<tr><td><code>--muted</code></td><td><span class="sw" style="background:#a294a8"></span>#a294a8</td><td>6.2:1 AA</td><td>secondary copy (on field); 5.8:1 on card surface</td></tr>
+<tr><td><code>--card-bg</code></td><td><span class="sw" style="background:#271a30"></span>#271a30</td><td>—</td><td>cards / panels</td></tr>
+<tr><td><code>--card-border</code></td><td><span class="sw" style="background:#3a2844"></span>#3a2844</td><td>1.3:1 — <em>decorative only</em></td><td>hairlines; never the sole indicator of an interactive boundary or state</td></tr>
+<tr><td><code>--card-border-hover</code> / <code>--brand-purple</code></td><td><span class="sw" style="background:#5a3d68"></span>#5a3d68</td><td>1.93:1 — <em>fill/border only</em></td><td>hero radial + card-hover border; makes the plum perceptible. <strong>Never carries text.</strong></td></tr>
+<tr><td><code>--accent</code> (emerald)</td><td><span class="sw" style="background:#34d17a"></span>#34d17a</td><td><strong>8.9:1</strong> text · 8.9:1 UI</td><td>CTAs, links, the one key headline word, focus ring</td></tr>
+<tr><td><code>--accent-bright</code></td><td><span class="sw" style="background:#5ef0a0"></span>#5ef0a0</td><td>12.1:1</td><td>hover / focus-visible emphasis</td></tr>
+<tr><td>CTA label</td><td><span class="sw" style="background:#0a1f12"></span>#0a1f12</td><td><strong>8.7:1</strong> on emerald</td><td><strong>dark-on-green.</strong> White-on-emerald = 1.99:1 → banned.</td></tr>
+</table>
+<p><strong>Two-green trap:</strong> the site's existing <code>--accent-green</code> is Hansard's <code>#3da87a</code>. The scope <strong>also</strong> sets <code>--accent-green:#34d17a</code> + <code>--accent-green-glow</code>, so any component using <code>card-glow-green</code>/<code>text-accent-green</code> inside <code>/provenance</code> renders the emerald, not Hansard's green.</p>
+
+<h3 class="item">Typography <span class="lock">no mono</span></h3>
+<p>Space Mono is dropped for this route. Headlines in an <strong>editorial serif</strong> (recommended: <strong>Fraunces</strong> — modern, optical-sized, premium-food register); body and labels in a <strong>clean humanist sans</strong> (recommended: <strong>Inter</strong>). Both loaded via <code>next/font/google</code> in the provenance layout and exposed as CSS vars; the <code>.provenance</code> scope repoints <code>--font-serif</code>/<code>--font-sans</code> so Tailwind's <code>font-serif</code>/<code>font-sans</code> utilities resolve to them inside the subtree only (the rest of the site stays Space Mono). Font names are swappable at spec-review.</p>
+
+<h3 class="item">De-tech adjustments (the panel's consensus subtractions)</h3>
+<ul>
+<li><strong>Drop the <code>hero-grid</code> lines</strong> for this route (strongest "SaaS dashboard" tell).</li>
+<li><strong>Disable the global noise overlay</strong> on this route (<code>body:has(.provenance)::before{display:none}</code>).</li>
+<li><strong>No glow on the headline</strong> — colour carries the accent; glow reads neon/tech.</li>
+<li>Keep the hero radial, recoloured to the lifted plum so the field reads aubergine, not black. No scanlines (they're opt-in per element — simply never applied here).</li>
+</ul>
+
+<h2 class="phase">Architecture</h2>
+
+<h3 class="item">Routes &amp; files</h3>
+<table>
+<tr><th>Path</th><th>Role</th></tr>
+<tr><td><code>src/app/provenance/layout.tsx</code></td><td>Loads Fraunces + Inter via <code>next/font</code>; wraps children in <code>&lt;div className="provenance min-h-screen bg-background text-foreground {fraunces.variable} {inter.variable}"&gt;</code> (mirrors <code>articles/layout.tsx</code>). Hosts the page-local footer with the <code>↩ henceforth.club</code> backlink.</td></tr>
+<tr><td><code>src/app/provenance/page.tsx</code></td><td>Server component. The seven sections (real content), composed with <code>FadeIn</code> + Tailwind + the small local components below. Exports <code>metadata</code> incl. <code>robots: { index:false, follow:false }</code>.</td></tr>
+<tr><td><code>src/app/provenance/_components/</code></td><td><code>ValueCard</code>, <code>ProductChip</code>, <code>AccreditationRow</code> — small presentational pieces local to the route (kept out of the shared <code>components/</code> tree since they're single-use).</td></tr>
+<tr><td><code>public/provenance/accreditations/*</code></td><td>The real cert logos (GlobalGAP, M&amp;S, Sedex, BRC, Fair Trade, +1), downloaded; plus a copy of the Modern Slavery statement PDF.</td></tr>
+<tr><td><code>src/app/globals.css</code></td><td><em>Append only</em>: the <code>.provenance</code> token block + scoped overrides (below). No edits to existing rules.</td></tr>
+</table>
+
+<h3 class="item">Scoped CSS — appended to <code>globals.css</code> (~18–22 lines, additive)</h3>
+<pre>.provenance {
+  --background:#1e1526; --foreground:#ece8ef; --muted:#a294a8;
+  --card-bg:#271a30; --card-border:#3a2844; --card-border-hover:#5a3d68;
+  --accent:#34d17a; --accent-glow:rgba(52,209,122,0.16);
+  --accent-green:#34d17a; --accent-green-glow:rgba(52,209,122,0.16);
+  --brand-purple:#5a3d68;
+  --font-serif: var(--font-fraunces), Georgia, serif;
+  --font-sans:  var(--font-inter), system-ui, sans-serif;
+}
+body:has(.provenance){ background:#1e1526; }
+body:has(.provenance)::before{ display:none; }            /* kill global noise */
+.provenance ::selection{ background:rgba(52,209,122,0.22); color:#ece8ef; }  /* base ::selection hardcodes cyan */
+.provenance .hero-gradient{ background:radial-gradient(ellipse 80% 50% at 50% -20%, var(--brand-purple) 0%, transparent 100%); }
+/* hero-grid deliberately NOT reused on this route (dropped). */</pre>
+<p><strong>Why these specific overrides:</strong> the cohesion lens verified that <code>::selection</code> and the <code>hero-gradient</code>/<code>hero-grid</code> rules hard-code cyan/amber literals and do <em>not</em> read tokens — so a pure var-swap leaks cyan. They must be scoped, and the hero gradient must be <code>.provenance</code>-prefixed (editing the shared rule would bleed plum onto the homepage). No <code>input:focus</code> override is needed because the page has no form fields (mailto only).</p>
+
+<h3 class="item">Chrome suppression (the only edits to shared files)</h3>
+<table>
+<tr><th>File</th><th>Change</th></tr>
+<tr><td><code>src/components/Navbar.tsx</code></td><td>Already a client component using <code>usePathname()</code>. Add an early <code>if (pathname.startsWith('/provenance')) return null;</code>.</td></tr>
+<tr><td><code>src/components/SiteFooter.tsx</code> (new, client)</td><td>Extract the footer JSX currently inline in <code>app/layout.tsx</code> into this <code>"use client"</code> component; add the same pathname guard. Replace the inline footer in <code>layout.tsx</code> with <code>&lt;SiteFooter/&gt;</code>. (Footer markup is static, so moving it client-side is cost-free.)</td></tr>
+</table>
+<p>Rejected alternative: top-level route groups with separate root layouts — correct in principle but would touch every existing route. The pathname guard is the surgical change.</p>
+
+<h3 class="item">Reused patterns (inherit the emerald automatically)</h3>
+<ul>
+<li><code>FadeIn</code> for staged section entrances (numeric <code>delay</code> prop — <em>not</em> the <code>.delay-N</code> classes, which only drive <code>.animate-in</code>).</li>
+<li><code>.section-line</code> dividers (read <code>--card-border</code> → re-tint for free).</li>
+<li><code>.card-glow</code> / <code>.card-glow-green</code> on Value and Product cards (read <code>--accent-glow</code>/<code>--accent-green-glow</code> → emerald).</li>
+<li>rounded-2xl bordered cards on <code>--card-bg</code>/<code>--card-border</code>.</li>
+</ul>
+
+<h2 class="phase">Content (modernised, real)</h2>
+<table>
+<tr><th>Section</th><th>Copy / elements</th></tr>
+<tr><td><strong>Hero</strong></td><td>Eyebrow: <em>FRESH PRODUCE SPECIALISTS · SINCE 2011</em>. Headline (serif, one emerald keyword): <em>“Sourcing the world's finest <span style="color:#1d7a4a">produce</span>.”</em> Sub: <em>“A vertically integrated supplier of globally grown exotic vegetables to the UK's leading retailers, processors and food-service.”</em> CTAs: <strong>[ Talk to us ]</strong> (<code>mailto:hello@provenance.co.uk</code>) · <em>View the range ↓</em> (anchor <code>#products</code>).</td></tr>
+<tr><td><strong>About</strong></td><td>Founding story, tightened: founded 2011 to market Vegpro Kenya's produce; since grown a global network of world-class supply partners delivering year-round premium and prepared produce to millions of UK consumers. Three stat chips: <em>Est. 2011 · Year-round supply · Retail · Processing · Food-service</em>.</td></tr>
+<tr><td><strong>Values &amp; Expertise</strong></td><td>Six emerald glow-cards (trimmed from eight): <strong>World-Class Partners · Honesty &amp; Integrity · Reliability &amp; Value · Technical Expertise · Quality · Product Development</strong>, each with a one-line modernised description.</td></tr>
+<tr><td><strong>Products</strong> (<code>#products</code>)</td><td>Prepared lines (Mixed Prepared Vegetables · Prepared Stir-Fry) + an emerald-dotted chip grid of the range: Tenderstem® Broccoli, Baby Corn, Runner Beans, Fine/Extra-Fine/Green Beans, Baby Courgettes, Sugar Snap Peas, Baby Pak Choi, Kale, Echalion Shallots, Mangetout, Spring Onions, Butternut, Herbs.</td></tr>
+<tr><td><strong>Accreditations</strong></td><td>Real cert logos on subtle cards (grayscale → colour on hover): GlobalGAP, M&amp;S, Sedex, BRC, Fair Trade (+1).</td></tr>
+<tr><td><strong>Suppliers</strong></td><td>The global-network / year-round sourcing story — world-class partners meeting product, technical and ethical standards.</td></tr>
+<tr><td><strong>Contact</strong></td><td>Address: <em>Unit 2.01 Clerkenwell Workshops, Clerkenwell Close, London, EC1R 0AT</em>. Emerald <code>mailto:</code> button to <code>hello@provenance.co.uk</code>. Link to the Modern Slavery statement PDF. Footer: <code>↩ henceforth.club</code> backlink.</td></tr>
+</table>
+<p><strong>Imagery:</strong> v1 is a restrained type-and-colour treatment with no photography (zero licensing risk, fastest, most premium-modern). Real produce photography is the flagged highest-impact <em>future</em> enhancement — the panel's brand lens noted produce ultimately sells on daylight imagery.</p>
+
+<h2 class="phase">Acceptance criteria</h2>
+<ol>
+<li><code>/provenance</code> renders the seven sections with the real, modernised content; the henceforth.club navbar and footer do <strong>not</strong> appear; the <code>↩ henceforth.club</code> backlink does.</li>
+<li>The page reads as dark aubergine with an emerald accent — purple is perceptibly present (not "black with green"), headlines are serif (no monospace anywhere on the route).</li>
+<li>The <strong>[ Talk to us ]</strong> CTA opens an email to <code>hello@provenance.co.uk</code>; <em>View the range</em> scrolls to <code>#products</code>.</li>
+<li><strong>Unlisted-stays-unlisted:</strong> <code>/provenance</code> is absent from <code>Navbar</code> links and from <code>sitemap.ts</code>; its <code>metadata.robots.index === false</code>.</li>
+<li>No cyan leaks: text selection and the hero gradient render emerald/plum, not cyan; the homepage hero is visually unchanged after the gradient override.</li>
+<li><code>npm run build</code> is clean; accreditation logos have <code>alt</code> text; contrast meets WCAG AA (already computed: foreground 14.6:1, emerald-on-field 8.9:1, dark-on-emerald CTA 8.7:1).</li>
+</ol>
+
+<h2 class="phase">Verification — named tests <span class="lock">DoD</span></h2>
+<p>Most of this page is visual judgement (verified on the Vercel preview URL), but the page's <em>intent</em> — "this URL must never leak into nav or search" — is executable and gets a Vitest guard so a future edit can't silently break it:</p>
+<table>
+<tr><th>Test</th><th>Asserts</th></tr>
+<tr><td><code>provenance.noindex</code></td><td>The route's <code>metadata.robots</code> has <code>index:false</code> (and <code>follow:false</code>).</td></tr>
+<tr><td><code>provenance.not-in-sitemap</code></td><td>No entry returned by <code>sitemap()</code> has a URL ending <code>/provenance</code>.</td></tr>
+<tr><td><code>provenance.not-in-nav</code></td><td>The <code>Navbar</code> link list contains no <code>/provenance</code> href.</td></tr>
+<tr><td><code>provenance.smoke</code></td><td>The page renders the headline, the <code>mailto:hello@provenance.co.uk</code> CTA, and the accreditation block.</td></tr>
+</table>
+<p>Honest exemption: palette "feel", serif choice, and motion are UX judgement, asserted by eye on the preview deploy, not by test.</p>
+
+<h2 class="phase">Non-goals (out of scope)</h2>
+<ul>
+<li><strong>Touching the live provenance.co.uk</strong> — no WordPress changes, no DNS, no redirects, no SEO migration. This is a separate unlisted page.</li>
+<li>A CMS, contact form/backend, or any dynamic data. Developer-edited static content only.</li>
+<li>Produce photography, multi-page sub-routes, or a <code>SectionNav</code> — deferred / rejected.</li>
+<li>Linking to <code>/provenance</code> from anywhere on henceforth.club, or adding it to the sitemap.</li>
+</ul>
+
+<h2 class="phase">Resolved <span class="lock">Henry · 2026-06-17</span></h2>
+<ol>
+<li><strong>Primary goal:</strong> modernise the design/brand.</li>
+<li><strong>Host &amp; visibility:</strong> a new route inside henceforth-club at <code>/provenance</code>, unlisted (type-the-URL only), standalone chrome.</li>
+<li><strong>Editing:</strong> developer-only → static code page, no CMS.</li>
+<li><strong>Colour:</strong> dark purple is the brand colour, green is the accent → "Quiet Plum, lifted" + crisp emerald <code>#34d17a</code>.</li>
+<li><strong>Type:</strong> no Space Mono — "professional, not codie" → editorial serif headlines + humanist sans body.</li>
+<li><strong>Structure / content / contact:</strong> single long page · real content modernised · <code>mailto:</code> (no form).</li>
+</ol>
+
+<h2 class="phase">Implementation arc (high-level — detailed plan follows via writing-plans)</h2>
+<table>
+<tr><th>#</th><th>Step</th></tr>
+<tr><td>1</td><td>Scoped theme: append the <code>.provenance</code> token block + scoped overrides to <code>globals.css</code>; load Fraunces + Inter in <code>provenance/layout.tsx</code> and apply the font vars to the wrapper.</td></tr>
+<tr><td>2</td><td>Chrome suppression: add the pathname guard to <code>Navbar.tsx</code>; extract the footer into a client <code>SiteFooter.tsx</code> with the same guard.</td></tr>
+<tr><td>3</td><td>Assets: download the accreditation logos + Modern Slavery PDF into <code>public/provenance/</code>.</td></tr>
+<tr><td>4</td><td>Build <code>provenance/page.tsx</code>: the seven sections with the real modernised content, <code>FadeIn</code>, emerald <code>mailto:</code> CTA, small local components; <code>metadata</code> with <code>robots:{index:false}</code>.</td></tr>
+<tr><td>5</td><td>Tests (the four guards above) · <code>npm run build</code> · a11y/contrast pass. Work on a <strong>feature branch → PR</strong> (no direct push to <code>main</code>); eyeball the Vercel preview URL.</td></tr>
+</table>
+
+</body>
+</html>
