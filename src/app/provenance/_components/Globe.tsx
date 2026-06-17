@@ -7,7 +7,6 @@ const GREEN: [number, number, number] = [0.486, 0.808, 0.165]; // #7cce2a
 
 const HQ: [number, number] = [51.5, -0.13]; // London
 
-// Approximate sourcing regions for globally sourced exotic vegetables.
 const SOURCES: [number, number][] = [
   [-1.29, 36.82], // Nairobi, Kenya — founding origin
   [31.79, -7.09], // Morocco
@@ -19,7 +18,7 @@ const SOURCES: [number, number][] = [
 ];
 
 const MARKERS = [
-  { location: HQ, size: 0.08 },
+  { location: HQ, size: 0.09 },
   ...SOURCES.map((location) => ({ location, size: 0.06 })),
 ];
 
@@ -34,33 +33,31 @@ export default function Globe() {
 
     let phi = 0;
     let raf = 0;
-    let size = canvas.offsetWidth;
-    const onResize = () => {
-      size = canvas.offsetWidth;
-    };
-    window.addEventListener("resize", onResize);
+    const px = () => Math.max(canvas.offsetWidth, 1) * 2;
 
     const globe = createGlobe(canvas, {
       devicePixelRatio: 2,
-      width: size * 2,
-      height: size * 2,
+      width: px(),
+      height: px(),
       phi: 0,
-      theta: 0.22,
-      dark: 0,
-      diffuse: 0.5,
+      theta: 0.25,
+      dark: 1,
+      diffuse: 1.2,
       mapSamples: 18000,
-      mapBrightness: 1.3,
-      baseColor: [0.91, 0.92, 0.94],
+      mapBrightness: 5,
+      mapBaseBrightness: 0.06,
+      baseColor: [0.16, 0.19, 0.16], // dark charcoal-green sphere
       markerColor: GREEN,
-      glowColor: [0.96, 0.98, 0.93],
+      glowColor: [0.72, 0.85, 0.6], // soft green rim
       markers: MARKERS,
       arcs: ARCS,
       arcColor: GREEN,
     });
 
     const frame = () => {
+      const w = px();
       phi += 0.004;
-      globe.update({ phi, width: size * 2, height: size * 2 });
+      globe.update({ phi, width: w, height: w });
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
@@ -68,7 +65,6 @@ export default function Globe() {
     return () => {
       cancelAnimationFrame(raf);
       globe.destroy();
-      window.removeEventListener("resize", onResize);
     };
   }, []);
 
