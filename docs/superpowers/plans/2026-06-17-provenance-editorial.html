@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Provenance — high-end editorial rebuild · implementation plan · 2026-06-17</title>
+<style>
+  :root { --bg:#f4f1ea; --ink:#1c1a16; --muted:#6b6358; --rule:#d8d0c0; --accent:#a8431f;
+    --card:#fbf9f4; --code-bg:#1e1e1e; --code-ink:#e8e8e8; --ok:#2f6f3e; --shadow:0 1px 3px rgba(0,0,0,0.08); }
+  *{box-sizing:border-box}
+  body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style',serif;font-size:17px;line-height:1.65}
+  .wrap{max-width:880px;margin:0 auto;padding:56px 32px}
+  header.doc{margin-bottom:40px;border-bottom:2px solid var(--rule);padding-bottom:24px}
+  .eyebrow{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px}
+  h1{font-size:34px;line-height:1.15;margin:0 0 12px;font-weight:700;letter-spacing:-.01em}
+  h2{font-size:24px;margin:44px 0 14px;padding-top:18px;border-top:1px solid var(--rule)}
+  h3{font-size:19px;margin:28px 0 10px}
+  .lede{font-size:19px;color:var(--muted);margin:0}
+  p{margin:14px 0}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:.86em;background:rgba(0,0,0,.06);padding:2px 6px;border-radius:4px}
+  pre{background:var(--code-bg);color:var(--code-ink);padding:18px 20px;border-radius:8px;overflow-x:auto;margin:12px 0}
+  pre code{background:none;padding:0;font-size:13px;line-height:1.6}
+  .task{display:flex;gap:12px;align-items:flex-start;margin:10px 0;padding:12px 16px;background:var(--card);border:1px solid var(--rule);border-radius:8px;box-shadow:var(--shadow)}
+  .task input[type=checkbox]{margin-top:5px;width:16px;height:16px;flex-shrink:0;accent-color:var(--ok)}
+  .task .body{flex:1}.task .body strong{display:block;margin-bottom:3px}
+  .meta{font-size:13px;color:var(--muted)}
+  .pill{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:999px;margin-left:6px}
+  .pill.build{background:#f0e0c0;color:#6f5318}.pill.visual{background:#d8e6cf;color:#33602a}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .gate{background:#fdf2ec;border:1px solid var(--accent);border-radius:8px;padding:14px 18px;margin:18px 0}
+  .gate strong{color:var(--accent)}
+  ul{margin:12px 0;padding-left:24px}li{margin:6px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="doc">
+  <div class="eyebrow">Henceforth.club · Plan · Provenance — high-end editorial rebuild · 2026-06-17</div>
+  <h1>Rebuild <code>/provenance</code> as a high-end editorial site</h1>
+  <p class="lede">Re-theme the existing <code>/provenance</code> route to an editorial, photography-led, premium design. Spec: <code>docs/superpowers/specs/2026-06-17-provenance-editorial-design.html</code>.</p>
+  <p class="meta" style="margin-top:16px;"><strong>For agentic workers:</strong> the route, its guards (noindex test, sitemap test, Navbar/SiteFooter suppression) and <code>content.ts</code> already exist and pass — this plan re-themes the look. Most tasks are <span class="pill build">build</span> (verified by <code>npm run build</code> + the existing tests) and the finale is a <span class="pill visual">visual</span> screenshot-iteration loop. Tests: <code>npm run test</code> (node-env vitest). Build: <code>npm run build</code>. Commit per task, never amend. <strong>Do not <code>git push</code> until the visual gate passes</strong> — push creates the Vercel preview for Henry; merge to <code>main</code> is Henry's call.</p>
+</header>
+
+<p><strong>Goal:</strong> <code>/provenance</code> reads as a genuinely premium editorial produce site — Fraunces display type, big photography, generous whitespace, green as the only accent, purple a whisper — with all real content and the unlisted guards intact.</p>
+<p><strong>Architecture:</strong> Same Next 16 / Tailwind v4 <code>.provenance</code> scoped-token approach. Swap fonts to Fraunces + DM Sans, rebuild <code>page.tsx</code> and its section components editorially, and place a photography set under <code>public/provenance/editorial/</code> that is swap-in-place for real photos later. Quality is reached by iterating the rendered page against screenshots, not by unit tests (the page is presentational; the two behavioural guards already exist).</p>
+<p><strong>Tech stack:</strong> Next 16 App Router, React 19, Tailwind v4 (<code>@theme inline</code>), <code>next/font/google</code> (Fraunces + DM Sans), Motion (<code>FadeIn</code>), vitest (node), headless Chrome for screenshots.</p>
+
+<h2>Global constraints</h2>
+<ul>
+<li><strong>Palette:</strong> white bg · charcoal text/headings <code>#2a2e33</code> (NOT purple) · muted <code>#6f6b78</code> · green <code>#7cce2a</code> = accent <strong>fills only</strong> (never green text on white) · purple <code>#330a49</code> = whisper (logo + at most one tiny detail) · CTA = green fill + dark text.</li>
+<li><strong>Type:</strong> Fraunces (serif display) + DM Sans (body). No monospace on the route.</li>
+<li><strong>Editorial:</strong> big imagery, large type scale, generous whitespace, restraint.</li>
+<li><strong>Photography swap-able:</strong> all images under <code>public/provenance/editorial/</code>; replacing a file must not require layout changes. v1 = CC stand-ins.</li>
+<li><strong>Unlisted invariant (already in place — keep green):</strong> not in nav/sitemap, <code>robots:{index:false}</code>; Navbar + SiteFooter return null on the route.</li>
+<li><strong>Append/scope only in <code>globals.css</code></strong> (edit the existing <code>.provenance</code> block; touch no other rule). Git: branch <code>feat/provenance-page</code> (already exists), commit per task, no push until the visual gate.</li>
+</ul>
+
+<h2>File structure</h2>
+<table>
+<thead><tr><th>Path</th><th>Change</th><th>Responsibility</th></tr></thead>
+<tbody>
+<tr><td><code>public/provenance/editorial/*</code></td><td>Create</td><td>Photography set (CC stand-ins): hero, story, produce, field.</td></tr>
+<tr><td><code>src/app/globals.css</code> <code>.provenance</code></td><td>Modify</td><td>Repoint <code>--font-serif</code>→Fraunces, <code>--font-sans</code>→DM Sans; keep light tokens + scoped guards.</td></tr>
+<tr><td><code>src/app/provenance/layout.tsx</code></td><td>Modify</td><td>Load Fraunces + DM Sans via next/font; header (logo + nav + green Contact); neutral footer.</td></tr>
+<tr><td><code>src/app/provenance/_components/*</code></td><td>Modify/Create</td><td>Editorial sections: <code>HeroEditorial</code>, <code>Story</code>, value list, product index, <code>AccreditationRow</code>.</td></tr>
+<tr><td><code>src/app/provenance/page.tsx</code></td><td>Modify</td><td>Compose the editorial sections from <code>content.ts</code>.</td></tr>
+<tr><td><code>src/app/provenance/content.ts</code></td><td>(reuse)</td><td>Already has hero/about/8 values/products/accreditations/suppliers/contact.</td></tr>
+</tbody>
+</table>
+
+<h2>Task 1 — Photography set <span class="pill build">build</span></h2>
+<div class="task"><input type="checkbox"><div class="body"><strong>Place the curated CC photos in <code>public/provenance/editorial/</code></strong>
+<pre><code># from the curated candidates already downloaded to /tmp
+mkdir -p public/provenance/editorial
+cp /tmp/provenance-mockup/img/candidates/field-2.jpg   public/provenance/editorial/hero.jpg     # balanced field rows (NOT the giant romanesco)
+cp /tmp/provenance-mockup/img/candidates/field-3.jpg   public/provenance/editorial/story.jpg    # hands holding produce (provenance)
+cp /tmp/provenance-mockup/img/candidates/single-1.jpg  public/provenance/editorial/produce.jpg  # clean green beans
+cp /tmp/provenance-mockup/img/candidates/macro-4.jpg   public/provenance/editorial/feature.jpg  # romanesco macro (a feature, not the hero)
+sips -Z 2000 public/provenance/editorial/*.jpg   # cap size for web</code></pre>
+Keep a note in the commit body that these are CC stand-ins to be swapped for real photography. Commit: <code>chore(provenance): editorial photography stand-ins</code>.</div></div>
+
+<h2>Task 2 — Fonts + scoped theme <span class="pill build">build</span></h2>
+<div class="task"><input type="checkbox"><div class="body"><strong>In <code>globals.css</code> <code>.provenance</code> block, repoint the font vars</strong> (leave the colour tokens — they're already the light editorial palette):
+<pre><code>  --font-serif: var(--font-fraunces), Georgia, serif;
+  --font-sans:  var(--font-dm-sans), system-ui, sans-serif;</code></pre>
+Leave the existing <code>body:has(.provenance)</code>, <code>::selection</code> and noise-disable rules as they are.</div></div>
+<div class="task"><input type="checkbox"><div class="body"><strong>In <code>layout.tsx</code>, load the fonts and apply both variables</strong>
+<pre><code>import { Fraunces, DM_Sans } from "next/font/google";
+const fraunces = Fraunces({ subsets:["latin"], variable:"--font-fraunces", display:"swap" });
+const dmSans = DM_Sans({ subsets:["latin"], variable:"--font-dm-sans", display:"swap", weight:["400","500","700"] });
+// wrapper className: `provenance font-sans min-h-screen bg-background text-foreground ${fraunces.variable} ${dmSans.variable}`</code></pre>
+Keep the header (logo + section nav + green Contact) and the neutral footer from the current layout; just change the fonts. Run <code>npm run build</code> → exit 0. Commit: <code>feat(provenance): Fraunces + DM Sans editorial type</code>.</div></div>
+
+<h2>Task 3 — Editorial section components <span class="pill build">build</span></h2>
+<div class="task"><input type="checkbox"><div class="body"><strong>Build the editorial section pieces in <code>_components/</code></strong> (server components; <code>next/image</code> for photos with <code>fill</code> + <code>object-cover</code>; Fraunces via <code>font-serif</code>):
+<ul>
+<li><code>HeroEditorial.tsx</code> — full-width or 60/40 hero: a large <code>hero.jpg</code> with a restrained Fraunces headline ("Globally sourced exotic vegetables."), one-line sub, one green CTA. <strong>Balanced</strong> — image is a backdrop/side, not a single oversized vegetable; headline legible over a soft scrim.</li>
+<li><code>Story.tsx</code> — two-column: <code>story.jpg</code> + the <code>ABOUT</code> narrative + 3-4 elegant stats (Est. 2011 · year-round · UK retail/processing/food-service).</li>
+<li>Reuse <code>ValueCard</code>/<code>ValueIcon</code> but restyle editorial (lighter weight, more air); reuse <code>ProductChip</code> or render products as a typographic index; reuse <code>AccreditationRow</code> (logos on white).</li>
+</ul>
+All colours via tokens / the constraint palette; green only as fills; headings <code>text-[#2a2e33]</code> in <code>font-serif</code>.</div></div>
+
+<h2>Task 4 — Compose the page <span class="pill build">build</span></h2>
+<div class="task"><input type="checkbox"><div class="body"><strong>Rebuild <code>page.tsx</code></strong> to compose the sections in order: Hero → Story → Values (all 8) → Products (full range) → Accreditations → Suppliers → Contact (mailto + Modern Slavery PDF). Keep <code>export const metadata = { ..., robots }</code> (noindex) and <code>FadeIn</code> on sections. Import content from <code>content.ts</code>. Run <code>npm run test</code> (34/34 green) + <code>npm run build</code> (exit 0, <code>/provenance</code> prerenders). Commit: <code>feat(provenance): editorial page composition</code>.</div></div>
+
+<h2>Task 5 — Visual polish loop <span class="pill visual">visual</span></h2>
+<div class="gate"><strong>Gate (iterate until premium):</strong> run a local prod server, screenshot <code>/provenance</code> with headless Chrome, and <em>look</em>. Adjust hero composition, type scale, spacing, image crops, section rhythm — re-screenshot — repeat until it genuinely reads high-end editorial. Checklist: (1) hero balanced &amp; headline legible; (2) no green-block placeholders, no oversized-vegetable hero; (3) Fraunces display + DM Sans body, ample whitespace; (4) green accent only, purple a whisper, charcoal headings; (5) all real content present; (6) <code>/provenance</code> has no henceforth nav/footer, homepage unchanged; (7) <code>npm run test</code> + <code>npm run build</code> green.</div>
+<div class="task"><input type="checkbox"><div class="body"><strong>Screenshot, refine, repeat; commit when it reads premium.</strong>
+<pre><code>PORT=3137 npm run start &amp;
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --hide-scrollbars \
+  --window-size=1440,5200 --screenshot=/tmp/prov.png "http://localhost:3137/provenance"</code></pre>
+Commit: <code>feat(provenance): editorial polish pass</code>.</div></div>
+<div class="task"><input type="checkbox"><div class="body"><strong>Push the branch</strong> → Vercel preview; share the <code>/provenance</code> preview URL with Henry. Merge to <code>main</code> only on his approval.</div></div>
+
+<h2>Decided here (from the spec)</h2>
+<ul>
+<li><strong>Hero photo:</strong> a balanced field/rows shot, not the romanesco macro (which becomes a feature) — avoids the oversized-single-vegetable problem seen in the mock.</li>
+<li><strong>Tests:</strong> the two behavioural guards (noindex, sitemap) already exist and stay green; the editorial look is verified visually, not by new unit tests (presentational).</li>
+<li><strong>Photography:</strong> CC stand-ins now; swap Provenance's real/premium photos before go-live (file replacement only).</li>
+</ul>
+</div>
+</body>
+</html>

@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Provenance — unlisted modernised brand page · implementation plan · 2026-06-17</title>
+<style>
+  :root {
+    --bg: #f4f1ea; --ink: #1c1a16; --muted: #6b6358; --rule: #d8d0c0;
+    --accent: #a8431f; --accent-soft: #c4a572; --card: #fbf9f4;
+    --code-bg: #1e1e1e; --code-ink: #e8e8e8; --ok: #2f6f3e; --warn: #a8431f;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 0 0 80px; background: var(--bg); color: var(--ink);
+    font-family: Georgia, 'Iowan Old Style', 'Times New Roman', serif; font-size: 17px; line-height: 1.65; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 56px 32px; }
+  header.doc { margin-bottom: 40px; border-bottom: 2px solid var(--rule); padding-bottom: 24px; }
+  .eyebrow { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-bottom: 10px; }
+  h1 { font-size: 34px; line-height: 1.15; margin: 0 0 12px; font-weight: 700; letter-spacing: -0.01em; }
+  h2 { font-size: 24px; margin: 44px 0 14px; padding-top: 18px; border-top: 1px solid var(--rule); }
+  h3 { font-size: 19px; margin: 28px 0 10px; }
+  .lede { font-size: 19px; color: var(--muted); margin: 0; }
+  p { margin: 14px 0; }
+  code { font-family: 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace; font-size: 0.86em; background: rgba(0,0,0,0.06); padding: 2px 6px; border-radius: 4px; }
+  pre { background: var(--code-bg); color: var(--code-ink); padding: 18px 20px; border-radius: 8px; overflow-x: auto; margin: 12px 0; }
+  pre code { background: none; padding: 0; font-size: 13px; line-height: 1.6; }
+  .task { display: flex; gap: 12px; align-items: flex-start; margin: 10px 0; padding: 12px 16px; background: var(--card); border: 1px solid var(--rule); border-radius: 8px; box-shadow: var(--shadow); }
+  .task input[type=checkbox] { margin-top: 5px; width: 16px; height: 16px; flex-shrink: 0; accent-color: var(--ok); }
+  .task .body { flex: 1; }
+  .task .body strong { display: block; margin-bottom: 3px; }
+  .meta { font-size: 13px; color: var(--muted); }
+  .pill { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 8px; border-radius: 999px; margin-left: 6px; }
+  .pill.tdd { background: #cfe3d4; color: #1f5a32; }
+  .pill.build { background: #f0e0c0; color: #6f5318; }
+  table { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 14.5px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  .gate { background: #fdf2ec; border: 1px solid var(--accent); border-radius: 8px; padding: 14px 18px; margin: 18px 0; }
+  .gate strong { color: var(--accent); }
+  ul { margin: 12px 0; padding-left: 24px; } li { margin: 6px 0; }
+  .files code { font-size: 0.92em; }
+  .sw { display:inline-block; width:11px; height:11px; border-radius:3px; border:1px solid rgba(0,0,0,0.2); vertical-align:middle; margin-right:5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="doc">
+  <div class="eyebrow">Henceforth.club · Plan · Provenance — unlisted brand page · 2026-06-17</div>
+  <h1>Build <code>/provenance</code> — a modernised, unlisted brand page</h1>
+  <p class="lede">A dark-aubergine + emerald, serif-headline marketing page for Provenance Partners, living unlisted inside the henceforth-club repo. Spec: <code>docs/superpowers/specs/2026-06-17-provenance-page-design.html</code>.</p>
+  <p class="meta" style="margin-top:16px;"><strong>For agentic workers:</strong> REQUIRED SUB-SKILL — use <code>superpowers:subagent-driven-development</code> (recommended) or <code>superpowers:executing-plans</code>. Execute task-by-task; tick each <code>&lt;input&gt;</code> as you go. Tests: <code>npm run test</code> (vitest, <strong>node env, <code>src/**/*.test.ts</code> only — no jsdom/RTL</strong>, so view behaviour is verified via <code>npm run build</code> + <code>npm run dev</code>, per the project's testing philosophy). Build gate: <code>npm run build</code>. Commit per task, never amend. <strong>Do not <code>git push</code> and do not open the PR</strong> — pushing the branch creates the Vercel preview and is Henry's call.</p>
+</header>
+
+<p><strong>Goal:</strong> A premium, modernised Provenance Partners page at <code>henceforth.club/provenance</code> — dark purple field, emerald accent, professional serif type — reachable only by typing the URL (not in nav, not in sitemap, <code>noindex</code>), with the henceforth.club chrome suppressed.</p>
+<p><strong>Architecture:</strong> A new App-Router route re-skinned with a scoped <code>.provenance</code> CSS-variable override (the proven <code>.paper</code> pattern), appended to <code>globals.css</code> — no existing rules change. Real content lives in a typed <code>content.ts</code> data module; the page maps it to presentational sections reusing <code>FadeIn</code> and the token-driven card/section utilities. The two behavioural invariants (noindex, sitemap-exclusion) are isolated into pure modules and unit-tested in node; everything visual is verified on the build + preview.</p>
+<p><strong>Tech stack:</strong> Next.js 16 (App Router, server/client components), React 19, Tailwind v4 (<code>@theme inline</code>, no config), <code>next/font/google</code> (Fraunces + Inter), Motion (<code>FadeIn</code>), vitest (node), npm, Vercel.</p>
+
+<h2>Global constraints</h2>
+<ul>
+<li><strong>Stack floor:</strong> Next.js 16 App Router · React 19 · Tailwind v4 via <code>@theme inline</code> (there is <em>no</em> <code>tailwind.config</code>) · TypeScript strict · npm.</li>
+<li><strong>Tests are node-only</strong> (<code>src/**/*.test.ts</code>, no jsdom). Unit-test pure data only; verify the view via <code>npm run build</code> + <code>npm run dev</code>.</li>
+<li><strong>Palette (scoped, AA-verified):</strong> <span class="sw" style="background:#1e1526"></span>bg <code>#1e1526</code> · <span class="sw" style="background:#ece8ef"></span>fg <code>#ece8ef</code> · <span class="sw" style="background:#a294a8"></span>muted <code>#a294a8</code> · <span class="sw" style="background:#271a30"></span>card <code>#271a30</code> · <span class="sw" style="background:#3a2844"></span>border <code>#3a2844</code> · <span class="sw" style="background:#5a3d68"></span>brand-purple <code>#5a3d68</code> (fill/border only) · <span class="sw" style="background:#34d17a"></span>emerald <code>#34d17a</code> · <span class="sw" style="background:#5ef0a0"></span>bright <code>#5ef0a0</code>.</li>
+<li><strong>CTA is dark-on-green</strong> (<code>#0a1f12</code> on <code>#34d17a</code>). White-on-emerald (1.99:1) is banned.</li>
+<li><strong>No Space Mono anywhere on this route</strong> — serif headlines (Fraunces), sans body (Inter).</li>
+<li><strong>Unlisted:</strong> never add <code>/provenance</code> to <code>Navbar</code> or <code>sitemap.ts</code>; the route is <code>robots: {index:false, follow:false}</code>.</li>
+<li><strong>Append-only to <code>globals.css</code></strong> — do not edit existing rules. The only edits to shared files are the two chrome guards (Task 7).</li>
+<li><strong>Git:</strong> work on branch <code>feat/provenance-page</code>; commit per task; never amend; do not push / open PR (Henry's call).</li>
+</ul>
+
+<h2>File structure</h2>
+<table class="files">
+<thead><tr><th>Path</th><th>Create / Modify</th><th>Responsibility</th></tr></thead>
+<tbody>
+<tr><td><code>src/app/globals.css</code></td><td>Modify (append)</td><td><code>.provenance</code> token block + scoped overrides (selection, hero-gradient, kill noise, overscroll, font vars).</td></tr>
+<tr><td><code>src/app/provenance/seo.ts</code></td><td>Create</td><td>Pure <code>robots</code> const + page metadata fields (testable in node).</td></tr>
+<tr><td><code>src/app/provenance/seo.test.ts</code></td><td>Create</td><td>Vitest: <code>robots.index === false</code>.</td></tr>
+<tr><td><code>src/app/sitemap.test.ts</code></td><td>Create</td><td>Vitest: no sitemap entry ends with <code>/provenance</code>.</td></tr>
+<tr><td><code>src/app/provenance/content.ts</code></td><td>Create</td><td>Typed real content: values[6], prepared lines, products[], accreditations[], contact.</td></tr>
+<tr><td><code>src/app/provenance/layout.tsx</code></td><td>Create</td><td>Loads Fraunces+Inter; <code>.provenance</code> wrapper applying font vars; page-local footer with <code>↩ henceforth.club</code> backlink.</td></tr>
+<tr><td><code>src/app/provenance/_components/ValueCard.tsx</code></td><td>Create</td><td>One value pillar (title + body), emerald glow on hover.</td></tr>
+<tr><td><code>src/app/provenance/_components/ProductChip.tsx</code></td><td>Create</td><td>Emerald-dotted product tag.</td></tr>
+<tr><td><code>src/app/provenance/_components/AccreditationRow.tsx</code></td><td>Create</td><td>Logo cards, grayscale → colour on hover.</td></tr>
+<tr><td><code>src/app/provenance/page.tsx</code></td><td>Create</td><td>The seven sections composed from <code>content.ts</code>; <code>metadata</code> (imports <code>robots</code>); emerald <code>mailto:</code> CTA.</td></tr>
+<tr><td><code>src/components/Navbar.tsx</code></td><td>Modify</td><td>Add <code>pathname.startsWith('/provenance')</code> → <code>return null</code>.</td></tr>
+<tr><td><code>src/components/SiteFooter.tsx</code></td><td>Create (client)</td><td>The footer JSX extracted from <code>layout.tsx</code> verbatim + the same pathname guard.</td></tr>
+<tr><td><code>src/app/layout.tsx</code></td><td>Modify</td><td>Replace the inline <code>&lt;footer&gt;</code> with <code>&lt;SiteFooter/&gt;</code>.</td></tr>
+<tr><td><code>public/provenance/…</code></td><td>Create</td><td>Accreditation logos + Modern Slavery PDF.</td></tr>
+</tbody>
+</table>
+
+<p class="meta"><strong>Setup (before Task 1):</strong> <code>git checkout main &amp;&amp; git pull &amp;&amp; git checkout -b feat/provenance-page</code>.</p>
+
+<h2>Task 1 — Scoped theme in <code>globals.css</code> <span class="pill build">build</span></h2>
+<div class="task"><input type="checkbox"><div class="body"><strong>Append the <code>.provenance</code> scope to the end of <code>src/app/globals.css</code></strong> (do not touch existing rules)
+<pre><code>/* ---- /provenance scoped theme (mirrors the .paper pattern) ---- */
+.provenance {
+  --background:#1e1526; --foreground:#ece8ef; --muted:#a294a8;
+  --card-bg:#271a30; --card-border:#3a2844; --card-border-hover:#5a3d68;
+  --accent:#34d17a; --accent-glow:rgba(52,209,122,0.16);
+  --accent-green:#34d17a; --accent-green-glow:rgba(52,209,122,0.16);
+  --brand-purple:#5a3d68;
+  --font-serif: var(--font-fraunces), Georgia, serif;
+  --font-sans:  var(--font-inter), system-ui, sans-serif;
+}
+body:has(.provenance){ background:#1e1526; }            /* overscroll/navbar backdrop */
+body:has(.provenance)::before{ display:none; }          /* kill the global noise overlay */
+.provenance ::selection{ background:rgba(52,209,122,0.22); color:#ece8ef; }  /* base ::selection hard-codes cyan */
+.provenance .hero-gradient{
+  background: radial-gradient(ellipse 80% 50% at 50% -20%, var(--brand-purple) 0%, transparent 100%);
+}
+/* NB: .hero-grid is intentionally NOT used on this route. */</code></pre>
+</div></div>
+<div class="task"><input type="checkbox"><div class="body"><strong>Run <code>npm run build</code> → exit 0.</strong> Then commit: <code>feat(provenance): scoped aubergine/emerald theme</code>.</div></div>
+
+<h2>Task 2 — Fonts + layout wrapper + page footer <span class="pill build">build</span></h2>
+<div class="task"><input type="checkbox"><div class="body"><strong>Create <code>src/app/provenance/layout.tsx</code></strong>
+<pre><code>import type { ReactNode } from "react";
+import Link from "next/link";
+import { Fraunces, Inter } from "next/font/google";
+
+const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-fraunces", display: "swap" });
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
+
+export default function ProvenanceLayout({ children }: { children: ReactNode }) {
+  return (
+    &lt;div className={`provenance font-sans min-h-screen bg-background text-foreground ${fraunces.variable} ${inter.variable}`}&gt;
+      {children}
+      &lt;footer className="mx-auto max-w-6xl px-6 py-16 text-sm text-muted"&gt;
+        &lt;p&gt;Provenance Partners Limited · Clerkenwell, London&lt;/p&gt;
+        &lt;Link href="/" className="text-accent hover:text-[#5ef0a0]"&gt;↩ henceforth.club&lt;/Link&gt;
+      &lt;/footer&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+The wrapper carries <code>font-sans</code> (→ Inter in scope); headings opt into <code>font-serif</code> (→ Fraunces).</div></div>
+<div class="task"><input type="checkbox"><div class="body"><strong>Run <code>npm run build</code> → exit 0.</strong> Commit: <code>feat(provenance): route layout, fonts, footer backlink</code>.</div></div>
+
+<h2>Task 3 — <code>seo.ts</code> + noindex test <span class="pill tdd">tdd</span></h2>
+<div class="task"><input type="checkbox"><div class="body"><strong>Write the failing test <code>src/app/provenance/seo.test.ts</code></strong>
+<pre><code>import { describe, it, expect } from "vitest";
+import { robots } from "./seo";
+
+describe("provenance seo", () =&gt; {
+  it("is noindex / nofollow so it stays reachable only by URL", () =&gt; {
+    expect(robots.index).toBe(false);
+    expect(robots.follow).toBe(false);
+  });
+});</code></pre>
+</div></div>
+<div class="task"><input type="checkbox"><div class="body"><strong>Run <code>npm run test</code> → FAIL</strong> ("Cannot find module './seo'").</div></div>
+<div class="task"><input type="checkbox"><div class="body"><strong>Create <code>src/app/provenance/seo.ts</code></strong>
+<pre><code>export const robots = { index: false, follow: false } as const;
+
+export const TITLE = "Provenance Partners — Fresh produce specialists";
+export const DESCRIPTION =
+  "A vertically integrated supplier of globally grown exotic vegetables to the UK's leading retailers, processors and food-service. Since 2011.";</code></pre>
+</div></div>
+<div class="task"><input type="checkbox"><div class="body"><strong>Run <code>npm run test</code> → PASS.</strong> Commit: <code>test(provenance): noindex guard</code>.</div></div>
+
+<h2>Task 4 — Sitemap-exclusion guard <span class="pill tdd">tdd</span></h2>
+<div class="task"><input type="checkbox"><div class="body"><strong>Write the failing test <code>src/app/sitemap.test.ts</code></strong> (the real "stays unlisted" guard — sitemap is the search-discoverability surface)
+<pre><code>import { describe, it, expect } from "vitest";
+import sitemap from "./sitemap";
+
+describe("sitemap", () =&gt; {
+  it("excludes the unlisted /provenance route", async () =&gt; {
+    const entries = await sitemap();
+    expect(entries.some((e) =&gt; e.url.replace(/\/$/, "").endsWith("/provenance"))).toBe(false);
+  });
+});</code></pre>
+<span class="meta">If <code>sitemap()</code> is synchronous, <code>await</code> on a non-promise is harmless. If it reads the filesystem in a way that breaks node import, fall back to asserting the module's base-route array excludes <code>/provenance</code>.</span></div></div>
+<div class="task"><input type="checkbox"><div class="body"><strong>Run <code>npm run test</code> → PASS</strong> (it already excludes it — this is a regression guard, not a change to <code>sitemap.ts</code>). Commit: <code>test(provenance): assert sitemap excludes the route</code>.</div></div>
+
+<h2>Task 5 — Content data module <span class="pill build">build</span></h2>
+<div class="task"><input type="checkbox"><div class="body"><strong>Create <code>src/app/provenance/content.ts</code></strong> — the real content, modernised
+<pre><code>export const VALUES = [
+  { title: "World-Class Partners", body: "Long-term relationships with the best growers worldwide, aligned on product, technical and ethical standards." },
+  { title: "Honesty &amp; Integrity", body: "Open, transparent dealing on every side — clear expectations between our partners, our customers and us." },
+  { title: "Reliability &amp; Value", body: "Near-perfect service from a global supply base: the right product, at the right price, from the right place, year-round." },
+  { title: "Technical Expertise", body: "Industry-leading technical and food-safety knowledge that keeps every consignment compliant and audit-ready." },
+  { title: "Quality", body: "Only the best product reaches our customers — sourced for just-in-time delivery and a consistent, premium grade." },
+  { title: "Product Development", body: "New varieties and products developed with seed houses and growers, proven through extensive trials." },
+] as const;
+
+export const PREPARED = ["Mixed Prepared Vegetables", "Prepared Stir-Fry"] as const;
+
+export const PRODUCTS = [
+  "Tenderstem® Broccoli", "Baby Corn", "Runner Beans", "Fine Beans", "Extra-Fine Beans",
+  "Green Beans", "Baby Courgettes", "Sugar Snap Peas", "Baby Pak Choi", "Kale",
+  "Echalion Shallots", "Mangetout", "Spring Onions", "Butternut", "Herbs",
+] as const;
+
+export const ACCREDITATIONS = [
+  { name: "GlobalGAP", logo: "/provenance/accreditations/globalgap.png" },
+  { name: "M&amp;S", logo: "/provenance/accreditations/ms.png" },
+  { name: "Sedex", logo: "/provenance/accreditations/sedex.png" },
+  { name: "BRC", logo: "/provenance/accreditations/brc.png" },
+  { name: "Fairtrade", logo: "/provenance/accreditations/fairtrade.png" },
+  // + any additional mark captured during Task 6 asset download
+] as const;
+
+export const CONTACT = {
+  address: "Unit 2.01 Clerkenwell Workshops, Clerkenwell Close, London, EC1R 0AT",
+  email: "hello@provenance.co.uk",
+  modernSlaveryPdf: "/provenance/modern-slavery-statement-2025.pdf",
+} as const;</code></pre>
+</div></div>
+<div class="task"><input type="checkbox"><div class="body"><strong>Commit:</strong> <code>feat(provenance): real content data module</code>.</div></div>
+
+<h2>Task 6 — Assets <span class="pill build">build</span></h2>
+<div class="task"><input type="checkbox"><div class="body"><strong>Create <code>public/provenance/accreditations/</code> and add the cert logos</strong> referenced in <code>content.ts</code> (GlobalGAP, M&amp;S, Sedex, BRC, Fairtrade, + any extra mark on the live site). Source from the live site's media or official brand assets. Add the Modern Slavery PDF at <code>public/provenance/modern-slavery-statement-2025.pdf</code>. Ensure filenames match <code>content.ts</code> exactly.</div></div>
+<div class="task"><input type="checkbox"><div class="body"><strong>Commit:</strong> <code>chore(provenance): accreditation logos + modern slavery pdf</code>.</div></div>
+
+<h2>Task 7 — Chrome suppression (Navbar + Footer) <span class="pill build">build</span></h2>
+<div class="task"><input type="checkbox"><div class="body"><strong>Modify <code>src/components/Navbar.tsx</code></strong> — it already calls <code>usePathname()</code>; add an early return right after it:
+<pre><code>const pathname = usePathname();
+if (pathname?.startsWith("/provenance")) return null;</code></pre>
+</div></div>
+<div class="task"><input type="checkbox"><div class="body"><strong>Create <code>src/components/SiteFooter.tsx</code></strong> — move the existing <code>&lt;footer&gt;…&lt;/footer&gt;</code> block out of <code>app/layout.tsx</code> <em>verbatim</em> into this client component, adding only the guard:
+<pre><code>"use client";
+import { usePathname } from "next/navigation";
+
+export default function SiteFooter() {
+  const pathname = usePathname();
+  if (pathname?.startsWith("/provenance")) return null;
+  return (
+    // &lt;&lt;&lt; paste the exact footer JSX previously inline in app/layout.tsx &gt;&gt;&gt;
+    // (links, easter-egg clues, copyright) — unchanged
+  );
+}</code></pre>
+</div></div>
+<div class="task"><input type="checkbox"><div class="body"><strong>Modify <code>src/app/layout.tsx</code></strong> — replace the now-removed inline footer with <code>&lt;SiteFooter /&gt;</code> (import it at top). Leave <code>&lt;Navbar /&gt;</code> placement unchanged.</div></div>
+<div class="task"><input type="checkbox"><div class="body"><strong>Run <code>npm run build</code> → exit 0;</strong> in <code>npm run dev</code>, confirm the homepage footer/nav are unchanged and <code>/provenance</code> shows neither. Commit: <code>feat(provenance): suppress global nav/footer on the route</code>.</div></div>
+
+<h2>Task 8 — Presentational components <span class="pill build">build</span></h2>
+<div class="task"><input type="checkbox"><div class="body"><strong>Create <code>_components/ValueCard.tsx</code></strong>
+<pre><code>export default function ValueCard({ title, body }: { title: string; body: string }) {
+  return (
+    &lt;div className="card-glow card-glow-green rounded-2xl border border-card-border bg-card-bg p-6"&gt;
+      &lt;h3 className="font-serif text-xl"&gt;{title}&lt;/h3&gt;
+      &lt;p className="mt-2 text-muted leading-relaxed"&gt;{body}&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+</div></div>
+<div class="task"><input type="checkbox"><div class="body"><strong>Create <code>_components/ProductChip.tsx</code></strong>
+<pre><code>export default function ProductChip({ label }: { label: string }) {
+  return (
+    &lt;span className="inline-flex items-center gap-2 rounded-full border border-card-border bg-card-bg px-4 py-2 text-sm"&gt;
+      &lt;span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden /&gt;
+      {label}
+    &lt;/span&gt;
+  );
+}</code></pre>
+</div></div>
+<div class="task"><input type="checkbox"><div class="body"><strong>Create <code>_components/AccreditationRow.tsx</code></strong> (uses <code>next/image</code>)
+<pre><code>import Image from "next/image";
+import { ACCREDITATIONS } from "../content";
+
+export default function AccreditationRow() {
+  return (
+    &lt;div className="flex flex-wrap items-center gap-6"&gt;
+      {ACCREDITATIONS.map((a) =&gt; (
+        &lt;div key={a.name} className="rounded-xl border border-card-border bg-card-bg p-4"&gt;
+          &lt;Image src={a.logo} alt={a.name} width={120} height={60}
+            className="h-12 w-auto opacity-70 grayscale transition hover:opacity-100 hover:grayscale-0" /&gt;
+        &lt;/div&gt;
+      ))}
+    &lt;/div&gt;
+  );
+}</code></pre>
+</div></div>
+<div class="task"><input type="checkbox"><div class="body"><strong>Commit:</strong> <code>feat(provenance): value/product/accreditation components</code>.</div></div>
+
+<h2>Task 9 — Compose the page <span class="pill build">build</span></h2>
+<div class="task"><input type="checkbox"><div class="body"><strong>Create <code>src/app/provenance/page.tsx</code></strong>
+<pre><code>import type { Metadata } from "next";
+import FadeIn from "@/components/FadeIn";
+import { robots, TITLE, DESCRIPTION } from "./seo";
+import { VALUES, PREPARED, PRODUCTS, CONTACT } from "./content";
+import ValueCard from "./_components/ValueCard";
+import ProductChip from "./_components/ProductChip";
+import AccreditationRow from "./_components/AccreditationRow";
+
+export const metadata: Metadata = { title: TITLE, description: DESCRIPTION, robots };
+
+const Section = ({ id, children }: { id?: string; children: React.ReactNode }) =&gt; (
+  &lt;section id={id} className="mx-auto max-w-6xl px-6 py-24 sm:py-32"&gt;{children}&lt;/section&gt;
+);
+const Heading = ({ children }: { children: React.ReactNode }) =&gt; (
+  &lt;h2 className="font-serif text-3xl sm:text-4xl"&gt;{children}&lt;/h2&gt;
+);
+
+export default function ProvenancePage() {
+  return (
+    &lt;&gt;
+      {/* HERO */}
+      &lt;section className="relative overflow-hidden"&gt;
+        &lt;div className="hero-gradient absolute inset-0" aria-hidden /&gt;
+        &lt;div className="relative mx-auto max-w-6xl px-6 py-32 sm:py-44"&gt;
+          &lt;FadeIn&gt;
+            &lt;p className="text-xs uppercase tracking-[0.25em] text-muted"&gt;Fresh produce specialists · since 2011&lt;/p&gt;
+            &lt;h1 className="mt-6 font-serif text-5xl font-semibold tracking-tight sm:text-7xl"&gt;
+              Sourcing the world's finest &lt;span className="text-accent"&gt;produce&lt;/span&gt;.
+            &lt;/h1&gt;
+            &lt;p className="mt-6 max-w-2xl text-lg text-muted"&gt;
+              A vertically integrated supplier of globally grown exotic vegetables to the UK's
+              leading retailers, processors and food-service.
+            &lt;/p&gt;
+            &lt;div className="mt-10 flex flex-wrap items-center gap-5"&gt;
+              &lt;a href={`mailto:${CONTACT.email}`}
+                 className="rounded-full bg-accent px-7 py-3 font-semibold text-[#0a1f12] transition hover:bg-[#5ef0a0]"&gt;
+                Talk to us
+              &lt;/a&gt;
+              &lt;a href="#products" className="text-accent hover:text-[#5ef0a0]"&gt;View the range ↓&lt;/a&gt;
+            &lt;/div&gt;
+          &lt;/FadeIn&gt;
+        &lt;/div&gt;
+      &lt;/section&gt;
+
+      {/* ABOUT */}
+      &lt;Section&gt;&lt;FadeIn&gt;
+        &lt;Heading&gt;About&lt;/Heading&gt;
+        &lt;p className="mt-6 max-w-3xl text-lg leading-relaxed text-muted"&gt;
+          Founded in 2011 to bring Vegpro Kenya's produce to the UK, Provenance Partners has grown a
+          global network of world-class supply partners — delivering best-in-class premium and prepared
+          produce, year-round, to millions of UK consumers through the country's leading retailers,
+          processors and food-service businesses.
+        &lt;/p&gt;
+        &lt;div className="mt-8 flex flex-wrap gap-3 text-sm"&gt;
+          {["Est. 2011", "Year-round supply", "Retail · Processing · Food-service"].map((s) =&gt; (
+            &lt;span key={s} className="rounded-full border border-card-border px-4 py-2"&gt;{s}&lt;/span&gt;
+          ))}
+        &lt;/div&gt;
+      &lt;/FadeIn&gt;&lt;/Section&gt;
+
+      {/* VALUES */}
+      &lt;Section&gt;&lt;FadeIn&gt;
+        &lt;Heading&gt;Values &amp; expertise&lt;/Heading&gt;
+        &lt;div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3"&gt;
+          {VALUES.map((v) =&gt; &lt;ValueCard key={v.title} title={v.title} body={v.body} /&gt;)}
+        &lt;/div&gt;
+      &lt;/FadeIn&gt;&lt;/Section&gt;
+
+      {/* PRODUCTS */}
+      &lt;Section id="products"&gt;&lt;FadeIn&gt;
+        &lt;Heading&gt;Products&lt;/Heading&gt;
+        &lt;p className="mt-6 text-muted"&gt;Prepared lines: {PREPARED.join(" · ")}.&lt;/p&gt;
+        &lt;div className="mt-8 flex flex-wrap gap-3"&gt;
+          {PRODUCTS.map((p) =&gt; &lt;ProductChip key={p} label={p} /&gt;)}
+        &lt;/div&gt;
+      &lt;/FadeIn&gt;&lt;/Section&gt;
+
+      {/* ACCREDITATIONS */}
+      &lt;Section&gt;&lt;FadeIn&gt;
+        &lt;Heading&gt;Accreditations&lt;/Heading&gt;
+        &lt;div className="mt-10"&gt;&lt;AccreditationRow /&gt;&lt;/div&gt;
+      &lt;/FadeIn&gt;&lt;/Section&gt;
+
+      {/* SUPPLIERS */}
+      &lt;Section&gt;&lt;FadeIn&gt;
+        &lt;Heading&gt;Suppliers&lt;/Heading&gt;
+        &lt;p className="mt-6 max-w-3xl text-lg leading-relaxed text-muted"&gt;
+          Our strength is our network. We work with and develop world-class supply partners across the
+          globe, chosen for their ability to meet — and exceed — exacting product, technical and ethical
+          standards, so our customers can rely on best-in-class produce whatever the season.
+        &lt;/p&gt;
+      &lt;/FadeIn&gt;&lt;/Section&gt;
+
+      {/* CONTACT */}
+      &lt;Section&gt;&lt;FadeIn&gt;
+        &lt;Heading&gt;Get in touch&lt;/Heading&gt;
+        &lt;p className="mt-6 text-muted"&gt;{CONTACT.address}&lt;/p&gt;
+        &lt;div className="mt-8 flex flex-wrap items-center gap-5"&gt;
+          &lt;a href={`mailto:${CONTACT.email}`}
+             className="rounded-full bg-accent px-7 py-3 font-semibold text-[#0a1f12] transition hover:bg-[#5ef0a0]"&gt;
+            {CONTACT.email}
+          &lt;/a&gt;
+          &lt;a href={CONTACT.modernSlaveryPdf} className="text-accent hover:text-[#5ef0a0]"&gt;
+            Modern Slavery statement (PDF)
+          &lt;/a&gt;
+        &lt;/div&gt;
+      &lt;/FadeIn&gt;&lt;/Section&gt;
+    &lt;/&gt;
+  );
+}</code></pre>
+</div></div>
+<div class="task"><input type="checkbox"><div class="body"><strong>Run <code>npm run build</code> → exit 0.</strong> Commit: <code>feat(provenance): compose the page</code>.</div></div>
+
+<h2>Task 10 — Verify &amp; finish <span class="pill build">build</span></h2>
+<div class="gate"><strong>Gate:</strong> <code>npm run test</code> green (seo noindex + sitemap exclusion) · <code>npm run build</code> exit 0 · in <code>npm run dev</code> check <code>/provenance</code>: (1) reads dark <em>aubergine</em>, not black, with emerald accent; (2) headlines are serif, no monospace anywhere; (3) <strong>Talk to us</strong> opens mail to <code>hello@provenance.co.uk</code>, <em>View the range</em> scrolls to <code>#products</code>; (4) no henceforth.club navbar/footer, <code>↩ henceforth.club</code> backlink present; (5) text selection is emerald, hero glow is plum (no cyan); (6) the homepage hero is visually unchanged; (7) accreditation logos have alt text and render. Fix anything, commit.</div>
+<div class="task"><input type="checkbox"><div class="body"><strong>Run the gate; fix; final commit.</strong> Then stop — pushing <code>feat/provenance-page</code> (→ Vercel preview) and opening the PR is Henry's call.</div></div>
+
+<h2>Decided here (carried from the spec)</h2>
+<ul>
+<li><strong>noindex is testable, render is not</strong> (node-only vitest): the invariant lives in pure <code>seo.ts</code> + <code>sitemap.test.ts</code>; the visual layer is preview-verified. Honest exemption: palette feel, serif choice and motion are judged by eye.</li>
+<li><strong>Append-only theming</strong> via <code>.provenance</code> (the <code>.paper</code> pattern); the only shared-file edits are the two chrome guards.</li>
+<li><strong>Fonts:</strong> Fraunces (serif headlines) + Inter (sans body) — swap at will; they're isolated to <code>layout.tsx</code> + the two scoped font vars.</li>
+<li><strong>Imagery:</strong> v1 is type-and-colour only; real produce photography is the flagged future enhancement.</li>
+</ul>
+</div>
+</body>
+</html>

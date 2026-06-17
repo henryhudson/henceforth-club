@@ -19,6 +19,8 @@ export default function Navbar() {
     };
   }, [open]);
 
+  if (pathname?.startsWith("/provenance")) return null;
+
   const links = [
     { href: "/henceforth", label: "Henceforth", hoverColor: "hover:text-accent-warm" },
     { href: "/dadeckofcards", label: "Deck of Cards", hoverColor: "hover:text-accent" },
