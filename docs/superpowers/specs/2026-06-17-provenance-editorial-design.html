@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Provenance — high-end editorial redesign · design · 2026-06-17</title>
+<style>
+  :root { --bg:#fafaf8; --fg:#18181b; --muted:#6b6b73; --rule:#e5e5e1;
+    --aside-bg:#f4f3ee; --accent:#c2410c; --code-bg:#f1efe8;
+    --ok:#5a6a44; --warn:#b45309; }
+  html,body{background:var(--bg);color:var(--fg);
+    font-family:ui-monospace,"Space Mono",SFMono-Regular,Menlo,Monaco,monospace;
+    line-height:1.6;margin:0;}
+  body{max-width:900px;margin:0 auto;padding:56px 24px 96px;font-size:15px;}
+  h1{font-size:30px;line-height:1.15;margin:0 0 12px;letter-spacing:-0.01em;}
+  h2.phase{font-size:22px;margin:54px 0 16px;border-top:2px solid var(--rule);padding-top:26px;}
+  h3.item{font-size:17px;margin:28px 0 8px;}
+  p{margin:10px 0;} p strong{font-weight:700;}
+  .byline{color:var(--muted);font-style:italic;margin:0 0 24px;}
+  aside{background:var(--aside-bg);border-left:3px solid var(--accent);
+    padding:14px 18px;margin:18px 0;border-radius:0 6px 6px 0;}
+  aside p{margin:6px 0;}
+  code,kbd{font-family:inherit;background:var(--code-bg);padding:1px 6px;
+    border-radius:3px;font-size:0.9em;}
+  pre{background:var(--code-bg);border-radius:6px;padding:14px 16px;overflow-x:auto;font-size:0.84em;line-height:1.5;}
+  ol,ul{padding-left:22px;} li{margin:5px 0;}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:0.9em;}
+  th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--rule);vertical-align:top;}
+  th{font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;font-size:0.8em;}
+  .lock{display:inline-block;font-size:0.72em;font-weight:700;padding:1px 7px;border-radius:10px;
+    background:var(--ok);color:#fff;text-transform:uppercase;letter-spacing:0.03em;}
+  .q{display:inline-block;font-size:0.72em;font-weight:700;padding:1px 7px;border-radius:10px;
+    background:var(--warn);color:#fff;text-transform:uppercase;letter-spacing:0.03em;}
+  .sw{display:inline-block;width:11px;height:11px;border-radius:3px;border:1px solid rgba(0,0,0,0.18);vertical-align:middle;margin-right:6px;}
+</style>
+</head>
+<body>
+<h1>Provenance — high-end editorial redesign</h1>
+<p class="byline">Design spec · 2026-06-17 · henceforth.club. <strong>Supersedes</strong> the earlier "faithful + polished" spec (<code>2026-06-17-provenance-page-design.html</code>) — that direction was rejected as not high-end enough. New brief: a genuinely premium, <strong>editorial &amp; photographic</strong> site for Provenance Partners. Same unlisted home (<code>henceforth.club/provenance</code>), same content, a far higher bar. Direction validated by mockup with Henry ("much better"; editorial confirmed, refinements pending).</p>
+
+<aside>
+<p><strong>The honest truth about this design: ~70% of it is photography.</strong> An editorial look lives or dies on image quality. AI generation is unavailable in this environment and free stock is only stock-grade, so the build uses sourced CC photography as <em>scaffolding</em> and is architected to swap in Provenance's own (or premium-licensed) photography before go-live. The CSS/type system is the high-end part we can finish now; the imagery is the dependency that makes it land.</p>
+</aside>
+
+<h2 class="phase">Decisions <span class="lock">locked</span> (with Henry)</h2>
+<ul>
+<li><strong>Aesthetic:</strong> editorial &amp; photographic — big imagery, refined serif display + clean sans, large type scale, generous whitespace, calm and confident. Reference register: Natoora / a premium food magazine. Restraint = premium.</li>
+<li><strong>Purple is an accent, not a field</strong> (hard-won): white/near-white background, near-black charcoal text, <strong>green the accent</strong>, <strong>purple only a whisper</strong> (logo + at most one small detail). No purple headings, bands, or footer.</li>
+<li><strong>Scope unchanged:</strong> unlisted route at <code>henceforth.club/provenance</code> (not in nav/sitemap, <code>noindex</code>); standalone (henceforth.club chrome suppressed); its own header + footer; real Provenance content; <code>mailto:</code> contact. Goes live on <code>main</code> only on Henry's approval.</li>
+<li><strong>Imagery:</strong> sourced CC stock stand-ins now (already downloaded), swap real/premium photography before go-live. Layout built to absorb real images by simply replacing files.</li>
+</ul>
+
+<h2 class="phase">Visual system</h2>
+<h3 class="item">Palette (light; verified AA earlier)</h3>
+<table>
+<tr><th>Token</th><th>Value</th><th>Role</th></tr>
+<tr><td>background</td><td><span class="sw" style="background:#ffffff"></span>#ffffff / warm off-white</td><td>page</td></tr>
+<tr><td>text / headings</td><td><span class="sw" style="background:#2a2e33"></span>#2a2e33</td><td>near-black charcoal — NOT purple</td></tr>
+<tr><td>muted</td><td><span class="sw" style="background:#6f6b78"></span>#6f6b78</td><td>secondary copy</td></tr>
+<tr><td>accent (green)</td><td><span class="sw" style="background:#7cce2a"></span>#7cce2a</td><td><strong>fills only</strong> (buttons, rules, details). Fails as text on white (~2:1) — never green text. CTA = green fill + dark text.</td></tr>
+<tr><td>purple</td><td><span class="sw" style="background:#330a49"></span>#330a49</td><td>whisper — logo + at most one tiny accent</td></tr>
+</table>
+<h3 class="item">Typography <span class="lock">no mono</span></h3>
+<p><strong>Fraunces</strong> (variable optical serif) for editorial display headlines — including weight/italic contrast for the signature moments — paired with a clean humanist sans (<strong>DM Sans</strong> or Inter) for body/labels, loaded via <code>next/font/google</code>. Large editorial scale; generous line-height and whitespace.</p>
+<h3 class="item">Photography <span class="q">build-time refine</span></h3>
+<p>Cohesive, bright, natural-light produce imagery. v1 uses the sourced CC set (Romanesco macro, hands-with-produce, green beans, field rows); these are stand-ins. <strong>Refinements to finalize against live screenshots:</strong> the hero must be a <em>balanced editorial composition</em> (not a single oversized vegetable), consistent grade across shots, and ultimately Provenance's real photography.</p>
+
+<h2 class="phase">Architecture</h2>
+<p>Rebuild the existing <code>src/app/provenance/*</code> on the editorial system (replaces the rejected light-faithful page). Stack unchanged: Next 16 App Router, React 19, Tailwind v4 <code>@theme inline</code>, the <code>.provenance</code> scoped-token pattern in <code>globals.css</code>.</p>
+<table>
+<tr><th>Path</th><th>Role</th></tr>
+<tr><td><code>globals.css</code> <code>.provenance</code> scope</td><td>Light editorial tokens (above); fonts repointed to Fraunces/DM Sans; keep the cyan-leak + noise + overscroll scoped fixes.</td></tr>
+<tr><td><code>provenance/layout.tsx</code></td><td><code>next/font</code> Fraunces + DM Sans; standalone header (logo + section nav + green Contact) and a neutral (non-purple) footer.</td></tr>
+<tr><td><code>provenance/page.tsx</code></td><td>Editorial sections (below), real content, <code>FadeIn</code>, green <code>mailto:</code> CTAs, <code>metadata</code> with <code>robots:{index:false}</code>.</td></tr>
+<tr><td><code>provenance/content.ts</code></td><td>Real content: hero copy, about/story, all 8 values, full product range, accreditations, suppliers, contact (already authored).</td></tr>
+<tr><td><code>provenance/_components/*</code></td><td>Editorial section pieces (hero, story, value list, product index, accreditation row).</td></tr>
+<tr><td><code>public/provenance/editorial/*</code></td><td>Photography (CC stand-ins now; swap real later) + the logo.</td></tr>
+</table>
+<p><strong>Unchanged guards (keep + keep tested):</strong> <code>seo.ts</code> noindex, <code>sitemap.test.ts</code> exclusion, Navbar/SiteFooter suppression on the route.</p>
+
+<h3 class="item">Page structure (editorial)</h3>
+<ol>
+<li><strong>Header</strong> — logo, section nav, green Contact button.</li>
+<li><strong>Hero</strong> — large produce photograph + a restrained Fraunces headline ("Globally sourced exotic vegetables." / strapline) + one green CTA. Balanced composition, generous air.</li>
+<li><strong>Story / About</strong> — editorial two-column: photo + the founding narrative (2011, Vegpro Kenya, global network, year-round premium &amp; prepared produce) + elegant stats.</li>
+<li><strong>Values &amp; expertise</strong> — all 8, set editorially (typographic list or restrained cards, not gimmicky).</li>
+<li><strong>Products</strong> — the full range as an elegant typographic index, with a produce photo used editorially.</li>
+<li><strong>Accreditations</strong> — the real certification logos, quietly presented.</li>
+<li><strong>Suppliers</strong> — the global-network story.</li>
+<li><strong>Contact</strong> — address, <code>mailto:hello@provenance.co.uk</code> (green CTA), Modern Slavery PDF.</li>
+</ol>
+
+<h2 class="phase">Acceptance criteria</h2>
+<ol>
+<li>Reads as premium editorial: Fraunces display type, big imagery, generous whitespace; green accent only; purple only a whisper; charcoal (not purple) headings and footer.</li>
+<li>All real content present (all 8 values, full product range, accreditations, suppliers, contact). <code>mailto:</code> works.</li>
+<li>Unlisted invariant intact: not in nav/sitemap, <code>noindex</code>; chrome suppressed; homepage unaffected.</li>
+<li>Photography is file-swappable: replacing files in <code>public/provenance/editorial/</code> updates the site with no layout change.</li>
+<li><code>npm run test</code> green; <code>npm run build</code> clean, <code>/provenance</code> prerenders; visually verified on a screenshot/preview (hero balanced, no green-block placeholders, no oversized-vegetable hero).</li>
+</ol>
+
+<h2 class="phase">Non-goals</h2>
+<ul>
+<li>Touching live <code>provenance.co.uk</code> (WordPress) — separate, untouched.</li>
+<li>A CMS / contact backend; produce photography <em>shoot</em> (we scaffold with stock, swap real later).</li>
+<li>Indexing/linking the route until Henry says so.</li>
+</ul>
+
+<h2 class="phase">Open / refine <span class="q">with Henry</span></h2>
+<ul>
+<li><strong>Photography source for go-live</strong> — Provenance's own shots vs premium-licensed. (Stock stand-ins for the build.)</li>
+<li><strong>Hero composition</strong> and final type scale — iterated against live screenshots during build.</li>
+<li>Any specific "needs refining" notes Henry has on the mockup direction.</li>
+</ul>
+
+<h2 class="phase">Implementation arc (high-level — detailed plan follows via writing-plans)</h2>
+<table>
+<tr><th>#</th><th>Step</th></tr>
+<tr><td>1</td><td>Re-theme the <code>.provenance</code> scope to the editorial light tokens; load Fraunces + DM Sans; keep the scoped guards.</td></tr>
+<tr><td>2</td><td>Place the photography set in <code>public/provenance/editorial/</code> (CC stand-ins now).</td></tr>
+<tr><td>3</td><td>Build the editorial sections + components (hero, story, values, products, accreditations, suppliers, contact) from <code>content.ts</code>.</td></tr>
+<tr><td>4</td><td>Keep guards green (noindex, sitemap, nav/footer suppression); <code>npm run test</code> + <code>npm run build</code>.</td></tr>
+<tr><td>5</td><td>Visual pass on a live screenshot — balance the hero, tune type/spacing — iterate until premium. Push branch → Vercel preview for Henry. Merge to <code>main</code> on his approval.</td></tr>
+</table>
+
+</body>
+</html>

@@ -1,13 +1,18 @@
 import type { ReactNode } from "react";
 import Image from "next/image";
-import { Nunito } from "next/font/google";
+import { Fraunces, DM_Sans } from "next/font/google";
 import { CONTACT } from "./content";
 
-const nunito = Nunito({
+const fraunces = Fraunces({
   subsets: ["latin"],
-  variable: "--font-nunito",
+  variable: "--font-fraunces",
   display: "swap",
-  weight: ["400", "600", "700", "800"],
+});
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-dm-sans",
+  display: "swap",
+  weight: ["400", "500", "700"],
 });
 
 const NAV = [
@@ -22,7 +27,7 @@ const NAV = [
 export default function ProvenanceLayout({ children }: { children: ReactNode }) {
   return (
     <div
-      className={`provenance font-sans min-h-screen bg-background text-foreground ${nunito.variable}`}
+      className={`provenance font-sans min-h-screen bg-background text-foreground ${fraunces.variable} ${dmSans.variable}`}
     >
       <header className="sticky top-0 z-50 border-b border-card-border bg-background/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-3">
