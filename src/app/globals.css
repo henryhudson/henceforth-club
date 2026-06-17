@@ -375,3 +375,33 @@ figure[data-rehype-pretty-code-figure] [data-line] {
     animation-delay: 0s !important;
   }
 }
+
+/* ---- /provenance scoped theme (mirrors the .paper pattern) ---- */
+.provenance {
+  --background: #1e1526;
+  --foreground: #ece8ef;
+  --muted: #a294a8;
+  --card-bg: #271a30;
+  --card-border: #3a2844;
+  --card-border-hover: #5a3d68;
+  --accent: #34d17a;
+  --accent-glow: rgba(52, 209, 122, 0.16);
+  --accent-green: #34d17a;
+  --accent-green-glow: rgba(52, 209, 122, 0.16);
+  --brand-purple: #5a3d68;
+  --font-serif: var(--font-fraunces), Georgia, serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+}
+body:has(.provenance) {
+  background: #1e1526;
+}
+body:has(.provenance)::before {
+  display: none;
+}
+.provenance ::selection {
+  background: rgba(52, 209, 122, 0.22);
+  color: #ece8ef;
+}
+.provenance .hero-gradient {
+  background: radial-gradient(ellipse 80% 50% at 50% -20%, var(--brand-purple) 0%, transparent 100%);
+}
