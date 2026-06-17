@@ -1,7 +1,21 @@
-export default function ValueCard({ title, body }: { title: string; body: string }) {
+import type { ValueIconKey } from "../content";
+import ValueIcon from "./ValueIcon";
+
+export default function ValueCard({
+  icon,
+  title,
+  body,
+}: {
+  icon: ValueIconKey;
+  title: string;
+  body: string;
+}) {
   return (
-    <div className="card-glow card-glow-green rounded-2xl border border-card-border bg-card-bg p-6">
-      <h3 className="font-serif text-xl">{title}</h3>
+    <div className="rounded-2xl border border-card-border bg-card-bg p-6 shadow-sm transition hover:border-card-border-hover hover:shadow-md">
+      <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[#7cce2a]/15 text-[#330a49]">
+        <ValueIcon name={icon} />
+      </div>
+      <h3 className="text-lg font-extrabold text-[#330a49]">{title}</h3>
       <p className="mt-2 leading-relaxed text-muted">{body}</p>
     </div>
   );

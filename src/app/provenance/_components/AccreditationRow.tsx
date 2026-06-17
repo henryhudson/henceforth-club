@@ -7,15 +7,9 @@ export default function AccreditationRow() {
       {ACCREDITATIONS.map((a) => (
         <div
           key={a.name}
-          className="relative h-16 w-28 rounded-xl border border-card-border bg-card-bg"
+          className="relative h-20 w-32 rounded-xl border border-card-border bg-white shadow-sm"
         >
-          <Image
-            src={a.logo}
-            alt={a.name}
-            fill
-            sizes="112px"
-            className="object-contain p-3 opacity-80 grayscale transition hover:opacity-100 hover:grayscale-0"
-          />
+          <Image src={a.logo} alt={a.name} fill sizes="128px" className="object-contain p-4" />
         </div>
       ))}
     </div>

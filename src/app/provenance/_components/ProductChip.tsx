@@ -1,7 +1,7 @@
 export default function ProductChip({ label }: { label: string }) {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-card-border bg-card-bg px-4 py-2 text-sm">
-      <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden />
+    <span className="inline-flex items-center gap-2 rounded-full border border-card-border bg-white px-4 py-2 text-sm font-semibold text-foreground shadow-sm">
+      <span className="h-2 w-2 rounded-full bg-[#7cce2a]" aria-hidden />
       {label}
     </span>
   );
