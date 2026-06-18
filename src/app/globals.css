@@ -389,7 +389,7 @@ figure[data-rehype-pretty-code-figure] [data-line] {
   --accent-green: #7cce2a;
   --accent-green-glow: rgba(124, 206, 42, 0.18);
   --brand-purple: #330a49;
-  --font-serif: var(--font-source-serif), Georgia, serif;
+  --font-serif: var(--font-lora), Georgia, serif;
   --font-sans: var(--font-dm-sans), system-ui, sans-serif;
 }
 body:has(.provenance) {

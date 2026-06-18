@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 import Image from "next/image";
-import { Source_Serif_4, DM_Sans } from "next/font/google";
+import { Lora, DM_Sans } from "next/font/google";
 import { CONTACT } from "./content";
 
-const sourceSerif = Source_Serif_4({
+const lora = Lora({
   subsets: ["latin"],
-  variable: "--font-source-serif",
+  variable: "--font-lora",
   display: "swap",
 });
 const dmSans = DM_Sans({
@@ -27,7 +27,7 @@ const NAV = [
 export default function ProvenanceLayout({ children }: { children: ReactNode }) {
   return (
     <div
-      className={`provenance font-sans min-h-screen bg-background text-foreground ${sourceSerif.variable} ${dmSans.variable}`}
+      className={`provenance font-sans min-h-screen bg-background text-foreground ${lora.variable} ${dmSans.variable}`}
     >
       <header className="sticky top-0 z-50 border-b border-card-border bg-background/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-3">
