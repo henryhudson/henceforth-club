@@ -52,7 +52,9 @@ export const metadata: Metadata = {
     title: "Henceforth Club",
     description:
       "FORTH. Cards. Parliament. A FORTH interpreter with a Bitcoin wallet, a multiplayer deck of cards, and a UK Parliament browser. Native iOS. No ads.",
-    images: ["/cover.png"],
+    // No images here on purpose: each route's opengraph-image.tsx flows into
+    // twitter:image automatically, so a default would shadow every card on X.
+    // Cardless pages still fall back to the openGraph /cover.png above.
   },
 };
 
