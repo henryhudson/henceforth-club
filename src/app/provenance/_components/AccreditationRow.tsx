@@ -3,13 +3,13 @@ import { ACCREDITATIONS } from "../content";
 
 export default function AccreditationRow() {
   return (
-    <div className="flex flex-wrap items-center gap-6">
+    <div className="flex flex-wrap items-center gap-8">
       {ACCREDITATIONS.map((a) => (
         <div
           key={a.name}
-          className="relative h-20 w-32 rounded-xl border border-card-border bg-white shadow-sm"
+          className="relative h-28 w-44 rounded-xl border border-card-border bg-white shadow-sm"
         >
-          <Image src={a.logo} alt={a.name} fill sizes="128px" className="object-contain p-4" />
+          <Image src={a.logo} alt={a.name} fill sizes="176px" className="object-contain p-5" />
         </div>
       ))}
     </div>

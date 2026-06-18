@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 import Image from "next/image";
-import { Fraunces, DM_Sans } from "next/font/google";
+import { Source_Serif_4, DM_Sans } from "next/font/google";
 import { CONTACT } from "./content";
 
-const fraunces = Fraunces({
+const sourceSerif = Source_Serif_4({
   subsets: ["latin"],
-  variable: "--font-fraunces",
+  variable: "--font-source-serif",
   display: "swap",
 });
 const dmSans = DM_Sans({
@@ -27,7 +27,7 @@ const NAV = [
 export default function ProvenanceLayout({ children }: { children: ReactNode }) {
   return (
     <div
-      className={`provenance font-sans min-h-screen bg-background text-foreground ${fraunces.variable} ${dmSans.variable}`}
+      className={`provenance font-sans min-h-screen bg-background text-foreground ${sourceSerif.variable} ${dmSans.variable}`}
     >
       <header className="sticky top-0 z-50 border-b border-card-border bg-background/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-3">
@@ -38,7 +38,7 @@ export default function ProvenanceLayout({ children }: { children: ReactNode }) 
               width={200}
               height={41}
               priority
-              className="h-9 w-auto"
+              className="h-12 w-auto sm:h-14"
             />
           </a>
           <nav className="hidden items-center gap-7 text-sm font-semibold lg:flex">
@@ -70,7 +70,7 @@ export default function ProvenanceLayout({ children }: { children: ReactNode }) 
             alt="Provenance Partners"
             width={200}
             height={41}
-            className="h-9 w-auto"
+            className="h-14 w-auto"
           />
           <p className="mt-5 max-w-md text-muted">{CONTACT.address}</p>
           <p className="mt-1">
