@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export type Card = {
@@ -120,9 +121,14 @@ export default function BoardClient({
     <main className="w-full px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Morning Board</h1>
-        <span className="text-sm text-muted">
-          {done}/{shown.length} done · updated {generated}
-        </span>
+        <div className="flex flex-wrap items-center gap-3 text-sm text-muted">
+          <span>
+            {done}/{shown.length} done · updated {generated}
+          </span>
+          <Link href="/board/report" className="text-accent-green underline">
+            Morning report →
+          </Link>
+        </div>
       </div>
 
       {/* Per-app filter */}
