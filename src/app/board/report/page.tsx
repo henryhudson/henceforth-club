@@ -1,6 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import Link from "next/link";
+import { getRedis } from "@/lib/redis";
 
 type Finding = {
   refId: string;
@@ -29,6 +30,8 @@ type Report = {
 
 const DIR = path.join(process.cwd(), "content/board/reports");
 
+export const dynamic = "force-dynamic";
+
 const VERDICT: Record<string, { label: string; color: string }> = {
   agree: { label: "Confirmed", color: "text-accent-green" },
   reject: { label: "Rejected", color: "text-red-700" },
@@ -37,6 +40,11 @@ const VERDICT: Record<string, { label: string; color: string }> = {
 };
 
 async function listDates(): Promise<string[]> {
+  const redis = getRedis();
+  if (redis) {
+    const dates = await redis.smembers("board:report:dates");
+    if (dates && dates.length) return [...dates].sort().reverse();
+  }
   try {
     const files = await fs.readdir(DIR);
     return files
@@ -50,6 +58,11 @@ async function listDates(): Promise<string[]> {
 }
 
 async function loadReport(date: string): Promise<Report | null> {
+  const redis = getRedis();
+  if (redis) {
+    const r = await redis.get<Report>(`board:report:${date}`);
+    if (r) return r;
+  }
   try {
     return JSON.parse(await fs.readFile(path.join(DIR, `${date}.json`), "utf8")) as Report;
   } catch {
