@@ -26,6 +26,7 @@ export default function Navbar() {
     { href: "/dadeckofcards", label: "Deck of Cards", hoverColor: "hover:text-accent" },
     { href: "/hansard", label: "Hansard", hoverColor: "hover:text-accent-green" },
     { href: "/contact", label: "Contact", hoverColor: "hover:text-foreground" },
+    { href: "/board", label: "Sign in", hoverColor: "hover:text-accent" },
   ];
 
   return (
