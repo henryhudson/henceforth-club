@@ -17,7 +17,7 @@ function LoginForm() {
     const res = await fetch("/api/board-auth", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ password: password.trim() }),
     });
     setBusy(false);
     if (res.ok) {
