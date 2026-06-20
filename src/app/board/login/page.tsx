@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function LoginForm() {
@@ -56,13 +56,27 @@ function LoginForm() {
   );
 }
 
+function greetingFor(hour: number): string {
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
 export default function BoardLoginPage() {
+  // Computed after mount from the browser's local clock (not the server's UTC),
+  // so the greeting matches the visitor's time of day. Null on first render to
+  // keep server and client markup identical (no hydration mismatch).
+  const [greeting, setGreeting] = useState<string | null>(null);
+  useEffect(() => {
+    setGreeting(greetingFor(new Date().getHours()));
+  }, []);
+
   return (
     <main className="mx-auto flex min-h-[70vh] max-w-6xl flex-col items-center justify-center px-6">
-      <h1 className="mb-1 text-2xl font-bold tracking-tight text-foreground">
-        Morning Board
+      <h1 className="mb-1 text-3xl font-bold tracking-tight text-foreground">
+        {greeting ?? " "}
       </h1>
-      <p className="mb-8 text-sm text-muted">Private. One password, no username.</p>
+      <p className="mb-8 text-sm text-muted">Enter password to continue.</p>
       <Suspense>
         <LoginForm />
       </Suspense>
