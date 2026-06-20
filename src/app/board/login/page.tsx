@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useState, useSyncExternalStore } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function LoginForm() {
@@ -62,14 +62,18 @@ function greetingFor(hour: number): string {
   return "Good evening";
 }
 
+const noopSubscribe = () => () => {};
+
 export default function BoardLoginPage() {
-  // Computed after mount from the browser's local clock (not the server's UTC),
-  // so the greeting matches the visitor's time of day. Null on first render to
-  // keep server and client markup identical (no hydration mismatch).
-  const [greeting, setGreeting] = useState<string | null>(null);
-  useEffect(() => {
-    setGreeting(greetingFor(new Date().getHours()));
-  }, []);
+  // The greeting depends on the visitor's local clock, which only exists on the
+  // client. useSyncExternalStore serves the server snapshot (null -> a blank
+  // line) during SSR + hydration, then the client snapshot — no hydration
+  // mismatch and no setState-in-effect.
+  const greeting = useSyncExternalStore(
+    noopSubscribe,
+    () => greetingFor(new Date().getHours()),
+    () => null,
+  );
 
   return (
     <main className="mx-auto flex min-h-[70vh] max-w-6xl flex-col items-center justify-center px-6">

@@ -2,12 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
+
+// The real session cookie is httpOnly (JS can't read it). Login also sets a
+// non-secret readable flag `board_signed_in=1` so this nav can choose the green
+// "Sign in" vs the red "Sign out" affordance.
+const noopSubscribe = () => () => {};
+const readSignedIn = () =>
+  document.cookie.split("; ").some((c) => c === "board_signed_in=1");
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
-  const [signedIn, setSignedIn] = useState(false);
   const pathname = usePathname();
+  // Re-evaluated on each render (incl. route changes via usePathname), so a
+  // login/logout reflects here — no setState-in-effect.
+  const signedIn = useSyncExternalStore(noopSubscribe, readSignedIn, () => false);
 
   // Prevent body scroll when the mobile menu is open. Restore whatever
   // overflow value was in place before we touched it, so we don't stomp
@@ -19,16 +28,6 @@ export default function Navbar() {
       document.body.style.overflow = prev;
     };
   }, [open]);
-
-  // The real session cookie is httpOnly (JS can't read it). Login also sets a
-  // non-secret readable flag `board_signed_in=1` purely so this nav can choose
-  // the green "Sign in" vs the red "Sign out" affordance. Re-checked on every
-  // route change so a login/logout on /board reflects here without a reload.
-  useEffect(() => {
-    setSignedIn(
-      document.cookie.split("; ").some((c) => c === "board_signed_in=1"),
-    );
-  }, [pathname]);
 
   if (pathname?.startsWith("/provenance")) return null;
 
