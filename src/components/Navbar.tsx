@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
   const pathname = usePathname();
 
   // Prevent body scroll when the mobile menu is open. Restore whatever
@@ -19,6 +20,16 @@ export default function Navbar() {
     };
   }, [open]);
 
+  // The real session cookie is httpOnly (JS can't read it). Login also sets a
+  // non-secret readable flag `board_signed_in=1` purely so this nav can choose
+  // the green "Sign in" vs the red "Sign out" affordance. Re-checked on every
+  // route change so a login/logout on /board reflects here without a reload.
+  useEffect(() => {
+    setSignedIn(
+      document.cookie.split("; ").some((c) => c === "board_signed_in=1"),
+    );
+  }, [pathname]);
+
   if (pathname?.startsWith("/provenance")) return null;
 
   const links = [
@@ -26,8 +37,24 @@ export default function Navbar() {
     { href: "/dadeckofcards", label: "Deck of Cards", hoverColor: "hover:text-accent" },
     { href: "/hansard", label: "Hansard", hoverColor: "hover:text-accent-green" },
     { href: "/contact", label: "Contact", hoverColor: "hover:text-foreground" },
-    { href: "/board", label: "Sign in", hoverColor: "hover:text-accent" },
   ];
+
+  // Liquid-glass pill, mirroring the henceforth CTA (rounded-full + translucent
+  // tint + backdrop-blur + accent glow). Green = signed out (sign in); red =
+  // signed in (sign out, which clears the httpOnly session server-side).
+  const authButton = (extra = "") => (
+    <Link
+      href={signedIn ? "/board/logout" : "/board"}
+      onClick={() => setOpen(false)}
+      className={`inline-flex items-center justify-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium backdrop-blur-md transition-all ${
+        signedIn
+          ? "border-red-500/40 bg-red-500/10 text-red-400 shadow-lg shadow-red-500/10 hover:border-red-500/60 hover:bg-red-500/20 hover:shadow-red-500/20"
+          : "border-accent-green/40 bg-accent-green/10 text-accent-green shadow-lg shadow-accent-green/10 hover:border-accent-green/60 hover:bg-accent-green/20 hover:shadow-accent-green/20"
+      } ${extra}`}
+    >
+      {signedIn ? "Sign out" : "Sign in"}
+    </Link>
+  );
 
   return (
     <nav className="animate-slide-down sticky top-0 z-50 border-b border-card-border/50 bg-background/70 backdrop-blur-xl">
@@ -41,7 +68,7 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop links */}
-        <div className="hidden sm:flex gap-6 lg:gap-8 text-sm">
+        <div className="hidden sm:flex items-center gap-6 lg:gap-8 text-sm">
           {links.map((link) => (
             <Link
               key={link.href}
@@ -53,6 +80,7 @@ export default function Navbar() {
               {link.label}
             </Link>
           ))}
+          {authButton()}
         </div>
 
         {/* Hamburger button */}
@@ -98,6 +126,7 @@ export default function Navbar() {
               {link.label}
             </Link>
           ))}
+          {authButton("self-start")}
         </div>
       </div>
     </nav>
