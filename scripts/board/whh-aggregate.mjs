@@ -59,22 +59,34 @@ export function ratios(t) {
   return { confirmRejectRatio, abstainRate, survivedRefutation };
 }
 
-/** Strip volatile suffixes from a finding title to get a stable grouping signature. */
+/** Strip volatile suffixes from a finding title to get a stable fallback signature. */
 export function reflagSignature(title) {
   return String(title)
-    .replace(/\s*[—-]\s*\d+(st|nd|rd|th)\s+re-?flag.*$/i, "")
-    .replace(/\s*[—-]\s*already carded.*$/i, "")
-    .replace(/\d{4}-\d{2}-\d{2}/g, "")
-    .trim().toLowerCase();
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, " ")                                   // drop parentheticals e.g. ("bill--1"), (defect, 5th re-flag)
+    .replace(/\d+(?:st|nd|rd|th)\s+(?:re-?flag|dismissal)/g, " ") // drop ordinal phrases anywhere
+    .replace(/[^a-z0-9]+/g, " ")                                  // punctuation -> space
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
+const FILE_RE = /\b([A-Za-z]\w*\.swift)\b/;
 const ORDINAL = /(\d+)(?:st|nd|rd|th)\s+(?:re-?flag|dismissal)/i;
 
-/** Findings the reviewer keeps re-deriving: appear on >1 day or self-report an ordinal >= 2. */
+/** A stable grouping key for a finding: the first Swift file it cites (in title or evidence),
+ *  else the normalized title. Findings re-derived from the same code cite the same file. */
+export function reflagKey(finding) {
+  const fileHit = `${finding.title ?? ""} ${finding.evidence ?? ""}`.match(FILE_RE);
+  if (fileHit) return fileHit[1].toLowerCase();
+  return reflagSignature(finding.title ?? "");
+}
+
+/** Findings the reviewer keeps re-deriving: grouped by reflagKey, recurring when seen on
+ *  more than one day or self-reporting an ordinal of 2 or more. */
 export function recurringReflags(reports) {
   const groups = new Map();
   for (const r of reports) for (const a of r.apps ?? []) for (const f of a.findings ?? []) {
-    const sig = reflagSignature(f.title);
+    const sig = reflagKey(f);
     if (!sig) continue;
     const key = `${a.app}::${sig}`;
     const g = groups.get(key) ?? { signature: sig, app: a.app, title: f.title, days: [], verdicts: [], maxOrdinal: 0 };

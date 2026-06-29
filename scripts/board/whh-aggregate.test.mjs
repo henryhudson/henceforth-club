@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   windowDates, parseSurvived, aggregateTotals, perApp, ratios,
-  reflagSignature, recurringReflags, earliestDateIn, throughput, buildRetro,
+  reflagSignature, reflagKey, recurringReflags, earliestDateIn, throughput, buildRetro,
 } from "./whh-aggregate.mjs";
 
 describe("windowDates", () => {
@@ -59,11 +59,36 @@ describe("ratios", () => {
 });
 
 describe("recurringReflags", () => {
-  it("reflagSignature strips re-flag ordinals, dates, and 'already carded'", () => {
+  it("reflagSignature strips ordinals, parentheticals, and punctuation", () => {
     expect(reflagSignature("Timeline nil-billId id collision — 8th re-flag"))
-      .toBe("timeline nil-billid id collision");
+      .toBe("timeline nil billid id collision");
   });
-  it("groups a finding seen across days and reads its ordinal", () => {
+
+  it("reflagKey anchors on the first Swift file cited (title or evidence), else the title", () => {
+    expect(reflagKey({ title: "TimelineModels.swift:31 — nil-billId collide", evidence: "" })).toBe("timelinemodels.swift");
+    expect(reflagKey({ title: "Timeline nil-billId collision", evidence: "origin/main TimelineModels.swift:31 id = ..." })).toBe("timelinemodels.swift");
+    expect(reflagKey({ title: "Some prose finding", evidence: "no file cited here" })).toBe("some prose finding");
+  });
+
+  it("collapses a finding re-derived across days under varying titles into ONE group", () => {
+    const day = (date, title, evidence, rec = "") => ({ date, apps: [{ app: "hansard", findings: [{ title, evidence, verdict: "reject", recommendation: rec }] }] });
+    const reports = [
+      day("2026-06-23", 'Timeline nil-billId id collision ("bill--1")', "origin/main TimelineModels.swift:31 id = bill-..."),
+      day("2026-06-24", "Timeline nil-billId id collision (bill--1)", "TimelineModels.swift:31 feeds recentBills..."),
+      day("2026-06-27", "TimelineModels.swift:31 — nil-billId bills collide on identifiable id 'bill--1' in list (defect, 5th re-flag)", "TimelineModels.swift:31"),
+      day("2026-06-28", "TimelineModels.swift:31/:74 — nil-billId bills collide (filed as defect, 7th re-flag)", "TimelineModels.swift:31"),
+      day("2026-06-29", 'Timeline nil-billId id collision ("bill--1") — 8th re-flag', 'TimelineModels.swift:31 id = "bill-\\(bill.billId ?? -1)"', "Reject (8th dismissal)"),
+    ];
+    const out = recurringReflags(reports);
+    expect(out).toHaveLength(1);
+    expect(out[0].app).toBe("hansard");
+    expect(out[0].signature).toBe("timelinemodels.swift");
+    expect(out[0].timesFlagged).toBe(8);
+    expect(out[0].status).toBe("serially-rejected");
+    expect(out[0].firstSeen).toBe("2026-06-23");
+  });
+
+  it("groups by normalized title when no Swift file is cited", () => {
     const mk = (date, title, verdict, rec = "") => ({ date, apps: [{ app: "hansard", findings: [{ title, verdict, recommendation: rec }] }] });
     const reports = [
       mk("2026-06-27", "nil-billId collision — 6th re-flag", "reject"),
@@ -72,7 +97,6 @@ describe("recurringReflags", () => {
     ];
     const out = recurringReflags(reports);
     expect(out).toHaveLength(1);
-    expect(out[0].app).toBe("hansard");
     expect(out[0].timesFlagged).toBe(8);
     expect(out[0].status).toBe("serially-rejected");
     expect(out[0].firstSeen).toBe("2026-06-27");
