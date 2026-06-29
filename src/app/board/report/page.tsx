@@ -119,6 +119,7 @@ export default async function ReportPage({
           <Link href="/board/docs" className="underline">
             Plans &amp; specs
           </Link>
+          <Link href="/board/week" className="underline">This week</Link>
         </div>
       </div>
       <p className="text-sm text-muted">

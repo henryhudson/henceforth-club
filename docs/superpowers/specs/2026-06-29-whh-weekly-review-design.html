@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>/whh — the weekly review · design · 2026-06-29</title>
+<style>
+  :root { --bg:#fafaf8; --fg:#18181b; --muted:#6b6b73; --rule:#e5e5e1;
+    --aside-bg:#f4f3ee; --accent:#c2410c; --code-bg:#f1efe8;
+    --ok:#5a6a44; --warn:#b45309; }
+  html,body{background:var(--bg);color:var(--fg);
+    font-family:ui-monospace,"Space Mono",SFMono-Regular,Menlo,Monaco,monospace;
+    line-height:1.6;margin:0;}
+  body{max-width:900px;margin:0 auto;padding:56px 24px 96px;font-size:15px;}
+  h1{font-size:30px;line-height:1.15;margin:0 0 12px;letter-spacing:-0.01em;}
+  h2.phase{font-size:22px;margin:54px 0 16px;border-top:2px solid var(--rule);padding-top:26px;}
+  h3.item{font-size:17px;margin:28px 0 8px;}
+  p{margin:10px 0;} p strong{font-weight:700;}
+  .byline{color:var(--muted);font-style:italic;margin:0 0 24px;}
+  aside{background:var(--aside-bg);border-left:3px solid var(--accent);
+    padding:14px 18px;margin:18px 0;border-radius:0 6px 6px 0;}
+  aside p{margin:6px 0;}
+  code,kbd{font-family:inherit;background:var(--code-bg);padding:1px 6px;
+    border-radius:3px;font-size:0.9em;}
+  pre{background:var(--code-bg);border-radius:6px;padding:14px 16px;overflow-x:auto;font-size:0.84em;line-height:1.5;}
+  ol,ul{padding-left:22px;} li{margin:5px 0;}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:0.9em;}
+  th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--rule);vertical-align:top;}
+  th{font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;font-size:0.8em;}
+  .lock{display:inline-block;font-size:0.72em;font-weight:700;padding:1px 7px;border-radius:10px;
+    background:var(--ok);color:#fff;text-transform:uppercase;letter-spacing:0.03em;}
+  .warn{display:inline-block;font-size:0.72em;font-weight:700;padding:1px 7px;border-radius:10px;
+    background:var(--warn);color:#fff;text-transform:uppercase;letter-spacing:0.03em;}
+</style>
+</head>
+<body>
+
+<h1>/whh — the weekly review</h1>
+<p class="byline">Design · 2026-06-29 · a higher-altitude aggregator over the daily <code>/hh</code> review: how the week went, how to do better, and what App Store Connect says about driving sales · <span class="warn">credentials prerequisite before the sales half runs</span></p>
+
+<aside>
+<p><strong>One-line:</strong> a hand-run <code>/whh</code> ("Weekly HH") command that reads the week's already-persisted daily-review artifacts and the kanban, computes the numbers deterministically, has an ultracode agent layer write the judgement (what went well, what to change next week), pulls real paid-units / proceeds / funnel data from App Store Connect, and publishes the whole thing to a gated <code>/board/week</code> page on henceforth.club so it is readable full-screen from any device.</p>
+<p><strong>Provenance:</strong> every path, schema, and constraint below was verified on 2026-06-29 by a three-agent read-only investigation of (a) the live <code>/hh</code> command and its persisted artifacts, (b) the henceforth-club board plumbing, and (c) App Store Connect access on this machine. The non-obvious findings — chiefly that <em>no analytics data or fetch-tooling exists locally yet</em> — are flagged inline. Open prerequisites are collected at the end.</p>
+</aside>
+
+<h2 class="phase">Goal &amp; scope</h2>
+<p>The daily <code>/hh</code> re-adjudicates the automated review emails and updates the Morning Board each morning. It leaves durable, dated traces but never looks <em>across</em> days. <code>/whh</code> is the weekly lens: it answers two questions you asked — <strong>"how did we do and how can we do better next week"</strong> (retrospective, from data that already exists) and <strong>"what does the analytics say, to drive more sales"</strong> (growth, from a new App Store Connect data path). These two halves have very different cost profiles and are designed to fail independently — the retrospective runs with zero new credentials; the sales half is gated on them.</p>
+<table>
+<tr><th>In scope (v1)</th><th>Out of scope (v1)</th></tr>
+<tr><td>Aggregate the week's <code>reports/&lt;date&gt;.json</code> series into weekly totals + per-app + trend</td><td>Re-running any daily review (it reads <code>/hh</code> output, never re-adjudicates)</td></tr>
+<tr><td>Board throughput: what reached <code>done</code>, what stalled, what keeps getting re-flagged</td><td>Mutating the kanban (read-only on <code>morning-board-data.js</code>; <code>/hh</code> owns writes)</td></tr>
+<tr><td>An agent-written "next week: do more / less of X" action list grounded in the numbers</td><td>Auto-acting on those actions (you decide; they can become board cards via <code>/hh</code>)</td></tr>
+<tr><td>Real paid units + proceeds per app, week-over-week, from App Store Connect Sales &amp; Trends</td><td>In-app telemetry / event analytics (the apps ship none; not adding an SDK)</td></tr>
+<tr><td>The App Store funnel (impressions → page views → conversion) + sales-driver suggestions</td><td>Automating App Store metadata or screenshot changes (suggestions only)</td></tr>
+<tr><td>A gated <code>/board/week</code> web page + a durable <code>weeks/&lt;date&gt;.json</code> artifact</td><td>A launchd schedule (you run <code>/whh</code> by hand, as chosen) &amp; an emailed digest</td></tr>
+</table>
+
+<h2 class="phase">What it reads — all on disk except analytics</h2>
+<p>The single best source is the dated machine report the daily review already writes. Nothing here is reconstructed.</p>
+<table>
+<tr><th>Source</th><th>Path</th><th>What the weekly review takes</th></tr>
+<tr><td>Daily report JSON</td><td><code>henceforth-club/content/board/reports/&lt;date&gt;.json</code></td><td>Per-day <code>summary</code> counts, every finding's <code>verdict</code>/<code>evidence</code>, the day's <code>plan</code>. <strong>6 reports present (06-23, 24, 26, 27, 28, 29)</strong> across the trailing 7 days — 06-25 absent, handled as a gap, not an error.</td></tr>
+<tr><td>Kanban</td><td><code>DaDeckOfCards/docs/superpowers/plans/morning-board-data.js</code></td><td><code>cards[]</code> current state — what reached <code>done</code> this week, what is stuck in <code>review</code>/<code>inprogress</code>; the in-file <code>log</code> run-history.</td></tr>
+<tr><td>Corrections ledgers</td><td>each repo's <code>docs/daily-review-corrections.md</code></td><td>The committed record of every rejection/abstention — the source for <strong>recurring re-flags</strong> (the noise the reviewer keeps re-deriving).</td></tr>
+<tr><td>App Store Connect</td><td><em>API — new data path (§ App Store Connect integration)</em></td><td>Paid units, proceeds, and the acquisition funnel per app.</td></tr>
+</table>
+<aside>
+<p><strong>The report series is the spine, not the kanban.</strong> The board dates findings only informally (inside <code>id</code>/<code>source</code>/<code>desc</code> strings), so it is a weak time-series. The <code>reports/&lt;date&gt;.json</code> files are explicitly dated and structured — so all weekly <em>numbers</em> come from them, and the board is used only for current-state questions (what shipped, what is stuck). Because 06-25 is missing, the aggregator keys on "reports that exist in the trailing 7 days," reports the actual day count, and never assumes seven.</p>
+</aside>
+
+<h2 class="phase">Analysis engine — hybrid (deterministic numbers, agent judgement)</h2>
+<p>This is the load-bearing design choice, taken over the two extremes.</p>
+<aside>
+<p><strong>Why not pure-agent, why not pure-script.</strong> A pure-agent analysis is articulate but non-reproducible — the same week would yield drifting counts run to run, and you could not trust "confirmed defects fell 40%." A pure deterministic script is trustworthy but mute — it cannot notice that you spent three mornings re-litigating the same already-rejected finding. So the work splits on a trust boundary: a <strong>deterministic aggregator</strong> owns every number (weekly totals, throughput, week-over-week deltas, recurring-reflag counts), and an <strong>ultracode Workflow synthesis layer</strong> owns every judgement (wins, misses, next-week actions, which sales lever to pull). This mirrors how <code>/hh</code> itself already separates deterministic local CI gates from agent adjudication — same boundary, one altitude up.</p>
+</aside>
+<table>
+<tr><th>Layer</th><th>Owns</th><th>Implementation</th></tr>
+<tr><td>Deterministic aggregator</td><td>All counts, sums, deltas, day census, stuck-card detection, reflag tallies</td><td>A Node module beside <code>scripts/board/*.mjs</code> — pure functions over the report JSONs + board + ledgers + the App Store Connect pull. Reproducible: same inputs → same numbers.</td></tr>
+<tr><td>Agent synthesis</td><td>Wins / misses narrative, "do more/less next week", sales-driver reasoning</td><td>The <code>/whh</code> command runs a Workflow: parallel readers (retro, throughput, reflags, sales) → a synthesis agent. Reads the deterministic numbers as ground truth; never recomputes them.</td></tr>
+</table>
+
+<h2 class="phase">Metrics — the retrospective half</h2>
+<p>Computed deterministically, then handed to synthesis as ground truth.</p>
+<ul>
+<li><strong>Weekly totals + per-app:</strong> sum of each daily <code>summary</code> field across the covered days — <code>reviews, confirmed, rejected, abstained, alreadyResolved, boardMoves, newConfirmedDefects, verdictsSurvivedRefutation</code> — overall and split by app (<code>deck</code>, <code>henceforth</code>, <code>hansard</code>, <code>provenance</code>).</li>
+<li><strong>Throughput:</strong> cards that reached <code>done</code> this week vs. cards that entered <code>review</code>/<code>inprogress</code>; net open delta; and <strong>stuck items</strong> — cards sitting in <code>inprogress</code>/<code>review</code> beyond a threshold (estimated from <code>id</code>/<code>source</code> dates + the <code>log</code>).</li>
+<li><strong>Recurring re-flags:</strong> findings that appear across multiple days' corrections ledgers or repeated rejections — e.g. the known <code>CertificateStore</code> / nil-<code>billId</code> carry-forwards. Each gets a count, first-seen date, and current status. This is the highest-leverage "do better" signal: it quantifies wasted re-adjudication.</li>
+<li><strong>Signal ratios:</strong> confirm-vs-reject ratio, abstain rate, and how many verdicts survived adversarial refutation — a read on review quality, not just volume.</li>
+</ul>
+
+<h2 class="phase">Metrics — the sales half</h2>
+<aside>
+<p><strong>The constraint that shapes this whole half:</strong> there is currently <em>zero</em> analytics data on this machine and <em>no</em> tooling to fetch it. Both apps are paid-up-front — <strong>no in-app purchases, no subscriptions, no telemetry SDK</strong> — so the only money-metric is <em>paid units × price</em>, which lives exclusively in App Store Connect. "Drive more sales" therefore cannot be answered from local data; it needs a new App Store Connect API path. That path is cheap to build (the <code>.p8</code> keys already exist) but needs three small inputs from you (end of doc).</p>
+</aside>
+<p>Two App Store Connect surfaces, in two tiers:</p>
+<table>
+<tr><th>Tier</th><th>Surface</th><th>Yields</th><th>Availability</th></tr>
+<tr><td>1 — the number</td><td><strong>Sales and Trends Reports</strong> (<code>GET /v1/salesReports</code>, <code>frequency=WEEKLY</code>)</td><td>Paid units + proceeds per app, per market. The real "sales" figure for paid apps.</td><td>Synchronous; previous day onward; needs the <strong>vendor number</strong>.</td></tr>
+<tr><td>2 — the funnel</td><td><strong>App Analytics Reports</strong> (<code>POST /v1/analyticsReportRequests</code> → poll → segment URLs)</td><td>Impressions → product-page views → downloads → <strong>conversion rate</strong>. The "why sales are what they are" signal.</td><td>Asynchronous; a one-time <code>ONGOING</code> report request per app, then ~1–2 days before Apple backfills.</td></tr>
+</table>
+<p><strong>Sales-driver suggestions</strong> hang off the weakest funnel stage: low impressions → search-keyword / App Store optimisation work; healthy impressions but low product-page views → icon / screenshots / subtitle; healthy views but low conversion → description, screenshots ordering, price, ratings prompts. Tier 1 ships in v1 immediately (units + proceeds + week-over-week); Tier 2 lights up once the report request has been live a couple of days, and the synthesis degrades gracefully — qualitative suggestions when the funnel numbers are not yet present.</p>
+
+<h2 class="phase">App Store Connect integration — the new data path</h2>
+<p>A small <strong>Node</strong> client living beside the existing <code>scripts/board/*.mjs</code> tooling (keeping everything in one runtime). It mints a short-lived <strong>ES256 JWT</strong> from your existing <code>~/.appstoreconnect/*.p8</code> key and calls the two surfaces above.</p>
+<pre>JWT (per call, ≤20 min expiry — Apple rejects longer):
+  header  { alg:"ES256", kid:&lt;Key ID&gt;, typ:"JWT" }
+  payload { iss:&lt;Issuer ID&gt;, iat, exp, aud:"appstoreconnect-v1" }
+  signed with ~/.appstoreconnect/AuthKey_&lt;KeyID&gt;.p8   (never copied, never committed)
+
+Sales (Tier 1):
+  GET /v1/salesReports?filter[frequency]=WEEKLY
+       &amp;filter[reportType]=SALES&amp;filter[reportSubType]=SUMMARY
+       &amp;filter[vendorNumber]=&lt;vendor&gt;&amp;filter[reportDate]=&lt;YYYY-MM-DD&gt;&amp;filter[version]=1_1
+  → gzipped TSV; parse Units + "Developer Proceeds" per app SKU.
+
+Analytics (Tier 2, one-time setup then poll):
+  POST /v1/analyticsReportRequests   { accessType: ONGOING, app: &lt;appId&gt; }
+  → poll analyticsReportRequests/{id}/reports → reports/{id}/instances
+  → reportInstances/{id}/segments → gzipped CSV download URLs.</pre>
+<aside>
+<p><strong>Three App Store Connect gotchas the client must handle:</strong> (1) Sales reports come back as <strong>gzipped TSV</strong>, not JSON — decompress and parse columns, don't expect a JSON body. (2) The Sales endpoint needs a <strong>vendor number</strong> (the 8-digit id from <em>Payments and Financial Reports</em>) <em>in addition to</em> the Issuer ID — a different identifier. (3) Apple's sales calendar lags ~1 day and uses fiscal weeks; the client requests the most recent available <code>reportDate</code> and labels the window honestly rather than assuming "today minus 7."</p>
+</aside>
+<p><strong>Credentials stay local — only aggregates are published.</strong> The Issuer ID, Key ID, vendor number, and <code>.p8</code> path go in <code>henceforth-club/.env.local</code> (where the Upstash secrets already live, gitignored); the <code>.p8</code> itself stays at <code>~/.appstoreconnect/</code>. Nothing secret is ever written to <code>content/</code>, committed to git, or pushed to Upstash — only the <em>computed</em> units / proceeds / funnel numbers reach the website. This matches the release pipeline's "base64 the key, pass via env, never to disk" stance and your standing keep-keys-local rule.</p>
+
+<h2 class="phase">Website surfacing — <code>/board/week</code></h2>
+<p>The canonical surface is the web page (you asked for it reachable from all devices) — so v1 deliberately writes <em>no</em> local HTML report; the page <em>is</em> the report. The data flow mirrors the daily board exactly:</p>
+<pre>/whh (run locally)
+   → writes  content/board/weeks/&lt;date&gt;.json         (durable artifact)
+   → publishes board:week:&lt;date&gt; + board:weeks (index set) to Upstash
+                                                      (scripts/board/publish-week.mjs)
+   → /board/week page reads Upstash, local-file fallback   (mirrors report/page.tsx)</pre>
+<ul>
+<li><strong>Route:</strong> <code>src/app/board/week/page.tsx</code>, behind the same <code>/board</code> password gate (verify the middleware matcher covers <code>/board/week</code>), with a "This week" link from <code>/board</code> and <code>/board/report</code>.</li>
+<li><strong>Publish:</strong> a <code>scripts/board/publish-week.mjs</code> (mirrors <code>publish.mjs</code>) writing <code>board:week:&lt;date&gt;</code> and adding to a <code>board:weeks</code> set; <code>/whh</code> invokes it with <code>--env-file=.env.local</code>, exactly as <code>/hh</code> invokes <code>publish.mjs</code>.</li>
+<li><strong>Branch:</strong> this stacks on the existing <code>feat/board-plan-and-docs</code> branch (pull request #7) and ships on its own branch per your henceforth-club branch + pull-request workflow — no direct <code>main</code> push.</li>
+<li><strong>Sensitivity:</strong> the page inherits the existing <code>/board</code> password; revenue figures live behind that gate only. (Confirm you are happy with proceeds numbers behind the same password as the board — see prerequisites.)</li>
+</ul>
+
+<h2 class="phase">Durable artifact — <code>weeks/&lt;date&gt;.json</code></h2>
+<p>The weekly analogue of the daily <code>reports/&lt;date&gt;.json</code>, so a future monthly/quarterly view can aggregate <em>weeks</em> the same way <code>/whh</code> aggregates <em>days</em>.</p>
+<pre>{
+  weekOf, weekEnd, generatedAt,
+  daysCovered: ["2026-06-23", …],            // reports that actually existed
+  retro: {
+    totals: { reviews, confirmed, rejected, abstained, alreadyResolved,
+              boardMoves, newConfirmedDefects, verdictsSurvivedRefutation },
+    perApp: [ { app, name, reviews, confirmed, rejected, abstained, shipped } ],
+    throughput: { movedToDone, enteredReview, netOpen,
+                  stuck: [ { id, title, app, col, daysInColumn } ] },
+    recurringReflags: [ { signature, app, timesFlagged, firstSeen, status, note } ],
+    ratios: { confirmRejectRatio, abstainRate, survivedRefutation },
+    wins: [string], misses: [string],
+    nextWeek: [ { tag, title, detail } ]       // agent-written, mirrors plan.items shape
+  },
+  sales: {
+    window: { thisWeek, lastWeek },
+    perApp: [ { app, name,
+      units:    { thisWeek, lastWeek, deltaPct },
+      proceeds: { thisWeek, lastWeek, currency, deltaPct },
+      funnel?:  { impressions, productPageViews, conversionRate } } ],   // Tier 2, optional
+    drivers: [ { app, lever, rationale, action } ]
+  }
+}
+</pre>
+<p>The <code>nextWeek</code> items reuse the daily <code>plan.items</code> shape (<code>{ tag, title, detail }</code>) so they could later be promoted into board cards by <code>/hh</code> with no reshaping.</p>
+
+<h2 class="phase">The <code>/whh</code> command</h2>
+<p>A global slash command at <code>~/.claude/commands/whh.md</code>, a sibling to <code>~/.claude/commands/hh.md</code>, run by hand. Default window: the <strong>trailing 7 days ending today</strong>. Its orchestration:</p>
+<ol>
+<li>Resolve the window and the set of <code>reports/&lt;date&gt;.json</code> that exist within it.</li>
+<li>Run the deterministic aggregator (numbers) + the App Store Connect pull (sales).</li>
+<li>Run a Workflow: parallel readers (retro · throughput · reflags · sales) → synthesis agent → the <code>weeks/&lt;date&gt;.json</code> object.</li>
+<li>Write the artifact, run <code>publish-week.mjs</code>, print a chat summary with the <code>/board/week</code> link.</li>
+</ol>
+
+<h2 class="phase">What v1 deliberately won't do <span class="lock">yagni</span></h2>
+<ul>
+<li><strong>No launchd automation</strong> — you run <code>/whh</code>, as chosen. The "This Week in Parliament" weekly agent stays the only scheduled weekly job.</li>
+<li><strong>No separate local HTML report</strong> — the gated web page is the canonical, cross-device surface.</li>
+<li><strong>No in-app telemetry SDK</strong> — sales reasoning uses App Store Connect aggregates only.</li>
+<li><strong>No kanban writes</strong> — <code>/whh</code> is read-only on the board; <code>/hh</code> remains the sole writer.</li>
+</ul>
+
+<h2 class="phase">Prerequisites &amp; decisions <span class="warn">your call</span></h2>
+<p>The retrospective half needs nothing new and runs today. The sales half is gated on these:</p>
+<table>
+<tr><th>#</th><th>Needed</th><th>Why / note</th></tr>
+<tr><td>1</td><td><strong>App Store Connect Issuer ID</strong></td><td>Team-level, from <em>Users and Access → Integrations</em>. Off-machine today (it lives in GitHub secrets). One value; goes in <code>.env.local</code>.</td></tr>
+<tr><td>2</td><td><strong>Which <code>.p8</code> key + its role</strong></td><td>Two exist: <code>AuthKey_SNR44PUTBF</code>, <code>AuthKey_5UB498DL82</code>. Sales reports need a key with <em>Sales</em>/<em>Finance</em>/<em>Admin</em> access; analytics needs <em>Admin</em>. Confirm one carries both, or we mint a dedicated key.</td></tr>
+<tr><td>3</td><td><strong>Vendor number</strong></td><td>The 8-digit id from <em>Payments and Financial Reports</em> — required by the Sales endpoint, distinct from the Issuer ID.</td></tr>
+<tr><td>4</td><td><strong>Route name</strong></td><td>Proposed <code>/board/week</code>. Confirm or rename (e.g. <code>/board/weekly</code>).</td></tr>
+<tr><td>5</td><td><strong>Proceeds behind the board password — OK?</strong></td><td>Revenue figures will sit behind the existing <code>/board</code> gate only. Confirm that gate is sufficient for you.</td></tr>
+</table>
+<p>None of these block building and validating the retrospective half plus the full website plumbing now; only the live sales numbers wait on #1–#3.</p>
+
+<p class="byline" style="margin-top:40px;border-top:1px solid var(--rule);padding-top:16px;">Design · 2026-06-29 · grounded by a three-agent read-only investigation of the live <code>/hh</code> artifacts, the henceforth-club board plumbing, and App Store Connect access on this machine · not yet built — pending the prerequisites above.</p>
+
+</body>
+</html>
