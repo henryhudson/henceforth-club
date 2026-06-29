@@ -138,6 +138,7 @@ describe("throughput + buildRetro", () => {
     const reports = [{ date: "2026-06-29", summary: { reviews: 3, confirmed: 3, rejected: 3, abstained: 1, alreadyResolved: 1, skipped: 1, newConfirmedDefects: 0, boardMoves: 1, verdictsSurvivedRefutation: "10/10" }, apps: [] }];
     const retro = buildRetro({ reports, board: { cards: [] }, windowStart: "2026-06-23" });
     expect(retro.totals.reviews).toBe(3);
+    expect(retro.stateOfUnion).toBe("");
     expect(retro.wins).toEqual([]);
     expect(retro.misses).toEqual([]);
     expect(retro.nextWeek).toEqual([]);
