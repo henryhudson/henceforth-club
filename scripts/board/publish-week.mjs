@@ -11,7 +11,13 @@ if (!url || !token) { console.error("Missing KV_REST_API_URL / KV_REST_API_TOKEN
 
 const redis = new Redis({ url, token });
 const dir = path.join(process.cwd(), "content/board/weeks");
-const files = (await readdir(dir)).filter((f) => f.endsWith(".json"));
+let files = [];
+try {
+  files = (await readdir(dir)).filter((f) => f.endsWith(".json"));
+} catch (e) {
+  console.error("no weeks to publish:", e.message);
+  process.exit(0);
+}
 for (const f of files) {
   const date = f.replace(/\.json$/, "");
   try {
