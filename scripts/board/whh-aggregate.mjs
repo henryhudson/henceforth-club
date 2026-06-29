@@ -133,7 +133,7 @@ export function throughput(board, windowStart) {
   return { columnCensus: census, doneCount: census.done ?? 0, stuck };
 }
 
-/** Assemble the deterministic retrospective. wins/misses/nextWeek are filled later by synthesis. */
+/** Assemble the deterministic retrospective. stateOfUnion/wins/misses/nextWeek are filled later by synthesis. */
 export function buildRetro({ reports, board, windowStart }) {
   const totals = aggregateTotals(reports);
   return {
@@ -142,6 +142,7 @@ export function buildRetro({ reports, board, windowStart }) {
     throughput: throughput(board, windowStart),
     recurringReflags: recurringReflags(reports),
     ratios: ratios(totals),
+    stateOfUnion: "",
     wins: [], misses: [], nextWeek: [],
   };
 }

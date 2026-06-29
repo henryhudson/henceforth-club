@@ -19,6 +19,7 @@ type WeekReport = {
     totals: Record<string, number>;
     throughput: { stuck: Stuck[] };
     recurringReflags: Reflag[];
+    stateOfUnion: string;
     wins: string[]; misses: string[]; nextWeek: NextItem[];
   };
   sales: { perApp: AppSales[]; drivers: { app: string; lever: string; rationale: string; action: string }[]; note?: string };
@@ -72,6 +73,10 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
       ) : (
         <>
           <p className="text-muted">Week of {w.weekOf} → {w.weekEnd} · {w.daysCovered.length} review days</p>
+
+          {w.retro.stateOfUnion && (
+            <p className="mt-4 border-l-2 border-accent-green/50 pl-4 text-lg leading-relaxed text-foreground">{w.retro.stateOfUnion}</p>
+          )}
 
           <h2 className="mt-8 border-b border-card-border pb-1 text-xl font-bold">How the week went</h2>
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
