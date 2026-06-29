@@ -4,7 +4,7 @@
 
 import { readFile, readdir, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
-import { windowDates, buildRetro } from "./whh-aggregate.mjs";
+import { windowDates, buildRetro, weekStripDates, buildWeekStrip } from "./whh-aggregate.mjs";
 import { pullSales } from "./asc-client.mjs";
 
 const ROOT = process.cwd();
@@ -14,12 +14,14 @@ const LATEST = path.join(ROOT, "content/board/latest.json");
 const NAMES = { henceforth: "Henceforth", deck: "DaDeckOfCards", hansard: "Hansard" };
 
 /** Pure: assemble a WeekReport from already-loaded inputs. */
-export function assemble({ endDate, days = 7, reports, board, sales, generatedAt }) {
+export function assemble({ endDate, days = 7, reports, board, sales, generatedAt, weekStrip }) {
   const dates = windowDates(endDate, days);
+  const retro = buildRetro({ reports, board, windowStart: dates[0] });
+  retro.weekStrip = weekStrip ?? [];
   return {
     weekOf: dates[0], weekEnd: endDate, generatedAt,
     daysCovered: reports.map((r) => r.date),
-    retro: buildRetro({ reports, board, windowStart: dates[0] }),
+    retro,
     sales: sales ?? { window: null, perApp: [], drivers: [], note: "App Store Connect not configured — sales half skipped." },
   };
 }
@@ -44,6 +46,14 @@ function ascFromEnv() {
 export async function run({ endDate, days = 7 }) {
   const reports = await loadReports(endDate, days);
   const board = JSON.parse(await readFile(LATEST, "utf8"));
+  const reviewsByDate = {};
+  for (const d of weekStripDates(endDate)) {
+    try {
+      const r = JSON.parse(await readFile(path.join(REPORTS_DIR, `${d}.json`), "utf8"));
+      reviewsByDate[d] = Number(r.summary?.reviews ?? 0);
+    } catch { /* no report that day */ }
+  }
+  const weekStrip = buildWeekStrip(reviewsByDate, endDate);
   const ascCfg = ascFromEnv();
   let sales = null;
   if (ascCfg) {
@@ -52,7 +62,7 @@ export async function run({ endDate, days = 7 }) {
     const creds = { issuerId: process.env.ASC_ISSUER_ID, keyId: process.env.ASC_KEY_ID, privateKeyPem: pem, vendorNumber: process.env.ASC_VENDOR_NUMBER };
     sales = await pullSales({ creds, appSkus: ascCfg.appSkus, names: NAMES, thisDate: endDate, lastDate: lastEnd });
   }
-  const week = assemble({ endDate, days, reports, board, sales, generatedAt: new Date().toISOString() });
+  const week = assemble({ endDate, days, reports, board, sales, weekStrip, generatedAt: new Date().toISOString() });
   await mkdir(WEEKS_DIR, { recursive: true });
   await writeFile(path.join(WEEKS_DIR, `${endDate}.json`), JSON.stringify(week, null, 2) + "\n");
   return week;

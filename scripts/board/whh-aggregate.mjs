@@ -133,7 +133,35 @@ export function throughput(board, windowStart) {
   return { columnCensus: census, doneCount: census.done ?? 0, stuck };
 }
 
-/** Assemble the deterministic retrospective. stateOfUnion/wins/misses/nextWeek are filled later by synthesis. */
+export const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/** The seven dates Sunday..Saturday of the week ending on the most recent Saturday on or before endDate. */
+export function weekStripDates(endDate) {
+  const end = new Date(`${endDate}T00:00:00Z`);
+  const backToSat = (end.getUTCDay() + 1) % 7;
+  const sat = new Date(end);
+  sat.setUTCDate(end.getUTCDate() - backToSat);
+  const out = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(sat);
+    d.setUTCDate(sat.getUTCDate() - i);
+    out.push(d.toISOString().slice(0, 10));
+  }
+  return out;
+}
+
+/** A Sunday..Saturday strip of per-day review activity. reviewsByDate maps a date to that
+ *  day's review count (from its report summary.reviews); days with no report read as zero. */
+export function buildWeekStrip(reviewsByDate, endDate) {
+  return weekStripDates(endDate).map((date) => ({
+    date,
+    weekday: WEEKDAYS[new Date(`${date}T00:00:00Z`).getUTCDay()],
+    reviews: reviewsByDate[date] ?? 0,
+    hasReport: Object.prototype.hasOwnProperty.call(reviewsByDate, date),
+  }));
+}
+
+/** Assemble the deterministic retrospective. weekStrip/stateOfUnion/wins/misses/nextWeek are filled later. */
 export function buildRetro({ reports, board, windowStart }) {
   const totals = aggregateTotals(reports);
   return {
@@ -142,6 +170,7 @@ export function buildRetro({ reports, board, windowStart }) {
     throughput: throughput(board, windowStart),
     recurringReflags: recurringReflags(reports),
     ratios: ratios(totals),
+    weekStrip: [],
     stateOfUnion: "",
     wins: [], misses: [], nextWeek: [],
   };
