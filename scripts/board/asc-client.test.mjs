@@ -4,9 +4,9 @@ import { gzipSync } from "node:zlib";
 import { mintJWT, parseSalesTsv, sumByApp, delta, fetchSalesReport, pullSales } from "./asc-client.mjs";
 
 const TSV = [
-  "SKU\tTitle\tUnits\tDeveloper Proceeds\tCurrency of Proceeds",
-  "HENCE01\tHenceforth\t4\t2.79\tGBP",
-  "DECK01\tDeck of Cards\t1\t0.00\tGBP",
+  "SKU\tTitle\tProduct Type Identifier\tUnits\tDeveloper Proceeds\tCurrency of Proceeds",
+  "HENCE01\tHenceforth\t1F\t4\t2.79\tGBP",
+  "DECK01\tDeck of Cards\t1F\t1\t0.00\tGBP",
 ].join("\n");
 
 describe("mintJWT", () => {
@@ -25,7 +25,7 @@ describe("mintJWT", () => {
 describe("sales parsing", () => {
   it("parseSalesTsv reads units and proceeds per row", () => {
     const rows = parseSalesTsv(TSV);
-    expect(rows[0]).toMatchObject({ sku: "HENCE01", units: 4, proceeds: 2.79, currency: "GBP" });
+    expect(rows[0]).toMatchObject({ sku: "HENCE01", productType: "1F", units: 4, proceeds: 2.79, currency: "GBP" });
   });
   it("parseSalesTsv tolerates carriage-return line endings", () => {
     const rows = parseSalesTsv(TSV.replace(/\n/g, "\r\n"));
@@ -35,6 +35,15 @@ describe("sales parsing", () => {
     const out = sumByApp(parseSalesTsv(TSV), { henceforth: ["HENCE01"], deck: ["DECK01"], hansard: ["HANS01"] });
     expect(out.henceforth.units).toBe(4);
     expect(out.hansard.units).toBe(0);
+  });
+  it("sumByApp counts downloads (type 1*) and excludes updates (7*) and in-app (3*)", () => {
+    const rows = parseSalesTsv([
+      "SKU\tTitle\tProduct Type Identifier\tUnits\tDeveloper Proceeds\tCurrency of Proceeds",
+      "DECK01\tDeck\t1F\t5\t0\tGBP",
+      "DECK01\tDeck\t7F\t40\t0\tGBP",
+      "DECK01\tDeck\t3F\t2\t0\tGBP",
+    ].join("\n"));
+    expect(sumByApp(rows, { deck: ["DECK01"] }).deck.units).toBe(5);
   });
   it("delta is fractional vs last week, null when no baseline", () => {
     expect(delta(6, 4)).toBeCloseTo(0.5);
@@ -60,7 +69,7 @@ describe("pullSales", () => {
   it("assembles per-app units/proceeds with week-over-week deltas", async () => {
     const { privateKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
     const pem = privateKey.export({ type: "pkcs8", format: "pem" });
-    const day = (units) => ["SKU\tTitle\tUnits\tDeveloper Proceeds\tCurrency of Proceeds", `HENCE01\tHenceforth\t${units}\t0.00\tGBP`].join("\n");
+    const day = (units) => ["SKU\tTitle\tProduct Type Identifier\tUnits\tDeveloper Proceeds\tCurrency of Proceeds", `HENCE01\tHenceforth\t1F\t${units}\t0.00\tGBP`].join("\n");
     // 3 units on each of two "this week" days (= 6), 2 on each "last week" day (= 4).
     const fetchImpl = async (url) => {
       const thisWeek = url.includes("2026-06-28") || url.includes("2026-06-29");
