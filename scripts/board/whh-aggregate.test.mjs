@@ -101,6 +101,22 @@ describe("recurringReflags", () => {
     expect(out[0].status).toBe("serially-rejected");
     expect(out[0].firstSeen).toBe("2026-06-27");
   });
+
+  it("anchors status to the re-flagged finding, not a stray already-resolved file-mate", () => {
+    const reports = [
+      { date: "2026-06-27", apps: [{ app: "hansard", findings: [
+        { title: "TimelineModels.swift:31 — nil-billId collide (5th re-flag)", evidence: "TimelineModels.swift:31", verdict: "reject" },
+        { title: "Timeline.load filter (already fixed)", evidence: "TimelineModels.swift:77", verdict: "already-resolved" },
+      ] }] },
+      { date: "2026-06-29", apps: [{ app: "hansard", findings: [
+        { title: "TimelineModels.swift:31 — nil-billId collide (8th re-flag)", evidence: "TimelineModels.swift:31", verdict: "reject" },
+      ] }] },
+    ];
+    const out = recurringReflags(reports);
+    expect(out).toHaveLength(1);
+    expect(out[0].timesFlagged).toBe(8);
+    expect(out[0].status).toBe("serially-rejected");
+  });
 });
 
 describe("throughput + buildRetro", () => {

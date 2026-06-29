@@ -82,17 +82,23 @@ export function reflagKey(finding) {
 }
 
 /** Findings the reviewer keeps re-deriving: grouped by reflagKey, recurring when seen on
- *  more than one day or self-reporting an ordinal of 2 or more. */
+ *  more than one day or self-reporting an ordinal of 2 or more. The shown title and status
+ *  are anchored to the most-escalated finding in the group (highest ordinal, latest date
+ *  breaking ties) so a stray already-resolved file-mate cannot mislabel a chronic rejection. */
 export function recurringReflags(reports) {
   const groups = new Map();
   for (const r of reports) for (const a of r.apps ?? []) for (const f of a.findings ?? []) {
     const sig = reflagKey(f);
     if (!sig) continue;
     const key = `${a.app}::${sig}`;
-    const g = groups.get(key) ?? { signature: sig, app: a.app, title: f.title, days: [], verdicts: [], maxOrdinal: 0 };
-    g.days.push(r.date); g.verdicts.push(f.verdict);
+    const g = groups.get(key) ?? { signature: sig, app: a.app, title: f.title, days: [], maxOrdinal: 0, anchorOrd: -1, anchorDate: "", anchorVerdict: f.verdict };
+    g.days.push(r.date);
     const m = `${f.title} ${f.recommendation ?? ""}`.match(ORDINAL);
-    if (m) g.maxOrdinal = Math.max(g.maxOrdinal, Number(m[1]));
+    const ord = m ? Number(m[1]) : 0;
+    g.maxOrdinal = Math.max(g.maxOrdinal, ord);
+    if (ord > g.anchorOrd || (ord === g.anchorOrd && r.date >= g.anchorDate)) {
+      g.anchorOrd = ord; g.anchorDate = r.date; g.anchorVerdict = f.verdict; g.title = f.title;
+    }
     groups.set(key, g);
   }
   return [...groups.values()]
@@ -101,8 +107,9 @@ export function recurringReflags(reports) {
       signature: g.signature, app: g.app, title: g.title,
       timesFlagged: Math.max(g.days.length, g.maxOrdinal),
       firstSeen: g.days.slice().sort()[0],
-      status: g.verdicts.every((v) => v === "reject") ? "serially-rejected"
-            : g.verdicts.includes("already-resolved") ? "resolved" : "mixed",
+      status: g.anchorVerdict === "reject" ? "serially-rejected"
+            : g.anchorVerdict === "already-resolved" ? "resolved"
+            : g.anchorVerdict === "confirm" ? "carded" : "open",
     }))
     .sort((a, b) => b.timesFlagged - a.timesFlagged);
 }
