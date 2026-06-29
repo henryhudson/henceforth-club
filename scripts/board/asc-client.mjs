@@ -66,18 +66,35 @@ export async function fetchSalesReport({ jwt, vendorNumber, reportDate, frequenc
   return parseSalesTsv(gunzipSync(Buffer.from(await res.arrayBuffer())).toString("utf8"));
 }
 
-/** Assemble the sales half: this-week vs last-week units/proceeds per app. */
-export async function pullSales({ creds, appSkus, names, thisDate, lastDate, fetchImpl = fetch }) {
+/** Sum units + proceeds per app across a list of DAILY report dates (each report's rows span many markets). */
+async function sumDailyRange({ jwt, vendorNumber, dates, appSkus, fetchImpl }) {
+  const totals = {};
+  for (const app of Object.keys(appSkus)) totals[app] = { units: 0, proceeds: 0, currency: null };
+  for (const date of dates) {
+    const rows = await fetchSalesReport({ jwt, vendorNumber, reportDate: date, frequency: "DAILY", fetchImpl });
+    const day = sumByApp(rows, appSkus);
+    for (const app of Object.keys(appSkus)) {
+      totals[app].units += day[app].units;
+      totals[app].proceeds += day[app].proceeds;
+      totals[app].currency = totals[app].currency ?? day[app].currency;
+    }
+  }
+  return totals;
+}
+
+/** Assemble the sales half from DAILY reports — this-week vs last-week units per app.
+ *  Daily, not weekly: Apple's WEEKLY frequency rejects any reportDate that is not a fiscal-week-ending Sunday. */
+export async function pullSales({ creds, appSkus, names, thisDates, lastDates, fetchImpl = fetch }) {
   const jwt = mintJWT(creds);
-  const [now, prev] = await Promise.all([
-    fetchSalesReport({ jwt, vendorNumber: creds.vendorNumber, reportDate: thisDate, fetchImpl }),
-    fetchSalesReport({ jwt, vendorNumber: creds.vendorNumber, reportDate: lastDate, fetchImpl }),
+  const [a, b] = await Promise.all([
+    sumDailyRange({ jwt, vendorNumber: creds.vendorNumber, dates: thisDates, appSkus, fetchImpl }),
+    sumDailyRange({ jwt, vendorNumber: creds.vendorNumber, dates: lastDates, appSkus, fetchImpl }),
   ]);
-  const a = sumByApp(now, appSkus), b = sumByApp(prev, appSkus);
+  const round2 = (n) => Math.round(n * 100) / 100;
   const perApp = Object.keys(appSkus).map((app) => ({
     app, name: names[app] ?? app,
     units: { thisWeek: a[app].units, lastWeek: b[app].units, deltaPct: delta(a[app].units, b[app].units) },
-    proceeds: { thisWeek: a[app].proceeds, lastWeek: b[app].proceeds, currency: a[app].currency ?? b[app].currency, deltaPct: delta(a[app].proceeds, b[app].proceeds) },
+    proceeds: { thisWeek: round2(a[app].proceeds), lastWeek: round2(b[app].proceeds), currency: a[app].currency ?? b[app].currency, deltaPct: delta(a[app].proceeds, b[app].proceeds) },
   }));
-  return { window: { thisWeek: thisDate, lastWeek: lastDate }, perApp, drivers: [] };
+  return { window: { thisWeek: thisDates[thisDates.length - 1], lastWeek: lastDates[lastDates.length - 1] }, perApp, drivers: [] };
 }

@@ -159,7 +159,7 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
             <table className="mt-3 w-full text-sm">
               <thead>
                 <tr className="text-left text-xs uppercase tracking-wide text-muted">
-                  <th className="py-1">App</th><th>Units</th><th>vs last week</th><th>Proceeds</th><th>vs last week</th>
+                  <th className="py-1">App</th><th>Downloads</th><th>Last week</th><th>Change</th>
                 </tr>
               </thead>
               <tbody>
@@ -167,9 +167,8 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
                   <tr key={a.app} className="border-t border-card-border">
                     <td className={`py-1 font-bold ${ACCENT[a.app] ?? "text-foreground"}`}>{a.name}</td>
                     <td>{a.units.thisWeek}</td>
+                    <td className="text-muted">{a.units.lastWeek}</td>
                     <td className="text-muted">{pct(a.units.deltaPct)}</td>
-                    <td>{a.proceeds.thisWeek} {a.proceeds.currency}</td>
-                    <td className="text-muted">{pct(a.proceeds.deltaPct)}</td>
                   </tr>
                 ))}
               </tbody>

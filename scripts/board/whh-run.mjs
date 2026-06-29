@@ -57,10 +57,10 @@ export async function run({ endDate, days = 7 }) {
   const ascCfg = ascFromEnv();
   let sales = null;
   if (ascCfg) {
-    const lastEnd = windowDates(endDate, 8)[0]; // endDate minus 7 = last week's report marker
+    const all14 = windowDates(endDate, 14); // this week = last 7, last week = the 7 before
     const pem = await readFile(process.env.ASC_KEY_PATH, "utf8");
     const creds = { issuerId: process.env.ASC_ISSUER_ID, keyId: process.env.ASC_KEY_ID, privateKeyPem: pem, vendorNumber: process.env.ASC_VENDOR_NUMBER };
-    sales = await pullSales({ creds, appSkus: ascCfg.appSkus, names: NAMES, thisDate: endDate, lastDate: lastEnd });
+    sales = await pullSales({ creds, appSkus: ascCfg.appSkus, names: NAMES, thisDates: all14.slice(7), lastDates: all14.slice(0, 7) });
   }
   const week = assemble({ endDate, days, reports, board, sales, weekStrip, generatedAt: new Date().toISOString() });
   await mkdir(WEEKS_DIR, { recursive: true });

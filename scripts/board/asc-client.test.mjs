@@ -60,16 +60,19 @@ describe("pullSales", () => {
   it("assembles per-app units/proceeds with week-over-week deltas", async () => {
     const { privateKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
     const pem = privateKey.export({ type: "pkcs8", format: "pem" });
-    const thisTsv = ["SKU\tTitle\tUnits\tDeveloper Proceeds\tCurrency of Proceeds", "HENCE01\tHenceforth\t6\t4.00\tGBP"].join("\n");
-    const lastTsv = ["SKU\tTitle\tUnits\tDeveloper Proceeds\tCurrency of Proceeds", "HENCE01\tHenceforth\t4\t2.00\tGBP"].join("\n");
-    const fetchImpl = async (url) => ({ ok: true, status: 200, arrayBuffer: async () => gzipSync(Buffer.from(url.includes("2026-06-29") ? thisTsv : lastTsv)) });
+    const day = (units) => ["SKU\tTitle\tUnits\tDeveloper Proceeds\tCurrency of Proceeds", `HENCE01\tHenceforth\t${units}\t0.00\tGBP`].join("\n");
+    // 3 units on each of two "this week" days (= 6), 2 on each "last week" day (= 4).
+    const fetchImpl = async (url) => {
+      const thisWeek = url.includes("2026-06-28") || url.includes("2026-06-29");
+      return { ok: true, status: 200, arrayBuffer: async () => gzipSync(Buffer.from(day(thisWeek ? 3 : 2))) };
+    };
     const sales = await pullSales({
       creds: { issuerId: "ISS", keyId: "KID", privateKeyPem: pem, vendorNumber: "12345678" },
       appSkus: { henceforth: ["HENCE01"] }, names: { henceforth: "Henceforth" },
-      thisDate: "2026-06-29", lastDate: "2026-06-22", fetchImpl,
+      thisDates: ["2026-06-28", "2026-06-29"], lastDates: ["2026-06-21", "2026-06-22"], fetchImpl,
     });
     const h = sales.perApp[0];
-    expect(h.units.thisWeek).toBe(6);
+    expect(h.units.thisWeek).toBe(6); // summed across the two daily reports
     expect(h.units.lastWeek).toBe(4);
     expect(h.units.deltaPct).toBeCloseTo(0.5);
     expect(sales.window).toEqual({ thisWeek: "2026-06-29", lastWeek: "2026-06-22" });
