@@ -1,5 +1,5 @@
 // Pure aggregation over a week of daily /hh report JSONs + the kanban board.
-// All functions are I/O-free and unit-tested. Consumed by whh-run.mjs.
+// Every function is computed purely from its arguments (no input/output) and unit-tested. Consumed by whh-run.mjs.
 
 /** Trailing `days` calendar dates ending `endDate`, ascending (UTC). */
 export function windowDates(endDate, days = 7) {

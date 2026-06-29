@@ -99,6 +99,7 @@ describe("throughput + buildRetro", () => {
     const retro = buildRetro({ reports, board: { cards: [] }, windowStart: "2026-06-23" });
     expect(retro.totals.reviews).toBe(3);
     expect(retro.wins).toEqual([]);
+    expect(retro.misses).toEqual([]);
     expect(retro.nextWeek).toEqual([]);
   });
 });
