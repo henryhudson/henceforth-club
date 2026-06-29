@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   windowDates, parseSurvived, aggregateTotals, perApp, ratios,
   reflagSignature, reflagKey, recurringReflags, earliestDateIn, throughput, buildRetro,
-  weekStripDates, buildWeekStrip,
+  weekStripDates, buildWeekStrip, currentWeekDates, weekPlanSkeleton,
 } from "./whh-aggregate.mjs";
 
 describe("windowDates", () => {
@@ -141,6 +141,7 @@ describe("throughput + buildRetro", () => {
     expect(retro.totals.reviews).toBe(3);
     expect(retro.stateOfUnion).toBe("");
     expect(retro.weekStrip).toEqual([]);
+    expect(retro.weekPlan).toEqual([]);
     expect(retro.wins).toEqual([]);
     expect(retro.misses).toEqual([]);
     expect(retro.nextWeek).toEqual([]);
@@ -162,5 +163,19 @@ describe("week strip (Sunday to Saturday)", () => {
     expect(strip[0]).toMatchObject({ date: "2026-06-21", weekday: "Sun", reviews: 0, hasReport: false });
     expect(strip[2]).toMatchObject({ date: "2026-06-23", weekday: "Tue", reviews: 3, hasReport: true });
     expect(strip[6]).toMatchObject({ date: "2026-06-27", weekday: "Sat", reviews: 3, hasReport: true });
+  });
+});
+
+describe("week plan (the week ahead)", () => {
+  it("currentWeekDates returns Sun..Sat of the week containing endDate", () => {
+    expect(currentWeekDates("2026-06-29")).toEqual([
+      "2026-06-28", "2026-06-29", "2026-06-30", "2026-07-01", "2026-07-02", "2026-07-03", "2026-07-04",
+    ]);
+  });
+  it("weekPlanSkeleton flags Wednesday as the update/review/article day", () => {
+    const plan = weekPlanSkeleton("2026-06-29");
+    expect(plan).toHaveLength(7);
+    expect(plan[0]).toMatchObject({ weekday: "Sun", isReviewDay: false, tasks: [] });
+    expect(plan[3]).toMatchObject({ date: "2026-07-01", weekday: "Wed", isReviewDay: true, tasks: [] });
   });
 });

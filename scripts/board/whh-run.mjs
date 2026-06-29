@@ -4,7 +4,7 @@
 
 import { readFile, readdir, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
-import { windowDates, buildRetro, weekStripDates, buildWeekStrip } from "./whh-aggregate.mjs";
+import { windowDates, buildRetro, weekStripDates, buildWeekStrip, weekPlanSkeleton } from "./whh-aggregate.mjs";
 import { pullSales } from "./asc-client.mjs";
 
 const ROOT = process.cwd();
@@ -18,6 +18,7 @@ export function assemble({ endDate, days = 7, reports, board, sales, generatedAt
   const dates = windowDates(endDate, days);
   const retro = buildRetro({ reports, board, windowStart: dates[0] });
   retro.weekStrip = weekStrip ?? [];
+  retro.weekPlan = weekPlanSkeleton(endDate);
   return {
     weekOf: dates[0], weekEnd: endDate, generatedAt,
     daysCovered: reports.map((r) => r.date),
