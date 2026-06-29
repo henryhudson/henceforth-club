@@ -161,7 +161,29 @@ export function buildWeekStrip(reviewsByDate, endDate) {
   }));
 }
 
-/** Assemble the deterministic retrospective. weekStrip/stateOfUnion/wins/misses/nextWeek are filled later. */
+/** The seven dates Sunday..Saturday of the calendar week containing endDate (the week ahead). */
+export function currentWeekDates(endDate) {
+  const end = new Date(`${endDate}T00:00:00Z`);
+  const sun = new Date(end);
+  sun.setUTCDate(end.getUTCDate() - end.getUTCDay());
+  const out = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(sun);
+    d.setUTCDate(sun.getUTCDate() + i);
+    out.push(d.toISOString().slice(0, 10));
+  }
+  return out;
+}
+
+/** A Sunday..Saturday plan skeleton for the week containing endDate; Wednesday is the update/review/article day. */
+export function weekPlanSkeleton(endDate) {
+  return currentWeekDates(endDate).map((date) => {
+    const wd = new Date(`${date}T00:00:00Z`).getUTCDay();
+    return { date, weekday: WEEKDAYS[wd], isReviewDay: wd === 3, tasks: [] };
+  });
+}
+
+/** Assemble the deterministic retrospective. weekStrip/weekPlan/stateOfUnion/wins/misses/nextWeek are filled later. */
 export function buildRetro({ reports, board, windowStart }) {
   const totals = aggregateTotals(reports);
   return {
@@ -171,6 +193,7 @@ export function buildRetro({ reports, board, windowStart }) {
     recurringReflags: recurringReflags(reports),
     ratios: ratios(totals),
     weekStrip: [],
+    weekPlan: [],
     stateOfUnion: "",
     wins: [], misses: [], nextWeek: [],
   };
