@@ -22,18 +22,21 @@ export function parseSalesTsv(text) {
   if (!lines.length) return [];
   const h = lines[0].split("\t");
   const at = (name) => h.indexOf(name);
-  const [iSku, iTitle, iUnits, iProc, iCur] = ["SKU", "Title", "Units", "Developer Proceeds", "Currency of Proceeds"].map(at);
+  const [iSku, iTitle, iType, iUnits, iProc, iCur] = ["SKU", "Title", "Product Type Identifier", "Units", "Developer Proceeds", "Currency of Proceeds"].map(at);
   return lines.slice(1).map((line) => {
     const c = line.split("\t");
-    return { sku: c[iSku], title: c[iTitle], units: Number(c[iUnits] ?? 0), proceeds: Number(c[iProc] ?? 0), currency: c[iCur] };
+    return { sku: c[iSku], title: c[iTitle], productType: c[iType], units: Number(c[iUnits] ?? 0), proceeds: Number(c[iProc] ?? 0), currency: c[iCur] };
   });
 }
 
-/** Sum units + proceeds per app, keyed by configured SKUs. */
+/** A "download" row is an app install (product type 1*); updates (7*) and in-app purchases (3*) are not downloads. */
+const isDownload = (r) => String(r.productType ?? "").startsWith("1");
+
+/** Sum DOWNLOAD units + proceeds per app, keyed by configured SKUs (updates and in-app purchases excluded). */
 export function sumByApp(rows, appSkus) {
   const out = {};
   for (const [app, skus] of Object.entries(appSkus)) {
-    const matched = rows.filter((r) => skus.includes(r.sku));
+    const matched = rows.filter((r) => skus.includes(r.sku) && isDownload(r));
     out[app] = {
       units: matched.reduce((n, r) => n + r.units, 0),
       proceeds: matched.reduce((n, r) => n + r.proceeds, 0),
