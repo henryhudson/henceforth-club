@@ -60,6 +60,7 @@ export default async function DocsPage() {
           <Link href="/board/report" className="underline">
             Report
           </Link>
+          <Link href="/board/week" className="underline">This week</Link>
         </div>
       </div>
       <p className="mt-1 text-sm text-muted">

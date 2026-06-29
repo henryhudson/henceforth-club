@@ -131,6 +131,7 @@ export default function BoardClient({
           <Link href="/board/docs" className="text-accent-green underline">
             Plans &amp; specs →
           </Link>
+          <Link href="/board/week" className="text-accent-green underline">This week →</Link>
         </div>
       </div>
 
