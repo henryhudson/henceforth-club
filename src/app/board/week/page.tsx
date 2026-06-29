@@ -112,7 +112,7 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
               <h3 className="mt-6 text-lg font-bold">Recurring re-flags — the noise to fix</h3>
               <ul className="mt-2 space-y-1">
                 {w.retro.recurringReflags.map((r) => (
-                  <li key={r.signature} className="text-sm">
+                  <li key={`${r.app}:${r.signature}`} className="text-sm">
                     <span className={`font-bold ${ACCENT[r.app] ?? "text-muted"}`}>{r.app}</span>{" "}
                     {r.title} — <span className="text-muted">flagged {r.timesFlagged}× since {r.firstSeen} ({r.status})</span>
                   </li>
@@ -143,7 +143,7 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
               <table className="mt-3 w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs uppercase tracking-wide text-muted">
-                    <th className="py-1">App</th><th>Units</th><th>WoW</th><th>Proceeds</th><th>WoW</th>
+                    <th className="py-1">App</th><th>Units</th><th>vs last week</th><th>Proceeds</th><th>vs last week</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -170,7 +170,7 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
             </>
           )}
 
-          {weeks.length > 1 && (
+          {weeks.length >= 1 && (
             <div className="mt-10 flex flex-wrap gap-2 text-xs text-muted">
               {weeks.map((d) => (
                 <Link key={d} href={`/board/week?date=${d}`} className={d === active ? "font-bold underline" : "underline"}>{d}</Link>
