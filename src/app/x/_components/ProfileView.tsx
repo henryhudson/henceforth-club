@@ -7,6 +7,35 @@ function formatDate(s?: string): string {
   return d.toLocaleDateString("en-GB", { year: "numeric", month: "short", day: "numeric" });
 }
 
+// Declared at module scope (not inside ProfileView's render) so it isn't
+// re-created — and its state reset — on every render. Takes what it needs as props.
+function Avatar({
+  size,
+  avatarUrl,
+  initial,
+}: {
+  size: number;
+  avatarUrl?: string;
+  initial: string;
+}) {
+  return avatarUrl ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={avatarUrl}
+      alt=""
+      className="rounded-full object-cover"
+      style={{ width: size, height: size }}
+    />
+  ) : (
+    <div
+      className="flex items-center justify-center rounded-full bg-accent/15 font-bold text-accent"
+      style={{ width: size, height: size }}
+    >
+      {initial}
+    </div>
+  );
+}
+
 export default function ProfileView({ archive }: { archive: XArchive }) {
   const { profile, posts } = archive;
   const initial = (profile.displayName || profile.handle || "?").charAt(0).toUpperCase();
@@ -30,31 +59,12 @@ export default function ProfileView({ archive }: { archive: XArchive }) {
     return true;
   });
 
-  function Avatar({ size }: { size: number }) {
-    return profile.avatarUrl ? (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={profile.avatarUrl}
-        alt=""
-        className="rounded-full object-cover"
-        style={{ width: size, height: size }}
-      />
-    ) : (
-      <div
-        className="flex items-center justify-center rounded-full bg-accent/15 font-bold text-accent"
-        style={{ width: size, height: size }}
-      >
-        {initial}
-      </div>
-    );
-  }
-
   return (
     <div className="mx-auto max-w-2xl px-6 pb-24">
       {/* Header */}
       <div className="rounded-2xl border border-card-border bg-card-bg p-6 sm:p-8">
         <div className="flex items-center gap-4">
-          <Avatar size={64} />
+          <Avatar size={64} avatarUrl={profile.avatarUrl} initial={initial} />
           <div>
             <h2 className="text-xl font-bold text-foreground">{profile.displayName ?? profile.handle}</h2>
             <p className="text-accent">@{profile.handle}</p>
@@ -92,7 +102,7 @@ export default function ProfileView({ archive }: { archive: XArchive }) {
             {/* The post */}
             <div className="flex gap-3">
               <div className="shrink-0">
-                <Avatar size={40} />
+                <Avatar size={40} avatarUrl={profile.avatarUrl} initial={initial} />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm">

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import type { XArchive } from "../parseArchive";
 import { socialArchiveToXArchive } from "../onchain";
 import { fetchTxArchive } from "@/lib/whatsonchain";
@@ -48,9 +49,9 @@ export default async function HandlePage(
         <div className="mx-auto max-w-2xl px-6 text-center">
           <h1 className="text-2xl font-bold text-foreground">@{handle}</h1>
           <p className="mt-3 text-muted">This profile isn&rsquo;t archived on Bitcoin yet.</p>
-          <a href="/x" className="mt-5 inline-block text-accent hover:underline">
+          <Link href="/x" className="mt-5 inline-block text-accent hover:underline">
             Archive a profile &rarr;
-          </a>
+          </Link>
         </div>
       </main>
     );
