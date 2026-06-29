@@ -136,38 +136,35 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
           )}
 
           <h2 className="mt-10 border-b border-card-border pb-1 text-xl font-bold">Driving sales</h2>
-          {w.sales.note ? (
-            <p className="mt-3 text-muted">{w.sales.note}</p>
-          ) : (
-            <>
-              <table className="mt-3 w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs uppercase tracking-wide text-muted">
-                    <th className="py-1">App</th><th>Units</th><th>vs last week</th><th>Proceeds</th><th>vs last week</th>
+          {w.sales.note && <p className="mt-3 text-muted">{w.sales.note}</p>}
+          {w.sales.perApp.length > 0 && (
+            <table className="mt-3 w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs uppercase tracking-wide text-muted">
+                  <th className="py-1">App</th><th>Units</th><th>vs last week</th><th>Proceeds</th><th>vs last week</th>
+                </tr>
+              </thead>
+              <tbody>
+                {w.sales.perApp.map((a) => (
+                  <tr key={a.app} className="border-t border-card-border">
+                    <td className={`py-1 font-bold ${ACCENT[a.app] ?? "text-foreground"}`}>{a.name}</td>
+                    <td>{a.units.thisWeek}</td>
+                    <td className="text-muted">{pct(a.units.deltaPct)}</td>
+                    <td>{a.proceeds.thisWeek} {a.proceeds.currency}</td>
+                    <td className="text-muted">{pct(a.proceeds.deltaPct)}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {w.sales.perApp.map((a) => (
-                    <tr key={a.app} className="border-t border-card-border">
-                      <td className={`py-1 font-bold ${ACCENT[a.app] ?? "text-foreground"}`}>{a.name}</td>
-                      <td>{a.units.thisWeek}</td>
-                      <td className="text-muted">{pct(a.units.deltaPct)}</td>
-                      <td>{a.proceeds.thisWeek} {a.proceeds.currency}</td>
-                      <td className="text-muted">{pct(a.proceeds.deltaPct)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {w.sales.drivers.length > 0 && (
-                <ul className="mt-4 space-y-2">
-                  {w.sales.drivers.map((d, i) => (
-                    <li key={i} className="text-sm">
-                      <span className={`font-bold ${ACCENT[d.app] ?? "text-foreground"}`}>{d.app}</span> — <span className="font-bold">{d.lever}:</span> <span className="text-muted">{d.action} ({d.rationale})</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {w.sales.drivers.length > 0 && (
+            <ul className="mt-4 space-y-2">
+              {w.sales.drivers.map((d, i) => (
+                <li key={i} className="text-sm">
+                  <span className={`font-bold ${ACCENT[d.app] ?? "text-foreground"}`}>{d.app}</span> — <span className="font-bold">{d.lever}:</span> <span className="text-muted">{d.action} ({d.rationale})</span>
+                </li>
+              ))}
+            </ul>
           )}
 
           {weeks.length >= 1 && (
