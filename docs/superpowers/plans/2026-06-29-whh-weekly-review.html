@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>/whh — Weekly Review · Implementation Plan · 2026-06-29</title>
+<style>
+  :root { --bg:#f4f1ea; --ink:#1c1a16; --muted:#6b6358; --rule:#d8d0c0; --accent:#a8431f; --accent-soft:#c4a572; --card:#fbf9f4; --code-bg:#1e1e1e; --code-ink:#e8e8e8; --ok:#2f6f3e; --warn:#a8431f; --shadow:0 1px 3px rgba(0,0,0,0.08); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.65;}
+  .wrap{max-width:880px;margin:0 auto;padding:56px 32px;} header.doc{margin-bottom:40px;border-bottom:2px solid var(--rule);padding-bottom:24px;}
+  .eyebrow{font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:34px;line-height:1.15;margin:0 0 12px;font-weight:700;letter-spacing:-0.01em;} h2{font-size:24px;margin:48px 0 14px;padding-top:20px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 10px;} .lede{font-size:19px;color:var(--muted);margin:0;} p{margin:14px 0;}
+  code{font-family:'SF Mono','JetBrains Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(0,0,0,0.06);padding:2px 6px;border-radius:4px;}
+  pre{background:var(--code-bg);color:var(--code-ink);padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;} th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .task{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:8px 22px 18px;margin:22px 0;box-shadow:var(--shadow);}
+  .task .tasknum{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);}
+  .files{font-size:14px;background:#efe9dc;border-radius:6px;padding:10px 14px;margin:10px 0;}
+  .files code{background:rgba(0,0,0,0.05);}
+  .try{background:#eef3e9;border-left:4px solid var(--ok);padding:10px 16px;border-radius:0 6px 6px 0;margin:14px 0;} .try strong{color:var(--ok);}
+  .note{background:#f6efe0;border-left:4px solid var(--accent-soft);padding:10px 16px;border-radius:0 6px 6px 0;margin:14px 0;}
+  .danger{background:#f7e8e2;border-left:4px solid var(--warn);padding:10px 16px;border-radius:0 6px 6px 0;margin:14px 0;} .danger strong{color:var(--warn);}
+  ul{margin:12px 0;padding-left:24px;} li{margin:5px 0;}
+  ul.steps{list-style:none;padding-left:4px;} ul.steps>li{margin:14px 0;padding-left:30px;position:relative;}
+  ul.steps>li input[type=checkbox]{position:absolute;left:0;top:5px;width:18px;height:18px;}
+  .badge{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:2px 8px;border-radius:999px;white-space:nowrap;}
+  .b-done{background:#dfeede;color:var(--ok);} .b-partial{background:#f6e7cf;color:#8a5a12;} .b-todo{background:#f3dcd2;color:var(--accent);} .b-wont{background:#e6e2d8;color:var(--muted);} .b-gate{background:#e7e0f0;color:#5a3a8a;}
+  .effort{font-size:13px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+  <div class="eyebrow">Implementation Plan · henceforth-club · branch <code>feat/whh-weekly-review</code></div>
+  <h1>/whh — the weekly review</h1>
+  <p class="lede">A hand-run <code>/whh</code> command that aggregates the week's daily <code>/hh</code> artifacts, pulls real App Store Connect sales, has an ultracode agent layer write the judgement, and publishes the whole thing to a gated <code>/board/week</code> page readable from any device.</p>
+  <p style="font-size:14px;color:var(--muted);margin:16px 0 0;">Implements <code>docs/superpowers/specs/2026-06-29-whh-weekly-review-design.html</code> (approved 2026-06-29). Every path, schema, and convention below was verified by a four-agent read-only investigation of the live <code>/hh</code> artifacts and the henceforth-club codebase. Execute task-by-task.</p>
+</header>
+
+<div class="note">
+<p><strong>For agentic workers:</strong> use <code>superpowers:subagent-driven-development</code> (recommended) or <code>superpowers:executing-plans</code>. Steps are real checkboxes. <strong>Phase&nbsp;0 is a gate</strong> for the <em>sales half only</em> — the retrospective half and the entire website plumbing build and verify without any App Store Connect credentials. The pure core (Phases&nbsp;1–2) is TDD — failing tests first, they are the definition of done, run via <code>vitest</code>. The feature adds <strong>zero new npm dependencies</strong> and <strong>zero middleware changes</strong>. Commit after each task.</p>
+</div>
+
+<h2>Design summary — what we settled</h2>
+<ul>
+<li><strong>Two halves, decoupled.</strong> The <em>retrospective</em> (how the week went, how to do better) aggregates data that already exists — no new credentials. The <em>sales</em> half (drive more sales) needs App Store Connect and is gated on Phase&nbsp;0 inputs. Either can ship without the other.</li>
+<li><strong>Hybrid engine.</strong> A deterministic aggregator owns every number (totals, throughput, deltas, recurring-reflag counts); an ultracode Workflow owns every judgement (wins, misses, next-week actions, sales drivers). Synthesis reads the numbers as ground truth and never recomputes them.</li>
+<li><strong>The page only renders.</strong> Like <code>report/page.tsx</code>, <code>/board/week</code> renders the published <code>weeks/&lt;date&gt;.json</code> from Upstash (local-file fallback). The aggregator + App Store Connect pull run offline inside <code>/whh</code>; the page is a trivial, fully-gated server component.</li>
+<li><strong>Zero new dependencies.</strong> Vitest already exists. The App Store Connect ES256 JWT is minted with built-in <code>node:crypto</code> (<code>dsaEncoding:"ieee-p1363"</code> emits the JOSE signature directly); the gzipped sales report unpacks with built-in <code>node:zlib</code>. No <code>jose</code>, no <code>jsonwebtoken</code>.</li>
+<li><strong>Sales covers three App Store apps</strong> — Henceforth (<code>id1602896145</code>), DaDeckOfCards (<code>id1520654142</code>), Hansard — and <strong>excludes Provenance</strong> (an operational watcher, not an App Store app).</li>
+<li><strong>Credentials stay local.</strong> Issuer id / key id / vendor number / <code>.p8</code> path live in <code>.env.local</code> (gitignored, beside the existing <code>KV_REST_API_*</code>); the <code>.p8</code> stays at <code>~/.appstoreconnect/</code>. Only computed aggregates reach Upstash and the website.</li>
+<li><strong>Recurring re-flags from report findings (v1).</strong> The week's <code>reports/&lt;date&gt;.json</code> findings already carry the signal (they self-number — "5th re-flag", "8th dismissal"), so v1 derives re-flags from them. Parsing the committed markdown corrections ledgers is a documented follow-on, not in this plan.</li>
+<li><strong>Sales Tier 1 now, Tier 2 later.</strong> This plan ships Tier 1 (units + proceeds + week-over-week). Tier 2 — the App Analytics impressions→conversion funnel — is a documented follow-on that lights up once its report request has been live a couple of days; the page degrades gracefully without it, and drivers fall back to units/proceeds trend plus qualitative App Store optimisation.</li>
+</ul>
+
+<h2>Global constraints</h2>
+<ul>
+<li><strong>Package manager:</strong> this repo uses <strong>npm</strong> (not bun). Commands: <code>npm run build</code>, <code>npm run lint</code>, <code>npm test</code> (= <code>vitest run</code>).</li>
+<li><strong>Modules:</strong> <code>package.json</code> has no <code>"type"</code> field → scripts use the <code>.mjs</code> extension for ES modules. New scripts match <code>scripts/board/*.mjs</code> exactly.</li>
+<li><strong>Upstash:</strong> publishers construct <code>new Redis({ url, token })</code> reading <code>KV_REST_API_URL || UPSTASH_REDIS_REST_URL</code> and the matching token; <code>redis.set(key, obj)</code> is passed the object directly (no <code>JSON.stringify</code>). Pages use the lazy <code>getRedis()</code> from <code>@/lib/redis</code>, never a direct client.</li>
+<li><strong>Gating:</strong> <code>src/middleware.ts</code> matcher <code>["/board", "/board/:path*"]</code> already gates <code>/board/week</code>. Do not modify it.</li>
+<li><strong>Git:</strong> branch + pull-request workflow; no direct <code>main</code> push, no force-push. Work on <code>feat/whh-weekly-review</code> (already created off <code>feat/board-plan-and-docs</code>; the spec is its first commit).</li>
+<li><strong>Prose:</strong> no acronyms / initialisms in any committed text or chat — spell things out ("pull request", "continuous integration", "App Store review").</li>
+<li><strong>App Store apps for sales:</strong> <code>henceforth</code>, <code>deck</code>, <code>hansard</code>. <strong>Provenance excluded.</strong></li>
+<li><strong>App→accent tokens</strong> (for the page): <code>henceforth → text-accent-warm</code> (amber), <code>hansard → text-accent-green</code> (green), <code>deck → text-accent</code> (cyan).</li>
+</ul>
+
+<h2>File structure</h2>
+<table>
+<tr><th>Path</th><th>Responsibility</th></tr>
+<tr><td><code>scripts/board/whh-aggregate.mjs</code> <em>(create)</em></td><td><strong>Pure.</strong> Deterministic aggregation over the week's report JSONs + board: window math, totals, per-app, ratios, recurring re-flags, throughput. No I/O.</td></tr>
+<tr><td><code>scripts/board/whh-aggregate.test.mjs</code> <em>(create)</em></td><td>Vitest unit tests for every pure function above (fixtures inline).</td></tr>
+<tr><td><code>scripts/board/asc-client.mjs</code> <em>(create)</em></td><td>App Store Connect client: ES256 JWT (<code>node:crypto</code>), sales-report TSV parse (<code>node:zlib</code>), per-app sums + week-over-week deltas.</td></tr>
+<tr><td><code>scripts/board/asc-client.test.mjs</code> <em>(create)</em></td><td>Vitest: JWT structure, TSV parse, delta math, per-app sums (network mocked).</td></tr>
+<tr><td><code>scripts/board/whh-run.mjs</code> <em>(create)</em></td><td>Orchestration: load the week's reports + board, run aggregator + optional sales, write <code>content/board/weeks/&lt;date&gt;.json</code>.</td></tr>
+<tr><td><code>scripts/board/whh-run.test.mjs</code> <em>(create)</em></td><td>Vitest: window math + assembly against fixtures (no live App Store Connect).</td></tr>
+<tr><td><code>scripts/board/publish-week.mjs</code> <em>(create)</em></td><td>Mirror of <code>publish.mjs</code>: publish <code>board:week:&lt;date&gt;</code> + <code>board:weeks</code> to Upstash.</td></tr>
+<tr><td><code>vitest.config.ts</code> <em>(modify)</em></td><td>Add <code>scripts/**/*.test.mjs</code> to <code>include</code>.</td></tr>
+<tr><td><code>src/app/board/week/page.tsx</code> <em>(create)</em></td><td>Gated server component rendering the published <code>WeekReport</code> (mirrors <code>report/page.tsx</code>).</td></tr>
+<tr><td><code>src/app/board/BoardClient.tsx</code>, <code>report/page.tsx</code>, <code>docs/page.tsx</code> <em>(modify)</em></td><td>Add a "This week" link into each page's existing link cluster.</td></tr>
+<tr><td><code>~/.claude/commands/whh.md</code> <em>(create)</em></td><td>The <code>/whh</code> orchestrator command (numbers → synthesis Workflow → publish).</td></tr>
+<tr><td><code>.env.local</code> <em>(modify, local-only, gitignored)</em></td><td>Add <code>ASC_ISSUER_ID</code>, <code>ASC_KEY_ID</code>, <code>ASC_KEY_PATH</code>, <code>ASC_VENDOR_NUMBER</code>, per-app <code>ASC_SKU_*</code>.</td></tr>
+</table>
+
+<h2>Phase 0 — Prerequisites gate (sales half only) <span class="badge b-gate">needs values from Henry</span></h2>
+<div class="note"><strong>This gate blocks only Phase&nbsp;2–3 sales wiring and Phase&nbsp;6 sales validation.</strong> Phases 1, 4, 5 and the retrospective validation run with none of it. Capture these into <code>.env.local</code> before running the sales pull.</div>
+
+<div class="task">
+<div class="tasknum">T0.1 · Collect App Store Connect credentials</div>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Issuer ID</strong> — App Store Connect → <em>Users and Access → Integrations → App Store Connect API</em>. One value per team. → <code>ASC_ISSUER_ID</code>.</li>
+<li><input type="checkbox"> <strong>Key + role</strong> — confirm which existing key (<code>~/.appstoreconnect/AuthKey_SNR44PUTBF.p8</code> or <code>~/.appstoreconnect/private_keys/AuthKey_5UB498DL82.p8</code>) carries <em>Sales</em> (and, for Tier&nbsp;2, <em>Admin</em>/Analytics) access. Set <code>ASC_KEY_ID</code> (the 10-char id in the filename) and <code>ASC_KEY_PATH</code> (absolute path). If neither key has Sales access, mint a dedicated key with the <em>Sales and Reports</em> role.</li>
+<li><input type="checkbox"> <strong>Vendor number</strong> — the 8-digit id from <em>Payments and Financial Reports</em> (distinct from the Issuer ID). → <code>ASC_VENDOR_NUMBER</code>.</li>
+<li><input type="checkbox"> <strong>Per-app SKUs</strong> — the SKU string each app uses in its sales report rows (App Store Connect → app → <em>App Information</em>). → <code>ASC_SKU_HENCEFORTH</code>, <code>ASC_SKU_DECK</code>, <code>ASC_SKU_HANSARD</code>.</li>
+<li><input type="checkbox"> Append all of the above to <code>henceforth-club/.env.local</code> (gitignored). Do <strong>not</strong> commit it; do not print the <code>.p8</code> contents anywhere.</li>
+</ul>
+</div>
+
+<h2>Phase 1 — The deterministic aggregator (TDD) <span class="badge b-todo">tests first</span></h2>
+<div class="note"><p>All pure functions: report JSONs + board object in, weekly numbers out. Write the failing tests first — they are the spec. No I/O, no network, no Upstash. The first step wires <code>.mjs</code> tests into Vitest so the rest can run.</p></div>
+
+<div class="task">
+<div class="tasknum">T1.1 · Wire <code>.mjs</code> tests into Vitest + window math (TDD)</div>
+<div class="files">Modify: <code>vitest.config.ts</code> · Create: <code>scripts/board/whh-aggregate.test.mjs</code>, <code>scripts/board/whh-aggregate.mjs</code></div>
+<ul class="steps">
+<li><input type="checkbox"> In <code>vitest.config.ts</code>, extend the include glob so script tests are discovered:
+<pre><code>include: ['src/**/*.test.ts', 'scripts/**/*.test.mjs'],</code></pre></li>
+<li><input type="checkbox"> <strong>Failing test first</strong> — create <code>scripts/board/whh-aggregate.test.mjs</code>:
+<pre><code>import { describe, it, expect } from "vitest";
+import { windowDates } from "./whh-aggregate.mjs";
+
+describe("windowDates", () =&gt; {
+  it("returns the trailing N calendar days ending endDate, ascending", () =&gt; {
+    expect(windowDates("2026-06-29", 7)).toEqual([
+      "2026-06-23","2026-06-24","2026-06-25",
+      "2026-06-26","2026-06-27","2026-06-28","2026-06-29",
+    ]);
+  });
+});</code></pre></li>
+<li><input type="checkbox"> Run and confirm it FAILS: <code>npx vitest run scripts/board/whh-aggregate.test.mjs</code> → expected <em>"Failed to resolve import ./whh-aggregate.mjs"</em>.</li>
+<li><input type="checkbox"> Create <code>scripts/board/whh-aggregate.mjs</code> with the implementation:
+<pre><code>// Pure aggregation over a week of daily /hh report JSONs + the kanban board.
+// All functions are I/O-free and unit-tested. JSDoc typedefs document the shape
+// the page (src/app/board/week/page.tsx) renders.
+
+/** @returns {string[]} trailing `days` calendar dates ending `endDate`, ascending. */
+export function windowDates(endDate, days = 7) {
+  const end = new Date(`${endDate}T00:00:00Z`);
+  const out = [];
+  for (let i = days - 1; i &gt;= 0; i--) {
+    const d = new Date(end);
+    d.setUTCDate(end.getUTCDate() - i);
+    out.push(d.toISOString().slice(0, 10));
+  }
+  return out;
+}</code></pre></li>
+<li><input type="checkbox"> Run and confirm it PASSES: <code>npx vitest run scripts/board/whh-aggregate.test.mjs</code> → 1 passed.</li>
+<li><input type="checkbox"> Commit: <code>git add vitest.config.ts scripts/board/whh-aggregate.*</code> then <code>git commit -m "whh: window math + vitest .mjs glob"</code>.</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">T1.2 · Totals across the week (TDD)</div>
+<div class="files">Edit: <code>scripts/board/whh-aggregate.test.mjs</code>, <code>scripts/board/whh-aggregate.mjs</code></div>
+<div class="note"><code>verdictsSurvivedRefutation</code> is a <strong>string</strong> like <code>"10/10"</code> in real reports — parse it as <code>n/m</code>, never sum it as an integer. (Verified against <code>content/board/reports/2026-06-29.json</code>.)</div>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Failing tests first</strong> — append:
+<pre><code>import { parseSurvived, aggregateTotals } from "./whh-aggregate.mjs";
+
+it("parseSurvived reads n/m strings and tolerates junk", () =&gt; {
+  expect(parseSurvived("10/10")).toEqual({ survived: 10, total: 10 });
+  expect(parseSurvived("7/9")).toEqual({ survived: 7, total: 9 });
+  expect(parseSurvived(undefined)).toEqual({ survived: 0, total: 0 });
+});
+
+it("aggregateTotals sums summary fields and accumulates survived n/m", () =&gt; {
+  const reports = [
+    { summary: { reviews: 3, confirmed: 3, rejected: 3, abstained: 1, alreadyResolved: 1, skipped: 1, newConfirmedDefects: 0, boardMoves: 1, verdictsSurvivedRefutation: "10/10" } },
+    { summary: { reviews: 2, confirmed: 1, rejected: 2, abstained: 0, alreadyResolved: 0, skipped: 0, newConfirmedDefects: 1, boardMoves: 2, verdictsSurvivedRefutation: "5/6" } },
+  ];
+  const t = aggregateTotals(reports);
+  expect(t.reviews).toBe(5);
+  expect(t.confirmed).toBe(4);
+  expect(t.boardMoves).toBe(3);
+  expect(t.verdictsSurvived).toBe(15);
+  expect(t.verdictsTotal).toBe(16);
+});</code></pre></li>
+<li><input type="checkbox"> Run → FAIL (functions undefined).</li>
+<li><input type="checkbox"> Implement in <code>whh-aggregate.mjs</code>:
+<pre><code>export function parseSurvived(value) {
+  if (typeof value === "number") return { survived: value, total: value };
+  if (typeof value !== "string") return { survived: 0, total: 0 };
+  const m = value.match(/(\d+)\s*\/\s*(\d+)/);
+  return m ? { survived: Number(m[1]), total: Number(m[2]) } : { survived: 0, total: 0 };
+}
+
+const SUMMARY_KEYS = ["reviews","confirmed","rejected","abstained","alreadyResolved","skipped","newConfirmedDefects","boardMoves"];
+
+export function aggregateTotals(reports) {
+  const totals = Object.fromEntries(SUMMARY_KEYS.map((k) =&gt; [k, 0]));
+  let survived = 0, survivedTotal = 0;
+  for (const r of reports) {
+    const s = r.summary ?? {};
+    for (const k of SUMMARY_KEYS) totals[k] += Number(s[k] ?? 0);
+    const v = parseSurvived(s.verdictsSurvivedRefutation);
+    survived += v.survived; survivedTotal += v.total;
+  }
+  return { ...totals, verdictsSurvived: survived, verdictsTotal: survivedTotal };
+}</code></pre></li>
+<li><input type="checkbox"> Run → PASS. Commit: <code>git commit -am "whh: weekly totals with n/m survival parsing"</code>.</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">T1.3 · Per-app verdict counts + ratios (TDD)</div>
+<div class="files">Edit: <code>scripts/board/whh-aggregate.test.mjs</code>, <code>scripts/board/whh-aggregate.mjs</code></div>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Failing tests first</strong> — append (use the four real apps + verdicts <code>confirm/reject/abstain/already-resolved</code>):
+<pre><code>import { perApp, ratios } from "./whh-aggregate.mjs";
+
+it("perApp groups findings by app and counts verdicts", () =&gt; {
+  const reports = [{ apps: [
+    { app: "henceforth", name: "Henceforth", reviewFound: true, findings: [
+      { verdict: "confirm" }, { verdict: "confirm" }, { verdict: "reject" } ] },
+    { app: "hansard", name: "Hansard", reviewFound: true, findings: [
+      { verdict: "reject" }, { verdict: "abstain" }, { verdict: "already-resolved" } ] },
+  ] }];
+  const a = perApp(reports);
+  const h = a.find((x) =&gt; x.app === "henceforth");
+  expect(h.confirm).toBe(2); expect(h.reject).toBe(1); expect(h.reviews).toBe(1);
+});
+
+it("ratios derive from totals safely on zero denominators", () =&gt; {
+  const r = ratios({ confirmed: 4, rejected: 0, abstained: 1, verdictsSurvived: 15, verdictsTotal: 16 });
+  expect(r.confirmRejectRatio).toBeNull();
+  expect(r.survivedRefutation).toBeCloseTo(15 / 16);
+});</code></pre></li>
+<li><input type="checkbox"> Run → FAIL. Implement:
+<pre><code>const VERDICTS = ["confirm","reject","abstain","already-resolved"];
+
+export function perApp(reports) {
+  const byApp = new Map();
+  for (const r of reports) for (const a of r.apps ?? []) {
+    const cur = byApp.get(a.app) ?? { app: a.app, name: a.name ?? a.app, reviews: 0, confirm: 0, reject: 0, abstain: 0, "already-resolved": 0 };
+    if (a.reviewFound) cur.reviews += 1;
+    for (const f of a.findings ?? []) if (VERDICTS.includes(f.verdict)) cur[f.verdict] += 1;
+    byApp.set(a.app, cur);
+  }
+  return [...byApp.values()];
+}
+
+export function ratios(t) {
+  const confirmRejectRatio = t.rejected === 0 ? null : t.confirmed / t.rejected;
+  const adjudicated = t.confirmed + t.rejected + t.abstained;
+  const abstainRate = adjudicated === 0 ? 0 : t.abstained / adjudicated;
+  const survivedRefutation = t.verdictsTotal === 0 ? null : t.verdictsSurvived / t.verdictsTotal;
+  return { confirmRejectRatio, abstainRate, survivedRefutation };
+}</code></pre></li>
+<li><input type="checkbox"> Run → PASS. Commit: <code>git commit -am "whh: per-app verdict counts and safe ratios"</code>.</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">T1.4 · Recurring re-flags (TDD)</div>
+<div class="files">Edit: <code>scripts/board/whh-aggregate.test.mjs</code>, <code>scripts/board/whh-aggregate.mjs</code></div>
+<div class="note">The highest-leverage "do better" signal: findings the reviewer keeps re-deriving. Real findings self-number ("5th re-flag", "8th dismissal") and recur across days — group by a stable signature (app + title with volatile suffixes stripped) and surface count + verdict trend.</div>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Failing tests first</strong> — append:
+<pre><code>import { reflagSignature, recurringReflags } from "./whh-aggregate.mjs";
+
+it("reflagSignature strips re-flag ordinals, dates, and 'already carded'", () =&gt; {
+  expect(reflagSignature("Timeline nil-billId id collision — 8th re-flag"))
+    .toBe("timeline nil-billid id collision");
+});
+
+it("recurringReflags groups a finding seen across days and reads its ordinal", () =&gt; {
+  const mk = (date, title, verdict, rec = "") =&gt; ({ date, apps: [{ app: "hansard", findings: [{ title, verdict, recommendation: rec }] }] });
+  const reports = [
+    mk("2026-06-27", "nil-billId collision — 6th re-flag", "reject"),
+    mk("2026-06-28", "nil-billId collision — 7th re-flag", "reject"),
+    mk("2026-06-29", "nil-billId collision — 8th re-flag", "reject", "Reject (8th dismissal)"),
+  ];
+  const out = recurringReflags(reports);
+  expect(out).toHaveLength(1);
+  expect(out[0].app).toBe("hansard");
+  expect(out[0].timesFlagged).toBe(8);
+  expect(out[0].status).toBe("serially-rejected");
+  expect(out[0].firstSeen).toBe("2026-06-27");
+});</code></pre></li>
+<li><input type="checkbox"> Run → FAIL. Implement:
+<pre><code>export function reflagSignature(title) {
+  return String(title)
+    .replace(/\s*[—-]\s*\d+(st|nd|rd|th)\s+re-?flag.*$/i, "")
+    .replace(/\s*[—-]\s*already carded.*$/i, "")
+    .replace(/\d{4}-\d{2}-\d{2}/g, "")
+    .trim().toLowerCase();
+}
+
+const ORDINAL = /(\d+)(?:st|nd|rd|th)\s+(?:re-?flag|dismissal)/i;
+
+export function recurringReflags(reports) {
+  const groups = new Map();
+  for (const r of reports) for (const a of r.apps ?? []) for (const f of a.findings ?? []) {
+    const sig = reflagSignature(f.title);
+    if (!sig) continue;
+    const key = `${a.app}::${sig}`;
+    const g = groups.get(key) ?? { signature: sig, app: a.app, title: f.title, days: [], verdicts: [], maxOrdinal: 0 };
+    g.days.push(r.date); g.verdicts.push(f.verdict);
+    const m = `${f.title} ${f.recommendation ?? ""}`.match(ORDINAL);
+    if (m) g.maxOrdinal = Math.max(g.maxOrdinal, Number(m[1]));
+    groups.set(key, g);
+  }
+  return [...groups.values()]
+    .filter((g) =&gt; g.days.length &gt; 1 || g.maxOrdinal &gt;= 2)
+    .map((g) =&gt; ({
+      signature: g.signature, app: g.app, title: g.title,
+      timesFlagged: Math.max(g.days.length, g.maxOrdinal),
+      firstSeen: g.days.slice().sort()[0],
+      status: g.verdicts.every((v) =&gt; v === "reject") ? "serially-rejected"
+            : g.verdicts.includes("already-resolved") ? "resolved" : "mixed",
+    }))
+    .sort((a, b) =&gt; b.timesFlagged - a.timesFlagged);
+}</code></pre></li>
+<li><input type="checkbox"> Run → PASS. Commit: <code>git commit -am "whh: recurring re-flag detection"</code>.</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">T1.5 · Throughput + the assembled retro (TDD)</div>
+<div class="files">Edit: <code>scripts/board/whh-aggregate.test.mjs</code>, <code>scripts/board/whh-aggregate.mjs</code></div>
+<div class="note">The board has no per-card timestamps, so "stuck" is honest best-effort: cards currently in <code>inprogress</code>/<code>review</code> whose earliest embedded date predates the window start. <code>buildRetro</code> leaves <code>wins/misses/nextWeek</code> empty for the synthesis layer.</div>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Failing tests first</strong> — append:
+<pre><code>import { earliestDateIn, throughput, buildRetro } from "./whh-aggregate.mjs";
+
+it("earliestDateIn finds the earliest ISO date in free text", () =&gt; {
+  expect(earliestDateIn("surfaced 2026-06-27 (carry-forward 2026-06-22)")).toBe("2026-06-22");
+  expect(earliestDateIn("no date here")).toBeNull();
+});
+
+it("throughput censuses columns and flags pre-window stuck cards", () =&gt; {
+  const board = { cards: [
+    { id: "a", col: "done", apps: ["deck"], title: "A" },
+    { id: "find-x-2026-06-10", col: "review", apps: ["henceforth"], title: "X", source: "2026-06-10" },
+    { id: "y", col: "inprogress", apps: ["hansard"], title: "Y", desc: "started 2026-06-28" },
+  ] };
+  const t = throughput(board, "2026-06-23");
+  expect(t.doneCount).toBe(1);
+  expect(t.stuck.map((s) =&gt; s.id)).toEqual(["find-x-2026-06-10"]);
+});
+
+it("buildRetro assembles numbers and leaves judgement empty", () =&gt; {
+  const reports = [{ date: "2026-06-29", summary: { reviews: 3, confirmed: 3, rejected: 3, abstained: 1, alreadyResolved: 1, skipped: 1, newConfirmedDefects: 0, boardMoves: 1, verdictsSurvivedRefutation: "10/10" }, apps: [] }];
+  const retro = buildRetro({ reports, board: { cards: [] }, windowStart: "2026-06-23" });
+  expect(retro.totals.reviews).toBe(3);
+  expect(retro.wins).toEqual([]);
+  expect(retro.nextWeek).toEqual([]);
+});</code></pre></li>
+<li><input type="checkbox"> Run → FAIL. Implement:
+<pre><code>export function earliestDateIn(text) {
+  const m = String(text).match(/\d{4}-\d{2}-\d{2}/g);
+  return m ? m.sort()[0] : null;
+}
+
+export function throughput(board, windowStart) {
+  const cards = board?.cards ?? [];
+  const census = {};
+  for (const c of cards) census[c.col] = (census[c.col] ?? 0) + 1;
+  const stuck = cards
+    .filter((c) =&gt; c.col === "inprogress" || c.col === "review")
+    .map((c) =&gt; ({ id: c.id, title: c.title, app: (c.apps ?? [])[0] ?? "*", col: c.col, firstSeen: earliestDateIn(`${c.id} ${c.source ?? ""} ${c.desc ?? ""}`) }))
+    .filter((c) =&gt; c.firstSeen &amp;&amp; c.firstSeen &lt; windowStart)
+    .sort((a, b) =&gt; (a.firstSeen &lt; b.firstSeen ? -1 : 1));
+  return { columnCensus: census, doneCount: census.done ?? 0, stuck };
+}
+
+export function buildRetro({ reports, board, windowStart }) {
+  const totals = aggregateTotals(reports);
+  return {
+    totals: Object.fromEntries(SUMMARY_KEYS.map((k) =&gt; [k, totals[k]])),
+    perApp: perApp(reports),
+    throughput: throughput(board, windowStart),
+    recurringReflags: recurringReflags(reports),
+    ratios: ratios(totals),
+    wins: [], misses: [], nextWeek: [],
+  };
+}</code></pre></li>
+<li><input type="checkbox"> Run the whole file → all PASS: <code>npx vitest run scripts/board/whh-aggregate.test.mjs</code>. Commit: <code>git commit -am "whh: throughput + assembled retrospective"</code>.</li>
+</ul>
+</div>
+
+<h2>Phase 2 — App Store Connect client (TDD) <span class="badge b-todo">zero new deps</span></h2>
+<div class="note"><p>JWT minting and report parsing are pure and fully tested; the network call is injected (a <code>fetchImpl</code> parameter) so tests never hit Apple. Built-ins only: <code>node:crypto</code>, <code>node:zlib</code>.</p></div>
+
+<div class="task">
+<div class="tasknum">T2.1 · Mint the ES256 JWT (TDD)</div>
+<div class="files">Create: <code>scripts/board/asc-client.test.mjs</code>, <code>scripts/board/asc-client.mjs</code></div>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Failing test first</strong> — generate a throwaway EC key in the test, mint, and assert structure:
+<pre><code>import { describe, it, expect } from "vitest";
+import { generateKeyPairSync } from "node:crypto";
+import { mintJWT } from "./asc-client.mjs";
+
+describe("mintJWT", () =&gt; {
+  it("produces a 3-part ES256 JWT with the right header and claims", () =&gt; {
+    const { privateKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
+    const pem = privateKey.export({ type: "pkcs8", format: "pem" });
+    const jwt = mintJWT({ issuerId: "ISS", keyId: "KID12345AB", privateKeyPem: pem, now: 1000, ttl: 1200 });
+    const [h, p, s] = jwt.split(".");
+    expect(jwt.split(".")).toHaveLength(3);
+    const header = JSON.parse(Buffer.from(h, "base64url").toString());
+    const payload = JSON.parse(Buffer.from(p, "base64url").toString());
+    expect(header).toMatchObject({ alg: "ES256", kid: "KID12345AB", typ: "JWT" });
+    expect(payload).toMatchObject({ iss: "ISS", aud: "appstoreconnect-v1", iat: 1000, exp: 2200 });
+    expect(Buffer.from(s, "base64url")).toHaveLength(64); // JOSE r||s, not DER
+  });
+});</code></pre></li>
+<li><input type="checkbox"> Run → FAIL. Implement:
+<pre><code>import { createPrivateKey, sign } from "node:crypto";
+import { gunzipSync } from "node:zlib";
+
+const b64url = (buf) =&gt; Buffer.from(buf).toString("base64url");
+
+/** Short-lived ES256 JWT for the App Store Connect API. */
+export function mintJWT({ issuerId, keyId, privateKeyPem, now = Math.floor(Date.now() / 1000), ttl = 1200 }) {
+  const header = { alg: "ES256", kid: keyId, typ: "JWT" };
+  const payload = { iss: issuerId, iat: now, exp: now + ttl, aud: "appstoreconnect-v1" };
+  const input = `${b64url(JSON.stringify(header))}.${b64url(JSON.stringify(payload))}`;
+  const signature = sign("sha256", Buffer.from(input), { key: createPrivateKey(privateKeyPem), dsaEncoding: "ieee-p1363" });
+  return `${input}.${b64url(signature)}`;
+}</code></pre></li>
+<li><input type="checkbox"> Run → PASS. Commit: <code>git add scripts/board/asc-client.*</code> then <code>git commit -m "whh: App Store Connect ES256 JWT via node:crypto"</code>.</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">T2.2 · Parse the sales report + per-app sums + deltas (TDD)</div>
+<div class="files">Edit: <code>scripts/board/asc-client.test.mjs</code>, <code>scripts/board/asc-client.mjs</code></div>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Failing tests first</strong> — append (the report is tab-separated with an <code>Units</code> + <code>Developer Proceeds</code> column):
+<pre><code>import { parseSalesTsv, sumByApp, delta } from "./asc-client.mjs";
+
+const TSV = [
+  "SKU\tTitle\tUnits\tDeveloper Proceeds\tCurrency of Proceeds",
+  "HENCE01\tHenceforth\t4\t2.79\tGBP",
+  "DECK01\tDeck of Cards\t1\t0.00\tGBP",
+].join("\n");
+
+it("parseSalesTsv reads units and proceeds per row", () =&gt; {
+  const rows = parseSalesTsv(TSV);
+  expect(rows[0]).toMatchObject({ sku: "HENCE01", units: 4, proceeds: 2.79, currency: "GBP" });
+});
+
+it("sumByApp totals units/proceeds by configured SKU", () =&gt; {
+  const out = sumByApp(parseSalesTsv(TSV), { henceforth: ["HENCE01"], deck: ["DECK01"], hansard: ["HANS01"] });
+  expect(out.henceforth.units).toBe(4);
+  expect(out.hansard.units).toBe(0);
+});
+
+it("delta is fractional vs last week, null when no baseline", () =&gt; {
+  expect(delta(6, 4)).toBeCloseTo(0.5);
+  expect(delta(3, 0)).toBeNull();
+  expect(delta(0, 0)).toBe(0);
+});</code></pre></li>
+<li><input type="checkbox"> Run → FAIL. Implement:
+<pre><code>export function parseSalesTsv(text) {
+  const lines = text.split("\n").filter((l) =&gt; l.length);
+  if (!lines.length) return [];
+  const h = lines[0].split("\t");
+  const at = (name) =&gt; h.indexOf(name);
+  const [iSku, iTitle, iUnits, iProc, iCur] = ["SKU","Title","Units","Developer Proceeds","Currency of Proceeds"].map(at);
+  return lines.slice(1).map((line) =&gt; {
+    const c = line.split("\t");
+    return { sku: c[iSku], title: c[iTitle], units: Number(c[iUnits] ?? 0), proceeds: Number(c[iProc] ?? 0), currency: c[iCur] };
+  });
+}
+
+export function sumByApp(rows, appSkus) {
+  const out = {};
+  for (const [app, skus] of Object.entries(appSkus)) {
+    const matched = rows.filter((r) =&gt; skus.includes(r.sku));
+    out[app] = {
+      units: matched.reduce((n, r) =&gt; n + r.units, 0),
+      proceeds: matched.reduce((n, r) =&gt; n + r.proceeds, 0),
+      currency: matched[0]?.currency ?? null,
+    };
+  }
+  return out;
+}
+
+export function delta(thisWeek, lastWeek) {
+  if (lastWeek === 0) return thisWeek === 0 ? 0 : null;
+  return (thisWeek - lastWeek) / lastWeek;
+}</code></pre></li>
+<li><input type="checkbox"> Run → PASS. Commit: <code>git commit -am "whh: sales TSV parse, per-app sums, week-over-week delta"</code>.</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">T2.3 · The fetch orchestration (TDD with injected fetch)</div>
+<div class="files">Edit: <code>scripts/board/asc-client.test.mjs</code>, <code>scripts/board/asc-client.mjs</code></div>
+<div class="note"><code>fetchSalesReport</code> takes a <code>fetchImpl</code> param so the test injects a fake returning a gzipped buffer; <code>404</code> means "no sales that period" → empty, not an error. <code>pullSales</code> fetches this-week + last-week report dates and assembles the <code>sales</code> object.</div>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Failing test first</strong> — append (gzip a fixture, feed it through a fake fetch):
+<pre><code>import { gzipSync } from "node:zlib";
+import { fetchSalesReport } from "./asc-client.mjs";
+
+it("fetchSalesReport gunzips + parses; 404 → empty", async () =&gt; {
+  const body = gzipSync(Buffer.from(TSV));
+  const okFetch = async () =&gt; ({ ok: true, status: 200, arrayBuffer: async () =&gt; body });
+  const rows = await fetchSalesReport({ jwt: "x", vendorNumber: "1", reportDate: "2026-06-29", fetchImpl: okFetch });
+  expect(rows[0].sku).toBe("HENCE01");
+  const notFound = async () =&gt; ({ ok: false, status: 404 });
+  expect(await fetchSalesReport({ jwt: "x", vendorNumber: "1", reportDate: "2026-06-29", fetchImpl: notFound })).toEqual([]);
+});</code></pre></li>
+<li><input type="checkbox"> Run → FAIL. Implement (and add the assembly helper <code>pullSales</code>):
+<pre><code>const ASC_BASE = "https://api.appstoreconnect.apple.com/v1";
+
+export async function fetchSalesReport({ jwt, vendorNumber, reportDate, frequency = "WEEKLY", fetchImpl = fetch }) {
+  const params = new URLSearchParams({
+    "filter[frequency]": frequency, "filter[reportType]": "SALES",
+    "filter[reportSubType]": "SUMMARY", "filter[vendorNumber]": vendorNumber,
+    "filter[reportDate]": reportDate, "filter[version]": "1_1",
+  });
+  const res = await fetchImpl(`${ASC_BASE}/salesReports?${params}`, {
+    headers: { Authorization: `Bearer ${jwt}`, Accept: "application/a-gzip" },
+  });
+  if (res.status === 404) return [];
+  if (!res.ok) throw new Error(`App Store Connect salesReports ${res.status}`);
+  return parseSalesTsv(gunzipSync(Buffer.from(await res.arrayBuffer())).toString("utf8"));
+}
+
+/** Assemble the sales half: this-week vs last-week units/proceeds per app. */
+export async function pullSales({ creds, appSkus, names, thisDate, lastDate, fetchImpl = fetch }) {
+  const jwt = mintJWT(creds);
+  const [now, prev] = await Promise.all([
+    fetchSalesReport({ jwt, vendorNumber: creds.vendorNumber, reportDate: thisDate, fetchImpl }),
+    fetchSalesReport({ jwt, vendorNumber: creds.vendorNumber, reportDate: lastDate, fetchImpl }),
+  ]);
+  const a = sumByApp(now, appSkus), b = sumByApp(prev, appSkus);
+  const perApp = Object.keys(appSkus).map((app) =&gt; ({
+    app, name: names[app] ?? app,
+    units: { thisWeek: a[app].units, lastWeek: b[app].units, deltaPct: delta(a[app].units, b[app].units) },
+    proceeds: { thisWeek: a[app].proceeds, lastWeek: b[app].proceeds, currency: a[app].currency ?? b[app].currency, deltaPct: delta(a[app].proceeds, b[app].proceeds) },
+  }));
+  return { window: { thisWeek: thisDate, lastWeek: lastDate }, perApp, drivers: [] };
+}</code></pre>
+<span class="effort">Note: <code>mintJWT</code> uses <code>Math.floor(Date.now()/1000)</code> by default — fine in this normal Node script (the <code>Date.now()</code> ban applies only to Workflow scripts).</span></li>
+<li><input type="checkbox"> Run → PASS. Commit: <code>git commit -am "whh: App Store Connect fetch orchestration + pullSales"</code>.</li>
+</ul>
+</div>
+
+<h2>Phase 3 — Assembly + publish <span class="badge b-todo">writes the artifact</span></h2>
+
+<div class="task">
+<div class="tasknum">T3.1 · The runner — load inputs, write <code>weeks/&lt;date&gt;.json</code> (TDD on assembly)</div>
+<div class="files">Create: <code>scripts/board/whh-run.test.mjs</code>, <code>scripts/board/whh-run.mjs</code></div>
+<div class="note">The runner is mostly I/O, but its window + assembly logic is testable via an exported <code>assemble()</code> that takes already-loaded inputs. The file-reading entry point is exercised by the Phase&nbsp;6 real run.</div>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Failing test first</strong> — create <code>scripts/board/whh-run.test.mjs</code>:
+<pre><code>import { describe, it, expect } from "vitest";
+import { assemble } from "./whh-run.mjs";
+
+describe("assemble", () =&gt; {
+  it("builds a WeekReport with retro numbers and a skipped-sales note when no App Store Connect", () =&gt; {
+    const reports = [{ date: "2026-06-29", summary: { reviews: 3, confirmed: 3, rejected: 3, abstained: 1, alreadyResolved: 1, skipped: 1, newConfirmedDefects: 0, boardMoves: 1, verdictsSurvivedRefutation: "10/10" }, apps: [] }];
+    const w = assemble({ endDate: "2026-06-29", days: 7, reports, board: { cards: [] }, sales: null, generatedAt: "2026-06-29T08:00:00Z" });
+    expect(w.weekOf).toBe("2026-06-23");
+    expect(w.weekEnd).toBe("2026-06-29");
+    expect(w.daysCovered).toEqual(["2026-06-29"]);
+    expect(w.retro.totals.reviews).toBe(3);
+    expect(w.sales.note).toMatch(/not configured/i);
+  });
+});</code></pre></li>
+<li><input type="checkbox"> Run → FAIL. Implement <code>scripts/board/whh-run.mjs</code> (pure <code>assemble</code> + I/O <code>run</code> + a command-line entry):
+<pre><code>import { readFile, readdir, writeFile, mkdir } from "node:fs/promises";
+import path from "node:path";
+import { windowDates, buildRetro } from "./whh-aggregate.mjs";
+import { pullSales } from "./asc-client.mjs";
+
+const ROOT = process.cwd();
+const REPORTS_DIR = path.join(ROOT, "content/board/reports");
+const WEEKS_DIR = path.join(ROOT, "content/board/weeks");
+const LATEST = path.join(ROOT, "content/board/latest.json");
+const NAMES = { henceforth: "Henceforth", deck: "DaDeckOfCards", hansard: "Hansard" };
+
+export function assemble({ endDate, days = 7, reports, board, sales, generatedAt }) {
+  const dates = windowDates(endDate, days);
+  return {
+    weekOf: dates[0], weekEnd: endDate, generatedAt,
+    daysCovered: reports.map((r) =&gt; r.date),
+    retro: buildRetro({ reports, board, windowStart: dates[0] }),
+    sales: sales ?? { window: null, perApp: [], drivers: [], note: "App Store Connect not configured — sales half skipped." },
+  };
+}
+
+async function loadReports(endDate, days) {
+  const wanted = new Set(windowDates(endDate, days));
+  const files = (await readdir(REPORTS_DIR)).filter((f) =&gt; f.endsWith(".json"));
+  const reports = [];
+  for (const f of files) {
+    const date = f.replace(/\.json$/, "");
+    if (wanted.has(date)) reports.push(JSON.parse(await readFile(path.join(REPORTS_DIR, f), "utf8")));
+  }
+  return reports.sort((a, b) =&gt; (a.date &lt; b.date ? -1 : 1));
+}
+
+function ascFromEnv(dates) {
+  const { ASC_ISSUER_ID, ASC_KEY_ID, ASC_KEY_PATH, ASC_VENDOR_NUMBER } = process.env;
+  if (!ASC_ISSUER_ID || !ASC_KEY_ID || !ASC_KEY_PATH || !ASC_VENDOR_NUMBER) return null;
+  const appSkus = { henceforth: [process.env.ASC_SKU_HENCEFORTH], deck: [process.env.ASC_SKU_DECK], hansard: [process.env.ASC_SKU_HANSARD] };
+  return { dates, appSkus };
+}
+
+export async function run({ endDate, days = 7 }) {
+  const reports = await loadReports(endDate, days);
+  const board = JSON.parse(await readFile(LATEST, "utf8"));
+  const dates = windowDates(endDate, days);
+  const lastEnd = windowDates(endDate, 8)[0]; // endDate minus 7 = last week's report marker
+  const ascCfg = ascFromEnv(dates);
+  let sales = null;
+  if (ascCfg) {
+    const pem = await readFile(process.env.ASC_KEY_PATH, "utf8");
+    const creds = { issuerId: process.env.ASC_ISSUER_ID, keyId: process.env.ASC_KEY_ID, privateKeyPem: pem, vendorNumber: process.env.ASC_VENDOR_NUMBER };
+    sales = await pullSales({ creds, appSkus: ascCfg.appSkus, names: NAMES, thisDate: endDate, lastDate: lastEnd });
+  }
+  const week = assemble({ endDate, days, reports, board, sales, generatedAt: new Date().toISOString() });
+  await mkdir(WEEKS_DIR, { recursive: true });
+  await writeFile(path.join(WEEKS_DIR, `${endDate}.json`), JSON.stringify(week, null, 2) + "\n");
+  return week;
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const endDate = process.argv[2] ?? new Date().toISOString().slice(0, 10);
+  run({ endDate })
+    .then((w) =&gt; console.log(`wrote content/board/weeks/${w.weekEnd}.json — ${w.daysCovered.length} review days${w.sales.note ? " (sales skipped)" : ""}`))
+    .catch((e) =&gt; { console.error(e); process.exit(1); });
+}</code></pre></li>
+<li><input type="checkbox"> Run → PASS. Commit: <code>git add scripts/board/whh-run.*</code> then <code>git commit -m "whh: weekly runner + artifact writer"</code>.</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">T3.2 · The publisher — mirror <code>publish.mjs</code></div>
+<div class="files">Create: <code>scripts/board/publish-week.mjs</code></div>
+<div class="note">Exactly mirrors <code>publish.mjs</code> (same env resolution, same <code>redis.set(key, obj)</code> object-passing). No test — it is thin Upstash I/O, matching the untested <code>publish.mjs</code> precedent; correctness is proven by the Phase&nbsp;6 run.</div>
+<ul class="steps">
+<li><input type="checkbox"> Create <code>scripts/board/publish-week.mjs</code>:
+<pre><code>import { Redis } from "@upstash/redis";
+import { readFile, readdir } from "node:fs/promises";
+import path from "node:path";
+
+const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+if (!url || !token) { console.error("Missing KV_REST_API_URL / KV_REST_API_TOKEN"); process.exit(1); }
+
+const redis = new Redis({ url, token });
+const dir = path.join(process.cwd(), "content/board/weeks");
+const files = (await readdir(dir)).filter((f) =&gt; f.endsWith(".json"));
+for (const f of files) {
+  const date = f.replace(/\.json$/, "");
+  try {
+    const week = JSON.parse(await readFile(path.join(dir, f), "utf8"));
+    await redis.set(`board:week:${date}`, week);
+    await redis.sadd("board:weeks", date);
+    console.log(`published board:week:${date}`);
+  } catch (e) { console.error(f, e.message); }
+}
+console.log("done");</code></pre></li>
+<li><input type="checkbox"> Smoke (after T3.1 has written at least one weeks file): <code>node --env-file=.env.local scripts/board/publish-week.mjs</code> → expect <code>published board:week:&lt;date&gt;</code> then <code>done</code>. (Skip if Upstash creds aren't present locally — the Phase&nbsp;6 run covers it.)</li>
+<li><input type="checkbox"> Commit: <code>git add scripts/board/publish-week.mjs</code> then <code>git commit -m "whh: publish weekly review to Upstash"</code>.</li>
+</ul>
+</div>
+
+<h2>Phase 4 — The <code>/board/week</code> page <span class="badge b-todo">renders the artifact</span></h2>
+<div class="note">A server component mirroring <code>report/page.tsx</code>: <code>force-dynamic</code>, <code>getRedis()</code> with local-file fallback, inline <code>WeekReport</code> type, <code>.paper</code> theme inherited from <code>board/layout.tsx</code>, per-app accent tokens. No client island (read-only). No middleware change (already gated). No page unit test (the repo has none for pages); verified by <code>npm run build</code> + a local render.</div>
+
+<div class="task">
+<div class="tasknum">T4.1 · Create <code>src/app/board/week/page.tsx</code></div>
+<div class="files">Create: <code>src/app/board/week/page.tsx</code></div>
+<ul class="steps">
+<li><input type="checkbox"> Create the page (complete; mirrors the <code>report/page.tsx</code> read-with-fallback idiom):
+<pre><code>import { getRedis } from "@/lib/redis";
+import Link from "next/link";
+import { promises as fs } from "node:fs";
+import path from "node:path";
+
+export const dynamic = "force-dynamic";
+
+type NextItem = { tag: string; title: string; detail: string };
+type Reflag = { signature: string; app: string; title: string; timesFlagged: number; firstSeen: string; status: string };
+type AppSales = {
+  app: string; name: string;
+  units: { thisWeek: number; lastWeek: number; deltaPct: number | null };
+  proceeds: { thisWeek: number; lastWeek: number; currency: string | null; deltaPct: number | null };
+};
+type WeekReport = {
+  weekOf: string; weekEnd: string; daysCovered: string[];
+  retro: {
+    totals: Record&lt;string, number&gt;;
+    throughput: { stuck: { id: string; title: string; app: string; col: string; firstSeen: string }[] };
+    recurringReflags: Reflag[];
+    wins: string[]; misses: string[]; nextWeek: NextItem[];
+  };
+  sales: { perApp: AppSales[]; drivers: { app: string; lever: string; rationale: string; action: string }[]; note?: string };
+};
+
+const DIR = path.join(process.cwd(), "content/board/weeks");
+const ACCENT: Record&lt;string, string&gt; = { henceforth: "text-accent-warm", hansard: "text-accent-green", deck: "text-accent" };
+const pct = (v: number | null) =&gt; (v === null ? "—" : `${v &gt; 0 ? "+" : ""}${(v * 100).toFixed(0)}%`);
+
+async function listWeeks(): Promise&lt;string[]&gt; {
+  const redis = getRedis();
+  if (redis) {
+    const ws = await redis.smembers("board:weeks");
+    if (ws &amp;&amp; ws.length) return [...ws].sort().reverse();
+  }
+  try {
+    const files = await fs.readdir(DIR);
+    return files.filter((f) =&gt; f.endsWith(".json")).map((f) =&gt; f.replace(/\.json$/, "")).sort().reverse();
+  } catch { return []; }
+}
+
+async function loadWeek(date: string): Promise&lt;WeekReport | null&gt; {
+  const redis = getRedis();
+  if (redis) {
+    const w = await redis.get&lt;WeekReport&gt;(`board:week:${date}`);
+    if (w) return w;
+  }
+  try { return JSON.parse(await fs.readFile(path.join(DIR, `${date}.json`), "utf8")) as WeekReport; }
+  catch { return null; }
+}
+
+export default async function WeekPage({ searchParams }: { searchParams: Promise&lt;{ date?: string }&gt; }) {
+  const { date } = await searchParams;
+  const weeks = await listWeeks();
+  const active = date &amp;&amp; weeks.includes(date) ? date : weeks[0];
+  const w = active ? await loadWeek(active) : null;
+
+  return (
+    &lt;main className="mx-auto max-w-3xl px-6 py-10"&gt;
+      &lt;div className="mb-1 flex flex-wrap items-baseline justify-between gap-2"&gt;
+        &lt;h1 className="text-3xl font-bold tracking-tight text-foreground"&gt;Weekly Review&lt;/h1&gt;
+        &lt;div className="flex gap-3 text-sm text-accent-green"&gt;
+          &lt;Link href="/board" className="underline"&gt;Board&lt;/Link&gt;
+          &lt;Link href="/board/report" className="underline"&gt;Morning report&lt;/Link&gt;
+          &lt;Link href="/board/docs" className="underline"&gt;Plans &amp;amp; specs&lt;/Link&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+
+      {!w ? (
+        &lt;p className="mt-8 text-muted"&gt;No weekly review yet. Run &lt;code&gt;/whh&lt;/code&gt; to generate one.&lt;/p&gt;
+      ) : (
+        &lt;&gt;
+          &lt;p className="text-muted"&gt;Week of {w.weekOf} → {w.weekEnd} · {w.daysCovered.length} review days&lt;/p&gt;
+
+          &lt;h2 className="mt-8 border-b border-card-border pb-1 text-xl font-bold"&gt;How the week went&lt;/h2&gt;
+          &lt;div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4"&gt;
+            {Object.entries(w.retro.totals).map(([k, v]) =&gt; (
+              &lt;div key={k} className="rounded-lg border border-card-border bg-card-bg/40 px-3 py-2"&gt;
+                &lt;div className="text-2xl font-bold text-foreground"&gt;{v}&lt;/div&gt;
+                &lt;div className="text-xs uppercase tracking-wide text-muted"&gt;{k}&lt;/div&gt;
+              &lt;/div&gt;
+            ))}
+          &lt;/div&gt;
+
+          {(w.retro.wins.length &gt; 0 || w.retro.misses.length &gt; 0) &amp;&amp; (
+            &lt;div className="mt-6 grid gap-4 sm:grid-cols-2"&gt;
+              &lt;div&gt;
+                &lt;h3 className="text-lg font-bold text-accent-green"&gt;Wins&lt;/h3&gt;
+                &lt;ul className="mt-2 list-disc pl-5 text-sm text-muted"&gt;{w.retro.wins.map((s, i) =&gt; &lt;li key={i}&gt;{s}&lt;/li&gt;)}&lt;/ul&gt;
+              &lt;/div&gt;
+              &lt;div&gt;
+                &lt;h3 className="text-lg font-bold text-accent-orange"&gt;Misses&lt;/h3&gt;
+                &lt;ul className="mt-2 list-disc pl-5 text-sm text-muted"&gt;{w.retro.misses.map((s, i) =&gt; &lt;li key={i}&gt;{s}&lt;/li&gt;)}&lt;/ul&gt;
+              &lt;/div&gt;
+            &lt;/div&gt;
+          )}
+
+          {w.retro.throughput.stuck.length &gt; 0 &amp;&amp; (
+            &lt;&gt;
+              &lt;h3 className="mt-6 text-lg font-bold"&gt;Stuck this week&lt;/h3&gt;
+              &lt;ul className="mt-2 space-y-1 text-sm text-muted"&gt;
+                {w.retro.throughput.stuck.map((s) =&gt; (
+                  &lt;li key={s.id}&gt;&lt;span className={`font-bold ${ACCENT[s.app] ?? "text-muted"}`}&gt;{s.app}&lt;/span&gt; {s.title} — in {s.col} since {s.firstSeen}&lt;/li&gt;
+                ))}
+              &lt;/ul&gt;
+            &lt;/&gt;
+          )}
+
+          {w.retro.recurringReflags.length &gt; 0 &amp;&amp; (
+            &lt;&gt;
+              &lt;h3 className="mt-6 text-lg font-bold"&gt;Recurring re-flags — the noise to fix&lt;/h3&gt;
+              &lt;ul className="mt-2 space-y-1"&gt;
+                {w.retro.recurringReflags.map((r) =&gt; (
+                  &lt;li key={r.signature} className="text-sm"&gt;
+                    &lt;span className={`font-bold ${ACCENT[r.app] ?? "text-muted"}`}&gt;{r.app}&lt;/span&gt;{" "}
+                    {r.title} — &lt;span className="text-muted"&gt;flagged {r.timesFlagged}× since {r.firstSeen} ({r.status})&lt;/span&gt;
+                  &lt;/li&gt;
+                ))}
+              &lt;/ul&gt;
+            &lt;/&gt;
+          )}
+
+          {w.retro.nextWeek.length &gt; 0 &amp;&amp; (
+            &lt;&gt;
+              &lt;h3 className="mt-6 text-lg font-bold"&gt;Next week&lt;/h3&gt;
+              &lt;ul className="mt-2 space-y-2"&gt;
+                {w.retro.nextWeek.map((it, i) =&gt; (
+                  &lt;li key={i} className="text-sm"&gt;
+                    &lt;span className="mr-2 rounded-full border border-card-border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted"&gt;{it.tag}&lt;/span&gt;
+                    &lt;span className="font-bold text-foreground"&gt;{it.title}&lt;/span&gt; — &lt;span className="text-muted"&gt;{it.detail}&lt;/span&gt;
+                  &lt;/li&gt;
+                ))}
+              &lt;/ul&gt;
+            &lt;/&gt;
+          )}
+
+          &lt;h2 className="mt-10 border-b border-card-border pb-1 text-xl font-bold"&gt;Driving sales&lt;/h2&gt;
+          {w.sales.note ? (
+            &lt;p className="mt-3 text-muted"&gt;{w.sales.note}&lt;/p&gt;
+          ) : (
+            &lt;&gt;
+              &lt;table className="mt-3 w-full text-sm"&gt;
+                &lt;thead&gt;&lt;tr className="text-left text-xs uppercase tracking-wide text-muted"&gt;
+                  &lt;th className="py-1"&gt;App&lt;/th&gt;&lt;th&gt;Units&lt;/th&gt;&lt;th&gt;WoW&lt;/th&gt;&lt;th&gt;Proceeds&lt;/th&gt;&lt;th&gt;WoW&lt;/th&gt;
+                &lt;/tr&gt;&lt;/thead&gt;
+                &lt;tbody&gt;
+                  {w.sales.perApp.map((a) =&gt; (
+                    &lt;tr key={a.app} className="border-t border-card-border"&gt;
+                      &lt;td className={`py-1 font-bold ${ACCENT[a.app] ?? "text-foreground"}`}&gt;{a.name}&lt;/td&gt;
+                      &lt;td&gt;{a.units.thisWeek}&lt;/td&gt;&lt;td className="text-muted"&gt;{pct(a.units.deltaPct)}&lt;/td&gt;
+                      &lt;td&gt;{a.proceeds.thisWeek} {a.proceeds.currency}&lt;/td&gt;&lt;td className="text-muted"&gt;{pct(a.proceeds.deltaPct)}&lt;/td&gt;
+                    &lt;/tr&gt;
+                  ))}
+                &lt;/tbody&gt;
+              &lt;/table&gt;
+              {w.sales.drivers.length &gt; 0 &amp;&amp; (
+                &lt;ul className="mt-4 space-y-2"&gt;
+                  {w.sales.drivers.map((d, i) =&gt; (
+                    &lt;li key={i} className="text-sm"&gt;
+                      &lt;span className={`font-bold ${ACCENT[d.app] ?? "text-foreground"}`}&gt;{d.app}&lt;/span&gt; — &lt;span className="font-bold"&gt;{d.lever}:&lt;/span&gt; &lt;span className="text-muted"&gt;{d.action} ({d.rationale})&lt;/span&gt;
+                    &lt;/li&gt;
+                  ))}
+                &lt;/ul&gt;
+              )}
+            &lt;/&gt;
+          )}
+
+          {weeks.length &gt; 1 &amp;&amp; (
+            &lt;div className="mt-10 flex flex-wrap gap-2 text-xs text-muted"&gt;
+              {weeks.map((d) =&gt; (
+                &lt;Link key={d} href={`/board/week?date=${d}`} className={d === active ? "font-bold underline" : "underline"}&gt;{d}&lt;/Link&gt;
+              ))}
+            &lt;/div&gt;
+          )}
+        &lt;/&gt;
+      )}
+    &lt;/main&gt;
+  );
+}</code></pre></li>
+<li><input type="checkbox"> Type-check + lint: <code>npm run build</code> then <code>npm run lint</code> → both clean.</li>
+<li><input type="checkbox"> Local render check: with a <code>content/board/weeks/&lt;date&gt;.json</code> present (from T3.1), <code>npm run dev</code>, sign in at <code>/board/login</code>, open <code>/board/week</code> → the retro section renders; sales shows the "skipped" note.</li>
+<li><input type="checkbox"> Commit: <code>git add src/app/board/week/page.tsx</code> then <code>git commit -m "whh: gated /board/week page"</code>.</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">T4.2 · Cross-link "This week" from the other board pages</div>
+<div class="files">Modify: <code>src/app/board/BoardClient.tsx</code> (header link cluster), <code>src/app/board/report/page.tsx</code> &amp; <code>src/app/board/docs/page.tsx</code> (right-side link cluster)</div>
+<ul class="steps">
+<li><input type="checkbox"> In <code>BoardClient.tsx</code>, add to the existing header link row (beside "Morning report →" / "Plans &amp; specs →"):
+<pre><code>&lt;Link href="/board/week" className="text-accent-green underline"&gt;This week →&lt;/Link&gt;</code></pre></li>
+<li><input type="checkbox"> In <code>report/page.tsx</code> and <code>docs/page.tsx</code>, add to the right-aligned <code>&lt;Link&gt;</code> cluster:
+<pre><code>&lt;Link href="/board/week" className="underline"&gt;This week&lt;/Link&gt;</code></pre></li>
+<li><input type="checkbox"> <code>npm run build</code> → clean. Commit: <code>git commit -am "whh: cross-link This week across board pages"</code>.</li>
+</ul>
+</div>
+
+<h2>Phase 5 — The <code>/whh</code> command <span class="badge b-todo">the orchestrator</span></h2>
+
+<div class="task">
+<div class="tasknum">T5.1 · Author <code>~/.claude/commands/whh.md</code></div>
+<div class="files">Create: <code>~/.claude/commands/whh.md</code> (a global slash command, sibling to <code>hh.md</code>)</div>
+<div class="note">Not code — an orchestration prompt run at ultracode depth. It runs the deterministic numbers, runs a synthesis Workflow to write the judgement into the artifact, then publishes. The deterministic numbers are ground truth; synthesis never recomputes them.</div>
+<ul class="steps">
+<li><input type="checkbox"> Create the command:
+<pre><code>---
+description: WHH — weekly review. Aggregate the week's daily /hh reports + App Store Connect sales, synthesize how the week went and how to do better, publish to the gated /board/week page.
+---
+
+# /whh — Weekly HH review
+
+Run at ultracode depth. Covers the trailing 7 days ending today and publishes to
+henceforth.club/board/week (password-gated).
+
+## Repository
+/Users/henryhudson/Programming/Main/henceforth-club  (branch: a feature branch, never main)
+
+## Board app keys
+deck, henceforth, hansard  — App Store apps (sales tracked)
+provenance                 — operational watcher, EXCLUDED from sales
+
+## Steps
+1. Deterministic pass — numbers + sales:
+   node --env-file=.env.local scripts/board/whh-run.mjs $(date +%F)
+   Writes content/board/weeks/&lt;today&gt;.json with retro numbers and either real
+   sales numbers or a "skipped" note (if the App Store Connect env vars are absent).
+2. Read content/board/weeks/&lt;today&gt;.json.
+3. Synthesis pass — run a Workflow (ultracode) with parallel readers over the numbers:
+   - retro reader: from totals / perApp / throughput / recurringReflags / ratios,
+     write retro.wins[], retro.misses[], retro.nextWeek[] ({tag,title,detail};
+     tags from the daily vocabulary: hansard|henceforth|deck|today|cleanup|infra|meta).
+   - sales reader: from sales.perApp (units/proceeds/delta), write sales.drivers[]
+     ({app,lever,rationale,action}) tied to each app's weakest signal.
+   - synthesis agent: merge, dedupe, keep every claim grounded ONLY in the numbers.
+4. Patch wins/misses/nextWeek/drivers into the JSON. PRESERVE every deterministic
+   number exactly — never recompute them in the agent layer.
+5. Publish:
+   node --env-file=.env.local scripts/board/publish-week.mjs
+6. Print a chat summary (week range, day count, headline retro deltas, top sales
+   driver) and the link: https://henceforth.club/board/week
+
+## Rules
+- Read-only on the kanban (morning-board-data.js). /hh owns board writes; /whh never mutates it.
+- Credentials never leave .env.local; only computed aggregates are published.
+- No acronyms in any prose you emit — spell things out.</code></pre></li>
+<li><input type="checkbox"> Dry-run the command surface: confirm <code>/whh</code> is listed (it is a global command file) and that step 1 runs against today. Commit (in the henceforth-club repo, the command file lives in <code>~/.claude</code> which is outside it — note in the pull request that the command was added globally).</li>
+</ul>
+</div>
+
+<h2>Phase 6 — Validate end-to-end <span class="badge b-todo">run it on this week</span></h2>
+
+<div class="task">
+<div class="tasknum">T6.1 · Retrospective half — run now, no credentials</div>
+<ul class="steps">
+<li><input type="checkbox"> Run the full Vitest suite: <code>npm test</code> → all green (the new <code>scripts/**/*.test.mjs</code> included).</li>
+<li><input type="checkbox"> Generate this week: <code>node --env-file=.env.local scripts/board/whh-run.mjs 2026-06-29</code> → writes <code>content/board/weeks/2026-06-29.json</code> with real retro numbers (6 review days, the CertificateStore + nil-billId recurring re-flags surfaced) and a sales "skipped" note.</li>
+<li><input type="checkbox"> Run <code>/whh</code> to add the synthesis (wins/misses/nextWeek), then <code>node --env-file=.env.local scripts/board/publish-week.mjs</code>.</li>
+<li><input type="checkbox"> Open <code>https://henceforth.club/board/week</code> (or the preview deploy for the branch), sign in, confirm the retrospective renders correctly across devices.</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">T6.2 · Sales half — once Phase 0 values are in <span class="badge b-gate">after T0.1</span></div>
+<ul class="steps">
+<li><input type="checkbox"> With the App Store Connect env vars present, re-run <code>node --env-file=.env.local scripts/board/whh-run.mjs 2026-06-29</code> → the <code>sales.perApp</code> array now carries real units + proceeds + week-over-week deltas for Henceforth, DaDeckOfCards, Hansard.</li>
+<li><input type="checkbox"> Re-run <code>/whh</code> so the synthesis writes <code>sales.drivers</code>, publish, and confirm the "Driving sales" table + drivers render on <code>/board/week</code>.</li>
+<li><input type="checkbox"> Open the pull request from <code>feat/whh-weekly-review</code> into the board branch (or main once #7 has merged), per the branch + pull-request workflow.</li>
+</ul>
+</div>
+
+<div class="try">
+<p><strong>Done =</strong> <code>/whh</code> reads the week's daily reports + board, computes trustworthy weekly numbers (totals, throughput, recurring re-flags) with a green Vitest suite, an ultracode synthesis layer writes honest "how we did / do better next week" judgement plus App Store Connect-grounded sales drivers, the artifact persists as <code>weeks/&lt;date&gt;.json</code>, and the whole thing renders on a password-gated <code>/board/week</code> page reachable from any device — with zero new npm dependencies and credentials that never leave <code>.env.local</code>.</p>
+</div>
+
+<p class="byline" style="font-size:14px;color:var(--muted);margin-top:40px;border-top:1px solid var(--rule);padding-top:16px;">Plan · 2026-06-29 · branch <code>feat/whh-weekly-review</code> · grounded in a four-agent read-only investigation of the live /hh artifacts and the henceforth-club codebase · sales half gated on Phase 0.</p>
+
+</div>
+</body>
+</html>
