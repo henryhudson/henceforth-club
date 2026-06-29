@@ -2,6 +2,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import Link from "next/link";
 import { getRedis } from "@/lib/redis";
+import PlanChecklist, { type PlanItem } from "./PlanChecklist";
 
 type Finding = {
   refId: string;
@@ -21,11 +22,19 @@ type AppReport = {
   findings: Finding[];
   note?: string;
 };
+type Plan = {
+  lead?: string;
+  note?: string;
+  items: PlanItem[];
+  notToday?: string;
+  decisions?: string;
+};
 type Report = {
   date: string;
   generatedAt: string;
   summary: Record<string, number>;
   apps: AppReport[];
+  plan?: Plan;
 };
 
 const DIR = path.join(process.cwd(), "content/board/reports");
@@ -103,9 +112,15 @@ export default async function ReportPage({
     <main className="mx-auto max-w-3xl px-6 py-10">
       <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Morning Report</h1>
-        <Link href="/board" className="text-sm text-accent-green underline">
-          Board →
-        </Link>
+        <div className="flex gap-3 text-sm text-accent-green">
+          <Link href="/board" className="underline">
+            Board
+          </Link>
+          <Link href="/board/docs" className="underline">
+            Plans &amp; specs
+          </Link>
+          <Link href="/board/week" className="underline">This week</Link>
+        </div>
       </div>
       <p className="text-sm text-muted">
         {report.date} · generated {report.generatedAt}
@@ -178,6 +193,33 @@ export default async function ReportPage({
           </section>
         ))}
       </div>
+
+      {report.plan && report.plan.items.length > 0 && (
+        <section className="mt-14">
+          <h2 className="mb-1 border-b border-card-border pb-1 text-xl font-bold text-foreground">
+            Plan of action
+          </h2>
+          {report.plan.lead && (
+            <p className="mb-2 mt-3 text-sm leading-relaxed text-muted">{report.plan.lead}</p>
+          )}
+          {report.plan.note && (
+            <p className="mb-5 text-sm italic leading-relaxed text-muted/80">{report.plan.note}</p>
+          )}
+          <PlanChecklist date={report.date} items={report.plan.items} />
+          {report.plan.notToday && (
+            <p className="mt-8 text-sm leading-relaxed text-muted">
+              <span className="font-semibold text-foreground/80">Deliberately not today.</span>{" "}
+              {report.plan.notToday}
+            </p>
+          )}
+          {report.plan.decisions && (
+            <p className="mt-3 text-sm leading-relaxed text-muted">
+              <span className="font-semibold text-foreground/80">Open decisions.</span>{" "}
+              {report.plan.decisions}
+            </p>
+          )}
+        </section>
+      )}
     </main>
   );
 }

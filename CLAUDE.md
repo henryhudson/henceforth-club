@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+> **Writing style — Henry's standing preference.** No acronyms or initialisms in prose: spell things out in plain English — "pull request" not "PR", "continuous integration" not "CI", "App Store review" not an abbreviation. Terse never means abbreviated. Applies to every written output — chat replies, commit messages, pull-request descriptions, and documentation. Code identifiers, file paths, and established proper nouns are exempt.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
