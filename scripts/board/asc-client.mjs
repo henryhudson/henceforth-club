@@ -18,7 +18,7 @@ export function mintJWT({ issuerId, keyId, privateKeyPem, now = Math.floor(Date.
 
 /** Parse an App Store Connect Sales SUMMARY report (tab-separated) into rows. */
 export function parseSalesTsv(text) {
-  const lines = text.split("\n").filter((l) => l.length);
+  const lines = text.split(/\r?\n/).filter((l) => l.length);
   if (!lines.length) return [];
   const h = lines[0].split("\t");
   const at = (name) => h.indexOf(name);

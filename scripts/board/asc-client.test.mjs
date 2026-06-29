@@ -27,6 +27,10 @@ describe("sales parsing", () => {
     const rows = parseSalesTsv(TSV);
     expect(rows[0]).toMatchObject({ sku: "HENCE01", units: 4, proceeds: 2.79, currency: "GBP" });
   });
+  it("parseSalesTsv tolerates carriage-return line endings", () => {
+    const rows = parseSalesTsv(TSV.replace(/\n/g, "\r\n"));
+    expect(rows[0].currency).toBe("GBP");
+  });
   it("sumByApp totals by configured SKU", () => {
     const out = sumByApp(parseSalesTsv(TSV), { henceforth: ["HENCE01"], deck: ["DECK01"], hansard: ["HANS01"] });
     expect(out.henceforth.units).toBe(4);
@@ -47,6 +51,8 @@ describe("fetchSalesReport", () => {
     expect(rows[0].sku).toBe("HENCE01");
     const notFound = async () => ({ ok: false, status: 404 });
     expect(await fetchSalesReport({ jwt: "x", vendorNumber: "1", reportDate: "2026-06-29", fetchImpl: notFound })).toEqual([]);
+    const serverError = async () => ({ ok: false, status: 500 });
+    await expect(fetchSalesReport({ jwt: "x", vendorNumber: "1", reportDate: "2026-06-29", fetchImpl: serverError })).rejects.toThrow("500");
   });
 });
 
