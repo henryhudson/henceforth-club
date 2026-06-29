@@ -13,12 +13,14 @@ type AppSales = {
   units: { thisWeek: number; lastWeek: number; deltaPct: number | null };
   proceeds: { thisWeek: number; lastWeek: number; currency: string | null; deltaPct: number | null };
 };
+type WeekDay = { date: string; weekday: string; reviews: number; hasReport: boolean };
 type WeekReport = {
   weekOf: string; weekEnd: string; daysCovered: string[];
   retro: {
     totals: Record<string, number>;
     throughput: { stuck: Stuck[] };
     recurringReflags: Reflag[];
+    weekStrip: WeekDay[];
     stateOfUnion: string;
     wins: string[]; misses: string[]; nextWeek: NextItem[];
   };
@@ -79,6 +81,17 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
           )}
 
           <h2 className="mt-8 border-b border-card-border pb-1 text-xl font-bold">How the week went</h2>
+          {w.retro.weekStrip?.length === 7 && (
+            <div className="mt-3 grid grid-cols-7 gap-1 text-center">
+              {w.retro.weekStrip.map((d) => (
+                <div key={d.date} className={`rounded-md border px-1 py-2 ${d.reviews > 0 ? "border-accent-green/40 bg-accent-green/10" : "border-card-border bg-card-bg/30"}`}>
+                  <div className="text-[10px] font-bold uppercase tracking-wide text-muted">{d.weekday}</div>
+                  <div className="mt-0.5 text-lg font-bold text-foreground">{d.reviews > 0 ? d.reviews : "·"}</div>
+                  <div className="text-[10px] text-muted">{Number(d.date.slice(8))}</div>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {Object.entries(w.retro.totals).map(([k, v]) => (
               <div key={k} className="rounded-lg border border-card-border bg-card-bg/40 px-3 py-2">

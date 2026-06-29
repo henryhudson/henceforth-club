@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   windowDates, parseSurvived, aggregateTotals, perApp, ratios,
   reflagSignature, reflagKey, recurringReflags, earliestDateIn, throughput, buildRetro,
+  weekStripDates, buildWeekStrip,
 } from "./whh-aggregate.mjs";
 
 describe("windowDates", () => {
@@ -139,8 +140,27 @@ describe("throughput + buildRetro", () => {
     const retro = buildRetro({ reports, board: { cards: [] }, windowStart: "2026-06-23" });
     expect(retro.totals.reviews).toBe(3);
     expect(retro.stateOfUnion).toBe("");
+    expect(retro.weekStrip).toEqual([]);
     expect(retro.wins).toEqual([]);
     expect(retro.misses).toEqual([]);
     expect(retro.nextWeek).toEqual([]);
+  });
+});
+
+describe("week strip (Sunday to Saturday)", () => {
+  it("weekStripDates returns Sun..Sat ending on the most recent Saturday on or before endDate", () => {
+    // 2026-06-29 is a Monday; the most recent Saturday is 2026-06-27.
+    expect(weekStripDates("2026-06-29")).toEqual([
+      "2026-06-21", "2026-06-22", "2026-06-23", "2026-06-24", "2026-06-25", "2026-06-26", "2026-06-27",
+    ]);
+    expect(weekStripDates("2026-06-27")[0]).toBe("2026-06-21"); // on the Saturday, same week
+    expect(weekStripDates("2026-06-27")[6]).toBe("2026-06-27");
+  });
+  it("buildWeekStrip maps review counts onto the seven weekdays, zero where no report", () => {
+    const strip = buildWeekStrip({ "2026-06-23": 3, "2026-06-24": 3, "2026-06-26": 3, "2026-06-27": 3 }, "2026-06-29");
+    expect(strip).toHaveLength(7);
+    expect(strip[0]).toMatchObject({ date: "2026-06-21", weekday: "Sun", reviews: 0, hasReport: false });
+    expect(strip[2]).toMatchObject({ date: "2026-06-23", weekday: "Tue", reviews: 3, hasReport: true });
+    expect(strip[6]).toMatchObject({ date: "2026-06-27", weekday: "Sat", reviews: 3, hasReport: true });
   });
 });
