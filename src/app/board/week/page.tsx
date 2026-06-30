@@ -1,5 +1,6 @@
 import { getRedis } from "@/lib/redis";
 import Link from "next/link";
+import WeekPlanner from "./WeekPlanner";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
@@ -158,22 +159,8 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
           {w.retro.weekPlan?.length === 7 && (
             <>
               <h2 className="mt-10 border-b border-card-border pb-1 text-xl font-bold">This week&apos;s plan</h2>
-              <div className="mt-3 space-y-3">
-                {w.retro.weekPlan.map((d) => (
-                  <div key={d.date} className={d.isReviewDay ? "border-l-2 border-accent-green pl-3" : "pl-3"}>
-                    <div className="flex flex-wrap items-baseline gap-2">
-                      <span className="text-sm font-bold text-foreground">{d.weekday}</span>
-                      <span className="text-xs text-muted">{d.date.slice(5)}</span>
-                      {d.isReviewDay && <span className="text-[10px] font-bold uppercase tracking-wide text-accent-green">Update &amp; review · article</span>}
-                    </div>
-                    {d.tasks.length > 0 ? (
-                      <ul className="mt-1 list-disc pl-5 text-sm text-muted">{d.tasks.map((t, i) => <li key={i}>{t}</li>)}</ul>
-                    ) : (
-                      <p className="mt-1 text-sm text-muted">—</p>
-                    )}
-                  </div>
-                ))}
-              </div>
+              <p className="mt-1 text-xs text-muted">Wednesday ★ is update &amp; review · article day. Tick tasks off as you go.</p>
+              <WeekPlanner days={w.retro.weekPlan} weekOf={w.weekOf} />
             </>
           )}
           <h2 className="mt-10 border-b border-card-border pb-1 text-xl font-bold">Driving sales</h2>
