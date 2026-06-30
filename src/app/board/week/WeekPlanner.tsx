@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-type Task = string | { label: string; start: number; end: number };
+type Task = string | { label: string; start?: number; end?: number; done?: boolean };
 type PlanDay = { date: string; weekday: string; isReviewDay: boolean; tasks: Task[] };
 
 // Henry's planner palette — one highlighter colour per day.
@@ -16,7 +16,8 @@ const DAY_COLOR: Record<string, string> = {
   Sat: "#fde047", // yellow
 };
 
-const norm = (t: Task) => (typeof t === "string" ? { label: t, start: undefined, end: undefined } : t);
+const norm = (t: Task): { label: string; start?: number; end?: number; done?: boolean } =>
+  typeof t === "string" ? { label: t } : t;
 const hh = (h: number) => `${String(h).padStart(2, "0")}:00`;
 
 // 0–24h timeline geometry.
@@ -71,7 +72,7 @@ export default function WeekPlanner({ days, weekOf }: { days: PlanDay[]; weekOf:
                           className="mt-0.5 shrink-0"
                           style={{ accentColor: "var(--color-accent-green)" }}
                         />
-                        <span className={checked ? "text-muted line-through" : "text-foreground"}>
+                        <span className={(checked || t.done) ? "text-muted line-through" : "text-foreground"}>
                           {t.start != null && <span className="mr-1 font-bold text-muted">{hh(t.start)}</span>}
                           {t.label}
                         </span>

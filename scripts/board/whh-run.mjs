@@ -7,19 +7,22 @@ import path from "node:path";
 import { windowDates, buildRetro, weekStripDates, buildWeekStrip, weekPlanSkeleton } from "./whh-aggregate.mjs";
 import { pullSales } from "./asc-client.mjs";
 import { pullAnalyticsDownloads } from "./asc-analytics.mjs";
+import { pullAppState } from "./app-state.mjs";
 
 const ROOT = process.cwd();
 const REPORTS_DIR = path.join(ROOT, "content/board/reports");
 const WEEKS_DIR = path.join(ROOT, "content/board/weeks");
 const LATEST = path.join(ROOT, "content/board/latest.json");
 const NAMES = { henceforth: "Henceforth", deck: "DaDeckOfCards", hansard: "Hansard" };
+const APP_IDS = { henceforth: "1602896145", deck: "1520654142", hansard: "6762037651" };
 
 /** Pure: assemble a WeekReport from already-loaded inputs. */
-export function assemble({ endDate, days = 7, reports, board, sales, generatedAt, weekStrip }) {
+export function assemble({ endDate, days = 7, reports, board, sales, generatedAt, weekStrip, appState }) {
   const dates = windowDates(endDate, days);
   const retro = buildRetro({ reports, board, windowStart: dates[0] });
   retro.weekStrip = weekStrip ?? [];
   retro.weekPlan = weekPlanSkeleton(endDate);
+  retro.appState = appState ?? [];
   return {
     weekOf: dates[0], weekEnd: endDate, generatedAt,
     daysCovered: reports.map((r) => r.date),
@@ -75,7 +78,9 @@ export async function run({ endDate, days = 7 }) {
       sales.source = "Sales report estimate (App Store Connect Analytics feed still generating)";
     }
   }
-  const week = assemble({ endDate, days, reports, board, sales, weekStrip, generatedAt: new Date().toISOString() });
+  const apps = Object.keys(NAMES).map((key) => ({ key, name: NAMES[key], appId: APP_IDS[key] }));
+  const appState = await pullAppState({ apps, sales });
+  const week = assemble({ endDate, days, reports, board, sales, weekStrip, appState, generatedAt: new Date().toISOString() });
   await mkdir(WEEKS_DIR, { recursive: true });
   await writeFile(path.join(WEEKS_DIR, `${endDate}.json`), JSON.stringify(week, null, 2) + "\n");
   return week;
