@@ -16,6 +16,13 @@ type AppSales = {
 };
 type WeekDay = { date: string; weekday: string; reviews: number; hasReport: boolean };
 type PlanDay = { date: string; weekday: string; isReviewDay: boolean; tasks: (string | { label: string; start?: number; end?: number; done?: boolean })[] };
+type AppState = {
+  app: string; name: string;
+  downloads: { thisWeek: number; lastWeek: number; deltaPct: number | null } | null;
+  rating: { average: number | null; count: number; version?: string | null };
+  analytics: { activeUsers?: number; retention?: number; crashRate?: number } | null;
+  verdict: string | null;
+};
 type WeekReport = {
   weekOf: string; weekEnd: string; daysCovered: string[];
   retro: {
@@ -24,6 +31,7 @@ type WeekReport = {
     recurringReflags: Reflag[];
     weekStrip: WeekDay[];
     weekPlan: PlanDay[];
+    appState: AppState[];
     stateOfUnion: string;
     wins: string[]; misses: string[]; nextWeek: NextItem[];
   };
@@ -193,6 +201,26 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
                 </li>
               ))}
             </ul>
+          )}
+
+          {w.retro.appState?.length > 0 && (
+            <>
+              <h2 className="mt-10 border-b border-card-border pb-1 text-xl font-bold">State of each app</h2>
+              <p className="mt-1 text-xs text-muted">Are we earning our users? Active-user, retention and crash signals fill in as the App Analytics feed backfills.</p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {w.retro.appState.map((a) => (
+                  <div key={a.app} className="rounded-lg border border-card-border bg-card-bg/30 p-3">
+                    <div className={`font-bold ${ACCENT[a.app] ?? "text-foreground"}`}>{a.name}</div>
+                    <dl className="mt-2 space-y-1 text-sm">
+                      <div className="flex justify-between gap-2"><dt className="text-muted">Downloads (wk)</dt><dd>{a.downloads ? `${a.downloads.thisWeek} (${pct(a.downloads.deltaPct)})` : "—"}</dd></div>
+                      <div className="flex justify-between gap-2"><dt className="text-muted">Rating</dt><dd>{a.rating.average != null ? `${a.rating.average.toFixed(1)}★ (${a.rating.count})` : "—"}</dd></div>
+                      <div className="flex justify-between gap-2"><dt className="text-muted">Active users</dt><dd className="text-muted/50">generating</dd></div>
+                    </dl>
+                    {a.verdict && <p className="mt-2 border-t border-card-border pt-2 text-xs leading-snug text-muted">{a.verdict}</p>}
+                  </div>
+                ))}
+              </div>
+            </>
           )}
 
           {weeks.length >= 1 && (
