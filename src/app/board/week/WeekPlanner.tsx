@@ -41,8 +41,6 @@ export default function WeekPlanner({ days, weekOf }: { days: PlanDay[]; weekOf:
       return next;
     });
 
-  const scheduled = days.some((d) => d.tasks.some((t) => typeof t !== "string" && t.start != null));
-
   return (
     <div className="mt-3 overflow-x-auto pb-2">
       <div className="grid min-w-[760px] grid-cols-7 gap-2">
@@ -83,7 +81,6 @@ export default function WeekPlanner({ days, weekOf }: { days: PlanDay[]; weekOf:
                 })}
               </ul>
 
-              {scheduled && (
                 <div className="relative mx-2 mb-2 mt-auto" style={{ height: BODY_H }}>
                   {GRID_HOURS.map((h) => (
                     <div key={h} className="absolute inset-x-0 border-t border-card-border/40" style={{ top: h * PX_PER_HOUR }}>
@@ -107,7 +104,6 @@ export default function WeekPlanner({ days, weekOf }: { days: PlanDay[]; weekOf:
                       );
                     })}
                 </div>
-              )}
             </div>
           );
         })}
