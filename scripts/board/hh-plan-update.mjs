@@ -5,13 +5,14 @@
 import { Redis } from "@upstash/redis";
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { weekOfFor, setDayEvents, markEventDone } from "./week-plan.mjs";
+import { weekOfFor, setDayEvents, markEventDone, rollForward } from "./week-plan.mjs";
 import { WEEKDAYS } from "./whh-aggregate.mjs";
 
 const today = process.argv[2] ?? new Date().toISOString().slice(0, 10);
 const payload = JSON.parse(process.argv[3] ?? "{}");
 const events = payload.events ?? [];
 const done = payload.done ?? [];
+const roll = payload.roll === true;
 const weekday = WEEKDAYS[new Date(`${today}T00:00:00Z`).getUTCDay()];
 
 const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
@@ -51,9 +52,10 @@ if (planWeekOf !== weekOfFor(today)) {
 
 let plan = week.retro.weekPlan;
 if (events.length) plan = setDayEvents(plan, weekday, events);
+else if (roll) plan = rollForward(plan, weekday); // carry undone past work onto today
 for (const label of done) plan = markEventDone(plan, weekday, label);
 week.retro.weekPlan = plan;
 
 await writeFile(path.join(DIR, `${date}.json`), JSON.stringify(week, null, 2) + "\n");
 if (redis) { await redis.set(`board:week:${date}`, week); await redis.sadd("board:weeks", date); }
-console.log(`updated ${weekday} on board:week:${date} — ${events.length} event(s), ${done.length} marked done`);
+console.log(`updated ${weekday} on board:week:${date} — ${roll && !events.length ? "rolled forward, " : ""}${events.length} event(s) set, ${done.length} marked done`);

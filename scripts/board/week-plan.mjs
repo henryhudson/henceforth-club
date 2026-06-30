@@ -23,3 +23,27 @@ export function markEventDone(plan, weekday, label) {
       : day,
   );
 }
+
+const WEEKDAY_ORDER = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const isDone = (task) => typeof task !== "string" && task.done === true;
+
+/** A new weekPlan where every not-done task from a weekday earlier than today is moved onto today
+ *  (carried, overdue-first), leaving each past day with only the tasks that were actually finished. */
+export function rollForward(plan, todayWeekday) {
+  const todayIdx = WEEKDAY_ORDER.indexOf(todayWeekday);
+  const carried = [];
+  const cleared = plan.map((day) => {
+    const idx = WEEKDAY_ORDER.indexOf(day.weekday);
+    if (idx >= 0 && idx < todayIdx) {
+      carried.push(...day.tasks.filter((t) => !isDone(t)));
+      return { ...day, tasks: day.tasks.filter(isDone) };
+    }
+    return day;
+  });
+  return cleared.map((day) => {
+    if (day.weekday !== todayWeekday) return day;
+    const here = new Set(day.tasks.map(labelOf));
+    const fresh = carried.filter((t) => !here.has(labelOf(t)));
+    return { ...day, tasks: [...fresh, ...day.tasks] };
+  });
+}
