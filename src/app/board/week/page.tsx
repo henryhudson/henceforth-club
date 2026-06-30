@@ -63,7 +63,7 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
   const w = active ? await loadWeek(active) : null;
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-10">
+    <main className="mx-auto px-6 py-10">
       <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Weekly Review</h1>
         <div className="flex gap-3 text-sm text-accent-green">
@@ -160,9 +160,7 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
             <>
               <h2 className="mt-10 border-b border-card-border pb-1 text-xl font-bold">This week&apos;s plan</h2>
               <p className="mt-1 text-xs text-muted">Wednesday ★ is update &amp; review · article day. Tick tasks off as you go.</p>
-              <div className="relative left-1/2 w-screen -translate-x-1/2 px-4 sm:px-6">
-                <WeekPlanner days={w.retro.weekPlan} weekOf={w.weekOf} />
-              </div>
+              <WeekPlanner days={w.retro.weekPlan} weekOf={w.weekOf} />
             </>
           )}
           <h2 className="mt-10 border-b border-card-border pb-1 text-xl font-bold">Driving sales</h2>
