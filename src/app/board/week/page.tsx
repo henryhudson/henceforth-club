@@ -168,7 +168,7 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
             <>
               <h2 className="mt-10 border-b border-card-border pb-1 text-xl font-bold">This week&apos;s plan</h2>
               <p className="mt-1 text-xs text-muted">Wednesday ★ is update &amp; review · article day. Tick tasks off as you go.</p>
-              <WeekPlanner days={w.retro.weekPlan} weekOf={w.weekOf} />
+              <WeekPlanner days={w.retro.weekPlan} weekKey={w.weekEnd} />
             </>
           )}
           <h2 className="mt-10 border-b border-card-border pb-1 text-xl font-bold">Driving sales</h2>
