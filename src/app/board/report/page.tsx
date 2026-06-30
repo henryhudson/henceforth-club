@@ -29,12 +29,30 @@ type Plan = {
   notToday?: string;
   decisions?: string;
 };
+type Emergency = { tag: string; title: string; why: string; card?: string };
+type AppStoreRow = {
+  app: string;
+  status: string;
+  version: string;
+  daysSince: string;
+  readyToShip: string;
+  blocker: string;
+};
+type AppStore = { shipDay: string; rule: string; apps: AppStoreRow[] };
 type Report = {
   date: string;
   generatedAt: string;
   summary: Record<string, number>;
+  emergencies?: Emergency[];
+  appStore?: AppStore;
   apps: AppReport[];
   plan?: Plan;
+};
+
+const STATUS_COLOR: Record<string, string> = {
+  live: "text-accent-green",
+  "not-yet-shipped": "text-accent",
+  "rejected-pending-resubmit": "text-red-600",
 };
 
 const DIR = path.join(process.cwd(), "content/board/reports");
@@ -130,6 +148,39 @@ export default async function ReportPage({
         {parts.length > 0 && <> — {parts.join(", ")}</>}.
       </p>
 
+      {report.emergencies && report.emergencies.length > 0 && (
+        <section className="mt-6 rounded-md border-2 border-red-700/70 bg-red-950/20 p-4">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-red-500">
+            ⚠ Do now — emergency actions
+          </p>
+          <ul className="flex flex-col gap-3">
+            {report.emergencies.map((e, i) => (
+              <li key={i} className="border-t border-red-900/40 pt-3 first:border-t-0 first:pt-0">
+                <p className="font-semibold leading-snug text-foreground">
+                  <span className="mr-2 align-middle rounded bg-red-700 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                    {e.tag}
+                  </span>
+                  {e.title}
+                </p>
+                <p className="mt-1 text-sm leading-relaxed text-muted">
+                  {e.why}
+                  {e.card && (
+                    <>
+                      {" → "}
+                      <span className="font-mono text-xs text-accent">{e.card}</span>
+                    </>
+                  )}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {report.emergencies && report.emergencies.length === 0 && (
+        <p className="mt-4 text-sm italic text-accent-green">Nothing on fire — clear to build.</p>
+      )}
+
       {dates.length > 1 && (
         <p className="mt-3 text-sm text-muted">
           Archive:{" "}
@@ -193,6 +244,41 @@ export default async function ReportPage({
           </section>
         ))}
       </div>
+
+      {report.appStore && report.appStore.apps.length > 0 && (
+        <section className="mt-14">
+          <h2 className="mb-1 border-b border-card-border pb-1 text-xl font-bold text-foreground">
+            App Store cadence — ship every {report.appStore.shipDay}
+          </h2>
+          {report.appStore.rule && (
+            <p className="mb-4 mt-3 border-l-4 border-accent pl-3 text-sm leading-relaxed text-muted">
+              {report.appStore.rule}
+            </p>
+          )}
+          <div className="flex flex-col gap-4">
+            {report.appStore.apps.map((a) => (
+              <div key={a.app} className="rounded border border-card-border p-3">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <p className="font-semibold capitalize text-foreground">
+                    {a.app}
+                    <span className="ml-2 text-xs font-normal text-muted">{a.version}</span>
+                  </p>
+                  <p className="text-xs">
+                    <span className={STATUS_COLOR[a.status] ?? "text-muted"}>{a.status}</span>
+                    <span className="text-muted/70"> · {a.daysSince}</span>
+                  </p>
+                </div>
+                <p className="mt-1.5 text-sm leading-relaxed text-muted">
+                  <span className="font-semibold text-foreground/80">Ready.</span> {a.readyToShip}
+                </p>
+                <p className="mt-1 text-sm leading-relaxed text-muted">
+                  <span className="font-semibold text-foreground/80">Blocker.</span> {a.blocker}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {report.plan && report.plan.items.length > 0 && (
         <section className="mt-14">
