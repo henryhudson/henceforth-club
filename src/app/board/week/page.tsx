@@ -15,7 +15,7 @@ type AppSales = {
   proceeds: { thisWeek: number; lastWeek: number; currency: string | null; deltaPct: number | null };
 };
 type WeekDay = { date: string; weekday: string; reviews: number; hasReport: boolean };
-type PlanDay = { date: string; weekday: string; isReviewDay: boolean; tasks: string[] };
+type PlanDay = { date: string; weekday: string; isReviewDay: boolean; tasks: (string | { label: string; start: number; end: number })[] };
 type WeekReport = {
   weekOf: string; weekEnd: string; daysCovered: string[];
   retro: {
@@ -27,7 +27,7 @@ type WeekReport = {
     stateOfUnion: string;
     wins: string[]; misses: string[]; nextWeek: NextItem[];
   };
-  sales: { perApp: AppSales[]; drivers: { app: string; lever: string; rationale: string; action: string }[]; note?: string };
+  sales: { perApp: AppSales[]; drivers: { app: string; lever: string; rationale: string; action: string }[]; note?: string; source?: string };
 };
 
 const DIR = path.join(process.cwd(), "content/board/weeks");
@@ -184,6 +184,7 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
               </tbody>
             </table>
           )}
+          {w.sales.source && <p className="mt-1 text-xs text-muted">Source: {w.sales.source}</p>}
           {w.sales.drivers.length > 0 && (
             <ul className="mt-4 space-y-2">
               {w.sales.drivers.map((d, i) => (
