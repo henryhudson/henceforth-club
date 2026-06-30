@@ -6,6 +6,7 @@ import { readFile, readdir, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { windowDates, buildRetro, weekStripDates, buildWeekStrip, weekPlanSkeleton } from "./whh-aggregate.mjs";
 import { pullSales } from "./asc-client.mjs";
+import { pullAnalyticsDownloads } from "./asc-analytics.mjs";
 
 const ROOT = process.cwd();
 const REPORTS_DIR = path.join(ROOT, "content/board/reports");
@@ -59,9 +60,20 @@ export async function run({ endDate, days = 7 }) {
   let sales = null;
   if (ascCfg) {
     const all14 = windowDates(endDate, 14); // this week = last 7, last week = the 7 before
+    const thisDates = all14.slice(7), lastDates = all14.slice(0, 7);
     const pem = await readFile(process.env.ASC_KEY_PATH, "utf8");
     const creds = { issuerId: process.env.ASC_ISSUER_ID, keyId: process.env.ASC_KEY_ID, privateKeyPem: pem, vendorNumber: process.env.ASC_VENDOR_NUMBER };
-    sales = await pullSales({ creds, appSkus: ascCfg.appSkus, names: NAMES, thisDates: all14.slice(7), lastDates: all14.slice(0, 7) });
+    // Prefer App Analytics (the App Store Connect dashboard's own download source); fall back to the
+    // Sales report estimate until Apple has generated the analytics instances for the ongoing requests.
+    const reqIds = { henceforth: process.env.ASC_ANALYTICS_REQ_HENCEFORTH, deck: process.env.ASC_ANALYTICS_REQ_DECK, hansard: process.env.ASC_ANALYTICS_REQ_HANSARD };
+    if (reqIds.henceforth && reqIds.deck && reqIds.hansard) {
+      try { sales = await pullAnalyticsDownloads({ creds, requestIds: reqIds, names: NAMES, thisDates, lastDates }); }
+      catch { sales = null; }
+    }
+    if (!sales) {
+      sales = await pullSales({ creds, appSkus: ascCfg.appSkus, names: NAMES, thisDates, lastDates });
+      sales.source = "Sales report estimate (App Store Connect Analytics feed still generating)";
+    }
   }
   const week = assemble({ endDate, days, reports, board, sales, weekStrip, generatedAt: new Date().toISOString() });
   await mkdir(WEEKS_DIR, { recursive: true });
