@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>/hh + /whh — the planning ritual · design · 2026-06-30</title>
+<style>
+  :root { --bg:#fafaf8; --fg:#18181b; --muted:#6b6b73; --rule:#e5e5e1;
+    --aside-bg:#f4f3ee; --accent:#c2410c; --code-bg:#f1efe8;
+    --ok:#5a6a44; --warn:#b45309; }
+  html,body{background:var(--bg);color:var(--fg);
+    font-family:ui-monospace,"Space Mono",SFMono-Regular,Menlo,Monaco,monospace;
+    line-height:1.6;margin:0;}
+  body{max-width:900px;margin:0 auto;padding:56px 24px 96px;font-size:15px;}
+  h1{font-size:30px;line-height:1.15;margin:0 0 12px;letter-spacing:-0.01em;}
+  h2.phase{font-size:22px;margin:54px 0 16px;border-top:2px solid var(--rule);padding-top:26px;}
+  h3.item{font-size:17px;margin:28px 0 8px;}
+  p{margin:10px 0;} p strong{font-weight:700;}
+  .byline{color:var(--muted);font-style:italic;margin:0 0 24px;}
+  aside{background:var(--aside-bg);border-left:3px solid var(--accent);
+    padding:14px 18px;margin:18px 0;border-radius:0 6px 6px 0;}
+  aside p{margin:6px 0;}
+  code,kbd{font-family:inherit;background:var(--code-bg);padding:1px 6px;
+    border-radius:3px;font-size:0.9em;}
+  pre{background:var(--code-bg);border-radius:6px;padding:14px 16px;overflow-x:auto;font-size:0.84em;line-height:1.5;}
+  ol,ul{padding-left:22px;} li{margin:5px 0;}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:0.9em;}
+  th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--rule);vertical-align:top;}
+  th{font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;font-size:0.8em;}
+  .lock{display:inline-block;font-size:0.72em;font-weight:700;padding:1px 7px;border-radius:10px;
+    background:var(--ok);color:#fff;text-transform:uppercase;letter-spacing:0.03em;}
+  .warn{display:inline-block;font-size:0.72em;font-weight:700;padding:1px 7px;border-radius:10px;
+    background:var(--warn);color:#fff;text-transform:uppercase;letter-spacing:0.03em;}
+</style>
+</head>
+<body>
+
+<h1>The planning ritual — /hh daily, /whh weekly</h1>
+<p class="byline">Design · 2026-06-30 · how the daily and weekly reviews come to co-own one living plan: <code>/whh</code> sets the week ahead, <code>/hh</code> judges yesterday and plans today, and the <code>/board/week</code> planner is the shared artifact between them · <span class="warn">decision points flagged inline</span></p>
+
+<aside>
+<p><strong>One-line:</strong> <code>/hh</code> stops being only a code-processor and becomes a daily <em>judgement-and-planning</em> ritual — "was yesterday good, and was it even the right thing to focus on? then, what best earns today?" — writing today's plan into the same week planner that <code>/whh</code> lays out every Sunday or Monday. The plan is a living document, re-evaluated each morning, not a Monday snapshot that is stale by Wednesday.</p>
+<p><strong>Status:</strong> the planner surface already ships (full-width colour-coded Sunday→Saturday grid, tickable major events on top, an empty 0–24h timeline beneath). This spec covers the <em>behavioural</em> change — what <code>/hh</code> and <code>/whh</code> each write into it — not the UI, which is built.</p>
+</aside>
+
+<h2 class="phase">The shift</h2>
+<p>Today <code>/hh</code> re-adjudicates the automated review emails and reconciles the Morning Board — it processes <em>code</em>. The change is to give it a second, higher job each morning: a verdict on yesterday and a plan for today. The daily review becomes the place where the week's direction is corrected, not just where findings are triaged. <code>/whh</code> keeps its forward, weekly job; <code>/hh</code> gains the daily steering.</p>
+
+<h2 class="phase">The two rituals</h2>
+<table>
+<tr><th></th><th>/whh — the weekly review</th><th>/hh — the daily review</th></tr>
+<tr><td><strong>Cadence</strong></td><td>Once, Sunday or Monday</td><td>Every morning</td></tr>
+<tr><td><strong>Gaze</strong></td><td>Forward — the week ahead</td><td>Backward, then forward — yesterday, then today</td></tr>
+<tr><td><strong>Asks</strong></td><td>"What are the major events of the coming week?"</td><td>"Was yesterday good, and the right focus? What best to do today?"</td></tr>
+<tr><td><strong>Writes</strong></td><td>The week's major events across the seven days (the planner's top row)</td><td>Today's plan; adjusts the days ahead as priorities move; marks shipped milestones done</td></tr>
+<tr><td><strong>Centre of gravity</strong></td><td>The whole week</td><td><strong>Today</strong> — the rest of the week is nudged, under constant re-evaluation</td></tr>
+</table>
+
+<h2 class="phase">/hh's morning sequence</h2>
+<p>The existing daily steps stay; a judgement-and-planning layer is appended after them.</p>
+<table>
+<tr><th>Step</th><th>What happens</th><th>State</th></tr>
+<tr><td>1 — Process</td><td>Pull the review email, adjudicate findings, reconcile the whole board, append the corrections ledgers, move shipped cards to Done, publish the morning board report.</td><td><span class="lock">built</span> the current <code>/hh</code></td></tr>
+<tr><td>2 — Judge yesterday</td><td>From the review just processed, form a verdict: <em>was the code good?</em> (quality — confirmed defects, survived refutation) and <em>was it the right thing to focus on?</em> (did it serve one of the week's major events, or was it a detour?).</td><td><span class="warn">new</span></td></tr>
+<tr><td>3 — Plan today</td><td>Given that verdict and the week's remaining major events, decide what best earns today — double down on what is working, correct course if yesterday drifted.</td><td><span class="warn">new</span></td></tr>
+<tr><td>4 — Update the planner</td><td>Write today's major event(s) into the current week's planner; mark shipped milestones done; adjust the days ahead only if the week genuinely moved.</td><td><span class="warn">new</span></td></tr>
+</table>
+
+<h2 class="phase">The evaluation — "was yesterday the right focus?"</h2>
+<p>This judgement is the heart of the change, so its anchor matters.</p>
+<aside>
+<p><strong>Proposed anchor</strong> <span class="warn">decision 1</span>: judge focus <em>primarily</em> against the week's major events — did yesterday's work move a planned milestone forward? — with a <em>secondary, honest impact read</em>: even if it was on the plan, did it matter, or was it motion? Pure plan-adherence alone would reward box-ticking; pure gut-feel alone drifts. The two together ask both "did you do what you said" and "was what you said worth doing." The alternative you raised — a broader, impact-only judgement untethered from the plan — is the other candidate; this is the call to confirm.</p>
+</aside>
+<p>The quality half is cheap: <code>/hh</code> already produces it (confirmed-vs-rejected, verdicts that survived adversarial refutation, new confirmed defects). The focus half is the new reasoning — comparing the day's actual work against the planner's major events for the week — and it is what feeds step 3.</p>
+
+<h2 class="phase">The shared artifact — the week planner</h2>
+<p>Both rituals read and write one object, already live: <code>board:week:&lt;weekOf&gt;</code> (mirrored to <code>content/board/weeks/&lt;date&gt;.json</code>), rendered at the gated <code>/board/week</code>. Its <code>retro.weekPlan</code> is the seven-day plan.</p>
+<pre>retro.weekPlan[day] = {
+  date, weekday, isReviewDay,           // Wednesday ★ carries the article/review marker
+  tasks: [                              // the day's MAJOR EVENTS (top row, tickable)
+    "Submit Hansard v1",                //   plain label, or…
+    { label, start, end }               //   …a timed block on the 0–24h grid
+  ]
+}</pre>
+<table>
+<tr><th>Layer</th><th>Holds</th><th>Owner / cadence</th></tr>
+<tr><td>Top — major events</td><td>A handful of milestones per day — the "what matters"</td><td><code>/whh</code> lays them out weekly; <code>/hh</code> keeps them current each morning</td></tr>
+<tr><td>Bottom — 0–24h timeline</td><td>The hourly actuals — what was really worked on, when</td><td><strong>Hand-filled</strong> as work happens <span class="warn">decision 3</span></td></tr>
+</table>
+
+<h2 class="phase">What /hh writes, concretely</h2>
+<p>Each morning <code>/hh</code> patches the current week's <code>weekPlan</code> and republishes it (the same Upstash path the daily board already uses — no deploy needed). Three writes:</p>
+<ul>
+<li><strong>Today's major events</strong> — re-derived for the current weekday from yesterday's verdict and the board's live state, replacing any stale entry.</li>
+<li><strong>Mark done</strong> — milestones that shipped get a <code>done</code> flag, rendered struck-through. <span class="warn">decision 2</span>: this server-side <code>done</code> is distinct from your in-browser checkbox ticks (local storage) — the page would show both, the plan's own "shipped" state and your personal tick. Keep them separate, or have one drive the other?</li>
+<li><strong>Adjust the days ahead</strong> — only when the week genuinely moved (a milestone slipped, a new one appeared); otherwise the future days are left as <code>/whh</code> set them.</li>
+</ul>
+
+<h2 class="phase">Engine — same hybrid boundary as today</h2>
+<p>Reuse the trust boundary the reviews already run on: deterministic facts, agent judgement.</p>
+<table>
+<tr><td>Deterministic</td><td>Which milestones shipped (board → Done), yesterday's review counts, which weekday "today" is — facts, computed, not narrated.</td></tr>
+<tr><td>Agent synthesis</td><td>The verdict (good? right focus?) and today's plan — a small Workflow reading the deterministic facts + the week's major events as ground truth, never recomputing them.</td></tr>
+</table>
+
+<h2 class="phase">State of each app — are we earning our users?</h2>
+<p>Beyond the retrospective and the downloads table, <code>/whh</code> gains a per-app panel answering the question under all of this: <strong>is each app worth its users' time?</strong> Most of it is fed by the App Analytics feed already being registered with Apple (the ongoing report requests are live; the data backfills in a day or two), so this section lights up as that lands.</p>
+<table>
+<tr><th>Dimension</th><th>What it answers</th><th>Source</th></tr>
+<tr><td><strong>Reach</strong> — how big</td><td>Active users now, and total installs to date</td><td>App Analytics — App Usage (active devices) + cumulative downloads</td></tr>
+<tr><td><strong>Growth</strong> — users</td><td>New users this week vs last; are they sticking (retention)?</td><td>App Analytics — downloads + retention curves</td></tr>
+<tr><td><strong>Effectiveness</strong> — is it useful</td><td>Sessions per active user, retention, ratings — do people come back?</td><td>App Analytics — App Usage + App Store ratings</td></tr>
+<tr><td><strong>Efficiency</strong> — is it well-built</td><td>Crash rate, hang rate, launch time, binary size</td><td>App Analytics — Performance reports + the build's size</td></tr>
+<tr><td><strong>Value verdict</strong></td><td>A weekly read: is this app earning its users, and the one change that would make it more useful?</td><td>Agent synthesis over the rows above</td></tr>
+</table>
+<aside>
+<p><strong>Why this belongs in the weekly, not the daily.</strong> User value moves on a weekly-or-slower scale — retention, engagement, and ratings do not change morning to morning. The daily <code>/hh</code> judges <em>yesterday's work</em>; the weekly <code>/whh</code> judges <em>whether the apps themselves are providing value</em>. Same hybrid engine: the numbers come deterministically from App Analytics, the value verdict is the agent's. Until the analytics instances backfill, the panel shows downloads + ratings and the verdict stays qualitative <span class="warn">decision 5</span>.</p>
+</aside>
+
+<h2 class="phase">Out of scope (v1)</h2>
+<ul>
+<li>Auto-logging the timeline — the 0–24h grid stays hand-filled for now; <code>/hh</code> may later record actuals, but not in this pass <span class="warn">decision 3</span>.</li>
+<li>Changing the planner UI — it is built; this is a data/behaviour change only.</li>
+<li>A second daily web surface — today's plan lives <em>in</em> the planner, not on a new page.</li>
+<li>Automating the work itself — <code>/hh</code> plans and judges; you (and I, on the day) do the work.</li>
+</ul>
+
+<h2 class="phase">Open decisions — to settle before the plan</h2>
+<ol>
+<li><strong>Evaluation anchor</strong> — focus judged primarily against the week's major events (proposed), or a broader impact-only read?</li>
+<li><strong>Done-state</strong> — should <code>/hh</code>'s server-side "shipped" mark and your personal checkbox tick be separate, or one drive the other?</li>
+<li><strong>Timeline</strong> — confirm it stays hand-filled in v1 (no <code>/hh</code> auto-logging yet).</li>
+<li><strong>Major-event altitude</strong> — is one-to-two milestones per day the right height, or higher (only the genuinely big events)?</li>
+<li><strong>App-state metrics</strong> — are Reach / Growth / Effectiveness / Efficiency the right four dimensions, and is "active users + retention + crash rate + ratings" the concrete signal set, or do you want different signals?</li>
+</ol>
+
+</body>
+</html>

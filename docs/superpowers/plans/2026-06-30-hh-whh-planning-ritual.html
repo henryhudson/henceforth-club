@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The planning ritual — /hh + /whh · Implementation Plan · 2026-06-30</title>
+<style>
+  :root { --bg:#f4f1ea; --ink:#1c1a16; --muted:#6b6358; --rule:#d8d0c0; --accent:#a8431f; --accent-soft:#c4a572; --card:#fbf9f4; --code-bg:#1e1e1e; --code-ink:#e8e8e8; --ok:#2f6f3e; --warn:#a8431f; --shadow:0 1px 3px rgba(0,0,0,0.08); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.65;}
+  .wrap{max-width:880px;margin:0 auto;padding:56px 32px;} header.doc{margin-bottom:40px;border-bottom:2px solid var(--rule);padding-bottom:24px;}
+  .eyebrow{font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:34px;line-height:1.15;margin:0 0 12px;font-weight:700;letter-spacing:-0.01em;} h2{font-size:24px;margin:48px 0 14px;padding-top:20px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 10px;} .lede{font-size:19px;color:var(--muted);margin:0;} p{margin:14px 0;}
+  code{font-family:'SF Mono','JetBrains Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(0,0,0,0.06);padding:2px 6px;border-radius:4px;}
+  pre{background:var(--code-bg);color:var(--code-ink);padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;} th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .task{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:8px 22px 18px;margin:22px 0;box-shadow:var(--shadow);}
+  .task .tasknum{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);}
+  .files{font-size:14px;background:#efe9dc;border-radius:6px;padding:10px 14px;margin:10px 0;}
+  .files code{background:rgba(0,0,0,0.05);}
+  .try{background:#eef3e9;border-left:4px solid var(--ok);padding:10px 16px;border-radius:0 6px 6px 0;margin:14px 0;} .try strong{color:var(--ok);}
+  .note{background:#f6efe0;border-left:4px solid var(--accent-soft);padding:10px 16px;border-radius:0 6px 6px 0;margin:14px 0;}
+  .danger{background:#f7e8e2;border-left:4px solid var(--warn);padding:10px 16px;border-radius:0 6px 6px 0;margin:14px 0;} .danger strong{color:var(--warn);}
+  ul{margin:12px 0;padding-left:24px;} li{margin:5px 0;}
+  ul.steps{list-style:none;padding-left:4px;} ul.steps>li{margin:14px 0;padding-left:30px;position:relative;}
+  ul.steps>li input[type=checkbox]{position:absolute;left:0;top:5px;width:18px;height:18px;}
+  .badge{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:2px 8px;border-radius:999px;white-space:nowrap;}
+  .b-done{background:#dfeede;color:var(--ok);} .b-partial{background:#f6e7cf;color:#8a5a12;} .b-todo{background:#f3dcd2;color:var(--accent);} .b-wont{background:#e6e2d8;color:var(--muted);} .b-gate{background:#e7e0f0;color:#5a3a8a;}
+  .effort{font-size:13px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+  <div class="eyebrow">Implementation Plan · henceforth-club + ~/.claude/commands · branch <code>feat/hh-whh-planning-ritual</code></div>
+  <h1>The planning ritual — /hh daily, /whh weekly</h1>
+  <p class="lede"><code>/whh</code> sets the week's major events; <code>/hh</code> judges yesterday and plans today, writing into the shared <code>/board/week</code> planner; and <code>/whh</code> grows a per-app "state of the app" panel answering whether each app earns its users.</p>
+  <p style="font-size:14px;color:var(--muted);margin:16px 0 0;">Implements <code>docs/superpowers/specs/2026-06-30-hh-whh-planning-ritual-design.html</code> (approved 2026-06-30). Execute task-by-task with <code>superpowers:subagent-driven-development</code>.</p>
+</header>
+
+<div class="note">
+<p><strong>For agentic workers:</strong> use <code>superpowers:subagent-driven-development</code>. Steps are real checkboxes. Pure helpers are TDD — failing <code>vitest</code> first. Commit after each task. <strong>Phase 2 is gated</strong> on the App Store Connect App Analytics feed (ongoing requests registered 2026-06-30; instances backfill in ~1–2 days) — it builds and renders with a graceful "generating" state and lights up when the data lands. Phases 1 and 3 need no new data.</p>
+</div>
+
+<h2>Decisions settled (the five open questions)</h2>
+<table>
+<tr><th>#</th><th>Decision</th><th>Resolution</th></tr>
+<tr><td>1</td><td>Evaluation anchor</td><td><strong>Major-events-primary + impact-secondary.</strong> "Right focus?" is judged first against the week's major events, then an honest "did it matter" read.</td></tr>
+<tr><td>2</td><td>Done-state</td><td><strong>Separate.</strong> <code>/hh</code> writes a server-side <code>done</code> on a major event (rendered struck-through); the browser checkbox tick (local storage) stays the reader's own. They do not drive each other.</td></tr>
+<tr><td>3</td><td>Timeline</td><td><strong>Hand-filled in v1.</strong> No <code>/hh</code> auto-logging onto the 0–24h grid this pass.</td></tr>
+<tr><td>4</td><td>Major-event altitude</td><td><strong>One-to-two milestones per day.</strong></td></tr>
+<tr><td>5</td><td>App-state metrics</td><td><strong>Reach / Growth / Effectiveness / Efficiency + value verdict</strong>, signals: active users · retention · crash rate · ratings.</td></tr>
+</table>
+
+<h2>Global constraints</h2>
+<ul>
+<li><strong>Package manager npm</strong>; ES modules are <code>.mjs</code> (no <code>"type"</code> in <code>package.json</code>). New scripts match <code>scripts/board/*.mjs</code>.</li>
+<li><strong>Hybrid engine</strong>: deterministic facts (which milestones shipped, the day's review counts, App Analytics numbers) are ground truth; an ultracode Workflow writes judgement (the verdict, today's plan, the value verdict) and never recomputes numbers.</li>
+<li><strong>The planner is one shared object</strong>: <code>board:week:&lt;weekOf&gt;</code> (mirror <code>content/board/weeks/&lt;date&gt;.json</code>), field <code>retro.weekPlan</code>. Both rituals patch it and republish via <code>scripts/board/publish-week.mjs</code> — no redeploy.</li>
+<li><strong>weekPlan task shape</strong>: a major event is <code>"label"</code> or <code>{ label, start, end }</code> or <code>{ label, done }</code>. <code>WeekPlanner.tsx</code> already tolerates strings and objects; extend it for <code>done</code>.</li>
+<li><strong>Credentials</strong> stay in <code>.env.local</code>; only computed aggregates are published. App Analytics request ids are in <code>ASC_ANALYTICS_REQ_*</code>.</li>
+<li><strong>Git</strong>: branch + pull request; no <code>main</code> push, no force-push. <strong>Prose</strong>: no acronyms.</li>
+<li><strong>Two files live outside the repo</strong>: <code>~/.claude/commands/hh.md</code> and <code>~/.claude/commands/whh.md</code>. Editing them is part of this plan; they are not under git but are the behavioural surface.</li>
+</ul>
+
+<h2>File structure</h2>
+<table>
+<tr><th>Path</th><th>Responsibility</th></tr>
+<tr><td><code>scripts/board/week-plan.mjs</code> <em>(create)</em></td><td><strong>Pure.</strong> <code>weekOfFor(date)</code>, <code>setDayEvents(plan, weekday, events)</code>, <code>markEventDone(plan, weekday, label)</code> — patch a <code>weekPlan</code> immutably. No I/O.</td></tr>
+<tr><td><code>scripts/board/week-plan.test.mjs</code> <em>(create)</em></td><td>Vitest for every pure function above.</td></tr>
+<tr><td><code>scripts/board/hh-plan-update.mjs</code> <em>(create)</em></td><td>The <code>/hh</code> hook: load this week's <code>weeks/&lt;weekOf&gt;.json</code> (Upstash → file), apply today's events + done-marks via <code>week-plan.mjs</code>, write + republish.</td></tr>
+<tr><td><code>scripts/board/asc-analytics.mjs</code> <em>(extend)</em></td><td>Add <code>pullAppState()</code>: read App Usage (active devices, sessions) + Performance (crash rate) reports per app; null until instances exist.</td></tr>
+<tr><td><code>scripts/board/whh-aggregate.mjs</code> <em>(extend)</em></td><td>Add <code>appState(...)</code> shaping the deterministic per-app Reach/Growth/Effectiveness/Efficiency numbers.</td></tr>
+<tr><td><code>src/app/board/week/page.tsx</code> <em>(extend)</em></td><td>Render the "State of each app" panel; "generating" placeholder when analytics is absent.</td></tr>
+<tr><td><code>src/app/board/week/WeekPlanner.tsx</code> <em>(extend)</em></td><td>Render a <code>done</code> major event struck-through (distinct from the local-storage tick).</td></tr>
+<tr><td><code>~/.claude/commands/hh.md</code> <em>(edit)</em></td><td>New closing step: judge yesterday + plan today + patch the week planner.</td></tr>
+<tr><td><code>~/.claude/commands/whh.md</code> <em>(edit)</em></td><td>Major-events synthesis (altitude) + the app-state value-verdict reader.</td></tr>
+</table>
+
+<h2>Phase 1 — /hh writes today into the week planner <span class="badge b-todo">no new data</span></h2>
+
+<div class="task">
+<div class="tasknum">Task 1 · week-plan.mjs (pure) + tests</div>
+<div class="files"><strong>Create:</strong> <code>scripts/board/week-plan.mjs</code>, <code>scripts/board/week-plan.test.mjs</code></div>
+<p>Pure, immutable patchers over a <code>weekPlan</code> array. <code>weekOfFor("2026-07-02")</code> → the Sunday of that week (reuse <code>currentWeekDates</code> from <code>whh-aggregate.mjs</code>). <code>setDayEvents(plan, "Thu", ["Episode 8"])</code> replaces that day's <code>tasks</code>. <code>markEventDone(plan, "Mon", "Submit Hansard v1")</code> sets <code>{label,done:true}</code> on the matching event.</p>
+<ul class="steps">
+<li><input type="checkbox"> Write failing tests: <code>weekOfFor</code> returns the right Sunday; <code>setDayEvents</code> replaces only the named day; <code>markEventDone</code> flips one event to <code>{label,done:true}</code> and leaves others untouched; both return new arrays (no mutation).</li>
+<li><input type="checkbox"> Implement the three pure functions.</li>
+<li><input type="checkbox"> <code>npx vitest run scripts/board/week-plan.test.mjs</code> green; commit.</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 2 · hh-plan-update.mjs (the I/O hook)</div>
+<div class="files"><strong>Create:</strong> <code>scripts/board/hh-plan-update.mjs</code> · <strong>uses</strong> <code>week-plan.mjs</code>, <code>@upstash/redis</code>, <code>publish-week.mjs</code> path</div>
+<p>Invoked by <code>/hh</code> as <code>node --env-file=.env.local scripts/board/hh-plan-update.mjs &lt;today&gt; &lt;eventsJson&gt;</code>. Loads <code>board:week:&lt;weekOf&gt;</code> (Upstash, file fallback), applies <code>setDayEvents</code> for today's weekday + any <code>markEventDone</code>, writes <code>weeks/&lt;weekOf&gt;.json</code>, republishes.</p>
+<ul class="steps">
+<li><input type="checkbox"> Accept today's date + a small JSON payload <code>{ events:[…], done:[…] }</code> (the agent's plan for today, from the /hh synthesis).</li>
+<li><input type="checkbox"> Load the current week artifact; if none exists for this week, start from <code>weekPlanSkeleton(today)</code>.</li>
+<li><input type="checkbox"> Apply via <code>week-plan.mjs</code>; write the file; republish to Upstash.</li>
+<li><input type="checkbox"> Manual verify against the live week: run it with a throwaway payload, confirm <code>/board/week</code> shows the change; commit.</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 3 · /hh command — judge yesterday + plan today</div>
+<div class="files"><strong>Edit:</strong> <code>~/.claude/commands/hh.md</code></div>
+<p>Append a step after the morning report (step 6/7): a short Workflow that (a) <strong>judges yesterday</strong> — was the code good (from today's adjudication counts) and was it the right focus (did yesterday's shipped work advance one of the week's major events, read from <code>board:week</code>)? — and (b) <strong>plans today</strong> — one-to-two major events for today, grounded in that verdict + the week's remaining events + each repo's backlog. Then call <code>hh-plan-update.mjs</code> with the result and mark shipped milestones done.</p>
+<ul class="steps">
+<li><input type="checkbox"> Add the step text: the verdict (anchor = major-events-primary + impact-secondary), the today-plan (altitude = 1–2 events), the <code>hh-plan-update.mjs</code> call, and "adjust the days ahead only if the week genuinely moved".</li>
+<li><input type="checkbox"> Keep it read-only on the board and source; it writes only the week planner + republishes.</li>
+<li><input type="checkbox"> Note the boundary: the morning report (<code>/board/report</code>) stays the day's full digest; the week planner (<code>/board/week</code>) gets today's major events. No duplication of intent.</li>
+</ul>
+</div>
+
+<h2>Phase 2 — /whh "state of each app" panel <span class="badge b-gate">gated · analytics feed</span></h2>
+
+<div class="danger"><p><strong>Data gate.</strong> Active users / retention / crash rate come from App Analytics report instances that Apple is still generating (ongoing requests registered 2026-06-30). Build the whole panel now against the <em>shape</em>; it renders "generating" until the first instances exist, then fills. The pure parser + aggregator are testable today with fixtures; the live pull verifies on first real data.</p></div>
+
+<div class="task">
+<div class="tasknum">Task 4 · asc-analytics.mjs — pullAppState()</div>
+<div class="files"><strong>Extend:</strong> <code>scripts/board/asc-analytics.mjs</code> + tests</div>
+<ul class="steps">
+<li><input type="checkbox"> Add a pure <code>parseUsageCsv</code> / <code>parsePerfCsv</code> (active devices, sessions; crash rate) mirroring <code>parseDownloadsCsv</code>; unit-test with fixtures.</li>
+<li><input type="checkbox"> Add <code>pullAppState({creds, requestIds, …})</code> reusing the request→report→instance→segment walk, selecting the App Usage + Performance reports; return null when no instances (graceful).</li>
+<li><input type="checkbox"> Tests green; commit.</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 5 · aggregator + page panel</div>
+<div class="files"><strong>Extend:</strong> <code>scripts/board/whh-aggregate.mjs</code>, <code>src/app/board/week/page.tsx</code></div>
+<ul class="steps">
+<li><input type="checkbox"> <code>appState(usage, perf, sales, ratings)</code> → per-app <code>{ reach, growth, effectiveness, efficiency }</code> deterministic numbers; unit-test.</li>
+<li><input type="checkbox"> Add <code>retro.appState</code> to the artifact (runner) and the page type.</li>
+<li><input type="checkbox"> Render a "State of each app" panel: per-app row with the four dimensions + a slot for the value verdict; "generating" when numbers absent. Build green.</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 6 · WeekPlanner — struck-through done events</div>
+<div class="files"><strong>Extend:</strong> <code>src/app/board/week/WeekPlanner.tsx</code></div>
+<ul class="steps">
+<li><input type="checkbox"> Normalise a <code>{label,done}</code> event; render <code>done</code> with a line-through + muted, independent of the local-storage tick. Build green; commit.</li>
+</ul>
+</div>
+
+<h2>Phase 3 — /whh sets the week + the value verdict <span class="badge b-todo">no new data</span></h2>
+
+<div class="task">
+<div class="tasknum">Task 7 · /whh command — major events + value verdict</div>
+<div class="files"><strong>Edit:</strong> <code>~/.claude/commands/whh.md</code></div>
+<ul class="steps">
+<li><input type="checkbox"> Reframe the day-plan synthesis to produce <strong>major events</strong> (1–2 per day, milestone altitude) written into <code>retro.weekPlan</code> — not granular tasks.</li>
+<li><input type="checkbox"> Add an app-state reader: from <code>retro.appState</code>, write the per-app <strong>value verdict</strong> (<code>"is it earning its users + the one change to make it more useful"</code>), grounded only in the numbers; qualitative when analytics is still generating.</li>
+<li><input type="checkbox"> Patch + publish as today; the page renders the panel + verdicts.</li>
+</ul>
+</div>
+
+<h2>Final review</h2>
+<ul class="steps">
+<li><input type="checkbox"> Whole-branch review (most-capable model): the hybrid boundary holds (no agent recomputes numbers), <code>/hh</code> stays report-only on source + board, credentials never published, prose acronym-free.</li>
+<li><input type="checkbox"> Open the pull request; <strong>Henry merges</strong> (production deploy needs his hand).</li>
+</ul>
+
+<div class="note"><p><strong>Sequencing.</strong> Phase 1 and Phase 3's major-events reframe are buildable and verifiable now. Phase 2's live numbers wait on Apple's backfill — its code lands now behind a graceful "generating" state, and the value verdicts fill on the first <code>/whh</code> run after the feed populates.</p></div>
+
+</div>
+</body>
+</html>
