@@ -15,7 +15,7 @@ type AppSales = {
   proceeds: { thisWeek: number; lastWeek: number; currency: string | null; deltaPct: number | null };
 };
 type WeekDay = { date: string; weekday: string; reviews: number; hasReport: boolean };
-type PlanDay = { date: string; weekday: string; isReviewDay: boolean; tasks: (string | { label: string; start: number; end: number })[] };
+type PlanDay = { date: string; weekday: string; isReviewDay: boolean; tasks: (string | { label: string; start?: number; end?: number; done?: boolean })[] };
 type WeekReport = {
   weekOf: string; weekEnd: string; daysCovered: string[];
   retro: {
