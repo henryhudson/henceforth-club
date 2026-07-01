@@ -48,7 +48,7 @@ export function prepareDivisions(votes: { row: DivisionRow }[]): PreparedDivisio
 }
 
 export function trimSentences(text: string, n: number): string {
-  const parts = String(text || '').split(/(?<=\.|\)) /)
+  const parts = String(text || '').split(/(?<=\.\)?) /)
   const bal = (s: string) => (s.match(/\(/g) || []).length - (s.match(/\)/g) || []).length
   let out = parts.slice(0, n).join(' ')
   for (let i = n; bal(out) > 0 && i < parts.length && i < n + 3; i++) out += ' ' + parts[i]

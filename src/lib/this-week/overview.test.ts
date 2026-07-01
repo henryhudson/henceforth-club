@@ -38,3 +38,7 @@ it('shortenDept and shortenDivTitle strip the boilerplate', () => {
   expect(shortenDept('Department of Health and Social Care')).toBe('Health')
   expect(shortenDivTitle('Armed Forces Bill Report Stage — New Clause 4')).toBe('Armed Forces Bill, New Clause 4')
 })
+it('trimSentences never splits at a mid-sentence parenthetical', () => {
+  expect(trimSentences('The vote passed (narrowly) on Wednesday. MPs debated for hours.', 1))
+    .toBe('The vote passed (narrowly) on Wednesday.')
+})
