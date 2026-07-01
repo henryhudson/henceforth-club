@@ -73,16 +73,21 @@ node -e "JSON.parse(require('fs').readFileSync('$FILE','utf8'))" || {
 }
 
 # Inject the busiest-members snapshot deterministically — the editorial pass
-# never writes overview.mostActive (see PROMPT.md step 6).
-MOST_ACTIVE=$(node "$REPO/scripts/this-week/compute-most-active.mjs" "$START" "$WED")
-node -e '
-  const fs = require("fs")
-  const [,, file, json] = process.argv
-  const digest = JSON.parse(fs.readFileSync(file, "utf8"))
-  const mostActive = JSON.parse(json)
-  if (mostActive && digest.overview) digest.overview.mostActive = mostActive
-  fs.writeFileSync(file, JSON.stringify(digest, null, 2) + "\n")
-' "$FILE" "$MOST_ACTIVE"
+# never writes overview.mostActive (see PROMPT.md step 6). Best-effort: the
+# overview page renders without the footer, so a failed lookup degrades the
+# issue — it never aborts the run.
+if MOST_ACTIVE=$(node "$REPO/scripts/this-week/compute-most-active.mjs" "$START" "$WED"); then
+  node -e '
+    const fs = require("fs")
+    const [, file, json] = process.argv   // node -e has no script-path slot; args start at argv[1]
+    const digest = JSON.parse(fs.readFileSync(file, "utf8"))
+    const mostActive = JSON.parse(json)
+    if (mostActive && digest.overview) digest.overview.mostActive = mostActive
+    fs.writeFileSync(file, JSON.stringify(digest, null, 2) + "\n")
+  ' "$FILE" "$MOST_ACTIVE" || echo "warn: most-active injection failed; issue ships without the footer"
+else
+  echo "warn: most-active computation failed; issue ships without the footer"
+fi
 
 # Commit + push (status stays "draft" — hidden from the public archive).
 git add "$FILE"
