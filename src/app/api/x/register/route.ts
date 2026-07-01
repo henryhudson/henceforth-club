@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { fetchTxArchive } from "@/lib/whatsonchain";
 import { appendXTxid } from "@/lib/xIndex";
+import { archiveDigest, setTxDigest } from "@/lib/xDigest";
 
 /**
  * POST /api/x/register  { handle, txid }
@@ -37,6 +38,11 @@ export async function POST(req: Request) {
       { status: 422 },
     );
   }
+
+  // Prime the per-transaction digest cache: this route just fetched and
+  // verified the archive, so the archived endpoint never needs to re-download
+  // this transaction to learn what it contains.
+  await setTxDigest(txid, archiveDigest(archive));
 
   const stored = await appendXTxid(handle, txid);
   if (!stored) {

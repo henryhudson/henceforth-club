@@ -132,26 +132,46 @@ export function socialArchiveToXArchive(sa: SocialArchive, txid?: string): XArch
  * Merge several on-chain archives of one handle into the renderable profile,
  * resolving each post's media against the transaction it was ACTUALLY inscribed
  * in — a photo backfilled in a later transaction must form its ORDFS outpoint
- * from that transaction's id, not the newest one. Posts are de-duplicated by id
- * (the newest archive's copy wins, so a media-enriched copy supersedes the
- * text-only original); the profile comes from the most recent archive. Input is
- * oldest-first.
+ * from that transaction's id, not the newest one. Posts are de-duplicated by id:
+ * fields come from the newest archive's copy, but media is the UNION across all
+ * copies (newest first, de-duplicated by url) — a later text-only re-archive
+ * must never erase photos inscribed, and paid for, earlier. The profile comes
+ * from the most recent archive; posts come out newest-first by post id. Input
+ * is oldest-first.
  */
 export function stitchToXArchive(
   pairs: Array<{ archive: SocialArchive; txid: string }>,
 ): XArchive {
   const rendered = pairs.map(({ archive, txid }) => socialArchiveToXArchive(archive, txid));
   const latest = rendered[rendered.length - 1];
-  const seen = new Set<string>();
-  const posts: XPost[] = [];
+  const merged = new Map<string, XPost>();
   for (let i = rendered.length - 1; i >= 0; i--) {
     for (const post of rendered[i].posts) {
-      if (seen.has(post.id)) continue;
-      seen.add(post.id);
-      posts.push(post);
+      const newer = merged.get(post.id);
+      merged.set(post.id, newer ? withMediaFromOlderCopy(newer, post) : post);
     }
   }
-  return { profile: latest.profile, posts };
+  return { profile: latest.profile, posts: [...merged.values()].sort(byNewestId) };
+}
+
+/** The newer copy's fields, with any media the older copy carries that the newer
+ * one lacks appended. Media urls identify inscriptions exactly — each already
+ * embeds the transaction the photo was inscribed in — so de-duplicating by url
+ * is safe. */
+function withMediaFromOlderCopy(newer: XPost, older: XPost): XPost {
+  const kept = newer.media ?? [];
+  const knownUrls = new Set(kept.map((m) => m.url));
+  const carried = (older.media ?? []).filter((m) => !knownUrls.has(m.url));
+  const media = [...kept, ...carried];
+  return { ...newer, media: media.length > 0 ? media : undefined };
+}
+
+/** Newest post first. X post ids are numeric snowflakes that grow over time but
+ * exceed the safe-integer range, so compare as strings: a longer id is newer;
+ * ids of equal length compare lexicographically. */
+function byNewestId(a: XPost, b: XPost): number {
+  if (a.id.length !== b.id.length) return b.id.length - a.id.length;
+  return a.id === b.id ? 0 : a.id < b.id ? 1 : -1;
 }
 
 function hexToBytes(hex: string): Uint8Array {
