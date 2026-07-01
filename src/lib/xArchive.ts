@@ -1,6 +1,5 @@
-import type { MediaRef, TweetsWithMedia } from "./xMedia";
-
-const BASE = "https://api.twitter.com/2";
+import type { MediaRef, Tweet, TweetsWithMedia } from "./xMedia";
+import { fetchAllUserTweets } from "./xPaginate";
 
 export type MediaItemDTO = {
   postId: string;
@@ -19,15 +18,17 @@ export async function fetchTweetsWithMedia(
   token: string,
   fetchFn: typeof fetch = fetch
 ): Promise<TweetsWithMedia> {
-  const res = await fetchFn(
-    `${BASE}/users/${userId}/tweets?max_results=20` +
-      `&tweet.fields=created_at,in_reply_to_user_id,attachments` +
-      `&expansions=attachments.media_keys` +
-      `&media.fields=type,url,variants`,
-    { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" }
+  // Whole timeline, media included: page the cursor to the ~3200-tweet ceiling
+  // so a full archive captures every photo, not just the recent 20 posts.
+  const { data, media } = await fetchAllUserTweets<Tweet>(
+    userId,
+    token,
+    "tweet.fields=created_at,in_reply_to_user_id,attachments" +
+      "&expansions=attachments.media_keys" +
+      "&media.fields=type,url,variants",
+    fetchFn
   );
-  if (!res.ok) return {};
-  return (await res.json()) as TweetsWithMedia;
+  return { data, includes: { media } };
 }
 
 export function selectRefs(
