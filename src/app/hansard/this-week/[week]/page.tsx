@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { listPublishedWeeks, loadDigest } from '@/lib/this-week/store'
-import DigestView from '../_components/DigestView'
+import Overview from '../_components/overview/Overview'
 
 export const revalidate = 3600
 
@@ -43,5 +43,5 @@ export default async function WeekPage({ params }: { params: Promise<Params> }) 
   const { week } = await params
   const digest = loadDigest(week)
   if (!digest || digest.status !== 'published') notFound()
-  return <DigestView digest={digest} />
+  return <Overview digest={digest} week={week} />
 }
