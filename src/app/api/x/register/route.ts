@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchTxArchive } from "@/lib/whatsonchain";
-import { setXTxid } from "@/lib/xIndex";
+import { appendXTxid } from "@/lib/xIndex";
 
 /**
  * POST /api/x/register  { handle, txid }
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const stored = await setXTxid(handle, txid);
+  const stored = await appendXTxid(handle, txid);
   if (!stored) {
     return NextResponse.json(
       { ok: false, reason: "index-unavailable" },

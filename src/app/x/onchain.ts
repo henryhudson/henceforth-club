@@ -128,6 +128,26 @@ export function socialArchiveToXArchive(sa: SocialArchive, txid?: string): XArch
   };
 }
 
+/**
+ * Merge several archives of the same handle — an initial archive plus incremental
+ * deltas that each add only the tweets not already on chain — into one. Posts are
+ * unioned and de-duplicated by id (the newest archive's copy of a post wins), and
+ * the profile comes from the most recent archive. Input is oldest-first.
+ */
+export function stitchArchives(archives: SocialArchive[]): SocialArchive {
+  const latest = archives[archives.length - 1];
+  const seen = new Set<string>();
+  const posts: SocialArchive["posts"] = [];
+  for (let i = archives.length - 1; i >= 0; i--) {
+    for (const post of archives[i].posts ?? []) {
+      if (seen.has(post.id)) continue;
+      seen.add(post.id);
+      posts.push(post);
+    }
+  }
+  return { ...latest, posts };
+}
+
 function hexToBytes(hex: string): Uint8Array {
   const clean = hex.length % 2 ? "0" + hex : hex;
   const out = new Uint8Array(clean.length / 2);
