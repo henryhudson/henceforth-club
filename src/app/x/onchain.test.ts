@@ -4,6 +4,7 @@ import {
   socialArchiveFromScripts,
   socialArchiveToXArchive,
   ordfsUrl,
+  stitchArchives,
 } from "./onchain";
 
 // Build an OP_RETURN script hex (OP_FALSE OP_RETURN <push>...) from string data,
@@ -120,5 +121,24 @@ describe("socialArchiveToXArchive media", () => {
 describe("ordfsUrl", () => {
   it("forms the outpoint url", () => {
     expect(ordfsUrl("abc", "2")).toBe("https://ordfs.network/abc_2");
+  });
+});
+
+describe("stitchArchives", () => {
+  const mk = (posts: { id: string; text: string }[], displayName?: string) => ({
+    v: 1,
+    source: "x",
+    handle: "h",
+    profile: { displayName },
+    posts: posts.map((p) => ({ id: p.id, at: "", text: p.text })),
+  });
+
+  it("unions posts across archives, dedupes by id (newest wins), takes the latest profile", () => {
+    const first = mk([{ id: "1", text: "a" }, { id: "2", text: "b" }], "Old Name");
+    const delta = mk([{ id: "2", text: "b2" }, { id: "3", text: "c" }], "New Name");
+    const merged = stitchArchives([first, delta]);
+    expect(merged.profile.displayName).toBe("New Name");
+    expect(merged.posts.map((p) => p.id).sort()).toEqual(["1", "2", "3"]);
+    expect(merged.posts.find((p) => p.id === "2")?.text).toBe("b2");
   });
 });

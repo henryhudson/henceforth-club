@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { XArchive } from "../parseArchive";
-import { socialArchiveToXArchive } from "../onchain";
+import { socialArchiveToXArchive, stitchArchives, type SocialArchive } from "../onchain";
 import { fetchTxArchive } from "@/lib/whatsonchain";
-import { getXTxid } from "@/lib/xIndex";
+import { getXTxids } from "@/lib/xIndex";
 import ProfilePage from "../_components/ProfilePage";
 import { realArchive } from "../real";
 
@@ -15,10 +15,20 @@ const fallback: Record<string, XArchive> = { henryhudson6: realArchive };
 async function resolve(
   handle: string,
 ): Promise<{ archive: XArchive; txid: string | null } | null> {
-  const txid = await getXTxid(handle);
-  if (txid) {
-    const sa = await fetchTxArchive(txid);
-    if (sa) return { archive: socialArchiveToXArchive(sa, txid), txid };
+  const txids = await getXTxids(handle);
+  if (txids.length > 0) {
+    const archives = (await Promise.all(txids.map((t) => fetchTxArchive(t)))).filter(
+      (a): a is SocialArchive => a !== null,
+    );
+    if (archives.length > 0) {
+      // Media outpoints resolve against the latest txid; today's archives are
+      // text-only, so multi-archive media stitching is deferred.
+      const latestTxid = txids[txids.length - 1];
+      return {
+        archive: socialArchiveToXArchive(stitchArchives(archives), latestTxid),
+        txid: latestTxid,
+      };
+    }
   }
   const fb = fallback[handle.toLowerCase()];
   return fb ? { archive: fb, txid: null } : null;
