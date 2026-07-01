@@ -35,5 +35,21 @@ For the lead story and EVERY hard fact (dates, vote numbers, names, quotes, poli
 ## 5. Write content/this-week/{{WEEK_DATE}}.json with status "draft"
 Match types.ts exactly. Set week="{{WEEK_DATE}}" and windowLabel="{{WINDOW_LABEL}}". House voice: literary, British, precise, dry-witted; em-dashes and curly quotes; specific numbers; a moral/constitutional through-line; a wry written-question note and a grave/human one. Fields: week, windowLabel, headline, mode, generatedAt (current ISO-8601), recessReturnISO, stats, departments, body (4–5 paragraphs), feature {title, asker, party, department, count, kicker, status, summary, questions[]}, topTopics, qa (3 items with the minister's real answer, HTML stripped, faithfully trimmed to complete sentences), highlights, intro, status:"draft". Set mode per compute.ts (recess/quiet/normal); if the window is a recess with no divisions and few questions, produce a SHORT recess-mode digest like the 2026-05-27 issue and set recessReturnISO.
 
-## 6. Validate (must be green), then STOP
+## 6. Write the `overview` block (plain-English summary)
+In the SAME JSON file, ALSO write an `overview` object on the digest matching `OverviewBlock` in types.ts:
+- `headline` — may match the main headline above; must contain no em-dash and no connector colon.
+- `intro` — the top story in a few plain-English lines. It carries the substance (what happened and what was found or decided), not only who responded. End with a short pivot to the rest of the week.
+- `brief` — an array of `{ title, when, note }` items covering the week's oral set-pieces: government statements, urgent questions, Prime Minister's Questions (the run now happens after that day's session — include it), and Royal Assent or similar. Three to five items, one or two sentences each.
+- `feature` — `{ title, summary }`, plain-English.
+- Do NOT write `mostActive` — the wrapper computes and injects it deterministically after this run.
+
+Prose rules for `intro`, `brief[].note`, and `feature.summary` (enforced by `src/lib/this-week/overview-prose.test.ts`):
+- Full sentences, plain English, short sentences, full stops freely.
+- No em-dashes or en-dashes as connectors. No colons joining clauses (data headings like "Roads: Temperature" are exempt).
+- Commas sparingly.
+- Whole numbers up to ninety-nine spelled out; numerals for vote tallies, dates, percentages and large or precise figures.
+- Role and party initialisms spelled out (Members of Parliament, Prime Minister); established proper nouns (NHS, NATO) kept.
+- Every name, party, tally, date and quotation preserved exactly.
+
+## 7. Validate (must be green), then STOP
 JSON parses; `npx vitest run src/lib/this-week`; `npx tsc --noEmit`. Re-check: departments counts sum == stats.questions; highlights.votes count == stats.divisions. Do NOT git commit, push, or email — the wrapper does that. End with a one-paragraph summary: the headline, the chosen top story and WHY it leads, the division and question counts, and the file path.

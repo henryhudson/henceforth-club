@@ -1,6 +1,7 @@
 #!/bin/zsh
 # This Week in Parliament — weekly digest generator.
-# Runs on the Mac mini via launchd, Tuesday 20:00 LOCAL time (see the .plist).
+# Runs on the Mac mini via launchd, Wednesday 14:00 LOCAL time, after Prime
+# Minister's Questions (see the .plist).
 #
 # Division of labour:
 #   - Claude Code (headless) does the EDITORIAL work: research, verify, write
@@ -70,6 +71,18 @@ node -e "JSON.parse(require('fs').readFileSync('$FILE','utf8'))" || {
   printf 'Digest generation FAILED for %s — %s is not valid JSON.\n' "$WINDOW_LABEL" "$FILE" | send_email "FAILED: This Week in Parliament $WED"
   exit 1
 }
+
+# Inject the busiest-members snapshot deterministically — the editorial pass
+# never writes overview.mostActive (see PROMPT.md step 6).
+MOST_ACTIVE=$(node "$REPO/scripts/this-week/compute-most-active.mjs" "$START" "$WED")
+node -e '
+  const fs = require("fs")
+  const [,, file, json] = process.argv
+  const digest = JSON.parse(fs.readFileSync(file, "utf8"))
+  const mostActive = JSON.parse(json)
+  if (mostActive && digest.overview) digest.overview.mostActive = mostActive
+  fs.writeFileSync(file, JSON.stringify(digest, null, 2) + "\n")
+' "$FILE" "$MOST_ACTIVE"
 
 # Commit + push (status stays "draft" — hidden from the public archive).
 git add "$FILE"
