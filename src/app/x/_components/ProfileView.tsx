@@ -1,4 +1,5 @@
 import type { XArchive } from "../parseArchive";
+import { fullResXAvatar } from "../xAvatar";
 
 function formatDate(s?: string): string {
   if (!s) return "";
@@ -21,7 +22,7 @@ function Avatar({
   return avatarUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={avatarUrl}
+      src={fullResXAvatar(avatarUrl)}
       alt=""
       className="rounded-full object-cover"
       style={{ width: size, height: size }}

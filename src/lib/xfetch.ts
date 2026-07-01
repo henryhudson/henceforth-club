@@ -1,4 +1,5 @@
 import type { SocialArchive } from "@/app/x/onchain";
+import { fullResXAvatar } from "@/app/x/xAvatar";
 
 const BASE = "https://api.twitter.com/2";
 
@@ -34,7 +35,7 @@ export async function fetchXArchive(handle: string, token: string): Promise<Soci
       bio: u.description,
       location: u.location,
       website: u.url,
-      avatarUrl: u.profile_image_url,
+      avatarUrl: fullResXAvatar(u.profile_image_url),
       accountId: u.id,
       createdAt: u.created_at,
     },
