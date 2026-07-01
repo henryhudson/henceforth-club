@@ -219,4 +219,4 @@
 }
 
 .printBtn { position: fixed; right: 16px; top: 16px; font: 600 13px/1 -apple-system, sans-serif; padding: 8px 14px; border-radius: 8px; border: 1px solid #ccc; background: #fff; cursor: pointer; }
-@media print { .noprint { display: none !important; } }
+@media print { .printBtn { display: none; } }

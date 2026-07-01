@@ -20,7 +20,7 @@ export default function A4Sheet({ children }: { children: React.ReactNode }) {
   }, [])
   return (
     <>
-      <button className={`${s.printBtn} noprint`} onClick={() => window.print()}>Print</button>
+      <button className={s.printBtn} onClick={() => window.print()}>Print</button>
       <div className={s.sheet} ref={ref}>{children}</div>
     </>
   )
