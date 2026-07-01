@@ -10,7 +10,7 @@ export default function TopQuestions({ qa }: TopQuestionsProps) {
   if (!qa.length) return null
   return (
     <>
-      <h3 className={s.sectionTitle}>A sample of the week&apos;s questions</h3>
+      <h3 className={s.sectionTitle}>A sample of the week&rsquo;s questions</h3>
       <div className={s.qa} style={{ gridTemplateColumns: `repeat(${qa.length}, 1fr)` }}>
         {qa.map((q, i) => (
           <div key={i} className={s.qitem}>

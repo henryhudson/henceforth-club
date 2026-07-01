@@ -20,8 +20,16 @@ export default function A4Sheet({ children }: { children: React.ReactNode }) {
   }, [])
   return (
     <>
+      <style>{`
+        @page { size: A4; margin: 0; }
+        @media print {
+          body * { visibility: hidden; }
+          .a4-print-root, .a4-print-root * { visibility: visible; }
+          .a4-print-root { position: absolute; top: 0; left: 0; margin: 0; box-shadow: none; }
+        }
+      `}</style>
       <button className={s.printBtn} onClick={() => window.print()}>Print</button>
-      <div className={s.sheet} ref={ref}>{children}</div>
+      <div className={`${s.sheet} a4-print-root`} ref={ref}>{children}</div>
     </>
   )
 }

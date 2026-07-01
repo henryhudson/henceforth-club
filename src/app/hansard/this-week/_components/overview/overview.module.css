@@ -1,8 +1,3 @@
-@page {
-  size: A4;
-  margin: 0;
-}
-
 .sheet {
   width: 210mm;
   min-height: 297mm;
@@ -207,7 +202,7 @@
   padding-right: 2px;
 }
 
-.none, .recessnote { font-style: italic; color: #777; }
+.none { font-style: italic; color: #777; }
 
 .credit {
   margin-top: 6pt;
@@ -230,7 +225,4 @@
 
 @media print {
   .printBtn { display: none; }
-  :global(body) * { visibility: hidden; }
-  .sheet, .sheet * { visibility: visible; }
-  .sheet { position: absolute; top: 0; left: 0; margin: 0; }
 }
