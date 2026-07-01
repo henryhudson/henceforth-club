@@ -39,7 +39,7 @@
 <p class="byline">Design · 2026-07-01 · a single-A4, plain-English overview becomes the standard weekly issue on henceforth.club; the existing long-form article is demoted to a linked reference where it exists · <span class="warn">open decisions flagged inline</span></p>
 
 <aside>
-<p><strong>One-line:</strong> Each week's page at <code>/hansard/this-week/[week]</code> becomes a one-page overview — headline, a few lines on the top story, the divisions as a graphic, a department bar chart, the most-asked subjects, a feature, and a two-line footer of the busiest asker and answerer. Plain English throughout, sized to fit one A4 and print from the browser. The rich long-form article is kept, moved to <code>/hansard/this-week/[week]/full</code>, and reached by a link at the top of the overview only for the weeks that have one.</p>
+<p><strong>One-line:</strong> Each week's page at <code>/hansard/this-week/[week]</code> becomes a one-page overview: headline, a few lines on the top story, a brief of the week's statements and Prime Minister's Questions, the divisions as a graphic, a department bar chart, the most-asked subjects, the top questions with the minister's reply, a feature, and a two-line footer of the busiest asker and answerer. Plain English throughout, sized to fit one A4 and print from the browser. The rich long-form article is kept, moved to <code>/hansard/this-week/[week]/full</code>, and reached by a link at the top of the overview only for the weeks that have one.</p>
 <p><strong>Status:</strong> the layout and plain-English style are proven — a scratch renderer already produces all six existing weeks (recess, four-division, eight, nine and twelve-division), verified by screenshot. This spec covers folding that renderer into the Next.js app as the standard page, with the prose living in the digest and produced by the generator.</p>
 </aside>
 
@@ -62,8 +62,10 @@
 <li><strong>Masthead.</strong> The kicker "This Week in Parliament, {window}", the headline, and a stats line of divisions, written questions and distinct askers.</li>
 <li><strong>Full-article link.</strong> "Read the full article" at the top, shown only where a <code>/full</code> page exists for the week.</li>
 <li><strong>Top story.</strong> The plain-English <code>overview.intro</code> as a drop-cap lead paragraph.</li>
+<li><strong>The week in brief.</strong> A short band of the week's oral set-pieces — government statements, urgent questions and Prime Minister's Questions — each a bold lead-in and a sentence or two, from <code>overview.brief</code>. This is where a moment like the "Did you meet Andy?" exchange at Prime Minister's Questions lands.</li>
 <li><strong>Divisions and department chart, side by side.</strong> The divisions adapt to the count: six or fewer render as the large pill cards, seven or more collapse to compact one-line rows, and past sixteen the sixteen most-contested show with a summary line for the rest. Always sorted closest-margin first. The chart is a horizontal bar per department, its label column auto-sized so no name can clip.</li>
 <li><strong>The most-asked subjects.</strong> A wrapped band of the top headings with their counts, derived from <code>topTopics</code>.</li>
+<li><strong>Top questions.</strong> Two or three featured written questions, each with the minister's actual reply trimmed to complete sentences, from the digest's existing <code>qa</code> field. This is where the reader gets past the counts and into what an MP asked and what the government said back — the road-surfaces-softening question, the infected-blood one.</li>
 <li><strong>The feature.</strong> From <code>overview.feature</code>, its summary trimmed to the first few sentences with a bracket-safe cut that never severs a parenthesis.</li>
 <li><strong>Footer.</strong> Two plain lines — the member who tabled the most written questions and the minister who answered the most.</li>
 </ol>
@@ -77,7 +79,7 @@
 <tr><td><code>OverviewPage</code></td><td>server</td><td>Loads the digest via the existing store, composes the page, decides whether the <code>/full</code> link shows.</td></tr>
 <tr><td><code>DivisionsBlock</code></td><td>pure</td><td>Renders pills or compact rows from <code>highlights.votes</code>.</td></tr>
 <tr><td><code>DepartmentChart</code></td><td>pure</td><td>Renders the bar chart from <code>departments</code>.</td></tr>
-<tr><td><code>MostAskedSubjects</code>, <code>Feature</code>, <code>Masthead</code>, <code>MostActiveFooter</code></td><td>pure</td><td>Small render-only pieces from their digest fields.</td></tr>
+<tr><td><code>WeekInBrief</code>, <code>TopQuestions</code>, <code>MostAskedSubjects</code>, <code>Feature</code>, <code>Masthead</code>, <code>MostActiveFooter</code></td><td>pure</td><td>Small render-only pieces from their digest fields. <code>TopQuestions</code> reuses the bracket-safe trim to shorten each answer to complete sentences.</td></tr>
 <tr><td><code>A4Sheet</code></td><td>client</td><td>The one client component. Wraps the page, runs the shrink-to-fit script, owns the print button and print styles.</td></tr>
 </table>
 
@@ -86,20 +88,22 @@
 <pre>overview?: {
   headline: string              // may differ from the long-form headline
   intro: string                 // plain English, the top story in a few lines
+  brief?: { title: string; when: string; note: string }[]   // oral set-pieces: statements, urgent questions, PMQs
   feature?: { title: string; summary: string }
   mostActive?: {
     asker:    { name: string; party: string; count: number }
     answerer: { name: string; party: string; count: number }
   }
 }</pre>
-<p>The overview renders from <code>overview</code> plus the structured fields. Only the prose and the two busiest names are new. If <code>overview</code> is absent on a published issue, the page falls back to deriving the top story from the long-form <code>intro</code>, so the site never shows a blank page during migration.</p>
+<p>The overview renders from <code>overview</code> plus structured fields the digest already has — <code>stats</code>, <code>departments</code>, <code>topTopics</code>, <code>highlights.votes</code>, and <code>qa</code> for the top-questions section. New to the digest are the plain-English prose, the oral <code>brief</code>, and the two busiest names. Everything else is derived. If <code>overview</code> is absent on a published issue, the page falls back to the long-form <code>intro</code> and <code>qa</code> so the site never shows a blank page during migration.</p>
 
 <h2 class="phase">Generation and migration</h2>
-<p><strong>Going forward.</strong> The editorial pass in <code>scripts/this-week/PROMPT.md</code> gains one step: after writing the digest, it writes the <code>overview</code> block in plain English under the style rules below. The wrapper, <code>run-weekly.sh</code>, computes <code>mostActive</code> deterministically from the questions-statements API — the busiest asker by questions tabled in the window, the busiest answerer by questions answered — the same tally already proven by hand, and injects it. One run produces the digest and its overview together, so the two cannot drift.</p>
-<p><strong>The six existing weeks.</strong> A one-time backfill script writes the <code>overview</code> block into each, using the plain-English rewrites already produced (intro and feature) and computing each week's two busiest names. The long-form fields are left untouched, so every existing week keeps its <code>/full</code> page.</p>
+<p><strong>Going forward.</strong> The editorial pass in <code>scripts/this-week/PROMPT.md</code> gains one step: after writing the digest, it writes the <code>overview</code> block in plain English under the style rules below — the intro, the feature, and the oral <code>brief</code> of the week's statements, urgent questions and Prime Minister's Questions. The <code>qa</code> for the top-questions section is already produced as part of the digest, so nothing new is needed there. The wrapper, <code>run-weekly.sh</code>, computes <code>mostActive</code> deterministically from the questions-statements API — the busiest asker by questions tabled in the window, the busiest answerer by questions answered — the same tally already proven by hand, and injects it. One run produces the digest and its overview together, so the two cannot drift.</p>
+<p><strong>The six existing weeks.</strong> A one-time backfill script writes the <code>overview</code> block into each. The intro and feature come from the plain-English rewrites already produced. Each week's <code>brief</code> is composed from its long-form proceedings, and the 1 July week reuses the brief from the mock. Each week's two busiest names are computed. The long-form fields are left untouched, so every existing week keeps its <code>/full</code> page.</p>
 
 <h2 class="phase">Print</h2>
 <p>Browser print, no server-side PDF. The sheet declares <code>@page { size: A4 }</code> and print styles. <code>A4Sheet</code> runs a small script on load that shrinks the base font in small steps until the content height fits one A4, so the page is guaranteed to print as a single sheet whatever the division count. A "Print" button calls <code>window.print()</code>. This is exactly the mechanism the scratch renderer uses and prints correctly today.</p>
+<p><strong>Space budget.</strong> The fuller content — brief, subjects, top questions and feature — makes the page denser. The auto-fit absorbs the variance down to a readable floor. If a heavy week would still overflow at that floor, a defined trim order keeps the one-page guarantee, applied in order until it fits: shorten the top-questions answers, then drop from three featured questions to two, then collapse the most-asked-subjects band into a single line. The intro, the brief, the divisions and the feature are never trimmed. The screenshot pass on the twelve-division week is the check that the budget holds.</p>
 
 <h2 class="phase">Style rules for the overview prose</h2>
 <p>The <code>overview.intro</code> and <code>overview.feature.summary</code> follow the plain-English house rules, and the generator prompt states them:</p>
@@ -126,7 +130,6 @@
 <h2 class="phase">v1 scope and non-goals</h2>
 <table>
 <tr><th>Decision</th><th>Call</th></tr>
-<tr><td>The curated "week in brief" band (statements, urgent questions, Prime Minister's Questions)</td><td><span class="warn">deferred to v2</span>. It needs the generator to emit structured statement highlights, which the digest does not have. The intro carries the week's narrative in v1, which the reprints show reads well.</td></tr>
 <tr><td>Statutory ages in prose — "under-sixteens" versus "under-16s"</td><td><span class="warn">open</span>. Spelled by default; revert to numerals on request.</td></tr>
 <tr><td>Server-side PDF export</td><td>Out of scope. Browser print covers it.</td></tr>
 <tr><td>Rewriting the long-form articles to plain English</td><td>Out of scope. They stay in their current voice on <code>/full</code>, kept for reference.</td></tr>
@@ -136,6 +139,7 @@
 <ul>
 <li>Every published week renders a one-page overview at its main URL that fits one A4 and prints as a single sheet.</li>
 <li>The divisions section is correct and legible from zero divisions up to twelve and beyond, verified by screenshot.</li>
+<li>The overview fits one A4 on the busiest week — twelve divisions with the brief, the top questions and the feature all present — using the defined trim order, verified by screenshot.</li>
 <li>Weeks with long-form content show a working "Read the full article" link; weeks without do not.</li>
 <li>The overview prose contains no em-dashes and no connector colons, enforced by the lint test.</li>
 <li>A new week generated by the pipeline produces its <code>overview</code> block automatically, with no hand-running.</li>
