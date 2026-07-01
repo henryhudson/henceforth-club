@@ -20,5 +20,5 @@ export default async function TxPage(
   const { txid } = await params;
   const sa = await fetchTxArchive(txid);
   if (!sa) notFound();
-  return <ProfilePage archive={socialArchiveToXArchive(sa)} txid={txid} />;
+  return <ProfilePage archive={socialArchiveToXArchive(sa, txid)} txid={txid} />;
 }

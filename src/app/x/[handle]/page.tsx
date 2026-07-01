@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { XArchive } from "../parseArchive";
-import { socialArchiveToXArchive } from "../onchain";
+import { stitchToXArchive } from "../onchain";
 import { fetchTxArchive } from "@/lib/whatsonchain";
-import { getXTxid } from "@/lib/xIndex";
+import { getXTxids } from "@/lib/xIndex";
 import ProfilePage from "../_components/ProfilePage";
 import { realArchive } from "../real";
 
@@ -15,10 +15,21 @@ const fallback: Record<string, XArchive> = { henryhudson6: realArchive };
 async function resolve(
   handle: string,
 ): Promise<{ archive: XArchive; txid: string | null } | null> {
-  const txid = await getXTxid(handle);
-  if (txid) {
-    const sa = await fetchTxArchive(txid);
-    if (sa) return { archive: socialArchiveToXArchive(sa), txid };
+  const txids = await getXTxids(handle);
+  if (txids.length > 0) {
+    // Keep each archive paired with ITS transaction id — a post's media
+    // outpoints resolve against the transaction that inscribed them.
+    const pairs = (
+      await Promise.all(
+        txids.map(async (txid) => ({ archive: await fetchTxArchive(txid), txid })),
+      )
+    ).flatMap(({ archive, txid }) => (archive ? [{ archive, txid }] : []));
+    if (pairs.length > 0) {
+      return {
+        archive: stitchToXArchive(pairs),
+        txid: pairs[pairs.length - 1].txid,
+      };
+    }
   }
   const fb = fallback[handle.toLowerCase()];
   return fb ? { archive: fb, txid: null } : null;

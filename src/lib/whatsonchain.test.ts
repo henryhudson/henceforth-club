@@ -25,28 +25,36 @@ const archiveJSON = JSON.stringify({
   posts: [{ id: "1", at: "t", text: "hi" }],
 });
 
+// Wrap output scripts in a minimal raw transaction (version 1, one null input,
+// locktime 0) — fetchTxArchive reads the RAW hex endpoint, not the JSON one,
+// because WhatsOnChain truncates large scripts in JSON responses.
+function rawTx(outputScriptsHex: string[]): string {
+  const varint = (n: number): string =>
+    n < 0xfd
+      ? n.toString(16).padStart(2, "0")
+      : "fd" +
+        (n & 0xff).toString(16).padStart(2, "0") +
+        ((n >> 8) & 0xff).toString(16).padStart(2, "0");
+  const input = "00".repeat(32) + "ffffffff" + "00" + "ffffffff";
+  const outputs = outputScriptsHex
+    .map((s) => "0100000000000000" + varint(s.length / 2) + s)
+    .join("");
+  return "01000000" + "01" + input + varint(outputScriptsHex.length) + outputs + "00000000";
+}
+
 afterEach(() => vi.restoreAllMocks());
 
 describe("fetchTxArchive", () => {
-  it("extracts the archive from a WhatsOnChain tx response", async () => {
+  it("extracts the archive from a WhatsOnChain raw transaction", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(
         async () =>
           new Response(
-            JSON.stringify({
-              vout: [
-                { scriptPubKey: { hex: "76a914aaaaaaaaaaaaaaaaaaaa88ac" } },
-                {
-                  scriptPubKey: {
-                    hex: opReturnScript(
-                      "19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut",
-                      archiveJSON,
-                    ),
-                  },
-                },
-              ],
-            }),
+            rawTx([
+              "76a914aaaaaaaaaaaaaaaaaaaa88ac",
+              opReturnScript("19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut", archiveJSON),
+            ]),
             { status: 200 },
           ),
       ),
