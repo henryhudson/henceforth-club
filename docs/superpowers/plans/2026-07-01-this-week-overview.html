@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>This Week in Parliament — one-page overview · Implementation Plan · 2026-07-01</title>
+<style>
+  :root { --bg:#f4f1ea; --ink:#1c1a16; --muted:#6b6358; --rule:#d8d0c0; --accent:#a8431f; --accent-soft:#c4a572; --card:#fbf9f4; --code-bg:#1e1e1e; --code-ink:#e8e8e8; --ok:#2f6f3e; --warn:#a8431f; --shadow:0 1px 3px rgba(0,0,0,0.08); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.65;}
+  .wrap{max-width:880px;margin:0 auto;padding:56px 32px;} header.doc{margin-bottom:40px;border-bottom:2px solid var(--rule);padding-bottom:24px;}
+  .eyebrow{font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:34px;line-height:1.15;margin:0 0 12px;font-weight:700;letter-spacing:-0.01em;} h2{font-size:24px;margin:48px 0 14px;padding-top:20px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 10px;} .lede{font-size:19px;color:var(--muted);margin:0;} p{margin:14px 0;}
+  code{font-family:'SF Mono','JetBrains Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(0,0,0,0.06);padding:2px 6px;border-radius:4px;}
+  pre{background:var(--code-bg);color:var(--code-ink);padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;} th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .task{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:8px 22px 18px;margin:22px 0;box-shadow:var(--shadow);}
+  .task .tasknum{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);}
+  .files{font-size:14px;background:#efe9dc;border-radius:6px;padding:10px 14px;margin:10px 0;}
+  .files code{background:rgba(0,0,0,0.05);}
+  .try{background:#eef3e9;border-left:4px solid var(--ok);padding:10px 16px;border-radius:0 6px 6px 0;margin:14px 0;} .try strong{color:var(--ok);}
+  .note{background:#f6efe0;border-left:4px solid var(--accent-soft);padding:10px 16px;border-radius:0 6px 6px 0;margin:14px 0;}
+  .danger{background:#f7e8e2;border-left:4px solid var(--warn);padding:10px 16px;border-radius:0 6px 6px 0;margin:14px 0;} .danger strong{color:var(--warn);}
+  ul{margin:12px 0;padding-left:24px;} li{margin:5px 0;}
+  ul.steps{list-style:none;padding-left:4px;} ul.steps>li{margin:14px 0;padding-left:30px;position:relative;}
+  ul.steps>li input[type=checkbox]{position:absolute;left:0;top:5px;width:18px;height:18px;}
+  .badge{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:2px 8px;border-radius:999px;white-space:nowrap;}
+  .b-done{background:#dfeede;color:var(--ok);} .b-todo{background:#f3dcd2;color:var(--accent);} .b-gate{background:#e7e0f0;color:#5a3a8a;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+  <div class="eyebrow">Implementation Plan · henceforth-club · branch <code>feat/this-week-overview</code></div>
+  <h1>This Week in Parliament — the one-page overview</h1>
+  <p class="lede">The plain-English, single-A4 overview becomes the standard weekly page. The long-form article moves to a linked <code>/full</code> sub-route. The overview's prose lives in a new <code>overview</code> block on the digest that the generator writes.</p>
+  <p style="font-size:14px;color:var(--muted);margin:16px 0 0;">Implements <code>docs/superpowers/specs/2026-07-01-this-week-overview-design.html</code> (approved 2026-07-01). Execute task-by-task with <code>superpowers:subagent-driven-development</code>.</p>
+</header>
+
+<div class="note">
+<p><strong>For agentic workers:</strong> REQUIRED SUB-SKILL — <code>superpowers:subagent-driven-development</code>. Steps are real checkboxes. Pure helpers are TDD: write the failing <code>vitest</code> first, watch it fail, then implement. React components are verified by the screenshot pass in Task 15, not unit tests. Commit after each task. A verified reference renderer already exists (produced this design session); its exact CSS and logic are reproduced in the tasks below, so nothing is invented.</p>
+</div>
+
+<h2>Global constraints</h2>
+<ul>
+<li><strong>Next.js App Router, TypeScript, React 19.</strong> Server components by default; only <code>A4Sheet</code> is a client component (<code>'use client'</code>).</li>
+<li><strong>Package manager</strong>: match the repo (<code>package.json</code> uses <code>vitest run</code> for <code>npm test</code>). ES-module scripts under <code>scripts/this-week</code> are <code>.mjs</code>.</li>
+<li><strong>Styling</strong>: one CSS module, <code>overview.module.css</code>, co-located with the components. Ported verbatim from the verified renderer. Point sizes and the A4 geometry are load-bearing — do not "tidy" them.</li>
+<li><strong>Print</strong>: browser print only. <code>@page { size: A4 }</code> plus the client auto-fit that shrinks the base font until the content fits 297mm.</li>
+<li><strong>Prose rules for the <code>overview</code> block</strong> (enforced by Task 11's lint): no em-dashes or connector colons; commas sparingly; whole numbers up to ninety-nine spelled; numerals for vote tallies, dates, percentages and large figures; proper terms for role and party initialisms (Members of Parliament, Prime Minister), established proper nouns (NHS) kept; every fact and quotation preserved.</li>
+<li><strong>Git</strong>: this branch, <code>feat/this-week-overview</code>. Feature branch, never <code>main</code> (Vercel auto-deploys <code>main</code>). No force-push. Prose in commits and docs spells out acronyms.</li>
+<li><strong>Definition of done includes a screenshot pass</strong> (Task 15). Render, screenshot with headless Chrome, read the image, before declaring a visual task complete.</li>
+</ul>
+
+<h2>File structure</h2>
+<table>
+<tr><th>Path</th><th>Responsibility</th></tr>
+<tr><td><code>src/lib/this-week/types.ts</code> <em>(modify)</em></td><td>Add the optional <code>overview</code> block to <code>DigestData</code>.</td></tr>
+<tr><td><code>src/lib/this-week/overview.ts</code> <em>(create)</em></td><td><strong>Pure.</strong> <code>prepareDivisions</code>, <code>shortenDept</code>, <code>shortenDivTitle</code>, <code>trimSentences</code>. No React, no I/O.</td></tr>
+<tr><td><code>src/lib/this-week/overview.test.ts</code> <em>(create)</em></td><td>Vitest for every pure function above, plus the pills-or-rows boundary and the bracket-safe trim.</td></tr>
+<tr><td><code>src/lib/this-week/overview-prose.test.ts</code> <em>(create)</em></td><td>Lint: fail if any <code>overview</code> prose in <code>content/this-week/*.json</code> holds an em-dash or a connector colon.</td></tr>
+<tr><td><code>src/app/hansard/this-week/_components/overview/overview.module.css</code> <em>(create)</em></td><td>All overview styling (A4 sheet, pills, compact rows, chart, brief, subjects, questions, feature, footer, print).</td></tr>
+<tr><td><code>…/overview/A4Sheet.tsx</code> <em>(create, client)</em></td><td>Wraps the page. Runs the shrink-to-fit script, owns the Print button and print styles.</td></tr>
+<tr><td><code>…/overview/Masthead.tsx</code>, <code>DivisionsBlock.tsx</code>, <code>DepartmentChart.tsx</code>, <code>WeekInBrief.tsx</code>, <code>MostAskedSubjects.tsx</code>, <code>TopQuestions.tsx</code>, <code>Feature.tsx</code>, <code>MostActiveFooter.tsx</code> <em>(create)</em></td><td>Pure render pieces, each from its digest fields.</td></tr>
+<tr><td><code>…/overview/Overview.tsx</code> <em>(create)</em></td><td>Composes the sections in order; decides the "Read the full article" link.</td></tr>
+<tr><td><code>src/app/hansard/this-week/[week]/page.tsx</code> <em>(modify)</em></td><td>Render <code>Overview</code> instead of <code>DigestView</code>.</td></tr>
+<tr><td><code>src/app/hansard/this-week/[week]/full/page.tsx</code> <em>(create)</em></td><td>The long-form <code>DigestView</code>, shown only where a <code>body</code> exists.</td></tr>
+<tr><td><code>scripts/this-week/compute-most-active.mjs</code> <em>(create)</em></td><td>Pull the busiest asker and answerer from the questions-statements API for a window.</td></tr>
+<tr><td><code>scripts/this-week/backfill-overview.mjs</code> <em>(create)</em></td><td>One-time: write the <code>overview</code> block into the six existing weeks.</td></tr>
+<tr><td><code>scripts/this-week/PROMPT.md</code> and <code>run-weekly.sh</code> <em>(modify)</em></td><td>Generate <code>overview</code> going forward; inject <code>mostActive</code>.</td></tr>
+</table>
+
+<h2>Tasks</h2>
+
+<div class="task">
+<div class="tasknum">Task 1 · Schema — the overview block <span class="badge b-todo">todo</span></div>
+<div class="files"><strong>Modify:</strong> <code>src/lib/this-week/types.ts</code> · <strong>Test:</strong> <code>src/lib/this-week/overview.test.ts</code></div>
+<p><strong>Produces:</strong> the <code>OverviewBlock</code> and <code>BriefItem</code> types, and <code>DigestData.overview?: OverviewBlock</code>. <code>QAItem</code> already exists and is reused by Task 8.</p>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 — write the failing test.</strong> In <code>overview.test.ts</code>:
+<pre><code>import { describe, it, expect } from 'vitest'
+import type { DigestData } from './types'
+
+it('DigestData carries an optional overview block', () => {
+  const d = { overview: {
+    headline: 'x', intro: 'y',
+    brief: [{ title: 'Steel', when: '25 June', note: 'a' }],
+    feature: { title: 'f', summary: 's' },
+    mostActive: { asker: { name: 'A', party: 'Con', count: 98 },
+                  answerer: { name: 'B', party: 'Lab', count: 175 } },
+  } } as Partial&lt;DigestData&gt;
+  expect(d.overview?.mostActive?.asker.count).toBe(98)
+})</code></pre></li>
+<li><input type="checkbox"> <strong>Step 2 — run, expect a type error.</strong> <code>npx tsc --noEmit</code> fails: <code>overview</code> not on <code>DigestData</code>.</li>
+<li><input type="checkbox"> <strong>Step 3 — add the types.</strong> Append to <code>types.ts</code>, and add the field to the <code>DigestData</code> interface:
+<pre><code>export interface BriefItem { title: string; when: string; note: string }
+export interface MostActiveEntry { name: string; party: string; count: number }
+export interface OverviewBlock {
+  headline: string
+  intro: string
+  brief?: BriefItem[]
+  feature?: { title: string; summary: string }
+  mostActive?: { asker: MostActiveEntry; answerer: MostActiveEntry }
+}
+// inside interface DigestData { … add: }
+  overview?: OverviewBlock</code></pre></li>
+<li><input type="checkbox"> <strong>Step 4 — run.</strong> <code>npx tsc --noEmit</code> passes; <code>npx vitest run src/lib/this-week/overview.test.ts</code> passes.</li>
+<li><input type="checkbox"> <strong>Step 5 — commit.</strong> <code>git commit -am "feat(this-week): add optional overview block to the digest schema"</code></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 2 · Pure derivations — overview.ts <span class="badge b-todo">todo</span></div>
+<div class="files"><strong>Create:</strong> <code>src/lib/this-week/overview.ts</code> · <strong>Test:</strong> add to <code>overview.test.ts</code></div>
+<p><strong>Produces:</strong> <code>prepareDivisions(votes): PreparedDivisions</code>, <code>shortenDept(name): string</code>, <code>shortenDivTitle(title): string</code>, <code>trimSentences(text, n): string</code>. <strong>Consumes:</strong> <code>DivisionRow</code> from <code>types.ts</code>.</p>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 — failing tests</strong> (append to <code>overview.test.ts</code>):
+<pre><code>import { prepareDivisions, shortenDept, shortenDivTitle, trimSentences } from './overview'
+const row = (ayes:number,noes:number,title='X',date='2026-06-24') => ({ row:{ id:0, title, date, ayes, noes } })
+
+it('six or fewer divisions render as pills, seven or more as rows', () => {
+  expect(prepareDivisions(Array.from({length:6}, ()=>row(300,100))).mode).toBe('pills')
+  expect(prepareDivisions(Array.from({length:7}, ()=>row(300,100))).mode).toBe('rows')
+})
+it('divisions are ordered closest margin first', () => {
+  const p = prepareDivisions([row(300,100), row(200,190), row(400,80)])
+  expect(p.items.map(i=>i.margin)).toEqual([10,200,320])
+})
+it('past sixteen it caps and summarises the rest', () => {
+  const p = prepareDivisions(Array.from({length:20}, (_,i)=>row(300,100+i)))
+  expect(p.items.length).toBe(16); expect(p.overflow).toBe(4)
+})
+it('trimSentences keeps three sentences but never severs a bracket', () => {
+  const t = 'One. Two. (Three starts. Four ends.) Five.'
+  expect(trimSentences(t,3)).toBe('One. Two. (Three starts. Four ends.)')
+})
+it('trimSentences drops an unclosed opener if it cannot balance', () => {
+  expect(trimSentences('One. Two. (Three with no close', 3)).toBe('One. Two.')
+})
+it('shortenDept and shortenDivTitle strip the boilerplate', () => {
+  expect(shortenDept('Department of Health and Social Care')).toBe('Health')
+  expect(shortenDivTitle('Armed Forces Bill Report Stage — New Clause 4')).toBe('Armed Forces Bill, New Clause 4')
+})</code></pre></li>
+<li><input type="checkbox"> <strong>Step 2 — run, expect fail</strong> (module not found). <code>npx vitest run src/lib/this-week/overview.test.ts</code>.</li>
+<li><input type="checkbox"> <strong>Step 3 — implement</strong> <code>overview.ts</code> (ported verbatim from the verified renderer):
+<pre><code>import type { DivisionRow } from './types'
+
+export interface PreparedDivision {
+  title: string; day: number; ayes: number; noes: number
+  carried: boolean; margin: number; ayesPct: number
+}
+export interface PreparedDivisions {
+  mode: 'none' | 'pills' | 'rows'
+  items: PreparedDivision[]
+  overflow: number          // count collapsed into the summary line
+  overflowAllCarried: boolean
+}
+
+export function shortenDivTitle(t: string): string {
+  return t.replace(/^Draft /, '').replace(/ 2026$/, '')
+    .replace(/Customs \(Tariff and Miscellaneous Amendments\) \(No\. \d+\) Regulations/, 'Customs (Tariff) Regulations')
+    .replace(/Climate Change Act 2008 \(International Aviation and International Shipping\) Regulations/, 'Climate Change Act, Aviation and Shipping')
+    .replace(/Climate Change Act 2008 \(Credit Limit\) Order/, 'Climate Change Act, Credit Limit')
+    .replace(/National Security \(State Threats\) Bill(?: Committee)? — /, 'National Security Bill, ')
+    .replace(/National Security \(State Threats\) Bill(?: Committee)?/, 'National Security Bill')
+    .replace(/Armed Forces Bill Report Stage — /, 'Armed Forces Bill, ')
+    .replace(/Opposition Day — /, 'Opposition Day, ')
+    .replace(/ — /g, ', ')
+}
+
+export function shortenDept(s: string): string {
+  return s
+    .replace('Department of Health and Social Care', 'Health').replace('Ministry of Defence', 'Defence')
+    .replace('Ministry of Housing, Communities and Local Government', 'Housing').replace('Department for Transport', 'Transport')
+    .replace('Department for Environment, Food and Rural Affairs', 'Environment').replace('Department for Education', 'Education')
+    .replace('Department for Business and Trade', 'Business and Trade').replace('Department for Energy Security and Net Zero', 'Energy')
+    .replace('Department for Work and Pensions', 'Work and Pensions')
+    .replace('Foreign, Commonwealth and Development Office', 'Foreign Office')
+    .replace(/^(\d+) other departments$/, '$1 others')
+}
+
+const CAP = 16
+export function prepareDivisions(votes: { row: DivisionRow }[]): PreparedDivisions {
+  if (!votes.length) return { mode: 'none', items: [], overflow: 0, overflowAllCarried: true }
+  const all = votes.map(v => {
+    const ayes = v.row.ayes, noes = v.row.noes, tot = ayes + noes || 1
+    return { title: shortenDivTitle(v.row.title), day: parseInt(v.row.date.slice(8), 10),
+      ayes, noes, carried: ayes > noes, margin: Math.abs(ayes - noes), ayesPct: ayes / tot * 100 }
+  }).sort((a, b) => a.margin - b.margin)
+  if (all.length <= 6) return { mode: 'pills', items: all, overflow: 0, overflowAllCarried: true }
+  const items = all.slice(0, CAP), rest = all.slice(CAP)
+  return { mode: 'rows', items, overflow: rest.length, overflowAllCarried: rest.every(r => r.carried) }
+}
+
+export function trimSentences(text: string, n: number): string {
+  const parts = String(text || '').split(/(?&lt;=\.) /)
+  const bal = (s: string) => (s.match(/\(/g) || []).length - (s.match(/\)/g) || []).length
+  let out = parts.slice(0, n).join(' ')
+  for (let i = n; bal(out) > 0 && i < parts.length && i < n + 3; i++) out += ' ' + parts[i]
+  if (bal(out) > 0) out = out.slice(0, out.lastIndexOf('(')).trim()
+  return out
+}</code></pre></li>
+<li><input type="checkbox"> <strong>Step 4 — run, expect pass.</strong> <code>npx vitest run src/lib/this-week/overview.test.ts</code>.</li>
+<li><input type="checkbox"> <strong>Step 5 — commit.</strong> <code>git commit -am "feat(this-week): pure overview derivations with tests"</code></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 3 · The A4 sheet, CSS and auto-fit <span class="badge b-todo">todo</span></div>
+<div class="files"><strong>Create:</strong> <code>…/overview/overview.module.css</code>, <code>…/overview/A4Sheet.tsx</code></div>
+<p><strong>Produces:</strong> <code>&lt;A4Sheet&gt;{children}&lt;/A4Sheet&gt;</code>, a client component that renders the A4 sheet, shrinks its font to fit one page, and shows a Print button.</p>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 — the CSS module.</strong> Port the full stylesheet from the committed reference renderer <code>docs/superpowers/plans/2026-07-01-overview-reference-renderer.mjs</code> (its <code>&lt;style&gt;</code> block, verified this session). Copy the rules (the <code>.sheet</code>, <code>.dpill</code>/<code>.dbar</code>, <code>.drow</code>/<code>.rbar</code>, <code>.chart</code>/<code>.bl</code>/<code>.bt</code>/<code>.bv</code>, <code>.tts</code>, <code>.feature</code>, <code>.funnote</code>, <code>@page</code> rules), renaming the top wrapper to <code>.sheet</code> and prefixing nothing (CSS module scopes it). Keep every point size. Add:
+<pre><code>@media print { .noprint { display: none !important; } }</code></pre></li>
+<li><input type="checkbox"> <strong>Step 2 — the client component.</strong> <code>A4Sheet.tsx</code>:
+<pre><code>'use client'
+import { useEffect, useRef } from 'react'
+import s from './overview.module.css'
+
+export default function A4Sheet({ children }: { children: React.ReactNode }) {
+  const ref = useRef&lt;HTMLDivElement&gt;(null)
+  useEffect(() => {
+    const el = ref.current; if (!el) return
+    const A4 = 297 * 96 / 25.4
+    let fs = 10.5; el.style.fontSize = fs + 'pt'
+    for (let g = 0; el.scrollHeight > A4 && fs > 7 && g < 50; g++) { fs -= 0.2; el.style.fontSize = fs + 'pt' }
+  }, [])
+  return (
+    &lt;&gt;
+      &lt;button className={s.printBtn + ' noprint'} onClick={() => window.print()}&gt;Print&lt;/button&gt;
+      &lt;div className={s.sheet} ref={ref}&gt;{children}&lt;/div&gt;
+    &lt;/&gt;
+  )
+}</code></pre></li>
+<li><input type="checkbox"> <strong>Step 3 — verify it builds.</strong> <code>npx tsc --noEmit</code> and <code>npm run build</code> succeed. (Visual check is Task 15.)</li>
+<li><input type="checkbox"> <strong>Step 4 — commit.</strong> <code>git commit -am "feat(this-week): A4 sheet with auto-fit and print"</code></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Tasks 4–8 · The render components <span class="badge b-todo">todo</span></div>
+<div class="files"><strong>Create:</strong> the eight pure components under <code>…/overview/</code></div>
+<p>Each is a server component taking a slice of the digest and returning JSX that uses the CSS-module classes from Task 3. The markup is a one-to-one port of the verified renderer's HTML. Commit after each.</p>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Task 4 — <code>Masthead.tsx</code></strong>: props <code>{ headline, windowLabel, stats, hasFull }</code>. Renders the kicker "This Week in Parliament, {windowLabel with the en-dash replaced by ' to '}", the headline, the "Read the full article" link (<code>&lt;Link href={\`/hansard/this-week/${week}/full\`}&gt;</code>) only when <code>hasFull</code>, and the stats line. Commit.</li>
+<li><input type="checkbox"> <strong>Task 5 — <code>DivisionsBlock.tsx</code></strong>: prop <code>{ votes }</code>. Calls <code>prepareDivisions</code>. When <code>mode==='none'</code> render "No divisions were held this week." When <code>'pills'</code> render the pill cards; when <code>'rows'</code> render the compact rows and, if <code>overflow&gt;0</code>, the summary line "and N more, all carried by wide margins". Markup and classes exactly as the renderer. Commit.</li>
+<li><input type="checkbox"> <strong>Task 6 — <code>DepartmentChart.tsx</code></strong>: prop <code>{ departments }</code>. The <code>display:grid; grid-template-columns:max-content 1fr max-content</code> bar list, labels via <code>shortenDept</code>, bar widths as <code>count/max*100</code>. Commit.</li>
+<li><input type="checkbox"> <strong>Task 7 — <code>WeekInBrief.tsx</code> + <code>MostAskedSubjects.tsx</code></strong>: brief maps <code>overview.brief</code> to a two-column list, each a bold <code>{title}, {when}</code> lead-in then <code>{note}</code>. Subjects maps <code>topTopics.slice(0,10)</code> to the wrapped <code>{count} {heading}</code> band. Commit.</li>
+<li><input type="checkbox"> <strong>Task 8 — <code>TopQuestions.tsx</code>, <code>Feature.tsx</code>, <code>MostActiveFooter.tsx</code></strong>: TopQuestions takes <code>qa.slice(0,3)</code>, each showing the heading, asker and party, the question, and the answer run through <code>trimSentences(answer, 2)</code>. Feature takes <code>overview.feature</code>, title with <code>replace(/\s+[—–]\s+/g, ', ')</code>, summary through <code>trimSentences(summary, 3)</code>. Footer takes <code>overview.mostActive</code>, two lines. Commit.</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 9 · Compose the overview and flip the route <span class="badge b-todo">todo</span></div>
+<div class="files"><strong>Create:</strong> <code>…/overview/Overview.tsx</code> · <strong>Modify:</strong> <code>src/app/hansard/this-week/[week]/page.tsx</code></div>
+<p><strong>Consumes:</strong> all Task 4–8 components. <strong>Produces:</strong> <code>&lt;Overview digest={…} /&gt;</code>.</p>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 — <code>Overview.tsx</code></strong> composes, in order: <code>Masthead</code> → <code>TopStory</code> (the <code>overview.intro</code> drop-cap paragraph) → <code>WeekInBrief</code> → a two-column row of <code>DivisionsBlock</code> and <code>DepartmentChart</code> → <code>MostAskedSubjects</code> → <code>TopQuestions</code> → <code>Feature</code> → <code>MostActiveFooter</code>, all inside <code>&lt;A4Sheet&gt;</code>. Sections whose data is absent render nothing. <code>hasFull = Boolean(digest.body?.length)</code>.</li>
+<li><input type="checkbox"> <strong>Step 2 — the page.</strong> In <code>[week]/page.tsx</code>, replace <code>return &lt;DigestView digest={digest} /&gt;</code> with <code>return &lt;Overview digest={digest} week={week} /&gt;</code>. Keep the published-status 404 gate and <code>generateStaticParams</code> unchanged.</li>
+<li><input type="checkbox"> <strong>Step 3 — build.</strong> <code>npm run build</code> succeeds.</li>
+<li><input type="checkbox"> <strong>Step 4 — commit.</strong> <code>git commit -am "feat(this-week): overview becomes the standard weekly page"</code></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 10 · The /full reference route <span class="badge b-todo">todo</span></div>
+<div class="files"><strong>Create:</strong> <code>src/app/hansard/this-week/[week]/full/page.tsx</code></div>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 — the page</strong> mirrors the old <code>[week]/page.tsx</code> body: <code>loadDigest(week)</code>; <code>if (!digest || digest.status !== 'published' || !digest.body?.length) notFound()</code>; <code>return &lt;DigestView digest={digest} /&gt;</code>. Keep <code>generateStaticParams</code> filtered to weeks that have a <code>body</code>.</li>
+<li><input type="checkbox"> <strong>Step 2 — verify.</strong> <code>npm run build</code>; a recess week (no <code>body</code>) 404s at <code>/full</code>, a normal week renders. Commit.</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 11 · Plain-English lint <span class="badge b-todo">todo</span></div>
+<div class="files"><strong>Create:</strong> <code>src/lib/this-week/overview-prose.test.ts</code></div>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 — the test</strong> reads every <code>content/this-week/*.json</code>, and for each with an <code>overview</code>, asserts <code>intro</code>, every <code>brief[].note</code>, and <code>feature.summary</code> contain no em-dash (<code>—</code>) and no connector colon (a <code>:</code> followed by a space and a lowercase letter). It runs after Task 13's backfill, so it will fail until then — that is expected and correct.
+<pre><code>import { readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
+const dir = join(process.cwd(), 'content/this-week')
+for (const f of readdirSync(dir).filter(f => f.endsWith('.json'))) {
+  const o = JSON.parse(readFileSync(join(dir, f), 'utf8')).overview
+  if (!o) continue
+  const fields = [o.intro, ...(o.brief ?? []).map((b:any)=>b.note), o.feature?.summary].filter(Boolean)
+  it(`${f} overview prose is plain English`, () => {
+    for (const t of fields) { expect(t).not.toMatch(/—/); expect(t).not.toMatch(/: [a-z]/) }
+  })
+}</code></pre></li>
+<li><input type="checkbox"> <strong>Step 2 — commit</strong> (it will go green after Task 13). <code>git commit -am "test(this-week): plain-English lint on overview prose"</code></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 12 · compute-most-active.mjs <span class="badge b-todo">todo</span></div>
+<div class="files"><strong>Create:</strong> <code>scripts/this-week/compute-most-active.mjs</code></div>
+<p><strong>Produces:</strong> <code>computeMostActive(startISO, endISO) → { asker, answerer }</code>. Ported from the design session's verified aggregation.</p>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 — implement</strong>: page <code>questions-statements-api.parliament.uk/api/writtenquestions/questions</code> twice — <code>tabledWhenFrom/To</code> tallied by <code>askingMember</code> for the busiest asker, <code>answeredWhenFrom/To</code> tallied by <code>answeringMember</code> for the busiest answerer — <code>take=100</code>, page to the total, return the top of each as <code>{ name, party, count }</code>. Export the function and a CLI entry that prints JSON for a window.</li>
+<li><input type="checkbox"> <strong>Step 2 — sanity run.</strong> <code>node scripts/this-week/compute-most-active.mjs 2026-06-24 2026-07-01</code> prints Andrew Snowden 98 and Preet Kaur Gill 175 (the values verified this session). Commit.</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 13 · Backfill the six weeks <span class="badge b-todo">todo</span></div>
+<div class="files"><strong>Create:</strong> <code>scripts/this-week/backfill-overview.mjs</code></div>
+<div class="danger"><strong>Writes to committed content.</strong> Edits <code>content/this-week/*.json</code> in place. Run once, review the diff, commit.</div>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 — the rewrites data.</strong> The plain-English intro, feature and headline for all six weeks are committed at <code>docs/superpowers/plans/2026-07-01-overview-rewrites.json</code> (keyed by week). Copy them into <code>scripts/this-week/overview-backfill-data.json</code> and add each week's <code>brief</code>: the 1 July brief is the mock's five items (Defence Investment Plan, Steel and the Union, Borders, Prime Minister's Questions, Royal Assent); compose the other weeks' briefs from their long-form <code>body</code>, under the prose rules.</li>
+<li><input type="checkbox"> <strong>Step 2 — the script</strong>: for each of the six weeks, load the digest, set <code>digest.overview = { headline, intro, brief, feature }</code> from the data file, call <code>computeMostActive(start, week)</code> for <code>mostActive</code>, write the JSON back with 2-space indent. Do not touch any other field.</li>
+<li><input type="checkbox"> <strong>Step 3 — run and check.</strong> <code>node scripts/this-week/backfill-overview.mjs</code>; then <code>npx vitest run src/lib/this-week/overview-prose.test.ts</code> now passes. Review <code>git diff content/this-week</code> — only <code>overview</code> blocks added.</li>
+<li><input type="checkbox"> <strong>Step 4 — commit.</strong> <code>git commit -am "content(this-week): backfill overview blocks for the six existing weeks"</code></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 14 · Generate the overview going forward <span class="badge b-todo">todo</span></div>
+<div class="files"><strong>Modify:</strong> <code>scripts/this-week/PROMPT.md</code>, <code>scripts/this-week/run-weekly.sh</code></div>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 — PROMPT.md.</strong> Add a step after the digest is written: also write <code>overview</code> — <code>headline</code>, plain-English <code>intro</code>, a <code>brief</code> of the week's statements, urgent questions and Prime Minister's Questions, and the plain-English <code>feature</code> — under the prose rules (paste the Global-constraints rule list). State that <code>qa</code> already covers the top questions.</li>
+<li><input type="checkbox"> <strong>Step 2 — run-weekly.sh.</strong> After the editorial pass writes the file and before the commit, run <code>node scripts/this-week/compute-most-active.mjs "$START" "$WED"</code>, and merge its output into the file's <code>overview.mostActive</code> with a small <code>node -e</code> patch. Keep the existing <code>status:"draft"</code>, commit and email flow.</li>
+<li><input type="checkbox"> <strong>Step 3 — verify</strong> the wrapper's JSON-validity check still passes on a file that now has an <code>overview</code>. Commit <code>docs(this-week): generate the overview block each week</code>.</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 15 · Screenshot verification — definition of done <span class="badge b-gate">gate</span></div>
+<div class="files"><strong>No new files</strong> (a throwaway headless-Chrome script, removed after).</div>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 — run the dev server</strong> (<code>npm run dev</code>) and screenshot each of the six weeks at <code>/hansard/this-week/&lt;week&gt;</code> with headless Chrome at an A4 viewport. Read each image.</li>
+<li><input type="checkbox"> <strong>Step 2 — check</strong>: every page fits one A4; the twelve-division week (17 to 24 June) uses compact rows with tallies visible; the recess week shows "Parliament in recess" with no empty sections; the brief, top questions and feature all render; no clipped department labels; the "Read the full article" link is present on the five long-form weeks and absent on the recess week. Fix any defect and re-screenshot before ticking this gate.</li>
+<li><input type="checkbox"> <strong>Step 3 — open a pull request</strong> from <code>feat/this-week-overview</code>. Do not merge to <code>main</code> without sign-off.</li>
+</ul>
+</div>
+
+<h2>Self-review notes</h2>
+<ul>
+<li><strong>Spec coverage:</strong> routes (Tasks 9, 10), page sections (Tasks 4–8), data model (Task 1), generation (Task 14), migration (Task 13), print and space budget (Task 3 auto-fit + the trim in Tasks 2/8), style rules (Task 11 lint), testing (Tasks 2, 11, 15). All present.</li>
+<li><strong>Type consistency:</strong> <code>prepareDivisions</code>, <code>shortenDept</code>, <code>shortenDivTitle</code>, <code>trimSentences</code>, <code>OverviewBlock</code>, <code>BriefItem</code>, <code>MostActiveEntry</code> named identically across tasks.</li>
+<li><strong>Ordering note:</strong> Task 11's lint is written before Task 13's backfill, so it stays red until the content lands. That is intentional and called out in Task 11.</li>
+</ul>
+
+</div>
+</body>
+</html>
