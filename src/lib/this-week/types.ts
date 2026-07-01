@@ -38,6 +38,16 @@ export interface FeatureStory {
   questions: string[]
 }
 
+export interface BriefItem { title: string; when: string; note: string }
+export interface MostActiveEntry { name: string; party: string; count: number }
+export interface OverviewBlock {
+  headline: string
+  intro: string
+  brief?: BriefItem[]
+  feature?: { title: string; summary: string }
+  mostActive?: { asker: MostActiveEntry; answerer: MostActiveEntry }
+}
+
 export interface DigestData {
   week: string
   windowLabel: string
@@ -51,6 +61,7 @@ export interface DigestData {
   feature?: FeatureStory
   topTopics?: TopicSlice[]
   qa?: QAItem[]
+  overview?: OverviewBlock
   highlights: {
     votes: { row: DivisionRow; blurb: string }[]
     questions: { row: QuestionRow; blurb: string }[]
