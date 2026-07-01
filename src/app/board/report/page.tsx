@@ -29,10 +29,31 @@ type Plan = {
   notToday?: string;
   decisions?: string;
 };
+type Emergency = {
+  tag: string;
+  title: string;
+  why: string;
+  card?: string;
+};
+type AppStoreRow = {
+  app: string;
+  status: string;
+  version: string;
+  daysSince: number | null;
+  readyToShip: string;
+  blocker: string;
+};
+type AppStore = {
+  shipDay: string;
+  rule: string;
+  apps: AppStoreRow[];
+};
 type Report = {
   date: string;
   generatedAt: string;
   summary: Record<string, number>;
+  emergencies?: Emergency[];
+  appStore?: AppStore;
   apps: AppReport[];
   plan?: Plan;
 };
@@ -47,6 +68,19 @@ const VERDICT: Record<string, { label: string; color: string }> = {
   abstain: { label: "Abstained", color: "text-muted" },
   "already-resolved": { label: "Already fixed", color: "text-accent" },
 };
+
+// Emergency chip + cadence status colours, mapped onto the site's theme tokens.
+function statusColor(status: string): string {
+  if (status === "live") return "text-accent-green";
+  if (status.startsWith("rejected")) return "text-red-700";
+  return "text-accent"; // not-yet-shipped, etc.
+}
+function tagChipColor(tag: string): string {
+  const t = tag.toLowerCase();
+  if (t === "resolved") return "border-accent-green/50 text-accent-green";
+  if (["defect", "security", "data-loss", "bug"].includes(t)) return "border-red-700/60 text-red-500";
+  return "border-accent/50 text-accent"; // ship, deadline, better-way
+}
 
 async function listDates(): Promise<string[]> {
   const redis = getRedis();
@@ -129,6 +163,83 @@ export default async function ReportPage({
         <span className="font-semibold">{s.reviews} reviews</span> adjudicated
         {parts.length > 0 && <> — {parts.join(", ")}</>}.
       </p>
+
+      {report.emergencies && (
+        <section
+          className={`mt-6 rounded-md border-2 p-4 ${
+            report.emergencies.length === 0
+              ? "border-accent-green/40 bg-accent-green/5"
+              : "border-accent/40 bg-accent/5"
+          }`}
+        >
+          <h2
+            className={`mb-2 text-xs font-bold uppercase tracking-wider ${
+              report.emergencies.length === 0 ? "text-accent-green" : "text-accent"
+            }`}
+          >
+            {report.emergencies.length === 0
+              ? "Nothing on fire — clear to build"
+              : "⚠ Do now — emergency actions"}
+          </h2>
+          {report.emergencies.length > 0 && (
+            <ul className="flex flex-col divide-y divide-card-border">
+              {report.emergencies.map((e, i) => (
+                <li key={i} className="py-2.5 first:pt-0 last:pb-0">
+                  <p className="font-semibold leading-snug text-foreground">
+                    <span
+                      className={`mr-2 inline-block rounded border px-1.5 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wide ${tagChipColor(
+                        e.tag,
+                      )}`}
+                    >
+                      {e.tag}
+                    </span>
+                    {e.title}
+                  </p>
+                  <p className="mt-1 text-sm leading-relaxed text-muted">{e.why}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {report.appStore && (
+        <section className="mt-8">
+          <h2 className="mb-1 border-b border-card-border pb-1 text-xl font-bold text-foreground">
+            App Store cadence{" "}
+            <span className="text-sm font-normal text-muted">— {report.appStore.shipDay}</span>
+          </h2>
+          <p className="mb-3 mt-2 text-sm italic leading-relaxed text-muted/80">
+            {report.appStore.rule}
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="text-xs uppercase tracking-wide text-muted/70">
+                  <th className="py-1 pr-3 font-semibold">App</th>
+                  <th className="py-1 pr-3 font-semibold">Status</th>
+                  <th className="py-1 pr-3 font-semibold">Live</th>
+                  <th className="py-1 pr-3 font-semibold">Days</th>
+                  <th className="py-1 pr-3 font-semibold">Ready but unshipped</th>
+                  <th className="py-1 font-semibold">Ship blocker</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.appStore.apps.map((a) => (
+                  <tr key={a.app} className="border-t border-card-border align-top">
+                    <td className="py-2 pr-3 font-semibold text-foreground">{a.app}</td>
+                    <td className={`py-2 pr-3 font-semibold ${statusColor(a.status)}`}>{a.status}</td>
+                    <td className="py-2 pr-3 text-muted">{a.version}</td>
+                    <td className="py-2 pr-3 text-muted">{a.daysSince ?? "—"}</td>
+                    <td className="py-2 pr-3 text-muted">{a.readyToShip}</td>
+                    <td className="py-2 text-muted">{a.blocker}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {dates.length > 1 && (
         <p className="mt-3 text-sm text-muted">
