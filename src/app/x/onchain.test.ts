@@ -3,6 +3,7 @@ import {
   extractPushdata,
   socialArchiveFromScripts,
   socialArchiveToXArchive,
+  ordfsUrl,
 } from "./onchain";
 
 // Build an OP_RETURN script hex (OP_FALSE OP_RETURN <push>...) from string data,
@@ -85,5 +86,39 @@ describe("socialArchiveToXArchive", () => {
     expect(x.profile.location).toBe("London"); // trimmed
     expect(x.posts).toHaveLength(2);
     expect(x.posts[1].replyToId).toBe("9");
+  });
+});
+
+describe("socialArchiveToXArchive media", () => {
+  const sa = {
+    source: "x",
+    handle: "h",
+    profile: {},
+    posts: [
+      { id: "p1", at: "", text: "a", mediaHashes: ["0", "1"] },
+      { id: "p2", at: "", text: "b" },
+    ],
+  };
+
+  it("maps each media vout to an ORDFS photo url under the archive txid", () => {
+    const x = socialArchiveToXArchive(sa, "abc123");
+    expect(x.posts[0].media).toEqual([
+      { type: "photo", url: "https://ordfs.network/abc123_0" },
+      { type: "photo", url: "https://ordfs.network/abc123_1" },
+    ]);
+  });
+
+  it("leaves a media-less post with no media", () => {
+    expect(socialArchiveToXArchive(sa, "abc123").posts[1].media).toBeUndefined();
+  });
+
+  it("omits media when there is no txid to resolve the outpoint against", () => {
+    expect(socialArchiveToXArchive(sa).posts[0].media).toBeUndefined();
+  });
+});
+
+describe("ordfsUrl", () => {
+  it("forms the outpoint url", () => {
+    expect(ordfsUrl("abc", "2")).toBe("https://ordfs.network/abc_2");
   });
 });

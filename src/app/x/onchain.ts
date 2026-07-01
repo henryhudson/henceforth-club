@@ -22,7 +22,7 @@ export interface SocialArchive {
     accountId?: string;
     createdAt?: string;
   };
-  posts: Array<{ id: string; at: string; text: string; replyToId?: string }>;
+  posts: Array<{ id: string; at: string; text: string; replyToId?: string; mediaHashes?: string[] }>;
 }
 
 const PUSHDATA1 = 0x4c;
@@ -94,8 +94,15 @@ function tryParseArchive(chunk: Uint8Array): SocialArchive | null {
   return null;
 }
 
-/** Map the lean on-chain archive to the shape the profile page renders. */
-export function socialArchiveToXArchive(sa: SocialArchive): XArchive {
+/** ORDFS serves an inscription's bytes with the correct Content-Type by outpoint. */
+export function ordfsUrl(txid: string, vout: string): string {
+  return `https://ordfs.network/${txid}_${vout}`;
+}
+
+/** Map the lean on-chain archive to the shape the profile page renders. When a
+ * `txid` is given, each post's media references (the ordinal vouts the app
+ * recorded) resolve to ORDFS-backed photo items against that archive transaction. */
+export function socialArchiveToXArchive(sa: SocialArchive, txid?: string): XArchive {
   return {
     profile: {
       handle: sa.handle,
@@ -107,7 +114,16 @@ export function socialArchiveToXArchive(sa: SocialArchive): XArchive {
       createdAt: sa.profile?.createdAt,
     },
     posts: (sa.posts ?? []).map(
-      (p): XPost => ({ id: p.id, at: p.at, text: p.text, replyToId: p.replyToId }),
+      (p): XPost => ({
+        id: p.id,
+        at: p.at,
+        text: p.text,
+        replyToId: p.replyToId,
+        media:
+          txid && p.mediaHashes?.length
+            ? p.mediaHashes.map((vout) => ({ type: "photo", url: ordfsUrl(txid, vout) }))
+            : undefined,
+      }),
     ),
   };
 }
