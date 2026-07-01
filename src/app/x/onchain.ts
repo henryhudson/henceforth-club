@@ -129,23 +129,29 @@ export function socialArchiveToXArchive(sa: SocialArchive, txid?: string): XArch
 }
 
 /**
- * Merge several archives of the same handle — an initial archive plus incremental
- * deltas that each add only the tweets not already on chain — into one. Posts are
- * unioned and de-duplicated by id (the newest archive's copy of a post wins), and
- * the profile comes from the most recent archive. Input is oldest-first.
+ * Merge several on-chain archives of one handle into the renderable profile,
+ * resolving each post's media against the transaction it was ACTUALLY inscribed
+ * in — a photo backfilled in a later transaction must form its ORDFS outpoint
+ * from that transaction's id, not the newest one. Posts are de-duplicated by id
+ * (the newest archive's copy wins, so a media-enriched copy supersedes the
+ * text-only original); the profile comes from the most recent archive. Input is
+ * oldest-first.
  */
-export function stitchArchives(archives: SocialArchive[]): SocialArchive {
-  const latest = archives[archives.length - 1];
+export function stitchToXArchive(
+  pairs: Array<{ archive: SocialArchive; txid: string }>,
+): XArchive {
+  const rendered = pairs.map(({ archive, txid }) => socialArchiveToXArchive(archive, txid));
+  const latest = rendered[rendered.length - 1];
   const seen = new Set<string>();
-  const posts: SocialArchive["posts"] = [];
-  for (let i = archives.length - 1; i >= 0; i--) {
-    for (const post of archives[i].posts ?? []) {
+  const posts: XPost[] = [];
+  for (let i = rendered.length - 1; i >= 0; i--) {
+    for (const post of rendered[i].posts) {
       if (seen.has(post.id)) continue;
       seen.add(post.id);
       posts.push(post);
     }
   }
-  return { ...latest, posts };
+  return { profile: latest.profile, posts };
 }
 
 function hexToBytes(hex: string): Uint8Array {
