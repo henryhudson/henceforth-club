@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { selectRefs, downloadItems } from "./xArchive";
+import { selectRefs, downloadItems, fetchTweetsWithMedia } from "./xArchive";
 
 const refs = [
   { postId: "p1", contentType: "image/jpeg", url: "https://pbs/x.jpg" },
@@ -40,5 +40,23 @@ describe("downloadItems", () => {
     expect(items).toEqual([
       { postId: "p2", contentType: "video/mp4", base64: Buffer.from([4, 5, 6]).toString("base64") },
     ]);
+  });
+});
+
+describe("fetchTweetsWithMedia", () => {
+  it("requests the media expansions with the bearer token, no network", async () => {
+    let requestedUrl = "";
+    let requestedHeaders: HeadersInit | undefined;
+    const fakeFetch = async (url: string | URL | Request, init?: RequestInit) => {
+      requestedUrl = url.toString();
+      requestedHeaders = init?.headers;
+      return { ok: true, json: async () => ({ data: [], includes: { media: [] } }) } as unknown as Response;
+    };
+
+    await fetchTweetsWithMedia("42", "secret-token", fakeFetch as unknown as typeof fetch);
+
+    expect(requestedUrl).toContain("/users/42/tweets");
+    expect(requestedUrl).toContain("expansions=attachments.media_keys");
+    expect(new Headers(requestedHeaders).get("Authorization")).toBe("Bearer secret-token");
   });
 });

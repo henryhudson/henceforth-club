@@ -1,10 +1,34 @@
-import type { MediaRef } from "./xMedia";
+import type { MediaRef, TweetsWithMedia } from "./xMedia";
+
+const BASE = "https://api.twitter.com/2";
 
 export type MediaItemDTO = {
   postId: string;
   contentType: string;
   base64: string;
 };
+
+/**
+ * Fetches a user's recent tweets together with the media (photos and videos)
+ * attached to them, using the X API's media expansions. Mirrors the tweets
+ * request in `xfetch.ts`, but also asks for attachments so the archive route
+ * can pull original-quality media without a second call per post.
+ */
+export async function fetchTweetsWithMedia(
+  userId: string,
+  token: string,
+  fetchFn: typeof fetch = fetch
+): Promise<TweetsWithMedia> {
+  const res = await fetchFn(
+    `${BASE}/users/${userId}/tweets?max_results=20` +
+      `&tweet.fields=created_at,in_reply_to_user_id,attachments` +
+      `&expansions=attachments.media_keys` +
+      `&media.fields=type,url,variants`,
+    { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" }
+  );
+  if (!res.ok) return {};
+  return (await res.json()) as TweetsWithMedia;
+}
 
 export function selectRefs(
   refs: MediaRef[],
