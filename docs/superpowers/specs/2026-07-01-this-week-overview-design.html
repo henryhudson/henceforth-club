@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>This Week in Parliament — the one-page overview · design · 2026-07-01</title>
+<style>
+  :root { --bg:#fafaf8; --fg:#18181b; --muted:#6b6b73; --rule:#e5e5e1;
+    --aside-bg:#f4f3ee; --accent:#c2410c; --code-bg:#f1efe8;
+    --ok:#5a6a44; --warn:#b45309; }
+  html,body{background:var(--bg);color:var(--fg);
+    font-family:ui-monospace,"Space Mono",SFMono-Regular,Menlo,Monaco,monospace;
+    line-height:1.6;margin:0;}
+  body{max-width:900px;margin:0 auto;padding:56px 24px 96px;font-size:15px;}
+  h1{font-size:30px;line-height:1.15;margin:0 0 12px;letter-spacing:-0.01em;}
+  h2.phase{font-size:22px;margin:54px 0 16px;border-top:2px solid var(--rule);padding-top:26px;}
+  h3.item{font-size:17px;margin:28px 0 8px;}
+  p{margin:10px 0;} p strong{font-weight:700;}
+  .byline{color:var(--muted);font-style:italic;margin:0 0 24px;}
+  aside{background:var(--aside-bg);border-left:3px solid var(--accent);
+    padding:14px 18px;margin:18px 0;border-radius:0 6px 6px 0;}
+  aside p{margin:6px 0;}
+  code,kbd{font-family:inherit;background:var(--code-bg);padding:1px 6px;
+    border-radius:3px;font-size:0.9em;}
+  pre{background:var(--code-bg);border-radius:6px;padding:14px 16px;overflow-x:auto;font-size:0.84em;line-height:1.5;}
+  ol,ul{padding-left:22px;} li{margin:5px 0;}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:0.9em;}
+  th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--rule);vertical-align:top;}
+  th{font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;font-size:0.8em;}
+  .lock{display:inline-block;font-size:0.72em;font-weight:700;padding:1px 7px;border-radius:10px;
+    background:var(--ok);color:#fff;text-transform:uppercase;letter-spacing:0.03em;}
+  .warn{display:inline-block;font-size:0.72em;font-weight:700;padding:1px 7px;border-radius:10px;
+    background:var(--warn);color:#fff;text-transform:uppercase;letter-spacing:0.03em;}
+</style>
+</head>
+<body>
+
+<h1>This Week in Parliament — the one-page overview</h1>
+<p class="byline">Design · 2026-07-01 · a single-A4, plain-English overview becomes the standard weekly issue on henceforth.club; the existing long-form article is demoted to a linked reference where it exists · <span class="warn">open decisions flagged inline</span></p>
+
+<aside>
+<p><strong>One-line:</strong> Each week's page at <code>/hansard/this-week/[week]</code> becomes a one-page overview — headline, a few lines on the top story, the divisions as a graphic, a department bar chart, the most-asked subjects, a feature, and a two-line footer of the busiest asker and answerer. Plain English throughout, sized to fit one A4 and print from the browser. The rich long-form article is kept, moved to <code>/hansard/this-week/[week]/full</code>, and reached by a link at the top of the overview only for the weeks that have one.</p>
+<p><strong>Status:</strong> the layout and plain-English style are proven — a scratch renderer already produces all six existing weeks (recess, four-division, eight, nine and twelve-division), verified by screenshot. This spec covers folding that renderer into the Next.js app as the standard page, with the prose living in the digest and produced by the generator.</p>
+</aside>
+
+<h2 class="phase">The shift</h2>
+<p>Today <code>/hansard/this-week/[week]</code> renders the full long-form digest through <code>DigestView</code>, and it returns a 404 for any issue whose <code>status</code> is not <code>published</code>. The change makes the one-page overview the thing a reader lands on. The long-form article is not deleted. It moves one click away, to a <code>/full</code> sub-route, and the overview links to it at the top for the weeks where it exists. New weeks are overview-only, so they carry no link.</p>
+<p>Nothing is thrown away. The digest JSON stays the single source of truth. It gains one small optional block for the overview's plain-English prose. The existing rich fields stay exactly where they are and feed the <code>/full</code> page.</p>
+
+<h2 class="phase">Routes</h2>
+<table>
+<tr><th>Route</th><th>Renders</th><th>Shown when</th></tr>
+<tr><td><code>/hansard/this-week/[week]</code></td><td>The one-page overview <span class="warn">new default</span></td><td>Always, for a published issue. 404 otherwise, as now.</td></tr>
+<tr><td><code>/hansard/this-week/[week]/full</code></td><td>The existing long-form <code>DigestView</code> <span class="lock">built</span></td><td>Only where the digest has long-form content (a <code>body</code>). 404 otherwise.</td></tr>
+<tr><td><code>/hansard/this-week</code></td><td>The archive calendar <span class="lock">built</span></td><td>Unchanged. Its links point at the overview, the main URL, as they already do.</td></tr>
+</table>
+<p>The archive, the recent-issues hero and the open-graph cards keep pointing at the main URL, so they now surface the overview with no change.</p>
+
+<h2 class="phase">The page</h2>
+<p>One A4, in reading order:</p>
+<ol>
+<li><strong>Masthead.</strong> The kicker "This Week in Parliament, {window}", the headline, and a stats line of divisions, written questions and distinct askers.</li>
+<li><strong>Full-article link.</strong> "Read the full article" at the top, shown only where a <code>/full</code> page exists for the week.</li>
+<li><strong>Top story.</strong> The plain-English <code>overview.intro</code> as a drop-cap lead paragraph.</li>
+<li><strong>Divisions and department chart, side by side.</strong> The divisions adapt to the count: six or fewer render as the large pill cards, seven or more collapse to compact one-line rows, and past sixteen the sixteen most-contested show with a summary line for the rest. Always sorted closest-margin first. The chart is a horizontal bar per department, its label column auto-sized so no name can clip.</li>
+<li><strong>The most-asked subjects.</strong> A wrapped band of the top headings with their counts, derived from <code>topTopics</code>.</li>
+<li><strong>The feature.</strong> From <code>overview.feature</code>, its summary trimmed to the first few sentences with a bracket-safe cut that never severs a parenthesis.</li>
+<li><strong>Footer.</strong> Two plain lines — the member who tabled the most written questions and the minister who answered the most.</li>
+</ol>
+<p>A recess week has no divisions, chart or feature. It shows the headline "Parliament in recess", the stats line of zeros, and the plain-English intro, and nothing else.</p>
+
+<h2 class="phase">Components</h2>
+<p>Each unit has one job and renders from a well-defined input, so it can be read and tested on its own.</p>
+<table>
+<tr><th>Unit</th><th>Kind</th><th>Job / input</th></tr>
+<tr><td><code>lib/this-week/overview.ts</code></td><td>pure</td><td>The derivations: sort divisions and pick pills-or-rows, shorten department and division titles, the bracket-safe sentence trim. No rendering.</td></tr>
+<tr><td><code>OverviewPage</code></td><td>server</td><td>Loads the digest via the existing store, composes the page, decides whether the <code>/full</code> link shows.</td></tr>
+<tr><td><code>DivisionsBlock</code></td><td>pure</td><td>Renders pills or compact rows from <code>highlights.votes</code>.</td></tr>
+<tr><td><code>DepartmentChart</code></td><td>pure</td><td>Renders the bar chart from <code>departments</code>.</td></tr>
+<tr><td><code>MostAskedSubjects</code>, <code>Feature</code>, <code>Masthead</code>, <code>MostActiveFooter</code></td><td>pure</td><td>Small render-only pieces from their digest fields.</td></tr>
+<tr><td><code>A4Sheet</code></td><td>client</td><td>The one client component. Wraps the page, runs the shrink-to-fit script, owns the print button and print styles.</td></tr>
+</table>
+
+<h2 class="phase">Data model</h2>
+<p>One optional block is added to <code>DigestData</code> in <code>src/lib/this-week/types.ts</code>. Everything else the overview needs — <code>stats</code>, <code>departments</code>, <code>topTopics</code>, <code>highlights.votes</code> — it already has.</p>
+<pre>overview?: {
+  headline: string              // may differ from the long-form headline
+  intro: string                 // plain English, the top story in a few lines
+  feature?: { title: string; summary: string }
+  mostActive?: {
+    asker:    { name: string; party: string; count: number }
+    answerer: { name: string; party: string; count: number }
+  }
+}</pre>
+<p>The overview renders from <code>overview</code> plus the structured fields. Only the prose and the two busiest names are new. If <code>overview</code> is absent on a published issue, the page falls back to deriving the top story from the long-form <code>intro</code>, so the site never shows a blank page during migration.</p>
+
+<h2 class="phase">Generation and migration</h2>
+<p><strong>Going forward.</strong> The editorial pass in <code>scripts/this-week/PROMPT.md</code> gains one step: after writing the digest, it writes the <code>overview</code> block in plain English under the style rules below. The wrapper, <code>run-weekly.sh</code>, computes <code>mostActive</code> deterministically from the questions-statements API — the busiest asker by questions tabled in the window, the busiest answerer by questions answered — the same tally already proven by hand, and injects it. One run produces the digest and its overview together, so the two cannot drift.</p>
+<p><strong>The six existing weeks.</strong> A one-time backfill script writes the <code>overview</code> block into each, using the plain-English rewrites already produced (intro and feature) and computing each week's two busiest names. The long-form fields are left untouched, so every existing week keeps its <code>/full</code> page.</p>
+
+<h2 class="phase">Print</h2>
+<p>Browser print, no server-side PDF. The sheet declares <code>@page { size: A4 }</code> and print styles. <code>A4Sheet</code> runs a small script on load that shrinks the base font in small steps until the content height fits one A4, so the page is guaranteed to print as a single sheet whatever the division count. A "Print" button calls <code>window.print()</code>. This is exactly the mechanism the scratch renderer uses and prints correctly today.</p>
+
+<h2 class="phase">Style rules for the overview prose</h2>
+<p>The <code>overview.intro</code> and <code>overview.feature.summary</code> follow the plain-English house rules, and the generator prompt states them:</p>
+<ul>
+<li>Full sentences and plain English. Short sentences. Full stops freely.</li>
+<li>No em-dashes or en-dashes as connectors. No colons to introduce or join clauses.</li>
+<li>Commas used sparingly.</li>
+<li>Whole numbers up to ninety-nine spelled out. Numerals kept for vote tallies, dates, percentages and large or precise figures.</li>
+<li>Proper terms for role and party initialisms: Members of Parliament, Prime Minister, and the like. Established proper nouns such as the NHS are kept.</li>
+<li>Every name, party, tally, date and quotation preserved exactly.</li>
+</ul>
+
+<h2 class="phase">Testing</h2>
+<p>The pure derivations get vitest cases beside the existing <code>src/lib/this-week</code> tests:</p>
+<ul>
+<li>The pills-or-rows threshold at its boundary (six versus seven).</li>
+<li>Closest-margin-first ordering.</li>
+<li>The bracket-safe trim on a summary whose third sentence opens a parenthesis it does not close.</li>
+<li>Department and division shortening on the known long names.</li>
+<li>A lint test that fails if any <code>overview</code> prose in <code>content/this-week</code> contains an em-dash or a connector colon.</li>
+</ul>
+<p>The visual layout is checked with a headless-Chrome screenshot pass, one image per week read back and inspected, as during this design work. That discipline — render, screenshot, look, before shipping — is part of the definition of done here.</p>
+
+<h2 class="phase">v1 scope and non-goals</h2>
+<table>
+<tr><th>Decision</th><th>Call</th></tr>
+<tr><td>The curated "week in brief" band (statements, urgent questions, Prime Minister's Questions)</td><td><span class="warn">deferred to v2</span>. It needs the generator to emit structured statement highlights, which the digest does not have. The intro carries the week's narrative in v1, which the reprints show reads well.</td></tr>
+<tr><td>Statutory ages in prose — "under-sixteens" versus "under-16s"</td><td><span class="warn">open</span>. Spelled by default; revert to numerals on request.</td></tr>
+<tr><td>Server-side PDF export</td><td>Out of scope. Browser print covers it.</td></tr>
+<tr><td>Rewriting the long-form articles to plain English</td><td>Out of scope. They stay in their current voice on <code>/full</code>, kept for reference.</td></tr>
+</table>
+
+<h2 class="phase">Success criteria</h2>
+<ul>
+<li>Every published week renders a one-page overview at its main URL that fits one A4 and prints as a single sheet.</li>
+<li>The divisions section is correct and legible from zero divisions up to twelve and beyond, verified by screenshot.</li>
+<li>Weeks with long-form content show a working "Read the full article" link; weeks without do not.</li>
+<li>The overview prose contains no em-dashes and no connector colons, enforced by the lint test.</li>
+<li>A new week generated by the pipeline produces its <code>overview</code> block automatically, with no hand-running.</li>
+<li>The six existing weeks are backfilled and unchanged on their <code>/full</code> pages.</li>
+</ul>
+
+</body>
+</html>
