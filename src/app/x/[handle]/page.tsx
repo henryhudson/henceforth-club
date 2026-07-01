@@ -18,7 +18,7 @@ async function resolve(
   const txid = await getXTxid(handle);
   if (txid) {
     const sa = await fetchTxArchive(txid);
-    if (sa) return { archive: socialArchiveToXArchive(sa), txid };
+    if (sa) return { archive: socialArchiveToXArchive(sa, txid), txid };
   }
   const fb = fallback[handle.toLowerCase()];
   return fb ? { archive: fb, txid: null } : null;
