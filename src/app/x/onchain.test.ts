@@ -144,5 +144,58 @@ describe("stitchToXArchive", () => {
     expect(p1?.media).toEqual([{ type: "photo", url: "https://ordfs.network/TXB_0" }]);
     expect(x.posts.find((p) => p.id === "p2")?.media).toBeUndefined();
   });
+
+  it("keeps media from an older archive when a newer text-only copy re-carries the post", () => {
+    const withMedia = {
+      v: 1, source: "x", handle: "h", profile: {},
+      posts: [{ id: "p1", at: "", text: "a", mediaHashes: ["0"] }],
+    };
+    const textOnlyRecarry = {
+      v: 1, source: "x", handle: "h", profile: {},
+      posts: [{ id: "p1", at: "", text: "a" }],
+    };
+    const x = stitchToXArchive([
+      { archive: withMedia, txid: "TXA" },
+      { archive: textOnlyRecarry, txid: "TXB" },
+    ]);
+    expect(x.posts.find((p) => p.id === "p1")?.media).toEqual([
+      { type: "photo", url: "https://ordfs.network/TXA_0" },
+    ]);
+  });
+
+  it("unions media across copies, newest first, without duplicates", () => {
+    const older = {
+      v: 1, source: "x", handle: "h", profile: {},
+      posts: [{ id: "p1", at: "", text: "a", mediaHashes: ["0"] }],
+    };
+    const newer = {
+      v: 1, source: "x", handle: "h", profile: {},
+      posts: [{ id: "p1", at: "", text: "a", mediaHashes: ["1"] }],
+    };
+    const x = stitchToXArchive([
+      { archive: older, txid: "TXA" },
+      { archive: newer, txid: "TXB" },
+    ]);
+    expect(x.posts.find((p) => p.id === "p1")?.media).toEqual([
+      { type: "photo", url: "https://ordfs.network/TXB_1" },
+      { type: "photo", url: "https://ordfs.network/TXA_0" },
+    ]);
+  });
+
+  it("orders posts newest-first by post id, whichever archive carried them", () => {
+    const first = {
+      v: 1, source: "x", handle: "h", profile: {},
+      posts: [{ id: "100", at: "", text: "mid" }, { id: "99", at: "", text: "old" }],
+    };
+    const second = {
+      v: 1, source: "x", handle: "h", profile: {},
+      posts: [{ id: "101", at: "", text: "new" }],
+    };
+    const x = stitchToXArchive([
+      { archive: first, txid: "TXA" },
+      { archive: second, txid: "TXB" },
+    ]);
+    expect(x.posts.map((p) => p.id)).toEqual(["101", "100", "99"]);
+  });
 });
 
