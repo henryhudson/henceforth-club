@@ -21,9 +21,17 @@ export async function GET(req: Request) {
 
   const txids = await getXTxids(handle);
   const tweetIds = new Set<string>();
+  // Posts whose MEDIA is already inscribed — the layers are independent: a post
+  // archived text-only can still have its photos backfilled later, so the app
+  // needs both sets to compute what a new archive would actually add.
+  const mediaPostIds = new Set<string>();
   for (const txid of txids) {
     const archive = await fetchTxArchive(txid);
-    if (archive) for (const post of archive.posts) tweetIds.add(post.id);
+    if (!archive) continue;
+    for (const post of archive.posts) {
+      tweetIds.add(post.id);
+      if (post.mediaHashes?.length) mediaPostIds.add(post.id);
+    }
   }
 
   return NextResponse.json({
@@ -31,6 +39,7 @@ export async function GET(req: Request) {
     archived: txids.length > 0,
     txids,
     tweetIds: [...tweetIds],
+    mediaPostIds: [...mediaPostIds],
     count: tweetIds.size,
   });
 }

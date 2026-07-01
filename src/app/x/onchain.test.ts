@@ -4,7 +4,7 @@ import {
   socialArchiveFromScripts,
   socialArchiveToXArchive,
   ordfsUrl,
-  stitchArchives,
+  stitchToXArchive,
 } from "./onchain";
 
 // Build an OP_RETURN script hex (OP_FALSE OP_RETURN <push>...) from string data,
@@ -124,21 +124,25 @@ describe("ordfsUrl", () => {
   });
 });
 
-describe("stitchArchives", () => {
-  const mk = (posts: { id: string; text: string }[], displayName?: string) => ({
-    v: 1,
-    source: "x",
-    handle: "h",
-    profile: { displayName },
-    posts: posts.map((p) => ({ id: p.id, at: "", text: p.text })),
-  });
-
-  it("unions posts across archives, dedupes by id (newest wins), takes the latest profile", () => {
-    const first = mk([{ id: "1", text: "a" }, { id: "2", text: "b" }], "Old Name");
-    const delta = mk([{ id: "2", text: "b2" }, { id: "3", text: "c" }], "New Name");
-    const merged = stitchArchives([first, delta]);
-    expect(merged.profile.displayName).toBe("New Name");
-    expect(merged.posts.map((p) => p.id).sort()).toEqual(["1", "2", "3"]);
-    expect(merged.posts.find((p) => p.id === "2")?.text).toBe("b2");
+describe("stitchToXArchive", () => {
+  it("resolves each post's media against its OWN archive's txid, newest post copy wins", () => {
+    const textOnly = {
+      v: 1, source: "x", handle: "h", profile: { displayName: "Old" },
+      posts: [{ id: "p1", at: "", text: "a" }, { id: "p2", at: "", text: "b" }],
+    };
+    const mediaBackfill = {
+      v: 1, source: "x", handle: "h", profile: { displayName: "New" },
+      posts: [{ id: "p1", at: "", text: "a", mediaHashes: ["0"] }],
+    };
+    const x = stitchToXArchive([
+      { archive: textOnly, txid: "TXA" },
+      { archive: mediaBackfill, txid: "TXB" },
+    ]);
+    expect(x.profile.displayName).toBe("New");
+    expect(x.posts.map((p) => p.id).sort()).toEqual(["p1", "p2"]);
+    const p1 = x.posts.find((p) => p.id === "p1");
+    expect(p1?.media).toEqual([{ type: "photo", url: "https://ordfs.network/TXB_0" }]);
+    expect(x.posts.find((p) => p.id === "p2")?.media).toBeUndefined();
   });
 });
+

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { XArchive } from "../parseArchive";
-import { socialArchiveToXArchive, stitchArchives, type SocialArchive } from "../onchain";
+import { stitchToXArchive } from "../onchain";
 import { fetchTxArchive } from "@/lib/whatsonchain";
 import { getXTxids } from "@/lib/xIndex";
 import ProfilePage from "../_components/ProfilePage";
@@ -17,16 +17,17 @@ async function resolve(
 ): Promise<{ archive: XArchive; txid: string | null } | null> {
   const txids = await getXTxids(handle);
   if (txids.length > 0) {
-    const archives = (await Promise.all(txids.map((t) => fetchTxArchive(t)))).filter(
-      (a): a is SocialArchive => a !== null,
-    );
-    if (archives.length > 0) {
-      // Media outpoints resolve against the latest txid; today's archives are
-      // text-only, so multi-archive media stitching is deferred.
-      const latestTxid = txids[txids.length - 1];
+    // Keep each archive paired with ITS transaction id — a post's media
+    // outpoints resolve against the transaction that inscribed them.
+    const pairs = (
+      await Promise.all(
+        txids.map(async (txid) => ({ archive: await fetchTxArchive(txid), txid })),
+      )
+    ).flatMap(({ archive, txid }) => (archive ? [{ archive, txid }] : []));
+    if (pairs.length > 0) {
       return {
-        archive: socialArchiveToXArchive(stitchArchives(archives), latestTxid),
-        txid: latestTxid,
+        archive: stitchToXArchive(pairs),
+        txid: pairs[pairs.length - 1].txid,
       };
     }
   }
