@@ -227,4 +227,10 @@
 }
 
 .printBtn { position: fixed; right: 16px; top: 16px; font: 600 13px/1 -apple-system, sans-serif; padding: 8px 14px; border-radius: 8px; border: 1px solid #ccc; background: #fff; cursor: pointer; }
-@media print { .printBtn { display: none; } }
+
+@media print {
+  .printBtn { display: none; }
+  :global(body) * { visibility: hidden; }
+  .sheet, .sheet * { visibility: visible; }
+  .sheet { position: absolute; top: 0; left: 0; margin: 0; }
+}
