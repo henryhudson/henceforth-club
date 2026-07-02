@@ -419,15 +419,33 @@ body:has(.provenance)::before {
     --accent-warm: #92400e;
     --accent-orange: #9a3412;
   }
-  html { background: #ffffff !important; }
-  body { background: #ffffff !important; color: #1c1917 !important; font-size: 11px; line-height: 1.45; }
+  /* Tailwind's spacing + type scale are all rem-based (relative to the html
+     root font-size), so shrinking body's own font-size barely touches most
+     text and none of the margin/padding/gap utilities. Scaling the root is
+     what actually buys back pages. */
+  html { background: #ffffff !important; font-size: 56.25%; }
+  body { background: #ffffff !important; color: #1c1917 !important; line-height: 1.4; }
   body::before { display: none !important; }   /* noise texture overlay */
   nav { display: none !important; }             /* site navbar */
+  footer { display: none !important; }           /* site footer (easter-egg links etc.) */
   .print-hidden { display: none !important; }
+  .paper { min-height: 0 !important; }   /* min-h-screen pads the board layout to a full viewport, spilling a near-empty 2nd page */
   main { max-width: none !important; padding: 0 !important; }
-  section { break-inside: avoid; }
+  /* break-inside:avoid on whole <section>s (emergencies / plan / verdicts)
+     pushes an entire section to the next page rather than letting it flow,
+     wasting the rest of the current page — scope avoidance to list items
+     instead, which is the actual "don't split a row" intent. */
+  li { break-inside: avoid; }
   a { color: inherit !important; text-decoration: none !important; }
   input[type="checkbox"] { width: 9px; height: 9px; }
+
+  /* the plan checklist's row padding + detail line-height and the large
+     section gaps (mt-14, mt-8) are the single biggest costs against the
+     one-page daily budget — trim them past what the root scale buys alone */
+  .paper .mt-14 { margin-top: 1rem !important; }
+  .paper .mt-8 { margin-top: 0.75rem !important; }
+  .paper ol > li.border-b { padding-block: 0.3rem !important; }
+  .paper ol > li p.leading-relaxed { line-height: 1.2 !important; }
 
   /* weekly edition: small type, two-page ceiling */
   .print-weekly { font-size: 9.5px; line-height: 1.35; }
