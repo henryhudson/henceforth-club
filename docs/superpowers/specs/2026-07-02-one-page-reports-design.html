@@ -48,7 +48,7 @@
 <code>/board/week</code> — the weekly <em>schedule only</em>: the planner grid with its strike-through done marks (the deep weekly-review detail moves into the weekly report edition)<br>
 <code>/board/reports</code> — <strong>new index</strong>: one line per edition, newest first, a type chip on each — <strong>Daily</strong> (from <code>board:report:dates</code>) interleaved with <strong>Weekly</strong> (from <code>board:weeks</code>)<br>
 <code>/board/reports/&lt;date&gt;</code> — a daily one-pager (§1)<br>
-<code>/board/reports/week-of-&lt;date&gt;</code> — a weekly one-pager (§2)<br>
+<code>/board/reports/week/&lt;date&gt;</code> — a weekly one-pager (§2)<br>
 <code>/board/report</code> — redirects to the newest daily edition (old links keep working)</p>
 </div>
 <p>The gated board pages cross-link as peers: Board · Week · Reports · Docs.</p>
@@ -65,7 +65,7 @@
 </ul>
 <p>Date navigation moves to the Reports index (the picker on the page itself goes away — the index is the archive).</p>
 
-<h2>2 · The weekly one-pager — <code>/board/reports/week-of-&lt;date&gt;</code></h2>
+<h2>2 · The weekly one-pager — <code>/board/reports/week/&lt;date&gt;</code></h2>
 <p>Sibling shape to the daily, rendered from the same <code>board:week:&lt;date&gt;</code> data <code>/whh</code> already writes (no new keys):</p>
 <ul>
   <li><strong>Week headline + sales strip</strong> at the top (existing <code>/whh</code> aggregate data; the sales plumbing itself is untouched).</li>
