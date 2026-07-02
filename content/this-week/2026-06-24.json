@@ -60,7 +60,35 @@
     { "heading": "Civil Servants: Workplace Pensions", "count": 6 },
     { "heading": "Flood Re", "count": 6 }
   ],
-  "qa": [],
+  "qa": [
+    {
+      "heading": "Special Advisers: By-elections",
+      "asker": "Mike Wood",
+      "party": "Conservative",
+      "constituency": "Kingswinford and South Staffordshire",
+      "department": "Cabinet Office",
+      "question": "What information does the Cabinet Office special adviser HR function hold on whether any special advisers have been seconded or taken unpaid leave to undertake political activity in parliamentary by-elections since 1 January 2026?",
+      "answer": "As per the Code of Conduct for Special Advisers, where a special adviser wishes to undertake work for a political party which does not arise out of government business they may do this either in their own time, outside office hours, or under a separate contract with the Party, working part-time for the Government. They may not use annual or unpaid leave for this purpose. Details of where a special adviser has undertaken work for the Party, while working part-time for the Government, will be published as part of the declaration of interest process."
+    },
+    {
+      "heading": "Domestic Abuse: Older People",
+      "asker": "Sonia Kumar",
+      "party": "Labour",
+      "constituency": "Dudley",
+      "department": "Home Office",
+      "question": "What steps is the Department taking with Cabinet colleagues to help support elderly domestic abuse victims?",
+      "answer": "From April 2025, the Home Office has allocated nearly £800,000 to Hourglass to provide specialist helpline and advocacy support for older victims of VAWG. We will also publish a new national commissioning statement on VAWG to improve the provision of support for all victims, including older victims."
+    },
+    {
+      "heading": "Inflation",
+      "asker": "Sarah Pochin",
+      "party": "Reform UK",
+      "constituency": "Runcorn and Helsby",
+      "department": "Treasury",
+      "question": "What assessment has the Department made of the potential impact of inflation on household savings rates in the last five years?",
+      "answer": "The household saving ratio was 9.9% in Q4 2025. This is slightly above the long-run average saving ratio since 1970, of 9.3%. Inflation was unchanged at 2.8% in May, having fallen from a peak of 11.1% in October 2022. The Monetary Policy Committee at the Bank of England has responsibility for controlling inflation, and the Government fully supports the action it is taking to sustainably return inflation to the 2 per cent target."
+    }
+  ],
   "highlights": {
     "votes": [
       {
@@ -94,6 +122,18 @@
       {
         "row": { "id": 2378, "title": "National Security (State Threats) Bill — Allocation of Time", "date": "2026-06-17", "ayes": 233, "noes": 94 },
         "blurb": "The week opened with the National Security (State Threats) Bill in committee; the allocation-of-time motion carried 233 to 94 to set the timetable."
+      },
+      {
+        "row": { "id": 2382, "title": "National Security (State Threats) Bill Committee — New Clause 3", "date": "2026-06-17", "ayes": 144, "noes": 244 },
+        "blurb": "New Clause 3 went first once the timetable was set, defeated 144 to 244."
+      },
+      {
+        "row": { "id": 2381, "title": "National Security (State Threats) Bill Committee — Amendment 13", "date": "2026-06-17", "ayes": 135, "noes": 258 },
+        "blurb": "Amendment 13 followed it down, 135 to 258 — the government line unmoved."
+      },
+      {
+        "row": { "id": 2380, "title": "National Security (State Threats) Bill Committee — Amendment 8", "date": "2026-06-17", "ayes": 143, "noes": 249 },
+        "blurb": "Amendment 8 lost 143 to 249, the third of four committee amendments before the heaviest fell."
       },
       {
         "row": { "id": 2379, "title": "National Security (State Threats) Bill Committee — Amendment 3", "date": "2026-06-17", "ayes": 85, "noes": 317 },
