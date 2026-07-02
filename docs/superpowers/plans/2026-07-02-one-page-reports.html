@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One-page reports + dated Done ledger — implementation plan</title>
+<style>
+  :root { --bg:#f4f1ea; --ink:#1c1a16; --muted:#6b6358; --rule:#d8d0c0; --accent:#a8431f; --accent-soft:#c4a572; --card:#fbf9f4; --code-bg:#1e1e1e; --code-ink:#e8e8e8; --ok:#2f6f3e; --warn:#a8431f; --shadow:0 1px 3px rgba(0,0,0,0.08); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.65;}
+  .wrap{max-width:880px;margin:0 auto;padding:56px 32px;} header.doc{margin-bottom:40px;border-bottom:2px solid var(--rule);padding-bottom:24px;}
+  .eyebrow{font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:34px;line-height:1.15;margin:0 0 12px;font-weight:700;} h2{font-size:24px;margin:48px 0 14px;padding-top:20px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 10px;} .lede{font-size:19px;color:var(--muted);margin:0;} p{margin:14px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(0,0,0,0.06);padding:2px 6px;border-radius:4px;}
+  pre{background:var(--code-bg);color:var(--code-ink);padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;} th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .task{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:8px 22px 18px;margin:22px 0;box-shadow:var(--shadow);}
+  .task .tasknum{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);}
+  .files{font-size:14px;background:#efe9dc;border-radius:6px;padding:10px 14px;margin:10px 0;}
+  .try{background:#eef3e9;border-left:4px solid var(--ok);padding:10px 16px;border-radius:0 6px 6px 0;margin:14px 0;} .try strong{color:var(--ok);}
+  .note{background:#f6efe0;border-left:4px solid var(--accent-soft);padding:10px 16px;border-radius:0 6px 6px 0;margin:14px 0;}
+  ul{margin:12px 0;padding-left:24px;} li{margin:5px 0;}
+  ul.steps{list-style:none;padding-left:4px;} ul.steps>li{margin:12px 0;padding-left:30px;position:relative;}
+  ul.steps>li input[type=checkbox]{position:absolute;left:0;top:5px;width:18px;height:18px;}
+  .badge{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:2px 8px;border-radius:999px;white-space:nowrap;}
+  .b-site{background:#dfe8ee;color:#2a5a7a;} .b-app{background:#f3dcd2;color:var(--accent);} .b-both{background:#e7e0f0;color:#5a3a8a;}
+  .effort{font-size:13px;color:#6b6358;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Implementation plan · 2026-07-02 · Morning Board</div>
+<h1>One-page reports + dated Done ledger</h1>
+<p class="lede">Build the Reports section (daily and weekly one-page editions), slim the week page to the schedule, and stamp every card move so Done reads as a dated ledger — per the approved spec <code>docs/superpowers/specs/2026-07-02-one-page-reports-design.html</code>.</p>
+</header>
+
+<p><strong>For agentic workers:</strong> REQUIRED SUB-SKILL: use <code>superpowers:subagent-driven-development</code> (recommended) or <code>superpowers:executing-plans</code> to implement task-by-task. Steps use checkbox syntax for tracking.</p>
+
+<p><strong>Goal:</strong> three peer board sections — kanban (<code>/board</code>), weekly schedule (<code>/board/week</code>), Reports index + editions (<code>/board/reports</code>) — plus <code>movedAt</code>/<code>doneAt</code> stamps flowing through both Done views.</p>
+<p><strong>Architecture:</strong> render-layer only on the site (report/week JSON schemas untouched); shared data access extracted to <code>src/lib/board-data.ts</code>; pure helpers unit-tested with vitest; the local kanban viewer and the /hh command doc gain the stamping rule.</p>
+<p><strong>Tech stack:</strong> Next.js 16 App Router, React 19 server components, Tailwind v4 theme tokens (<code>text-accent-green</code> etc.), vitest, plain-JavaScript viewer HTML.</p>
+
+<h2>Global constraints</h2>
+<ul>
+  <li>Work happens on branch <code>feat/one-page-reports</code> in the worktree created in Task 0 (the main checkout at <code>~/Programming/Main/henceforth-club</code> holds Henry's unrelated uncommitted edits — never touch it).</li>
+  <li>Report JSON (<code>board:report:&lt;date&gt;</code>) and week JSON (<code>board:week:&lt;date&gt;</code>) schemas are read-only contracts — no publisher changes.</li>
+  <li>No acronyms in any user-visible copy or commit message prose ("pull request", not the abbreviation). Code identifiers exempt.</li>
+  <li>TypeScript strict; run <code>npm run build</code> before any push; commit after every task.</li>
+  <li>The board pages are cookie-gated — for local dev checks, log in once at <code>localhost:3000/board/login</code>.</li>
+</ul>
+
+<div class="task">
+<div class="tasknum">Task 0 · Worktree + baseline <span class="badge b-site">setup</span> <span class="effort">~5 min</span></div>
+<div class="files"><strong>Files:</strong> none (environment only)</div>
+<ul class="steps">
+  <li><input type="checkbox"> <strong>Create the worktree.</strong> The branch may still be attached to a stale session worktree — detach it first:
+<pre><code>cd ~/Programming/Main/henceforth-club
+git worktree list                       # if a worktree already holds feat/one-page-reports:
+git worktree remove --force &lt;that-path&gt; 2&gt;/dev/null || true
+git worktree add ../hc-onepage feat/one-page-reports
+cp .env.local ../hc-onepage/.env.local   # gitignored; lets dev + scripts read Upstash
+cd ../hc-onepage &amp;&amp; npm install</code></pre></li>
+  <li><input type="checkbox"> <strong>Baseline green.</strong> Run: <code>npm test</code> → existing <code>scripts/board/*.test.mjs</code> suites pass. Run: <code>npm run build</code> → succeeds.</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 1 · Pure helpers, test-first <span class="badge b-site">site</span> <span class="effort">~15 min</span></div>
+<div class="files"><strong>Files:</strong> create <code>src/lib/report-helpers.ts</code> · create <code>src/lib/report-helpers.test.ts</code><br>
+<strong>Produces:</strong> <code>verdictLine(findings: {verdict: string}[]): string</code> · <code>editionIndex(dailyDates: string[], weekDates: string[]): Edition[]</code> with <code>type Edition = { type: "daily" | "weekly"; date: string; href: string }</code> — Tasks 3 and 4 consume these exact names.</div>
+<ul class="steps">
+  <li><input type="checkbox"> <strong>Write the failing tests</strong> — <code>src/lib/report-helpers.test.ts</code>:
+<pre><code>import { describe, expect, it } from "vitest";
+import { editionIndex, verdictLine } from "./report-helpers";
+
+describe("verdictLine", () =&gt; {
+  it("orders confirmed, rejected, abstained, already fixed", () =&gt; {
+    const findings = [
+      { verdict: "agree" }, { verdict: "agree" },
+      { verdict: "reject" }, { verdict: "abstain" }, { verdict: "already-resolved" },
+    ];
+    expect(verdictLine(findings)).toBe("2 confirmed · 1 rejected · 1 abstained · 1 already fixed");
+  });
+  it("omits zero buckets", () =&gt; {
+    expect(verdictLine([{ verdict: "reject" }])).toBe("1 rejected");
+  });
+  it("reads 'no findings' for an empty list", () =&gt; {
+    expect(verdictLine([])).toBe("no findings");
+  });
+  it("counts unknown verdicts as abstained", () =&gt; {
+    expect(verdictLine([{ verdict: "shrug" }])).toBe("1 abstained");
+  });
+});
+
+describe("editionIndex", () =&gt; {
+  it("interleaves newest-first with correct hrefs", () =&gt; {
+    const out = editionIndex(["2026-07-02", "2026-06-30"], ["2026-07-01"]);
+    expect(out).toEqual([
+      { type: "daily", date: "2026-07-02", href: "/board/reports/2026-07-02" },
+      { type: "weekly", date: "2026-07-01", href: "/board/reports/week/2026-07-01" },
+      { type: "daily", date: "2026-06-30", href: "/board/reports/2026-06-30" },
+    ]);
+  });
+  it("puts the weekly first on an equal date", () =&gt; {
+    const out = editionIndex(["2026-06-29"], ["2026-06-29"]);
+    expect(out.map((e) =&gt; e.type)).toEqual(["weekly", "daily"]);
+  });
+});</code></pre></li>
+  <li><input type="checkbox"> <strong>Run to verify they fail.</strong> <code>npx vitest run src/lib/report-helpers.test.ts</code> → FAIL (module not found).</li>
+  <li><input type="checkbox"> <strong>Implement</strong> — <code>src/lib/report-helpers.ts</code>:
+<pre><code>export type Edition = { type: "daily" | "weekly"; date: string; href: string };
+
+export function verdictLine(findings: { verdict: string }[]): string {
+  if (findings.length === 0) return "no findings";
+  const counts = { confirmed: 0, rejected: 0, abstained: 0, alreadyFixed: 0 };
+  for (const f of findings) {
+    if (f.verdict === "agree") counts.confirmed++;
+    else if (f.verdict === "reject") counts.rejected++;
+    else if (f.verdict === "already-resolved") counts.alreadyFixed++;
+    else counts.abstained++;
+  }
+  const parts: string[] = [];
+  if (counts.confirmed) parts.push(`${counts.confirmed} confirmed`);
+  if (counts.rejected) parts.push(`${counts.rejected} rejected`);
+  if (counts.abstained) parts.push(`${counts.abstained} abstained`);
+  if (counts.alreadyFixed) parts.push(`${counts.alreadyFixed} already fixed`);
+  return parts.join(" · ");
+}
+
+export function editionIndex(dailyDates: string[], weekDates: string[]): Edition[] {
+  const dailies: Edition[] = dailyDates.map((d) =&gt; ({ type: "daily", date: d, href: `/board/reports/${d}` }));
+  const weeklies: Edition[] = weekDates.map((d) =&gt; ({ type: "weekly", date: d, href: `/board/reports/week/${d}` }));
+  return [...dailies, ...weeklies].sort((a, b) =&gt;
+    a.date &lt; b.date ? 1 : a.date &gt; b.date ? -1 : a.type === "weekly" ? -1 : 1,
+  );
+}</code></pre></li>
+  <li><input type="checkbox"> <strong>Run to verify pass.</strong> <code>npx vitest run src/lib/report-helpers.test.ts</code> → 6 passed.</li>
+  <li><input type="checkbox"> <strong>Commit.</strong> <code>git add src/lib/report-helpers.ts src/lib/report-helpers.test.ts &amp;&amp; git commit -m "feat(board): verdict-line and edition-index helpers for the reports section"</code></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 2 · Extract shared board data access <span class="badge b-site">site</span> <span class="effort">~20 min</span></div>
+<div class="files"><strong>Files:</strong> create <code>src/lib/board-data.ts</code> · modify <code>src/app/board/report/page.tsx</code> · modify <code>src/app/board/week/page.tsx</code><br>
+<strong>Produces:</strong> exported from <code>@/lib/board-data</code>: types <code>Report</code>, <code>Finding</code>, <code>AppReport</code>, <code>Plan</code>, <code>Emergency</code>, <code>AppStore</code>, <code>WeekReport</code>, <code>PlanDay</code> and functions <code>listDates(): Promise&lt;string[]&gt;</code>, <code>loadReport(date: string): Promise&lt;Report | null&gt;</code>, <code>listWeeks(): Promise&lt;string[]&gt;</code>, <code>loadWeek(date: string): Promise&lt;WeekReport | null&gt;</code>. Tasks 3–6 consume these.</div>
+<ul class="steps">
+  <li><input type="checkbox"> <strong>Create <code>src/lib/board-data.ts</code></strong> by moving, verbatim: the type block from <code>report/page.tsx:7-59</code> (export every type) and <code>listDates</code>/<code>loadReport</code> with their <code>DIR</code> constant (<code>report/page.tsx:61, 85-114</code>); the type block from <code>week/page.tsx:9-39</code> (export every type, keeping the names <code>WeekReport</code>, <code>PlanDay</code>, <code>AppSales</code>, <code>AppState</code>, <code>WeekDay</code>, <code>NextItem</code>, <code>Reflag</code>, <code>Stuck</code>) and <code>listWeeks</code>/<code>loadWeek</code> with their <code>DIR</code> constant renamed <code>WEEKS_DIR</code> (<code>week/page.tsx:41, 45-65</code>). Keep both <code>getRedis</code>-then-file fallbacks exactly as they are. <code>PlanItem</code> stays exported from <code>PlanChecklist</code>; <code>board-data.ts</code> imports it for the <code>Plan</code> type: <code>import type { PlanItem } from "@/app/board/report/PlanChecklist";</code> (Task 3 updates this import when the file moves).</li>
+  <li><input type="checkbox"> <strong>Point both pages at the module.</strong> In <code>report/page.tsx</code> and <code>week/page.tsx</code>, delete the moved types/functions and import them from <code>@/lib/board-data</code>. No behaviour change.</li>
+  <li><input type="checkbox"> <strong>Verify.</strong> <code>npm run build</code> → succeeds. <code>npm test</code> → passes.</li>
+  <li><input type="checkbox"> <strong>Commit.</strong> <code>git add -A src/ &amp;&amp; git commit -m "refactor(board): extract report and week data access into src/lib/board-data"</code></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 3 · Daily edition page + checklist rehome <span class="badge b-site">site</span> <span class="effort">~45 min</span></div>
+<div class="files"><strong>Files:</strong> create <code>src/app/board/reports/[date]/page.tsx</code> · move <code>src/app/board/report/PlanChecklist.tsx</code> → <code>src/app/board/reports/PlanChecklist.tsx</code> (git mv, update the import in <code>board-data.ts</code>)<br>
+<strong>Interfaces:</strong> consumes <code>loadReport</code>/<code>listDates</code>/types (Task 2), <code>verdictLine</code> (Task 1), <code>PlanChecklist</code> (moved).</div>
+<ul class="steps">
+  <li><input type="checkbox"> <strong>Move the checklist.</strong> <code>git mv src/app/board/report/PlanChecklist.tsx src/app/board/reports/PlanChecklist.tsx</code>; update the type import in <code>src/lib/board-data.ts</code> to <code>@/app/board/reports/PlanChecklist</code>; update the (temporary, until Task 5) import in <code>report/page.tsx</code> to the new path.</li>
+  <li><input type="checkbox"> <strong>Create <code>src/app/board/reports/[date]/page.tsx</code></strong> — a server component. Reuse, verbatim from the current <code>report/page.tsx</code>: the <code>VERDICT</code> map (:65-70), <code>statusColor</code>/<code>tagChipColor</code> (:73-83), the emergencies section markup (:167-204), and the plan section markup (:308-333). New layout, top to bottom:
+<pre><code>import Link from "next/link";
+import { notFound } from "next/navigation";
+import { loadReport } from "@/lib/board-data";
+import { verdictLine } from "@/lib/report-helpers";
+import PlanChecklist from "../PlanChecklist";
+
+export const dynamic = "force-dynamic";
+
+export default async function DailyEdition({ params }: { params: Promise&lt;{ date: string }&gt; }) {
+  const { date } = await params;
+  const report = await loadReport(date);
+  if (!report) notFound();
+
+  return (
+    &lt;main className="mx-auto max-w-3xl px-6 py-10"&gt;
+      {/* header: title + date + peer links */}
+      &lt;div className="mb-1 flex flex-wrap items-baseline justify-between gap-2"&gt;
+        &lt;h1 className="text-3xl font-bold tracking-tight text-foreground"&gt;Daily Report&lt;/h1&gt;
+        &lt;div className="flex gap-3 text-sm text-accent-green"&gt;
+          &lt;Link href="/board/reports" className="underline"&gt;Reports&lt;/Link&gt;
+          &lt;Link href="/board" className="underline"&gt;Board&lt;/Link&gt;
+          &lt;Link href="/board/week" className="underline"&gt;Week&lt;/Link&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;p className="text-sm text-muted"&gt;{report.date} · generated {report.generatedAt}&lt;/p&gt;
+
+      {/* 1 · emergencies — markup moved verbatim from report/page.tsx:167-204 */}
+      {/* 2 · plan — markup moved verbatim from report/page.tsx:308-333 */}
+      {/* 3 · cadence strip — compact one-liners, replaces the table */}
+      {report.appStore &amp;&amp; (
+        &lt;section className="mt-8"&gt;
+          &lt;h2 className="mb-2 border-b border-card-border pb-1 text-xl font-bold text-foreground"&gt;
+            Ship cadence &lt;span className="text-sm font-normal text-muted"&gt;— {report.appStore.shipDay}&lt;/span&gt;
+          &lt;/h2&gt;
+          &lt;ul className="flex flex-col gap-1 text-sm"&gt;
+            {report.appStore.apps.map((a) =&gt; (
+              &lt;li key={a.app} className="text-muted"&gt;
+                &lt;span className="font-semibold text-foreground"&gt;{a.app}&lt;/span&gt;
+                {" — "}&lt;span className={statusColor(a.status)}&gt;{a.status}&lt;/span&gt;
+                {" · "}{a.version}
+                {a.daysSince != null &amp;&amp; &lt;&gt; · {a.daysSince}d&lt;/&gt;}
+                {" · "}{a.blocker}
+              &lt;/li&gt;
+            ))}
+          &lt;/ul&gt;
+        &lt;/section&gt;
+      )}
+
+      {/* 4 · one verdict line per app */}
+      &lt;section className="mt-8"&gt;
+        &lt;h2 className="mb-2 border-b border-card-border pb-1 text-xl font-bold text-foreground"&gt;Verdicts&lt;/h2&gt;
+        &lt;ul className="flex flex-col gap-1 text-sm"&gt;
+          {report.apps.map((app) =&gt; (
+            &lt;li key={app.app} className="text-muted"&gt;
+              &lt;span className="font-semibold text-foreground"&gt;{app.name}&lt;/span&gt;
+              {app.reviewFound ? &lt;&gt; @ {app.headSha.slice(0, 7)} — {verdictLine(app.findings)}&lt;/&gt; : &lt;&gt; — no review today&lt;/&gt;}
+            &lt;/li&gt;
+          ))}
+        &lt;/ul&gt;
+      &lt;/section&gt;
+
+      {/* 5 · full detail, folded */}
+      &lt;details className="mt-10"&gt;
+        &lt;summary className="cursor-pointer text-sm font-semibold text-muted hover:text-foreground"&gt;
+          Full verdicts — evidence, falsifications, recommendations
+        &lt;/summary&gt;
+        {/* the per-app findings blocks moved verbatim from report/page.tsx:261-306 */}
+      &lt;/details&gt;
+    &lt;/main&gt;
+  );
+}</code></pre>
+  The summary strip (<code>report/page.tsx:137-165</code> — "N reviews adjudicated — …") moves inside the fold's top as a one-line paragraph. Order the sections exactly: emergencies → plan → cadence → verdicts → fold.</li>
+  <li><input type="checkbox"> <strong>Verify by eye.</strong> <code>npm run dev</code> → log in → <code>localhost:3000/board/reports/2026-07-02</code> renders one page: emergency band, tickable plan, cadence lines, verdict lines, collapsed fold. Also load an older date (<code>/board/reports/2026-06-28</code>) and a bogus one (<code>/board/reports/2020-01-01</code> → 404).</li>
+  <li><input type="checkbox"> <strong>Build + commit.</strong> <code>npm run build</code> → succeeds. <code>git add -A src/ &amp;&amp; git commit -m "feat(board): daily report renders as a one-page edition under /board/reports"</code></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 4 · Weekly edition page <span class="badge b-site">site</span> <span class="effort">~40 min</span></div>
+<div class="files"><strong>Files:</strong> create <code>src/app/board/reports/week/[date]/page.tsx</code> · modify <code>docs/superpowers/specs/2026-07-02-one-page-reports-design.html</code> (one line)<br>
+<strong>Interfaces:</strong> consumes <code>loadWeek</code>/<code>WeekReport</code> (Task 2).</div>
+<div class="note"><strong>Route correction to the spec.</strong> Next.js segments cannot mix a literal prefix with a parameter, so <code>/board/reports/week-of-&lt;date&gt;</code> becomes <code>/board/reports/week/&lt;date&gt;</code>. Patch the two <code>week-of-</code> mentions in the spec's §0 and §2 headings to <code>week/&lt;date&gt;</code> in this task's commit.</div>
+<ul class="steps">
+  <li><input type="checkbox"> <strong>Create <code>src/app/board/reports/week/[date]/page.tsx</code></strong> — server component, <code>notFound()</code> on a miss like Task 3. Layout: header ("Weekly Report", links Reports · Board · Week) → <code>stateOfUnion</code> pull-quote (markup verbatim from <code>week/page.tsx:90-92</code>) → compact sales strip → accomplished-vs-planned → fold. New sections:
+<pre><code>{/* sales strip — one line per app */}
+&lt;section className="mt-6"&gt;
+  &lt;h2 className="mb-2 border-b border-card-border pb-1 text-xl font-bold text-foreground"&gt;Sales&lt;/h2&gt;
+  &lt;ul className="flex flex-col gap-1 text-sm"&gt;
+    {w.sales.perApp.map((a) =&gt; (
+      &lt;li key={a.app} className="text-muted"&gt;
+        &lt;span className="font-semibold text-foreground"&gt;{a.name}&lt;/span&gt;
+        {" — "}{a.units.thisWeek} downloads ({pct(a.units.deltaPct)} on last week)
+      &lt;/li&gt;
+    ))}
+  &lt;/ul&gt;
+  {w.sales.note &amp;&amp; &lt;p className="mt-2 text-sm text-muted"&gt;{w.sales.note}&lt;/p&gt;}
+&lt;/section&gt;
+
+{/* accomplished vs planned — per day, done tasks ticked */}
+&lt;section className="mt-8"&gt;
+  &lt;h2 className="mb-2 border-b border-card-border pb-1 text-xl font-bold text-foreground"&gt;Accomplished vs planned&lt;/h2&gt;
+  &lt;ul className="flex flex-col gap-2 text-sm"&gt;
+    {w.retro.weekPlan.filter((d) =&gt; d.tasks.length &gt; 0).map((d) =&gt; (
+      &lt;li key={d.date}&gt;
+        &lt;span className="font-semibold text-foreground"&gt;{d.weekday} {d.date.slice(5)}&lt;/span&gt;
+        &lt;ul className="mt-0.5 flex flex-col gap-0.5 pl-4"&gt;
+          {d.tasks.map((t, i) =&gt; {
+            const task = typeof t === "string" ? { label: t, done: false } : t;
+            return (
+              &lt;li key={i} className={task.done ? "text-muted line-through" : "text-muted"}&gt;
+                {task.done ? "✓ " : "· "}{task.label}
+              &lt;/li&gt;
+            );
+          })}
+        &lt;/ul&gt;
+      &lt;/li&gt;
+    ))}
+  &lt;/ul&gt;
+&lt;/section&gt;</code></pre>
+  (<code>pct</code> moves verbatim from <code>week/page.tsx:43</code>; the <code>ACCENT</code> map from :42 comes along for the fold.) The fold (<code>&lt;details&gt;</code>, same summary styling as Task 3) receives, moved verbatim from <code>week/page.tsx</code>: the week strip grid (:95-105), totals grid (:106-113), wins/misses (:115-126), stuck (:128-137), recurring re-flags (:139-151), next week (:153-165), sales drivers (:196-204), and state-of-each-app (:206-224).</li>
+  <li><input type="checkbox"> <strong>Patch the spec's two route mentions</strong> (§0 line and §2 heading) from <code>week-of-&lt;date&gt;</code> to <code>week/&lt;date&gt;</code>.</li>
+  <li><input type="checkbox"> <strong>Verify by eye.</strong> <code>localhost:3000/board/reports/week/2026-06-29</code> → one page with the sales strip, Wednesday's three struck-through milestones under Accomplished vs planned, fold collapsed.</li>
+  <li><input type="checkbox"> <strong>Build + commit.</strong> <code>npm run build</code> → succeeds. <code>git add -A src/ docs/ &amp;&amp; git commit -m "feat(board): weekly report renders as a one-page edition under /board/reports/week"</code></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 5 · Reports index, week slimming, redirect, peer links <span class="badge b-site">site</span> <span class="effort">~40 min</span></div>
+<div class="files"><strong>Files:</strong> create <code>src/app/board/reports/page.tsx</code> · rewrite <code>src/app/board/report/page.tsx</code> (redirect only) · rewrite <code>src/app/board/week/page.tsx</code> (schedule only) · modify <code>src/app/board/BoardClient.tsx:128-134</code> (links)</div>
+<ul class="steps">
+  <li><input type="checkbox"> <strong>Index page</strong> — <code>src/app/board/reports/page.tsx</code>:
+<pre><code>import Link from "next/link";
+import { listDates, listWeeks } from "@/lib/board-data";
+import { editionIndex } from "@/lib/report-helpers";
+
+export const dynamic = "force-dynamic";
+
+export default async function ReportsIndex() {
+  const [dailies, weeks] = await Promise.all([listDates(), listWeeks()]);
+  const editions = editionIndex(dailies, weeks);
+
+  return (
+    &lt;main className="mx-auto max-w-3xl px-6 py-10"&gt;
+      &lt;div className="mb-1 flex flex-wrap items-baseline justify-between gap-2"&gt;
+        &lt;h1 className="text-3xl font-bold tracking-tight text-foreground"&gt;Reports&lt;/h1&gt;
+        &lt;div className="flex gap-3 text-sm text-accent-green"&gt;
+          &lt;Link href="/board" className="underline"&gt;Board&lt;/Link&gt;
+          &lt;Link href="/board/week" className="underline"&gt;Week&lt;/Link&gt;
+          &lt;Link href="/board/docs" className="underline"&gt;Plans &amp;amp; specs&lt;/Link&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;p className="text-sm text-muted"&gt;One-page editions, newest first — daily morning briefs and weekly reviews.&lt;/p&gt;
+      &lt;ol className="mt-6 flex flex-col"&gt;
+        {editions.map((e) =&gt; (
+          &lt;li key={e.href} className="border-b border-card-border py-3 last:border-b-0"&gt;
+            &lt;Link href={e.href} className="group flex items-baseline gap-3"&gt;
+              &lt;span
+                className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                  e.type === "weekly"
+                    ? "border-accent-warm/60 text-accent-warm"
+                    : "border-accent-green/60 text-accent-green"
+                }`}
+              &gt;
+                {e.type}
+              &lt;/span&gt;
+              &lt;span className="font-semibold text-foreground group-hover:underline"&gt;
+                {e.type === "weekly" ? `Week of ${e.date}` : e.date}
+              &lt;/span&gt;
+            &lt;/Link&gt;
+          &lt;/li&gt;
+        ))}
+        {editions.length === 0 &amp;&amp; &lt;p className="py-6 text-muted"&gt;No editions yet — run /hh.&lt;/p&gt;}
+      &lt;/ol&gt;
+    &lt;/main&gt;
+  );
+}</code></pre></li>
+  <li><input type="checkbox"> <strong>Redirect</strong> — replace the whole of <code>src/app/board/report/page.tsx</code> with:
+<pre><code>import { redirect } from "next/navigation";
+import { listDates } from "@/lib/board-data";
+
+export const dynamic = "force-dynamic";
+
+// Old links keep working: /board/report → newest daily edition;
+// /board/report?date=X → that date's edition.
+export default async function ReportRedirect({
+  searchParams,
+}: {
+  searchParams: Promise&lt;{ date?: string }&gt;;
+}) {
+  const { date } = await searchParams;
+  if (date) redirect(`/board/reports/${date}`);
+  const dates = await listDates();
+  redirect(dates[0] ? `/board/reports/${dates[0]}` : "/board/reports");
+}</code></pre></li>
+  <li><input type="checkbox"> <strong>Slim the week page</strong> — rewrite <code>src/app/board/week/page.tsx</code> to: header ("Weekly Schedule"; links Board · Reports · Plans &amp; specs) → the planner intro line + <code>&lt;WeekPlanner days={w.retro.weekPlan} weekKey={w.weekEnd} /&gt;</code> (kept exactly as today, <code>week/page.tsx:167-173</code>) → one link under it: <code>&lt;Link href={`/board/reports/week/${active}`}&gt;This week's report edition →&lt;/Link&gt;</code> → the archive link row (:226-232, hrefs unchanged). Everything else (state of union, totals, wins, stuck, re-flags, next week, sales, app state) is deleted here — it now lives in the Task 4 edition.</li>
+  <li><input type="checkbox"> <strong>Peer links.</strong> In <code>BoardClient.tsx:128-134</code>: change the "Morning report →" link to <code>href="/board/reports"</code> label "Reports →"; keep "Plans &amp; specs →" and "This week →".</li>
+  <li><input type="checkbox"> <strong>Verify by eye.</strong> Index lists dailies + the weekly with chips; <code>/board/report</code> lands on today's edition; <code>/board/report?date=2026-06-30</code> lands on that edition; week page is schedule + one link.</li>
+  <li><input type="checkbox"> <strong>Build + commit.</strong> <code>npm run build</code> → succeeds (build fails here if any old import of the deleted week sections survives — fix before committing). <code>git add -A src/ &amp;&amp; git commit -m "feat(board): reports index, week page slimmed to the schedule, old report links redirect"</code></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 6 · Web board stamps + dated Done <span class="badge b-site">site</span> <span class="effort">~25 min</span></div>
+<div class="files"><strong>Files:</strong> modify <code>src/app/board/BoardClient.tsx</code> (Card type :6-16 · reconcile :61-70 · persist :96-104 · move :106-112 · done column render :204-217 · CardView :246-299)</div>
+<ul class="steps">
+  <li><input type="checkbox"> <strong>Card type.</strong> Add to <code>Card</code>: <code>movedAt?: string; doneAt?: string;</code></li>
+  <li><input type="checkbox"> <strong>Stamp on move.</strong> Replace <code>move()</code>:
+<pre><code>function move(id: string, targetCol: string) {
+  const now = new Date().toISOString();
+  setCards((prev) =&gt; {
+    const next = prev.map((c) =&gt;
+      c.id === id
+        ? { ...c, col: targetCol, movedAt: now, doneAt: targetCol === "done" ? now : undefined }
+        : c,
+    );
+    persist(next);
+    return next;
+  });
+}</code></pre>
+  Extend the persisted map and reconcile so local stamps survive a reload: <code>persist</code> saves <code>{ col, rev, movedAt, doneAt }</code> per card; in <code>reconcile</code>, when the saved placement wins, return <code>{ ...c, col: prev.col, movedAt: prev.movedAt, doneAt: prev.doneAt }</code> (typed as <code>Record&lt;string, { col: string; rev: number; movedAt?: string; doneAt?: string }&gt;</code>).</li>
+  <li><input type="checkbox"> <strong>Dated Done column.</strong> Where each column renders its cards (both the mobile branch at :180-184 and the desktop branch at :204-216 use <code>shown.filter((c) =&gt; c.col === col.id)</code>), sort the done column by stamp, newest first, unstamped last:
+<pre><code>const byDoneAt = (a: Card, b: Card) =&gt; (b.doneAt ?? "").localeCompare(a.doneAt ?? "");
+const inCol = (colId: string) =&gt; {
+  const cs = shown.filter((c) =&gt; c.col === colId);
+  return colId === "done" ? [...cs].sort(byDoneAt) : cs;
+};</code></pre>
+  and use <code>inCol(col.id)</code> at both render sites. In <code>CardView</code>, under the title, add the chip:
+<pre><code>{card.col === "done" &amp;&amp; card.doneAt &amp;&amp; (
+  &lt;p className="mt-1 text-xs font-semibold text-accent-green"&gt;✓ {card.doneAt.slice(0, 10)}&lt;/p&gt;
+)}</code></pre></li>
+  <li><input type="checkbox"> <strong>Verify by eye.</strong> On <code>localhost:3000/board</code>, drag any card into Done → it tops the Done column with today's chip; reload → placement and chip survive; drag it back out → chip gone.</li>
+  <li><input type="checkbox"> <strong>Build + commit.</strong> <code>npm run build</code> → succeeds. <code>git add src/app/board/BoardClient.tsx &amp;&amp; git commit -m "feat(board): movedAt and doneAt stamps; Done renders as a dated ledger"</code></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 7 · Local viewer stamps + dated Done page <span class="badge b-app">viewer</span> <span class="effort">~25 min</span></div>
+<div class="files"><strong>Files:</strong> modify <code>~/Programming/Main/DaDeckOfCards/docs/superpowers/plans/2026-06-20-morning-review-dashboard-kanban.html</code> (reconcile :184-201 · renderDone :275-294 · cardEl :309-340 · moveCard :372-390 · the <code>&lt;style&gt;</code> block)</div>
+<div class="note">This file is a local artifact — edited in place in the DaDeckOfCards checkout, <strong>never committed</strong> (standing /hh rule). Plain JavaScript, ES5 style — match it.</div>
+<ul class="steps">
+  <li><input type="checkbox"> <strong>Stamp in <code>moveCard</code></strong> — after <code>card.col = targetCol;</code> (:376) insert:
+<pre><code>card.movedAt = new Date().toISOString();
+if (targetCol === "done") card.doneAt = card.movedAt; else delete card.doneAt;</code></pre>
+  (The viewer saves whole card objects to localStorage, so the stamps persist with no <code>save()</code> change.)</li>
+  <li><input type="checkbox"> <strong>Carry stamps through <code>reconcile</code></strong> — inside the local-wins branch (:192), extend to:
+<pre><code>if (prev &amp;&amp; colExists(prev.col) &amp;&amp; pRev &gt;= sRev) {
+  merged.col = prev.col;
+  if (prev.movedAt) merged.movedAt = prev.movedAt;
+  if (prev.doneAt) merged.doneAt = prev.doneAt; else delete merged.doneAt;
+}</code></pre>
+  (When the data file wins, <code>clone(s)</code> already carries any /hh-written stamps.)</li>
+  <li><input type="checkbox"> <strong>Sort the Done page</strong> — in <code>renderDone</code>, before the grid loop (:292), insert:
+<pre><code>doneCards.sort(function (a, b) { return (b.doneAt || "").localeCompare(a.doneAt || ""); });</code></pre></li>
+  <li><input type="checkbox"> <strong>Date chip</strong> — in <code>cardEl</code>, after the <code>title</code> variable (:320) add:
+<pre><code>var stamp = (c.col === "done" &amp;&amp; c.doneAt)
+  ? '&lt;div class="donestamp"&gt;✓ ' + esc(c.doneAt.slice(0, 10)) + '&lt;/div&gt;' : '';</code></pre>
+  and include it in the innerHTML concatenation (:340): <code>el.innerHTML = top + title + stamp + src + appsHtml + desc + moves;</code>. Add to the <code>&lt;style&gt;</code> block:
+<pre><code>.donestamp{font-size:11px;font-weight:700;color:#2f6f3e;margin:2px 0 0;}</code></pre></li>
+  <li><input type="checkbox"> <strong>Verify by eye.</strong> Open the viewer, drag a card to Done (button drop-target or ←/→) → Done page shows it first with today's chip; reload → survives; historical done cards sit below, chipless.</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 8 · Command docs — /hh and /whh learn the new rules <span class="badge b-both">docs</span> <span class="effort">~15 min</span></div>
+<div class="files"><strong>Files:</strong> modify <code>~/.claude/commands/hh.md</code> · modify <code>~/.claude/commands/whh.md</code></div>
+<ul class="steps">
+  <li><input type="checkbox"> <strong>hh.md — stamping rule.</strong> In "The board" section, directly after the paragraph "Every card has a <code>rev</code> integer…" (line ~96), insert:
+<pre><code>**Timestamps (2026-07-02).** Whenever /hh changes a card's `col`, also set
+`movedAt` to the current ISO datetime; when the move lands in `done`, set
+`doneAt` to the same value (and DELETE `doneAt` when reopening a done card).
+The Done views on the website and the local viewer sort by `doneAt` — an
+unstamped move breaks the ledger's chronology.</code></pre>
+  And in step 4's sweep-advance bullet ("move it to <code>col:"done"</code> and bump its rev"), append: "<code>, set movedAt + doneAt</code>".</li>
+  <li><input type="checkbox"> <strong>hh.md — new report URLs.</strong> In step 8, replace the two opened URLs with <code>https://henceforth.club/board</code> and <code>https://henceforth.club/board/reports</code>, noting <code>/board/report</code> now redirects to the newest daily edition.</li>
+  <li><input type="checkbox"> <strong>whh.md — edition pointer.</strong> Find the step that publishes the week (search "publish"), append the sentence: "The week renders two ways: the schedule at <code>/board/week</code> and the one-page weekly edition at <code>/board/reports/week/&lt;weekOf&gt;</code> — open the edition after publishing."</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 9 · Ship — build, push, pull request, preview walk-through <span class="badge b-site">ship</span> <span class="effort">~20 min</span></div>
+<ul class="steps">
+  <li><input type="checkbox"> <strong>Full gate.</strong> In the worktree: <code>npm test</code> → all pass · <code>npm run lint</code> → clean · <code>npm run build</code> → succeeds.</li>
+  <li><input type="checkbox"> <strong>Push + pull request.</strong> <code>git push</code>, then <code>gh pr create --title "Reports section: one-page daily and weekly editions + dated Done ledger" --body "Three peer board sections: the kanban board, the weekly schedule, and a new Reports index of one-page editions (daily /hh briefs + weekly /whh reviews, detail folded). Old /board/report links redirect. Cards gain movedAt/doneAt so Done renders as a dated, newest-first ledger on both the site and the local viewer. Spec: docs/superpowers/specs/2026-07-02-one-page-reports-design.html"</code>. Vercel builds a preview automatically.</li>
+  <li><input type="checkbox"> <strong>Preview walk-through (the definition of done, from the spec):</strong> on the Vercel preview URL, logged in: (1) <code>/board/reports</code> lists daily + weekly editions interleaved newest-first with chips; (2) today's and one older daily render one-page with the fold collapsed; (3) <code>/board/reports/week/2026-06-29</code> renders, and <code>/board/week</code> is the schedule alone; (4) <code>/board/report</code> redirects to the newest daily; (5) a card dragged to Done shows its date chip, newest first; (6) build green (Vercel).</li>
+  <li><input type="checkbox"> <strong>Hand to Henry for merge</strong> — main auto-deploys on merge.</li>
+</ul>
+</div>
+
+<h2>Self-review (spec coverage)</h2>
+<ul>
+  <li>Spec §0 routes → Tasks 3, 4, 5 (with the <code>week/&lt;date&gt;</code> route correction patched back into the spec in Task 4).</li>
+  <li>Spec §1 daily one-pager (order, fold, empty-state, archive-in-index) → Tasks 3, 5.</li>
+  <li>Spec §2 weekly one-pager + slimmed week page → Tasks 4, 5.</li>
+  <li>Spec §3 stamps, mirrored Done, no backfill, rev semantics untouched → Tasks 6, 7; writer rules → Task 8. Stamps flow through publish untouched (cards copied verbatim — verified in <code>publish.mjs</code> and the /hh latest.json generation; no change needed).</li>
+  <li>Spec definition of done → Task 9 walk-through, items 1–6.</li>
+</ul>
+
+</div>
+</body>
+</html>
