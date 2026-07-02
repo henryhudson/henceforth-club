@@ -9,6 +9,7 @@ const pct = (v: number | null) => (v === null ? "—" : `${v > 0 ? "+" : ""}${(v
 
 export default async function WeeklyEdition({ params }: { params: Promise<{ date: string }> }) {
   const { date } = await params;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) notFound();
   const w = await loadWeek(date);
   if (!w) notFound();
 

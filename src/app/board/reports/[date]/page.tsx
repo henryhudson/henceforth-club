@@ -28,6 +28,7 @@ function tagChipColor(tag: string): string {
 
 export default async function DailyEdition({ params }: { params: Promise<{ date: string }> }) {
   const { date } = await params;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) notFound();
   const report = await loadReport(date);
   if (!report) notFound();
 

@@ -57,8 +57,8 @@ export default async function DocsPage() {
           <Link href="/board" className="underline">
             Board
           </Link>
-          <Link href="/board/report" className="underline">
-            Report
+          <Link href="/board/reports" className="underline">
+            Reports
           </Link>
           <Link href="/board/week" className="underline">This week</Link>
         </div>
