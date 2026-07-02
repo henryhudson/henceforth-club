@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { downloadFilename } from "./board-pdf";
+import { INSCRIPTION_MARKER, downloadFilename } from "./board-pdf";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -13,6 +13,6 @@ describe("board-pdf naming", () => {
 describe("render script naming stays in sync", () => {
   it("the script's inscription marker matches the library", () => {
     const script = readFileSync(join(process.cwd(), "scripts/board/render-pdf.mjs"), "utf8");
-    expect(script).toContain("HHRPT1");
+    expect(script).toContain(INSCRIPTION_MARKER);
   });
 });
