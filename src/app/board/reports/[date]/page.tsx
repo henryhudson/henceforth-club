@@ -48,6 +48,7 @@ export default async function DailyEdition({ params }: { params: Promise<{ date:
           <Link href="/board/reports" className="underline">Reports</Link>
           <Link href="/board" className="underline">Board</Link>
           <Link href="/board/week" className="underline">Week</Link>
+          <a href={`/board/reports/${date}/pdf`} className="underline print:hidden">PDF</a>
         </div>
       </div>
       <p className="text-sm text-muted">{report.date} · generated {report.generatedAt}</p>

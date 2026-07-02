@@ -21,6 +21,7 @@ export default async function WeeklyEdition({ params }: { params: Promise<{ date
           <Link href="/board/reports" className="underline">Reports</Link>
           <Link href="/board" className="underline">Board</Link>
           <Link href="/board/week" className="underline">Week</Link>
+          <a href={`/board/reports/week/${date}/pdf`} className="underline print:hidden">PDF</a>
         </div>
       </div>
       <p className="text-muted">Week of {w.weekOf} → {w.weekEnd} · {w.daysCovered.length} review days</p>
