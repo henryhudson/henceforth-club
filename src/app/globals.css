@@ -407,7 +407,8 @@ body:has(.provenance)::before {
 @page { size: A4; margin: 12mm; }
 
 @media print {
-  :root {
+  /* .paper too: the board layout's paper scope re-declares these tokens on its own div, shadowing :root */
+  :root, .paper {
     --background: #ffffff;
     --foreground: #1c1917;
     --muted: #57534e;
