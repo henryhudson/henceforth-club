@@ -44,6 +44,11 @@ async function render(browser, kind, date, outPath) {
   });
   const resp = await page.goto(url, { waitUntil: "networkidle0", timeout: 45_000 });
   if (!resp || !resp.ok()) throw new Error(`${url} answered ${resp ? resp.status() : "nothing"} — not rendering`);
+  // A stale or rotated BOARD_COOKIE_SECRET redirects here instead of failing —
+  // without this guard the script would archive login-page PDFs over real editions.
+  if (new URL(page.url()).pathname.startsWith("/board/login")) {
+    throw new Error(`${url} bounced to the login gate — BOARD_COOKIE_SECRET in .env.local no longer matches production`);
+  }
   const pdf = await page.pdf({ format: "A4", preferCSSPageSize: true, printBackground: true });
   await page.close();
 
