@@ -68,6 +68,8 @@ function reconcile(
     const prev = saved[c.id];
     const dRev = c.rev ?? 0;
     if (prev && COL_IDS.includes(prev.col) && prev.rev >= dRev) {
+      // Pre-stamp localStorage entries carry no movedAt — keep the data file's stamps.
+      if (!prev.movedAt) return { ...c, col: prev.col };
       return { ...c, col: prev.col, movedAt: prev.movedAt, doneAt: prev.doneAt };
     }
     return { ...c };
