@@ -14,10 +14,10 @@ export default async function WeeklyEdition({ params }: { params: Promise<{ date
   if (!w) notFound();
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-10">
+    <main className="mx-auto max-w-3xl px-6 py-10 print-weekly">
       <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Weekly Report</h1>
-        <div className="flex gap-3 text-sm text-accent-green">
+        <div className="flex gap-3 text-sm text-accent-green print:hidden">
           <Link href="/board/reports" className="underline">Reports</Link>
           <Link href="/board" className="underline">Board</Link>
           <Link href="/board/week" className="underline">Week</Link>
@@ -65,7 +65,7 @@ export default async function WeeklyEdition({ params }: { params: Promise<{ date
         </ul>
       </section>
 
-      <details className="mt-10">
+      <details className="mt-10 print:hidden">
         <summary className="cursor-pointer text-sm font-semibold text-muted hover:text-foreground">
           Full week detail — week strip, wins &amp; misses, stuck work, re-flags, next week, sales drivers, app state
         </summary>

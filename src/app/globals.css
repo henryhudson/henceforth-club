@@ -402,3 +402,34 @@ body:has(.provenance)::before {
   background: rgba(124, 206, 42, 0.3);
   color: #330a49;
 }
+
+/* ── A4 print editions (board report pages) ─────────────────── */
+@page { size: A4; margin: 12mm; }
+
+@media print {
+  :root {
+    --background: #ffffff;
+    --foreground: #1c1917;
+    --muted: #57534e;
+    --card-border: #d6d3d1;
+    --card-bg: #fafaf9;
+    --accent: #0e7490;
+    --accent-green: #166534;
+    --accent-warm: #92400e;
+    --accent-orange: #9a3412;
+  }
+  html { background: #ffffff !important; }
+  body { background: #ffffff !important; color: #1c1917 !important; font-size: 11px; line-height: 1.45; }
+  body::before { display: none !important; }   /* noise texture overlay */
+  nav { display: none !important; }             /* site navbar */
+  .print-hidden { display: none !important; }
+  main { max-width: none !important; padding: 0 !important; }
+  section { break-inside: avoid; }
+  a { color: inherit !important; text-decoration: none !important; }
+  input[type="checkbox"] { width: 9px; height: 9px; }
+
+  /* weekly edition: small type, two-page ceiling */
+  .print-weekly { font-size: 9.5px; line-height: 1.35; }
+  .print-weekly h1 { font-size: 18px; }
+  .print-weekly h2 { font-size: 12px; margin-top: 10px; }
+}
