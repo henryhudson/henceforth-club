@@ -40,7 +40,7 @@ async function render(browser, kind, date, outPath) {
     domain: SITE_HOST,
     path: "/",
     httpOnly: true,
-    secure: SITE_HOST !== "localhost",
+    secure: new URL(SITE).protocol === "https:",
   });
   const resp = await page.goto(url, { waitUntil: "networkidle0", timeout: 45_000 });
   if (!resp || !resp.ok()) throw new Error(`${url} answered ${resp ? resp.status() : "nothing"} — not rendering`);
