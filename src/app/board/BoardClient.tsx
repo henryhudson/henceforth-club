@@ -125,8 +125,8 @@ export default function BoardClient({
           <span>
             {done}/{shown.length} done · updated {generated}
           </span>
-          <Link href="/board/report" className="text-accent-green underline">
-            Morning report →
+          <Link href="/board/reports" className="text-accent-green underline">
+            Reports →
           </Link>
           <Link href="/board/docs" className="text-accent-green underline">
             Plans &amp; specs →
