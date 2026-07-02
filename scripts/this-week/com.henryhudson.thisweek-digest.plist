@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  This Week in Parliament — weekly digest, Tuesday 20:00 LOCAL time.
-  launchd uses local time, so this stays at 20:00 Europe/London across BST/GMT
+  This Week in Parliament — weekly digest, Wednesday 14:00 LOCAL time, after
+  that day's Prime Minister's Questions.
+  launchd uses local time, so this stays at 14:00 Europe/London across BST/GMT
   (no UTC/DST maths needed). Weekday: 0/7=Sun, 1=Mon, 2=Tue, 3=Wed...
   Adjust the script path below if the repo lives elsewhere on the Mac mini.
 -->
@@ -21,9 +22,9 @@
     <key>StartCalendarInterval</key>
     <dict>
         <key>Weekday</key>
-        <integer>2</integer>
+        <integer>3</integer>
         <key>Hour</key>
-        <integer>20</integer>
+        <integer>14</integer>
         <key>Minute</key>
         <integer>0</integer>
     </dict>

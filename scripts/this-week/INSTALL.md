@@ -1,6 +1,7 @@
 # This Week in Parliament — weekly digest automation (Mac mini)
 
-Generates the weekly digest every **Tuesday 20:00 (local)**, writes a
+Generates the weekly digest every **Wednesday 14:00 (local)**, after that
+day's Prime Minister's Questions, writes a
 `status:"draft"` file, commits + pushes it, and emails you the digest for
 review. A draft is hidden from the archive **and 404s at its own URL** (the
 `[week]` route only renders `published` issues) — so you review from the email
@@ -12,7 +13,7 @@ which is what makes it render live.
 - `PROMPT.md` — the editor instructions handed to Claude Code (research, verify, write, validate).
 - `run-weekly.sh` — the wrapper: computes the week, runs Claude, commits/pushes, emails.
 - `email-body.mjs` — builds the plain-text review email from the JSON.
-- `com.henryhudson.thisweek-digest.plist` — the launchd schedule (Tue 20:00 local).
+- `com.henryhudson.thisweek-digest.plist` — the launchd schedule (Wed 14:00 local).
 
 ## Prerequisites on the Mac mini
 
@@ -46,7 +47,9 @@ launchctl unload ~/Library/LaunchAgents/com.henryhudson.thisweek-digest.plist 2>
 launchctl load   ~/Library/LaunchAgents/com.henryhudson.thisweek-digest.plist
 ```
 
-## Test it now (without waiting for Tuesday)
+Already had the job installed under the old Tuesday 20:00 schedule? Re-copy the plist as above, then reload it once on the mini so the new time takes effect: `launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.henryhudson.thisweek-digest.plist && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.henryhudson.thisweek-digest.plist`
+
+## Test it now (without waiting for Wednesday)
 
 ```sh
 # Dry of the whole pipeline (this WILL generate, commit, push, and email):
@@ -67,9 +70,10 @@ launchctl list | grep thisweek-digest
 
 ## Notes
 
-- **Timing:** launchd fires at 20:00 *local* time, so it tracks BST/GMT automatically.
-- **The Tuesday → coming-Wednesday rule** is handled in the wrapper (it computes the
-  Wednesday and passes it to the agent), so it can never regenerate last week's issue.
+- **Timing:** launchd fires at 14:00 *local* time, so it tracks BST/GMT automatically —
+  the run lands after that day's Prime Minister's Questions.
+- **The same-Wednesday rule** is handled in the wrapper (dow=3 on a Wednesday run means
+  the offset is zero, so it always targets the day it runs on, never next week's issue).
 - **To publish a draft:** edit `content/this-week/<date>.json`, set
   `"status": "published"`, and push. Vercel redeploys and it appears in the archive.
 - **Failures email you too** (subject `FAILED: …`), so a broken run is never silent.

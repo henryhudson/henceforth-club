@@ -87,6 +87,26 @@
       "answer": "There are over 90 inhabited island and peninsula communities in Scotland that rely on ferry services, each with distinct geographic contexts and with populations ranging from fewer than 10 to just over 21,000 inhabitants."
     }
   ],
+  "overview": {
+    "headline": "Back from the break, and straight into a fight",
+    "intro": "For the first half of the week the Commons was dark. Members of Parliament were still on their Whitsun holidays until Sunday. They filed back in on Monday and got straight to work. There were four votes on the Armed Forces Bill. A ‘votes at 16’ bill and a duty-of-candour bill both reached report stage. And 236 Members of Parliament lodged 2,247 written questions on everything from Ebola in the Congo to NHS dentistry. Health, as ever, drew the most fire.",
+    "feature": {
+      "title": "The police handling of the Henry Nowak stabbing",
+      "summary": "The most-pressed single subject of the week never appeared under any official heading. Rupert Lowe (Restore Britain) tabled eight written questions to the Home Office over the police response to the fatal stabbing of Henry Nowak. He pressed on whether attending officers misidentified the dying victim as a suspect, why he was handcuffed while seriously injured, and whether first-aid and casualty-care protocols were followed. He is also demanding that all body-worn video, radio traffic, emergency-call recordings and officer decision logs be preserved and disclosed to the family. And he is asking whether the Home Secretary has raised the handling with the Chief Constable of Hampshire and Isle of Wight Constabulary. None have been answered yet."
+    },
+    "mostActive": {
+      "asker": {
+        "name": "Ben Obese-Jecty",
+        "party": "Conservative",
+        "count": 210
+      },
+      "answerer": {
+        "name": "Karin Smyth",
+        "party": "Labour",
+        "count": 109
+      }
+    }
+  },
   "highlights": {
     "votes": [
       {

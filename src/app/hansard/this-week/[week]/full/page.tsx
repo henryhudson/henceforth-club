@@ -1,14 +1,16 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { listPublishedWeeks, loadDigest } from '@/lib/this-week/store'
-import Overview from '../_components/overview/Overview'
+import DigestView from '../../_components/DigestView'
 
 export const revalidate = 3600
 
 type Params = { week: string }
 
 export function generateStaticParams(): Params[] {
-  return listPublishedWeeks().map(week => ({ week }))
+  return listPublishedWeeks()
+    .filter(week => Boolean(loadDigest(week)?.body?.length))
+    .map(week => ({ week }))
 }
 
 /** Card blurb: the intro's first full sentence when it's a sensible length,
@@ -27,10 +29,10 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   const digest = loadDigest(week)
   if (!digest) return { title: 'This Week in Parliament' }
   const title = digest.headline
-    ? `${digest.headline} — This Week in Parliament`
-    : `This Week in Parliament — ${digest.windowLabel}`
+    ? `${digest.headline} — This Week in Parliament — the full article`
+    : `This Week in Parliament — ${digest.windowLabel} — the full article`
   const description = cardDescription(digest.intro ?? '')
-  const url = `/hansard/this-week/${week}`
+  const url = `/hansard/this-week/${week}/full`
   return {
     title,
     description,
@@ -39,9 +41,9 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   }
 }
 
-export default async function WeekPage({ params }: { params: Promise<Params> }) {
+export default async function WeekFullPage({ params }: { params: Promise<Params> }) {
   const { week } = await params
   const digest = loadDigest(week)
-  if (!digest || digest.status !== 'published') notFound()
-  return <Overview digest={digest} week={week} />
+  if (!digest || digest.status !== 'published' || !digest.body?.length) notFound()
+  return <DigestView digest={digest} />
 }
