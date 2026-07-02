@@ -1,64 +1,6 @@
-import { promises as fs } from "fs";
-import path from "path";
 import Link from "next/link";
-import { getRedis } from "@/lib/redis";
-import PlanChecklist, { type PlanItem } from "./PlanChecklist";
-
-type Finding = {
-  refId: string;
-  title: string;
-  kind: string;
-  verdict: string;
-  confidence: string;
-  evidence: string;
-  falsification?: string;
-  recommendation?: string;
-};
-type AppReport = {
-  app: string;
-  name: string;
-  headSha: string;
-  reviewFound: boolean;
-  findings: Finding[];
-  note?: string;
-};
-type Plan = {
-  lead?: string;
-  note?: string;
-  items: PlanItem[];
-  notToday?: string;
-  decisions?: string;
-};
-type Emergency = {
-  tag: string;
-  title: string;
-  why: string;
-  card?: string;
-};
-type AppStoreRow = {
-  app: string;
-  status: string;
-  version: string;
-  daysSince: number | null;
-  readyToShip: string;
-  blocker: string;
-};
-type AppStore = {
-  shipDay: string;
-  rule: string;
-  apps: AppStoreRow[];
-};
-type Report = {
-  date: string;
-  generatedAt: string;
-  summary: Record<string, number>;
-  emergencies?: Emergency[];
-  appStore?: AppStore;
-  apps: AppReport[];
-  plan?: Plan;
-};
-
-const DIR = path.join(process.cwd(), "content/board/reports");
+import PlanChecklist from "./PlanChecklist";
+import { listDates, loadReport } from "@/lib/board-data";
 
 export const dynamic = "force-dynamic";
 
@@ -80,37 +22,6 @@ function tagChipColor(tag: string): string {
   if (t === "resolved") return "border-accent-green/50 text-accent-green";
   if (["defect", "security", "data-loss", "bug"].includes(t)) return "border-red-700/60 text-red-500";
   return "border-accent/50 text-accent"; // ship, deadline, better-way
-}
-
-async function listDates(): Promise<string[]> {
-  const redis = getRedis();
-  if (redis) {
-    const dates = await redis.smembers("board:report:dates");
-    if (dates && dates.length) return [...dates].sort().reverse();
-  }
-  try {
-    const files = await fs.readdir(DIR);
-    return files
-      .filter((f) => f.endsWith(".json"))
-      .map((f) => f.replace(/\.json$/, ""))
-      .sort()
-      .reverse();
-  } catch {
-    return [];
-  }
-}
-
-async function loadReport(date: string): Promise<Report | null> {
-  const redis = getRedis();
-  if (redis) {
-    const r = await redis.get<Report>(`board:report:${date}`);
-    if (r) return r;
-  }
-  try {
-    return JSON.parse(await fs.readFile(path.join(DIR, `${date}.json`), "utf8")) as Report;
-  } catch {
-    return null;
-  }
 }
 
 export default async function ReportPage({

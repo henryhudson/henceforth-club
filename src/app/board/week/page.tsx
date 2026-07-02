@@ -1,68 +1,11 @@
-import { getRedis } from "@/lib/redis";
 import Link from "next/link";
 import WeekPlanner from "./WeekPlanner";
-import { promises as fs } from "node:fs";
-import path from "node:path";
+import { listWeeks, loadWeek } from "@/lib/board-data";
 
 export const dynamic = "force-dynamic";
 
-type NextItem = { tag: string; title: string; detail: string };
-type Reflag = { signature: string; app: string; title: string; timesFlagged: number; firstSeen: string; status: string };
-type Stuck = { id: string; title: string; app: string; col: string; firstSeen: string };
-type AppSales = {
-  app: string; name: string;
-  units: { thisWeek: number; lastWeek: number; deltaPct: number | null };
-  proceeds: { thisWeek: number; lastWeek: number; currency: string | null; deltaPct: number | null };
-};
-type WeekDay = { date: string; weekday: string; reviews: number; hasReport: boolean };
-type PlanDay = { date: string; weekday: string; isReviewDay: boolean; tasks: (string | { label: string; start?: number; end?: number; done?: boolean })[] };
-type AppState = {
-  app: string; name: string;
-  downloads: { thisWeek: number; lastWeek: number; deltaPct: number | null } | null;
-  rating: { average: number | null; count: number; version?: string | null };
-  analytics: { activeUsers?: number; retention?: number; crashRate?: number } | null;
-  verdict: string | null;
-};
-type WeekReport = {
-  weekOf: string; weekEnd: string; daysCovered: string[];
-  retro: {
-    totals: Record<string, number>;
-    throughput: { stuck: Stuck[] };
-    recurringReflags: Reflag[];
-    weekStrip: WeekDay[];
-    weekPlan: PlanDay[];
-    appState: AppState[];
-    stateOfUnion: string;
-    wins: string[]; misses: string[]; nextWeek: NextItem[];
-  };
-  sales: { perApp: AppSales[]; drivers: { app: string; lever: string; rationale: string; action: string }[]; note?: string; source?: string };
-};
-
-const DIR = path.join(process.cwd(), "content/board/weeks");
 const ACCENT: Record<string, string> = { henceforth: "text-accent-warm", hansard: "text-accent-green", deck: "text-accent" };
 const pct = (v: number | null) => (v === null ? "—" : `${v > 0 ? "+" : ""}${(v * 100).toFixed(0)}%`);
-
-async function listWeeks(): Promise<string[]> {
-  const redis = getRedis();
-  if (redis) {
-    const ws = await redis.smembers("board:weeks");
-    if (ws && ws.length) return [...ws].sort().reverse();
-  }
-  try {
-    const files = await fs.readdir(DIR);
-    return files.filter((f) => f.endsWith(".json")).map((f) => f.replace(/\.json$/, "")).sort().reverse();
-  } catch { return []; }
-}
-
-async function loadWeek(date: string): Promise<WeekReport | null> {
-  const redis = getRedis();
-  if (redis) {
-    const w = await redis.get<WeekReport>(`board:week:${date}`);
-    if (w) return w;
-  }
-  try { return JSON.parse(await fs.readFile(path.join(DIR, `${date}.json`), "utf8")) as WeekReport; }
-  catch { return null; }
-}
 
 export default async function WeekPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
   const { date } = await searchParams;
