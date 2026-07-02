@@ -1,7 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { getRedis } from "@/lib/redis";
-import type { PlanItem } from "@/app/board/report/PlanChecklist";
+import type { PlanItem } from "@/app/board/reports/PlanChecklist";
 
 export type Finding = {
   refId: string;

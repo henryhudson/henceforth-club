@@ -1,5 +1,5 @@
 import Link from "next/link";
-import PlanChecklist from "./PlanChecklist";
+import PlanChecklist from "@/app/board/reports/PlanChecklist";
 import { listDates, loadReport } from "@/lib/board-data";
 
 export const dynamic = "force-dynamic";
