@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@bsv/sdk": "^2.1.6",
     "@mdx-js/loader": "^3.1.1",
     "@mdx-js/react": "^3.1.1",
     "@next/mdx": "^16.2.6",
@@ -17,7 +18,6 @@
     "@types/mdx": "^2.0.13",
     "@upstash/redis": "^1.37.0",
     "@vercel/analytics": "^2.0.1",
-    "@vercel/blob": "^2.5.0",
     "@vercel/speed-insights": "^2.0.0",
     "cobe": "^2.0.1",
     "date-fns": "^4.4.0",
