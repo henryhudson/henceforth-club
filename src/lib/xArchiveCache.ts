@@ -1,10 +1,11 @@
+import { cache } from "react";
 import type { Redis } from "@upstash/redis";
 import { getRedis } from "./redis";
 import { getXTxids } from "./xIndex";
 import { fetchTxArchiveWithTime as fetchTxArchiveDefault } from "./whatsonchain";
 import { stitchToXArchive, type SocialArchive } from "@/app/x/onchain";
 import { realArchive } from "@/app/x/real";
-import type { XArchive, XPost, XProfile } from "@/app/x/parseArchive";
+import { dedupePosts, type XArchive, type XPost, type XProfile } from "@/app/x/parseArchive";
 
 // Reading a handle's whole archive used to mean stitching every archive
 // transaction and shipping every post in one response — fine at a few dozen
@@ -60,23 +61,6 @@ const previewArchives: Record<string, XArchive> = { henryhudson6: realArchive };
 const metaKey = (handle: string) => `x:posts:${handle.toLowerCase()}:meta`;
 const chunkKey = (handle: string, n: number) => `x:posts:${handle.toLowerCase()}:${n}`;
 const childrenKeyOf = (handle: string) => `x:posts:${handle.toLowerCase()}:children`;
-
-/**
- * Drop a duplicate post by trimmed text, keeping the first occurrence. Posts
- * arrive newest-first, so the kept copy is always the newest one. Doing this
- * once, here, before chunking, is what keeps a page offset meaning the same
- * thing every time it's read — the old approach re-deduplicated on every
- * render, which would silently shift indices as soon as reads were paged.
- */
-export function dedupePosts(posts: XPost[]): XPost[] {
-  const seen = new Set<string>();
-  return posts.filter((p) => {
-    const key = p.text.trim();
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
 
 /** Split posts (already newest-first) into fixed-size chunks ready to cache. */
 export function chunkPosts(posts: XPost[]): XPost[][] {
@@ -278,8 +262,15 @@ async function stitchAndCache(
 /** Resolve a handle to its archive: the cache when it's still valid for the
  * current txid set, a freshly-stitched (and, when Redis is available,
  * rewritten) one otherwise, or the pre-inscription preview as a last resort —
- * matching the un-cached fallback behaviour the profile page always had. */
-async function resolveHandle(
+ * matching the un-cached fallback behaviour the profile page always had.
+ * Wrapped in React's `cache()` so one request resolves a handle at most
+ * once: the permalink route calls this (via `getArchivePost` and
+ * `getArchivePage`) from both `generateMetadata` and the page body, which
+ * would otherwise repeat the same chain lookup and cache read up to three
+ * times over for a single page view. Outside of a request/render (as in
+ * this module's unit tests), `cache()` has nothing to scope memoization to
+ * and simply calls straight through — every call still runs. */
+const resolveHandle = cache(async function resolveHandle(
   handle: string,
   fetchTxArchive: typeof fetchTxArchiveDefault,
   redis: Redis | null,
@@ -305,7 +296,7 @@ async function resolveHandle(
   const preview = previewArchives[handle.toLowerCase()];
   if (!preview) return null;
   return { kind: "preview", archive: { profile: preview.profile, posts: dedupePosts(preview.posts) } };
-}
+});
 
 /** Read only the chunks a `[start, end)` post window touches, and slice out
  * exactly that window — never the whole cached archive. Null means at least
