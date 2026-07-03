@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseArchive } from "./parseArchive";
+import { dedupePosts, parseArchive, type XPost } from "./parseArchive";
 
 const tweetsJS = `window.YTD.tweets.part0 = [
   { "tweet" : { "id_str" : "1001", "created_at" : "Wed Oct 10 20:19:24 +0000 2018", "full_text" : "hello world" } },
@@ -13,6 +13,30 @@ const profileJS = `window.YTD.profile.part0 = [
 const accountJS = `window.YTD.account.part0 = [
   { "account" : { "username" : "henry", "accountId" : "42", "createdAt" : "2016-01-01T00:00:00.000Z", "accountDisplayName" : "Henry H" } }
 ]`;
+
+function post(id: string, overrides: Partial<XPost> = {}): XPost {
+  return { id, at: "2020-01-01", text: `post ${id}`, ...overrides };
+}
+
+describe("dedupePosts", () => {
+  it("drops a later duplicate, keeping the first (newest, since input is newest-first) occurrence", () => {
+    const first = post("2", { text: "same text" });
+    const dup = post("1", { text: "same text" });
+    expect(dedupePosts([first, dup])).toEqual([first]);
+  });
+
+  it("compares trimmed text, so surrounding whitespace still counts as a duplicate", () => {
+    const first = post("2", { text: "hello" });
+    const dup = post("1", { text: "  hello  " });
+    expect(dedupePosts([first, dup])).toEqual([first]);
+  });
+
+  it("keeps distinct posts in their original order", () => {
+    const a = post("1", { text: "a" });
+    const b = post("2", { text: "b" });
+    expect(dedupePosts([a, b])).toEqual([a, b]);
+  });
+});
 
 describe("parseArchive", () => {
   it("strips the JS wrapper and decodes tweets", () => {
