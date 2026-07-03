@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { socialArchiveToXArchive } from "../../onchain";
-import { fetchTxArchive } from "@/lib/whatsonchain";
+import { fetchTxArchiveWithTime } from "@/lib/whatsonchain";
+import { countPhotos } from "@/lib/xArchiveCache";
 import ProfilePage from "../../_components/ProfilePage";
 
 // Canonical, trustless view: render whatever archive lives at this exact TXID,
@@ -18,7 +19,17 @@ export default async function TxPage(
   { params }: { params: Promise<{ txid: string }> },
 ) {
   const { txid } = await params;
-  const sa = await fetchTxArchive(txid);
-  if (!sa) notFound();
-  return <ProfilePage archive={socialArchiveToXArchive(sa, txid)} txid={txid} />;
+  const result = await fetchTxArchiveWithTime(txid);
+  if (!result) notFound();
+  const archive = socialArchiveToXArchive(result.archive, txid);
+  return (
+    <ProfilePage
+      archive={archive}
+      txid={txid}
+      txCount={1}
+      photoCount={countPhotos(archive.posts)}
+      firstInscribedAt={result.time}
+      txTimes={result.time !== undefined ? { [txid]: result.time } : {}}
+    />
+  );
 }

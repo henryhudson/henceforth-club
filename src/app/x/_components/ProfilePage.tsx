@@ -8,26 +8,36 @@ import PostsScrollLoader from "./PostsScrollLoader";
  * transaction; otherwise it's a pre-inscription live preview. `postCount`
  * and `handle` are only set by the paginated `/x/<handle>` route — when the
  * archive holds more posts than are rendered yet, a scroll loader appends
- * the rest as the visitor scrolls.
+ * the rest as the visitor scrolls. `txCount`, `photoCount`, `firstInscribedAt`,
+ * and `txTimes` feed the header's permanence line and each post card's
+ * outpoint chip.
  */
 export default function ProfilePage({
   archive,
   txid,
   postCount,
   handle,
+  txCount,
+  photoCount,
+  firstInscribedAt,
+  txTimes = {},
 }: {
   archive: XArchive;
   txid?: string | null;
   postCount?: number;
   handle?: string;
+  txCount?: number;
+  photoCount?: number;
+  firstInscribedAt?: number;
+  txTimes?: Record<string, number>;
 }) {
   const scrollLoader =
     handle !== undefined && postCount !== undefined && postCount > archive.posts.length ? (
       <PostsScrollLoader
         handle={handle}
-        profile={archive.profile}
         initialCount={archive.posts.length}
         postCount={postCount}
+        initialTxTimes={txTimes}
       />
     ) : undefined;
 
@@ -52,7 +62,16 @@ export default function ProfilePage({
           </p>
         )}
       </header>
-      <ProfileView archive={archive} postCount={postCount} footer={scrollLoader} />
+      <ProfileView
+        archive={archive}
+        postCount={postCount}
+        footer={scrollLoader}
+        isPreview={!txid}
+        photoCount={photoCount}
+        txCount={txCount}
+        firstInscribedAt={firstInscribedAt}
+        txTimes={txTimes}
+      />
     </main>
   );
 }

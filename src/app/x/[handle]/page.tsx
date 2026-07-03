@@ -42,6 +42,10 @@ export default async function HandlePage(
       txid={page.latestTxid}
       postCount={page.postCount}
       handle={handle}
+      txCount={page.txCount}
+      photoCount={page.photoCount}
+      firstInscribedAt={page.firstInscribedAt}
+      txTimes={page.txTimes}
     />
   );
 }
