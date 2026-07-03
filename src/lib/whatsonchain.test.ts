@@ -75,4 +75,20 @@ describe("fetchTxArchive", () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("nope", { status: 404 })));
     expect(await fetchTxArchive("b".repeat(64))).toBeNull();
   });
+
+  it("accepts an injected fetch instead of relying on the global one", async () => {
+    const injected = vi.fn(
+      async () =>
+        new Response(
+          rawTx([opReturnScript("19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut", archiveJSON)]),
+          { status: 200 },
+        ),
+    );
+    const globalFetch = vi.fn();
+    vi.stubGlobal("fetch", globalFetch);
+    const sa = await fetchTxArchive("c".repeat(64), injected);
+    expect(sa?.handle).toBe("henry");
+    expect(injected).toHaveBeenCalledTimes(1);
+    expect(globalFetch).not.toHaveBeenCalled();
+  });
 });

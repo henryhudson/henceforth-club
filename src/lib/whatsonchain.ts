@@ -10,14 +10,18 @@ const WOC = "https://api.whatsonchain.com/v1/bsv/main";
  * characters, which silently cut off whole-profile archives (a 1,439-post
  * OP_RETURN is ~500,000). On-chain data is immutable, so the response is cached
  * for an hour. Returns null for a malformed txid, a failed fetch, or a tx with
- * no archive.
+ * no archive. `fetchFn` is a test seam — `xArchiveCache` injects a fake one so
+ * its own tests never hit the network.
  */
-export async function fetchTxArchive(txid: string): Promise<SocialArchive | null> {
+export async function fetchTxArchive(
+  txid: string,
+  fetchFn: typeof fetch = fetch,
+): Promise<SocialArchive | null> {
   if (!/^[0-9a-fA-F]{64}$/.test(txid)) return null;
 
   let res: Response;
   try {
-    res = await fetch(`${WOC}/tx/${txid}/hex`, { next: { revalidate: 3600 } });
+    res = await fetchFn(`${WOC}/tx/${txid}/hex`, { next: { revalidate: 3600 } });
   } catch {
     return null;
   }
