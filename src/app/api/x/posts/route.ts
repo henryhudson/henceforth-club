@@ -10,6 +10,9 @@ import { getArchivePage, PAGE_SIZE } from "@/lib/xArchiveCache";
  * order has somewhere to go without a breaking change; only `latest` exists
  * today. The page size is fixed server-side (`PAGE_SIZE`) so the offset the
  * client sends next always lines up with what the server actually returned.
+ * `txTimes` is the whole archive's known transaction times (not just this
+ * page's) — small and stable per handle, so it rides along on every page
+ * rather than needing its own request.
  */
 export async function GET(req: Request) {
   const params = new URL(req.url).searchParams;
@@ -34,5 +37,10 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, reason: "not-found" }, { status: 404 });
   }
 
-  return NextResponse.json({ posts: page.posts, offset, postCount: page.postCount });
+  return NextResponse.json({
+    posts: page.posts,
+    offset,
+    postCount: page.postCount,
+    txTimes: page.txTimes,
+  });
 }

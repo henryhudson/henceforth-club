@@ -4,7 +4,9 @@ import {
   CHUNK_SIZE,
   chunkPosts,
   childrenMap,
+  countPhotos,
   dedupePosts,
+  earliestKnownTime,
   getArchivePage,
   getArchivePost,
   slicePage,
@@ -106,6 +108,37 @@ describe("dedupePosts", () => {
   });
 });
 
+describe("countPhotos", () => {
+  it("counts photo-type media across posts, ignoring other media types", () => {
+    const posts = [
+      post("1", {
+        media: [
+          { type: "photo", url: "a" },
+          { type: "video", url: "b" },
+        ],
+      }),
+      post("2", { media: [{ type: "photo", url: "c" }] }),
+      post("3"),
+    ];
+    expect(countPhotos(posts)).toBe(2);
+  });
+
+  it("returns zero for an empty post list or one with no media", () => {
+    expect(countPhotos([])).toBe(0);
+    expect(countPhotos([post("1")])).toBe(0);
+  });
+});
+
+describe("earliestKnownTime", () => {
+  it("returns the smallest of the known times", () => {
+    expect(earliestKnownTime({ a: 500, b: 1000, c: 200 })).toBe(200);
+  });
+
+  it("returns undefined when no times are known", () => {
+    expect(earliestKnownTime({})).toBeUndefined();
+  });
+});
+
 describe("slicePage", () => {
   it("returns the requested window when it fits inside the total", () => {
     expect(slicePage(100, 30, 30)).toEqual({ start: 30, end: 60 });
@@ -156,8 +189,12 @@ function chainOf(...ids: string[]): SocialArchive["posts"] {
 
 function fetchTxArchiveFrom(
   archives: Record<string, SocialArchive | null>,
-): (txid: string) => Promise<SocialArchive | null> {
-  return async (txid: string) => archives[txid] ?? null;
+  times: Record<string, number> = {},
+): (txid: string) => Promise<{ archive: SocialArchive; time?: number } | null> {
+  return async (txid: string) => {
+    const archive = archives[txid];
+    return archive ? { archive, time: times[txid] } : null;
+  };
 }
 
 beforeEach(() => {
@@ -260,6 +297,109 @@ describe("getArchivePage", () => {
     const page = await getArchivePage("henryhudson6", 0, 5, fetchTxArchiveFrom({}), fakeRedis());
     expect(page).not.toBeNull();
     expect(page?.latestTxid).toBeNull();
+  });
+
+  it("gives a preview page no transaction data — it was never inscribed", async () => {
+    mockGetXTxids.mockResolvedValue([]);
+    const page = await getArchivePage("henryhudson6", 0, 5, fetchTxArchiveFrom({}), fakeRedis());
+    expect(page?.txCount).toBeUndefined();
+    expect(page?.photoCount).toBeUndefined();
+    expect(page?.firstInscribedAt).toBeUndefined();
+    expect(page?.txTimes).toEqual({});
+  });
+
+  it("counts photos across the deduplicated posts into photoCount", async () => {
+    mockGetXTxids.mockResolvedValue(["txA"]);
+    const redis = fakeRedis();
+    const withPhotos: SocialArchive["posts"] = [
+      { id: "1", at: "2020-01-01", text: "one photo", mediaHashes: ["0"] },
+      { id: "2", at: "2020-01-01", text: "two photos", mediaHashes: ["0", "1"] },
+      { id: "3", at: "2020-01-01", text: "no photo" },
+    ];
+    const fetchTxArchive = fetchTxArchiveFrom({ txA: socialArchive("h", withPhotos) });
+
+    const page = await getArchivePage("h", 0, 30, fetchTxArchive, redis);
+    expect(page?.photoCount).toBe(3);
+  });
+
+  it("counts zero photos when the archive carries none", async () => {
+    mockGetXTxids.mockResolvedValue(["txA"]);
+    const redis = fakeRedis();
+    const fetchTxArchive = fetchTxArchiveFrom({ txA: socialArchive("h", chainOf("1", "2")) });
+
+    const page = await getArchivePage("h", 0, 30, fetchTxArchive, redis);
+    expect(page?.photoCount).toBe(0);
+  });
+
+  it("records the transaction count and known times, deriving firstInscribedAt as the earliest", async () => {
+    mockGetXTxids.mockResolvedValue(["txA", "txB"]);
+    const redis = fakeRedis();
+    const fetchTxArchive = fetchTxArchiveFrom(
+      { txA: socialArchive("h", chainOf("1")), txB: socialArchive("h", chainOf("2")) },
+      { txA: 1000, txB: 500 },
+    );
+
+    const page = await getArchivePage("h", 0, 30, fetchTxArchive, redis);
+    expect(page?.txCount).toBe(2);
+    expect(page?.txTimes).toEqual({ txA: 1000, txB: 500 });
+    expect(page?.firstInscribedAt).toBe(500);
+  });
+
+  it("reports a single-transaction archive's txCount as 1", async () => {
+    mockGetXTxids.mockResolvedValue(["txA"]);
+    const redis = fakeRedis();
+    const fetchTxArchive = fetchTxArchiveFrom({ txA: socialArchive("h", chainOf("1")) }, { txA: 1000 });
+
+    const page = await getArchivePage("h", 0, 30, fetchTxArchive, redis);
+    expect(page?.txCount).toBe(1);
+  });
+
+  it("omits an unconfirmed transaction from txTimes instead of recording it as zero", async () => {
+    mockGetXTxids.mockResolvedValue(["txA", "txB"]);
+    const redis = fakeRedis();
+    const fetchTxArchive = fetchTxArchiveFrom(
+      { txA: socialArchive("h", chainOf("1")), txB: socialArchive("h", chainOf("2")) },
+      { txA: 1000 }, // txB has no known time
+    );
+
+    const page = await getArchivePage("h", 0, 30, fetchTxArchive, redis);
+    expect(page?.txTimes).toEqual({ txA: 1000 });
+    expect(page?.firstInscribedAt).toBe(1000);
+  });
+
+  it("leaves firstInscribedAt unknown when no transaction time is known at all", async () => {
+    mockGetXTxids.mockResolvedValue(["txA"]);
+    const redis = fakeRedis();
+    const fetchTxArchive = fetchTxArchiveFrom({ txA: socialArchive("h", chainOf("1")) });
+
+    const page = await getArchivePage("h", 0, 30, fetchTxArchive, redis);
+    expect(page?.firstInscribedAt).toBeUndefined();
+    expect(page?.txTimes).toEqual({});
+  });
+
+  it("rebuilds when the cached meta predates the v2 format, even if the txid set hash matches", async () => {
+    mockGetXTxids.mockResolvedValue(["txA"]);
+    const redis = fakeRedis();
+    const fetchTxArchive = vi.fn(
+      fetchTxArchiveFrom({ txA: socialArchive("h", chainOf("1", "2")) }, { txA: 1000 }),
+    );
+
+    // A v1 (version-less) meta left over from before this task — same hash,
+    // stale shape.
+    await redis.set("x:posts:h:meta", {
+      txidSetHash: txidSetHash(["txA"]),
+      postCount: 2,
+      chunkCount: 1,
+      profile: { handle: "h" },
+      latestTxid: "txA",
+      generatedAt: "2020-01-01T00:00:00.000Z",
+    });
+
+    const page = await getArchivePage("h", 0, 30, fetchTxArchive, redis);
+
+    expect(fetchTxArchive).toHaveBeenCalledTimes(1); // rebuilt, not served stale
+    expect(page?.txCount).toBe(1);
+    expect(page?.firstInscribedAt).toBe(1000);
   });
 
   it("fails open with no Redis: still serves correct pages, re-stitching every call", async () => {

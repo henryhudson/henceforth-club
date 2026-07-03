@@ -1,7 +1,7 @@
 import type { Redis } from "@upstash/redis";
 import { getRedis } from "./redis";
 import { getXTxids } from "./xIndex";
-import { fetchTxArchive as fetchTxArchiveDefault } from "./whatsonchain";
+import { fetchTxArchiveWithTime as fetchTxArchiveDefault } from "./whatsonchain";
 import { stitchToXArchive, type SocialArchive } from "@/app/x/onchain";
 import { realArchive } from "@/app/x/real";
 import type { XArchive, XPost, XProfile } from "@/app/x/parseArchive";
@@ -20,13 +20,24 @@ export const CHUNK_SIZE = 100;
 /** Posts per page: the profile page's first server render and the paged route both use this. */
 export const PAGE_SIZE = 30;
 
+// Bumped whenever the cached shape gains fields older cached chunks don't
+// carry — a v1 (or version-less) cache is treated as stale even when its
+// txid set hash still matches, so it rebuilds instead of serving posts that
+// are missing `txid`.
+const META_VERSION = 2;
+
 type ArchiveMeta = {
+  v: typeof META_VERSION;
   txidSetHash: string;
   postCount: number;
   chunkCount: number;
   profile: XProfile;
   latestTxid: string | null;
   generatedAt: string;
+  txCount: number;
+  photoCount: number;
+  firstInscribedAt?: number;
+  txTimes: Record<string, number>;
 };
 
 export type ArchivePage = {
@@ -34,6 +45,10 @@ export type ArchivePage = {
   postCount: number;
   profile: XProfile;
   latestTxid: string | null;
+  txCount?: number;
+  photoCount?: number;
+  firstInscribedAt?: number;
+  txTimes: Record<string, number>;
 };
 
 // Pre-inscription fallbacks (live preview rendered until a handle is indexed
@@ -124,36 +139,69 @@ type Resolved =
   | { kind: "cached"; meta: ArchiveMeta; redis: Redis }
   | { kind: "fresh"; archive: XArchive; meta: ArchiveMeta };
 
-function freshMeta(archive: XArchive, hash: string, latestTxid: string): ArchiveMeta {
+/** Count photo-type media items across a post list — the profile header's
+ * permanence line reports how many photos the archive actually carries. */
+export function countPhotos(posts: XPost[]): number {
+  return posts.reduce((n, p) => n + (p.media?.filter((m) => m.type === "photo").length ?? 0), 0);
+}
+
+/** The earliest of a set of known transaction times, or undefined when none
+ * are known (every archive transaction is still unconfirmed). */
+export function earliestKnownTime(txTimes: Record<string, number>): number | undefined {
+  const times = Object.values(txTimes);
+  return times.length > 0 ? Math.min(...times) : undefined;
+}
+
+function freshMeta(
+  archive: XArchive,
+  hash: string,
+  latestTxid: string,
+  txCount: number,
+  txTimes: Record<string, number>,
+): ArchiveMeta {
   return {
+    v: META_VERSION,
     txidSetHash: hash,
     postCount: archive.posts.length,
     chunkCount: chunkPosts(archive.posts).length,
     profile: archive.profile,
     latestTxid,
     generatedAt: new Date().toISOString(),
+    txCount,
+    photoCount: countPhotos(archive.posts),
+    firstInscribedAt: earliestKnownTime(txTimes),
+    txTimes,
   };
 }
 
 /** Fetch every indexed transaction for a handle and stitch + deduplicate them
- * into one chronological post list, ready to chunk and cache. Null when none
- * of the transactions could be read (chain fetch down, or a bad txid). */
+ * into one chronological post list, ready to chunk and cache, along with how
+ * many transactions contributed and which of their confirmation times are
+ * known. Null when none of the transactions could be read (chain fetch down,
+ * or a bad txid). */
 async function stitchFresh(
   txids: string[],
   fetchTxArchive: typeof fetchTxArchiveDefault,
-): Promise<{ archive: XArchive; latestTxid: string } | null> {
-  const pairs = (
-    await Promise.all(
-      txids.map(async (txid) => ({ archive: await fetchTxArchive(txid), txid })),
-    )
-  ).flatMap(({ archive, txid }): Array<{ archive: SocialArchive; txid: string }> =>
-    archive ? [{ archive, txid }] : [],
+): Promise<
+  { archive: XArchive; latestTxid: string; txCount: number; txTimes: Record<string, number> } | null
+> {
+  const fetched = await Promise.all(
+    txids.map(async (txid) => ({ result: await fetchTxArchive(txid), txid })),
   );
+  const pairs: Array<{ archive: SocialArchive; txid: string }> = [];
+  const txTimes: Record<string, number> = {};
+  for (const { result, txid } of fetched) {
+    if (!result) continue;
+    pairs.push({ archive: result.archive, txid });
+    if (result.time !== undefined) txTimes[txid] = result.time;
+  }
   if (pairs.length === 0) return null;
   const stitched = stitchToXArchive(pairs);
   return {
     archive: { profile: stitched.profile, posts: dedupePosts(stitched.posts) },
     latestTxid: pairs[pairs.length - 1].txid,
+    txCount: pairs.length,
+    txTimes,
   };
 }
 
@@ -164,9 +212,11 @@ async function rebuildCache(
   archive: XArchive,
   hash: string,
   latestTxid: string,
+  txCount: number,
+  txTimes: Record<string, number>,
   redis: Redis,
 ): Promise<ArchiveMeta> {
-  const meta = freshMeta(archive, hash, latestTxid);
+  const meta = freshMeta(archive, hash, latestTxid, txCount, txTimes);
   const chunks = chunkPosts(archive.posts);
   await Promise.all([
     ...chunks.map((chunk, n) => redis.set(chunkKey(handle, n), chunk)),
@@ -190,7 +240,7 @@ async function resolveHandle(
     const hash = txidSetHash(txids);
     if (redis) {
       const cachedMeta = await redis.get<ArchiveMeta>(metaKey(handle));
-      if (cachedMeta && cachedMeta.txidSetHash === hash) {
+      if (cachedMeta && cachedMeta.v === META_VERSION && cachedMeta.txidSetHash === hash) {
         return { kind: "cached", meta: cachedMeta, redis };
       }
     }
@@ -198,8 +248,8 @@ async function resolveHandle(
     const fresh = await stitchFresh(txids, fetchTxArchive);
     if (fresh) {
       const meta = redis
-        ? await rebuildCache(handle, fresh.archive, hash, fresh.latestTxid, redis)
-        : freshMeta(fresh.archive, hash, fresh.latestTxid);
+        ? await rebuildCache(handle, fresh.archive, hash, fresh.latestTxid, fresh.txCount, fresh.txTimes, redis)
+        : freshMeta(fresh.archive, hash, fresh.latestTxid, fresh.txCount, fresh.txTimes);
       return { kind: "fresh", archive: fresh.archive, meta };
     }
     // Every per-transaction fetch failed — fall through to the preview map,
@@ -265,20 +315,35 @@ export async function getArchivePage(
   if (resolved.kind === "cached") {
     const { start, end } = slicePage(resolved.meta.postCount, offset, limit);
     const posts = await readChunkRange(handle, start, end, resolved.redis);
-    return {
-      posts,
-      postCount: resolved.meta.postCount,
-      profile: resolved.meta.profile,
-      latestTxid: resolved.meta.latestTxid,
-    };
+    return { posts, ...pageInfoFromMeta(resolved.meta) };
   }
 
-  const postCount =
-    resolved.kind === "fresh" ? resolved.meta.postCount : resolved.archive.posts.length;
-  const profile = resolved.kind === "fresh" ? resolved.meta.profile : resolved.archive.profile;
-  const latestTxid = resolved.kind === "fresh" ? resolved.meta.latestTxid : null;
-  const { start, end } = slicePage(postCount, offset, limit);
-  return { posts: resolved.archive.posts.slice(start, end), postCount, profile, latestTxid };
+  if (resolved.kind === "fresh") {
+    const { start, end } = slicePage(resolved.meta.postCount, offset, limit);
+    return { posts: resolved.archive.posts.slice(start, end), ...pageInfoFromMeta(resolved.meta) };
+  }
+
+  // Preview — never inscribed, so there's no transaction data to report.
+  const { start, end } = slicePage(resolved.archive.posts.length, offset, limit);
+  return {
+    posts: resolved.archive.posts.slice(start, end),
+    postCount: resolved.archive.posts.length,
+    profile: resolved.archive.profile,
+    latestTxid: null,
+    txTimes: {},
+  };
+}
+
+function pageInfoFromMeta(meta: ArchiveMeta): Omit<ArchivePage, "posts"> {
+  return {
+    postCount: meta.postCount,
+    profile: meta.profile,
+    latestTxid: meta.latestTxid,
+    txCount: meta.txCount,
+    photoCount: meta.photoCount,
+    firstInscribedAt: meta.firstInscribedAt,
+    txTimes: meta.txTimes,
+  };
 }
 
 /** A single post by id, for the permalink page. Null when the handle has no

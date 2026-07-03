@@ -50,6 +50,7 @@ describe("GET /api/x/posts", () => {
       postCount: 0,
       profile: { handle: "henry" },
       latestTxid: null,
+      txTimes: {},
     });
     const res = await GET(req("handle=henry"));
     expect(res.status).toBe(200);
@@ -68,6 +69,7 @@ describe("GET /api/x/posts", () => {
       postCount: 0,
       profile: { handle: "henry" },
       latestTxid: null,
+      txTimes: {},
     });
     const res = await GET(req("handle=henry&offset=0&mode=latest"));
     expect(res.status).toBe(200);
@@ -79,17 +81,23 @@ describe("GET /api/x/posts", () => {
     expect(res.status).toBe(404);
   });
 
-  it("serves a page of posts for a valid request", async () => {
+  it("serves a page of posts for a valid request, including the archive's known transaction times", async () => {
     mockGetArchivePage.mockResolvedValue({
-      posts: [{ id: "1", at: "t", text: "hi" }],
+      posts: [{ id: "1", at: "t", text: "hi", txid: "abc" }],
       postCount: 100,
       profile: { handle: "henry" },
       latestTxid: "abc",
+      txTimes: { abc: 1751328000 },
     });
     const res = await GET(req("handle=henry&offset=30"));
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toEqual({ posts: [{ id: "1", at: "t", text: "hi" }], offset: 30, postCount: 100 });
+    expect(body).toEqual({
+      posts: [{ id: "1", at: "t", text: "hi", txid: "abc" }],
+      offset: 30,
+      postCount: 100,
+      txTimes: { abc: 1751328000 },
+    });
     expect(mockGetArchivePage).toHaveBeenCalledWith("henry", 30, 30);
   });
 
@@ -99,6 +107,7 @@ describe("GET /api/x/posts", () => {
       postCount: 0,
       profile: { handle: "henry" },
       latestTxid: null,
+      txTimes: {},
     });
     await GET(req("handle=%40henry&offset=0"));
     expect(mockGetArchivePage).toHaveBeenCalledWith("henry", 0, 30);

@@ -103,7 +103,8 @@ function fetchStub({
   rawHex?: string;
   txJson?: Record<string, unknown> | null;
 }) {
-  return vi.fn(async (url: string) => {
+  return vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input);
     if (url.endsWith("/hex")) {
       return rawHex === undefined
         ? new Response("nope", { status: 404 })
