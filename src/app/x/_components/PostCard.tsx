@@ -94,6 +94,7 @@ export default function PostCard({
     <article
       id={`post-${post.id}`}
       data-post-id={post.id}
+      tabIndex={-1}
       className="rounded-xl border border-card-border bg-card-bg p-4 transition-shadow"
     >
       {/* The tweet being replied to */}

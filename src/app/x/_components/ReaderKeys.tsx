@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { advanceIndex } from "./readerIndex";
 
 /**
  * Terminal-style keyboard navigation for the reading room: `j`/`k` step
@@ -13,7 +14,9 @@ import { useRouter } from "next/navigation";
  */
 export default function ReaderKeys({ handle }: { handle?: string }) {
   const router = useRouter();
-  const indexRef = useRef(0);
+  // Null means "nothing focused yet" — distinct from 0, so the very first
+  // `j` or `k` press lands on the first post rather than skipping it.
+  const indexRef = useRef<number | null>(null);
 
   useEffect(() => {
     function cards(): HTMLElement[] {
@@ -29,7 +32,11 @@ export default function ReaderKeys({ handle }: { handle?: string }) {
         card.classList.toggle("ring-2", i === clamped);
         card.classList.toggle("ring-accent", i === clamped);
       });
-      list[clamped].scrollIntoView({ block: "center" });
+      const target = list[clamped];
+      target.scrollIntoView({ block: "center" });
+      // Move real keyboard focus too, not just the visual ring, so
+      // assistive technology tracks the reading position.
+      target.focus({ preventScroll: true });
     }
 
     function onKeyDown(e: KeyboardEvent) {
@@ -39,11 +46,11 @@ export default function ReaderKeys({ handle }: { handle?: string }) {
 
       if (e.key === "j") {
         e.preventDefault();
-        focusCard(indexRef.current + 1);
+        focusCard(advanceIndex(indexRef.current, 1, cards().length));
       } else if (e.key === "k") {
         e.preventDefault();
-        focusCard(indexRef.current - 1);
-      } else if (e.key === "o" && handle) {
+        focusCard(advanceIndex(indexRef.current, -1, cards().length));
+      } else if (e.key === "o" && handle && indexRef.current !== null) {
         const postId = cards()[indexRef.current]?.dataset.postId;
         if (postId) router.push(`/x/${handle}/${postId}`);
       }
