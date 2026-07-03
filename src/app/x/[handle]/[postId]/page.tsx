@@ -34,8 +34,12 @@ export default async function PostPage(
 
   return (
     <main className="min-h-screen bg-background pt-16">
-      <div className="mx-auto max-w-2xl px-6 py-8">
-        <PostCard post={post} profile={page.profile} showParent={Boolean(post.parent)} />
+      <div className="mx-auto max-w-[68ch] px-6 py-8">
+        <PostCard
+          post={post}
+          showParent={Boolean(post.parent)}
+          txTime={post.txid ? page.txTimes[post.txid] : undefined}
+        />
         <Link href={`/x/${handle}`} className="mt-6 inline-block text-accent hover:underline">
           &larr; Back to @{handle}
         </Link>

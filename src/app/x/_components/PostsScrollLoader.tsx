@@ -1,29 +1,38 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { XPost, XProfile } from "../parseArchive";
+import type { XPost } from "../parseArchive";
 import PostCard, { computeShowParent } from "./PostCard";
 
-type PostsResponse = { posts: XPost[]; offset: number; postCount: number };
+type PostsResponse = {
+  posts: XPost[];
+  offset: number;
+  postCount: number;
+  txTimes: Record<string, number>;
+};
 
 /**
  * Appends further pages of a profile's posts as the visitor scrolls near the
  * bottom of what the server already rendered. A sentinel element at the foot
  * of the loaded posts triggers the next fetch once it enters the viewport,
- * so nobody downloads posts they never scroll to.
+ * so nobody downloads posts they never scroll to. `txTimes` starts from the
+ * server-rendered page and is refreshed from each response, so a scroll-
+ * loaded post's outpoint chip gets the same "on chain since" hover text a
+ * server-rendered one does.
  */
 export default function PostsScrollLoader({
   handle,
-  profile,
   initialCount,
   postCount,
+  initialTxTimes,
 }: {
   handle: string;
-  profile: XProfile;
   initialCount: number;
   postCount: number;
+  initialTxTimes: Record<string, number>;
 }) {
   const [posts, setPosts] = useState<XPost[]>([]);
+  const [txTimes, setTxTimes] = useState<Record<string, number>>(initialTxTimes);
   const [loadingMore, setLoadingMore] = useState(false);
   const [exhausted, setExhausted] = useState(initialCount >= postCount);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -52,6 +61,7 @@ export default function PostsScrollLoader({
         }
         const body = (await res.json()) as PostsResponse;
         setPosts((prev) => [...prev, ...body.posts]);
+        setTxTimes(body.txTimes);
         if (body.posts.length === 0 || offset + body.posts.length >= body.postCount) {
           setExhausted(true);
         }
@@ -76,7 +86,12 @@ export default function PostsScrollLoader({
     <>
       <div className="mt-3 space-y-3">
         {posts.map((post, i) => (
-          <PostCard key={post.id} post={post} profile={profile} showParent={showParent[i]} />
+          <PostCard
+            key={post.id}
+            post={post}
+            showParent={showParent[i]}
+            txTime={post.txid ? txTimes[post.txid] : undefined}
+          />
         ))}
       </div>
       {!exhausted && (
