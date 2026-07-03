@@ -103,7 +103,9 @@ function fetchStub({
   rawHex?: string;
   txJson?: Record<string, unknown> | null;
 }) {
-  return vi.fn(async (input: RequestInfo | URL) => {
+  // Typed as the real fetch so mock.calls carries its full signature — the
+  // abort-signal assertion reads the request options off the second element.
+  const impl: typeof fetch = async (input) => {
     const url = String(input);
     if (url.endsWith("/hex")) {
       return rawHex === undefined
@@ -113,7 +115,8 @@ function fetchStub({
     return txJson === null || txJson === undefined
       ? new Response("nope", { status: 404 })
       : new Response(JSON.stringify(txJson), { status: 200 });
-  });
+  };
+  return vi.fn(impl);
 }
 
 describe("fetchTxArchiveWithTime", () => {
