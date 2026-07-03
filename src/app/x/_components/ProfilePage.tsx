@@ -1,18 +1,36 @@
 import type { XArchive } from "../parseArchive";
 import ProfileView from "./ProfileView";
+import PostsScrollLoader from "./PostsScrollLoader";
 
 /**
  * Shared profile page shell used by both `/x/<handle>` and `/x/tx/<txid>`.
  * When `txid` is present the profile was read from Bitcoin and we link the
- * transaction; otherwise it's a pre-inscription live preview.
+ * transaction; otherwise it's a pre-inscription live preview. `postCount`
+ * and `handle` are only set by the paginated `/x/<handle>` route — when the
+ * archive holds more posts than are rendered yet, a scroll loader appends
+ * the rest as the visitor scrolls.
  */
 export default function ProfilePage({
   archive,
   txid,
+  postCount,
+  handle,
 }: {
   archive: XArchive;
   txid?: string | null;
+  postCount?: number;
+  handle?: string;
 }) {
+  const scrollLoader =
+    handle !== undefined && postCount !== undefined && postCount > archive.posts.length ? (
+      <PostsScrollLoader
+        handle={handle}
+        profile={archive.profile}
+        initialCount={archive.posts.length}
+        postCount={postCount}
+      />
+    ) : undefined;
+
   return (
     <main className="min-h-screen bg-background pt-16">
       <header className="mx-auto max-w-2xl px-6 py-8 text-center">
@@ -34,7 +52,7 @@ export default function ProfilePage({
           </p>
         )}
       </header>
-      <ProfileView archive={archive} />
+      <ProfileView archive={archive} postCount={postCount} footer={scrollLoader} />
     </main>
   );
 }

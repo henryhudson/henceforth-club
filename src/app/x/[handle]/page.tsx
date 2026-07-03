@@ -1,49 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import type { XArchive } from "../parseArchive";
-import { stitchToXArchive } from "../onchain";
-import { fetchTxArchive } from "@/lib/whatsonchain";
-import { getXTxids } from "@/lib/xIndex";
+import { getArchivePage, PAGE_SIZE } from "@/lib/xArchiveCache";
 import ProfilePage from "../_components/ProfilePage";
-import { realArchive } from "../real";
-
-// Pre-inscription fallbacks (live preview rendered until a handle is indexed
-// on-chain). Once a profile is inscribed + registered, the on-chain read wins.
-const fallback: Record<string, XArchive> = { henryhudson6: realArchive };
-
-/** handle → archive: the on-chain inscription (via the txid index) first, else preview. */
-async function resolve(
-  handle: string,
-): Promise<{ archive: XArchive; txid: string | null } | null> {
-  const txids = await getXTxids(handle);
-  if (txids.length > 0) {
-    // Keep each archive paired with ITS transaction id — a post's media
-    // outpoints resolve against the transaction that inscribed them.
-    const pairs = (
-      await Promise.all(
-        txids.map(async (txid) => ({ archive: await fetchTxArchive(txid), txid })),
-      )
-    ).flatMap(({ archive, txid }) => (archive ? [{ archive, txid }] : []));
-    if (pairs.length > 0) {
-      return {
-        archive: stitchToXArchive(pairs),
-        txid: pairs[pairs.length - 1].txid,
-      };
-    }
-  }
-  const fb = fallback[handle.toLowerCase()];
-  return fb ? { archive: fb, txid: null } : null;
-}
 
 export async function generateMetadata(
   { params }: { params: Promise<{ handle: string }> },
 ): Promise<Metadata> {
   const { handle } = await params;
-  const r = await resolve(handle);
-  return r
+  const page = await getArchivePage(handle, 0, 0);
+  return page
     ? {
-        title: `@${r.archive.profile.handle} — on Bitcoin`,
-        description: `${r.archive.profile.displayName ?? r.archive.profile.handle}'s X profile, reclaimed onto Bitcoin — readable forever, even if X goes down.`,
+        title: `@${page.profile.handle} — on Bitcoin`,
+        description: `${page.profile.displayName ?? page.profile.handle}'s X profile, reclaimed onto Bitcoin — readable forever, even if X goes down.`,
       }
     : { title: `@${handle} — not archived yet` };
 }
@@ -52,9 +20,9 @@ export default async function HandlePage(
   { params }: { params: Promise<{ handle: string }> },
 ) {
   const { handle } = await params;
-  const r = await resolve(handle);
+  const page = await getArchivePage(handle, 0, PAGE_SIZE);
 
-  if (!r) {
+  if (!page) {
     return (
       <main className="min-h-screen bg-background pt-28">
         <div className="mx-auto max-w-2xl px-6 text-center">
@@ -68,5 +36,12 @@ export default async function HandlePage(
     );
   }
 
-  return <ProfilePage archive={r.archive} txid={r.txid} />;
+  return (
+    <ProfilePage
+      archive={{ profile: page.profile, posts: page.posts }}
+      txid={page.latestTxid}
+      postCount={page.postCount}
+      handle={handle}
+    />
+  );
 }
