@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { fetchTxArchive } from "@/lib/whatsonchain";
+import { fetchTxArchive, fetchTxArchiveWithTime } from "@/lib/whatsonchain";
 
 function opReturnScript(...datas: string[]): string {
   let s = "006a";
@@ -90,5 +90,65 @@ describe("fetchTxArchive", () => {
     expect(sa?.handle).toBe("henry");
     expect(injected).toHaveBeenCalledTimes(1);
     expect(globalFetch).not.toHaveBeenCalled();
+  });
+});
+
+// A stand-in for the two WhatsOnChain endpoints fetchTxArchiveWithTime hits:
+// the raw-hex endpoint (for the archive) and the JSON tx endpoint (for the
+// confirmation time, which a raw transaction never carries itself).
+function fetchStub({
+  rawHex,
+  txJson,
+}: {
+  rawHex?: string;
+  txJson?: Record<string, unknown> | null;
+}) {
+  return vi.fn(async (url: string) => {
+    if (url.endsWith("/hex")) {
+      return rawHex === undefined
+        ? new Response("nope", { status: 404 })
+        : new Response(rawHex, { status: 200 });
+    }
+    return txJson === null || txJson === undefined
+      ? new Response("nope", { status: 404 })
+      : new Response(JSON.stringify(txJson), { status: 200 });
+  });
+}
+
+describe("fetchTxArchiveWithTime", () => {
+  it("returns the archive together with its confirmed time", async () => {
+    const fetchFn = fetchStub({
+      rawHex: rawTx([opReturnScript("19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut", archiveJSON)]),
+      txJson: { time: 1751328000, blocktime: 1751328000 },
+    });
+    const result = await fetchTxArchiveWithTime("d".repeat(64), fetchFn);
+    expect(result?.archive.handle).toBe("henry");
+    expect(result?.time).toBe(1751328000);
+  });
+
+  it("treats an unconfirmed transaction (no time or blocktime) as an unknown time", async () => {
+    const fetchFn = fetchStub({
+      rawHex: rawTx([opReturnScript("19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut", archiveJSON)]),
+      txJson: { confirmations: 0 },
+    });
+    const result = await fetchTxArchiveWithTime("e".repeat(64), fetchFn);
+    expect(result?.archive.handle).toBe("henry");
+    expect(result?.time).toBeUndefined();
+  });
+
+  it("still returns the archive when the time lookup itself fails", async () => {
+    const fetchFn = fetchStub({
+      rawHex: rawTx([opReturnScript("19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut", archiveJSON)]),
+      txJson: null,
+    });
+    const result = await fetchTxArchiveWithTime("f".repeat(64), fetchFn);
+    expect(result?.archive.handle).toBe("henry");
+    expect(result?.time).toBeUndefined();
+  });
+
+  it("returns null, without a time lookup, when the archive itself can't be found", async () => {
+    const fetchFn = fetchStub({ txJson: { time: 1751328000 } });
+    expect(await fetchTxArchiveWithTime("a".repeat(64), fetchFn)).toBeNull();
+    expect(fetchFn).toHaveBeenCalledTimes(1); // only the hex attempt, never the time lookup
   });
 });
