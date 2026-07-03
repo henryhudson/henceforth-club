@@ -178,15 +178,20 @@ function freshMeta(
  * into one chronological post list, ready to chunk and cache, along with how
  * many transactions contributed and which of their confirmation times are
  * known. Null when none of the transactions could be read (chain fetch down,
- * or a bad txid). */
+ * or a bad txid). `includeTimes` is false when there's no Redis to cache the
+ * result in — a time lookup nobody can reuse would just double the number of
+ * WhatsOnChain round trips on every single page view, so it's skipped
+ * entirely; the outpoint chip and permanence line already have tested
+ * fallbacks for an unknown time. */
 async function stitchFresh(
   txids: string[],
   fetchTxArchive: typeof fetchTxArchiveDefault,
+  includeTimes: boolean,
 ): Promise<
   { archive: XArchive; latestTxid: string; txCount: number; txTimes: Record<string, number> } | null
 > {
   const fetched = await Promise.all(
-    txids.map(async (txid) => ({ result: await fetchTxArchive(txid), txid })),
+    txids.map(async (txid) => ({ result: await fetchTxArchive(txid, undefined, includeTimes), txid })),
   );
   const pairs: Array<{ archive: SocialArchive; txid: string }> = [];
   const txTimes: Record<string, number> = {};
@@ -245,7 +250,7 @@ async function resolveHandle(
       }
     }
 
-    const fresh = await stitchFresh(txids, fetchTxArchive);
+    const fresh = await stitchFresh(txids, fetchTxArchive, redis !== null);
     if (fresh) {
       const meta = redis
         ? await rebuildCache(handle, fresh.archive, hash, fresh.latestTxid, fresh.txCount, fresh.txTimes, redis)

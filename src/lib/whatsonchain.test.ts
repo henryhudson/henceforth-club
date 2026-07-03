@@ -152,4 +152,36 @@ describe("fetchTxArchiveWithTime", () => {
     expect(await fetchTxArchiveWithTime("a".repeat(64), fetchFn)).toBeNull();
     expect(fetchFn).toHaveBeenCalledTimes(1); // only the hex attempt, never the time lookup
   });
+
+  it("skips the time lookup entirely when includeTime is false, doing only the archive fetch", async () => {
+    const fetchFn = fetchStub({
+      rawHex: rawTx([opReturnScript("19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut", archiveJSON)]),
+      txJson: { time: 1751328000 },
+    });
+    const result = await fetchTxArchiveWithTime("1".repeat(64), fetchFn, false);
+    expect(result?.archive.handle).toBe("henry");
+    expect(result?.time).toBeUndefined();
+    expect(fetchFn).toHaveBeenCalledTimes(1); // only the hex fetch — no round trip for a time nobody will cache
+  });
+
+  it("bounds the time lookup with an abort signal, so a hung endpoint can't stall the caller", async () => {
+    const fetchFn = fetchStub({
+      rawHex: rawTx([opReturnScript("19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut", archiveJSON)]),
+      txJson: { time: 1751328000 },
+    });
+    await fetchTxArchiveWithTime("2".repeat(64), fetchFn);
+    const timeCall = fetchFn.mock.calls.find(([input]) => String(input).includes("/tx/hash/"));
+    expect(timeCall?.[1]?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("still returns the archive when the time lookup is aborted (as a real timeout would)", async () => {
+    const hex = rawTx([opReturnScript("19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut", archiveJSON)]);
+    const fetchFn = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).endsWith("/hex")) return new Response(hex, { status: 200 });
+      throw new DOMException("The operation was aborted.", "AbortError");
+    });
+    const result = await fetchTxArchiveWithTime("3".repeat(64), fetchFn);
+    expect(result?.archive.handle).toBe("henry");
+    expect(result?.time).toBeUndefined();
+  });
 });

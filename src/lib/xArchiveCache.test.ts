@@ -197,6 +197,33 @@ function fetchTxArchiveFrom(
   };
 }
 
+/** A fetchTxArchive fake that counts how many times it was asked to do an
+ * archive fetch versus a time lookup — standing in for the two separate
+ * WhatsOnChain round trips `fetchTxArchiveWithTime` makes underneath. Used to
+ * prove `includeTimes` actually skips the second round trip rather than just
+ * discarding its result. */
+function countingFetchTxArchive(
+  archives: Record<string, SocialArchive | null>,
+  times: Record<string, number> = {},
+): {
+  fetchTxArchive: (
+    txid: string,
+    fetchFn?: typeof fetch,
+    includeTimes?: boolean,
+  ) => Promise<{ archive: SocialArchive; time?: number } | null>;
+  counts: { archive: number; time: number };
+} {
+  const counts = { archive: 0, time: 0 };
+  const fetchTxArchive = async (txid: string, _fetchFn?: typeof fetch, includeTimes = true) => {
+    counts.archive++;
+    const archive = archives[txid];
+    if (!archive) return null;
+    if (includeTimes) counts.time++;
+    return { archive, time: includeTimes ? times[txid] : undefined };
+  };
+  return { fetchTxArchive, counts };
+}
+
 beforeEach(() => {
   mockGetXTxids.mockReset();
 });
@@ -412,6 +439,34 @@ describe("getArchivePage", () => {
     expect(first?.posts.map((p) => p.id)).toEqual(["2", "1"]);
     expect(second?.posts.map((p) => p.id)).toEqual(["2", "1"]);
     expect(fetchTxArchive).toHaveBeenCalledTimes(2); // no cache without Redis
+  });
+
+  it("with no Redis to cache the result, skips the time lookups and performs only the archive fetch per transaction", async () => {
+    mockGetXTxids.mockResolvedValue(["txA", "txB"]);
+    const { fetchTxArchive, counts } = countingFetchTxArchive(
+      { txA: socialArchive("h", chainOf("1")), txB: socialArchive("h", chainOf("2")) },
+      { txA: 1000, txB: 2000 },
+    );
+
+    const page = await getArchivePage("h", 0, 30, fetchTxArchive, null);
+
+    expect(counts.archive).toBe(2); // one archive fetch per transaction, same as always
+    expect(counts.time).toBe(0); // no time round trip when there's nowhere to cache it
+    expect(page?.txTimes).toEqual({});
+  });
+
+  it("with Redis available, still performs the time lookups so they can be cached", async () => {
+    mockGetXTxids.mockResolvedValue(["txA"]);
+    const redis = fakeRedis();
+    const { fetchTxArchive, counts } = countingFetchTxArchive(
+      { txA: socialArchive("h", chainOf("1")) },
+      { txA: 1000 },
+    );
+
+    const page = await getArchivePage("h", 0, 30, fetchTxArchive, redis);
+
+    expect(counts.time).toBe(1);
+    expect(page?.txTimes).toEqual({ txA: 1000 });
   });
 });
 

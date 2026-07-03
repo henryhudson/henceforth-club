@@ -30,6 +30,11 @@ export async function fetchTxArchive(
   return socialArchiveFromScripts(voutScriptsFromRawTx(await res.text()));
 }
 
+// A hung WhatsOnChain response must never stall a cache rebuild — the time
+// lookup is best-effort, so it gets a hard ceiling and simply comes back
+// unknown if the endpoint doesn't answer in time.
+const TIME_LOOKUP_TIMEOUT_MS = 5000;
+
 /**
  * Fetch a transaction's archive together with its confirmation time (unix
  * seconds). A raw transaction carries no notion of "when" — only
@@ -39,13 +44,19 @@ export async function fetchTxArchive(
  * hex, so the JSON endpoint's script-length truncation never matters here).
  * An unconfirmed transaction, or one the time lookup otherwise fails to read,
  * comes back with `time: undefined` — unknown, not "never confirmed".
+ *
+ * `includeTime` lets a caller skip the time lookup altogether — set to
+ * false when there's nowhere to cache the result, so every page view isn't
+ * paying for a second round trip it can't reuse.
  */
 export async function fetchTxArchiveWithTime(
   txid: string,
   fetchFn: typeof fetch = fetch,
+  includeTime = true,
 ): Promise<{ archive: SocialArchive; time?: number } | null> {
   const archive = await fetchTxArchive(txid, fetchFn);
   if (!archive) return null;
+  if (!includeTime) return { archive, time: undefined };
   return { archive, time: await fetchConfirmedTime(txid, fetchFn) };
 }
 
@@ -55,7 +66,10 @@ async function fetchConfirmedTime(
 ): Promise<number | undefined> {
   let res: Response;
   try {
-    res = await fetchFn(`${WOC}/tx/hash/${txid}`, { next: { revalidate: 3600 } });
+    res = await fetchFn(`${WOC}/tx/hash/${txid}`, {
+      next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(TIME_LOOKUP_TIMEOUT_MS),
+    });
   } catch {
     return undefined;
   }
