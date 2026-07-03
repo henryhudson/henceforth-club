@@ -1,6 +1,7 @@
 import type { XArchive } from "../parseArchive";
 import ProfileView from "./ProfileView";
 import PostsScrollLoader from "./PostsScrollLoader";
+import ReaderKeys from "./ReaderKeys";
 
 /**
  * Shared profile page shell used by both `/x/<handle>` and `/x/tx/<txid>`.
@@ -8,9 +9,9 @@ import PostsScrollLoader from "./PostsScrollLoader";
  * transaction; otherwise it's a pre-inscription live preview. `postCount`
  * and `handle` are only set by the paginated `/x/<handle>` route — when the
  * archive holds more posts than are rendered yet, a scroll loader appends
- * the rest as the visitor scrolls. `txCount`, `photoCount`, `firstInscribedAt`,
- * and `txTimes` feed the header's permanence line and each post card's
- * outpoint chip.
+ * the rest as the visitor scrolls, and `j`/`k`/`o` become available.
+ * `txCount`, `photoCount`, `firstInscribedAt`, and `txTimes` feed the header's
+ * permanence line and each post card's outpoint chip.
  */
 export default function ProfilePage({
   archive,
@@ -72,6 +73,7 @@ export default function ProfilePage({
         firstInscribedAt={firstInscribedAt}
         txTimes={txTimes}
       />
+      <ReaderKeys handle={handle} />
     </main>
   );
 }
