@@ -136,7 +136,7 @@ export function slicePage(
  * no Redis available, held only in memory for this request). */
 type Resolved =
   | { kind: "preview"; archive: XArchive }
-  | { kind: "cached"; meta: ArchiveMeta; redis: Redis }
+  | { kind: "cached"; meta: ArchiveMeta; redis: Redis; txids: string[]; hash: string }
   | { kind: "fresh"; archive: XArchive; meta: ArchiveMeta };
 
 /** Count photo-type media items across a post list — the profile header's
@@ -211,7 +211,12 @@ async function stitchFresh(
 }
 
 /** Write a freshly-stitched archive's chunks, meta, and children map to
- * Redis, replacing whatever (stale or absent) cache was there before. */
+ * Redis, replacing whatever (stale or absent) cache was there before. Meta
+ * is written LAST, and only once every chunk and the children map have
+ * actually landed — meta is the commit point a read trusts, so a request
+ * that finds a valid meta can trust the chunks it points at are there too.
+ * Throws (rather than swallowing) if any write fails, leaving meta
+ * unwritten; see `attemptRebuild` for how a caller recovers from that. */
 async function rebuildCache(
   handle: string,
   archive: XArchive,
@@ -225,10 +230,49 @@ async function rebuildCache(
   const chunks = chunkPosts(archive.posts);
   await Promise.all([
     ...chunks.map((chunk, n) => redis.set(chunkKey(handle, n), chunk)),
-    redis.set(metaKey(handle), meta),
     redis.set(childrenKeyOf(handle), childrenMap(archive.posts)),
   ]);
+  await redis.set(metaKey(handle), meta);
   return meta;
+}
+
+/** Rebuild the cache for a freshly-stitched archive, but never let a write
+ * failure fail the request that triggered it: the caller already has a
+ * correct in-memory stitch to serve regardless of whether the cache write
+ * succeeds. A failed rebuild simply leaves the old (stale or absent) meta
+ * in place, which the next read sees as a miss and retries on its own. */
+async function attemptRebuild(
+  handle: string,
+  archive: XArchive,
+  hash: string,
+  latestTxid: string,
+  txCount: number,
+  txTimes: Record<string, number>,
+  redis: Redis,
+): Promise<ArchiveMeta> {
+  try {
+    return await rebuildCache(handle, archive, hash, latestTxid, txCount, txTimes, redis);
+  } catch {
+    return freshMeta(archive, hash, latestTxid, txCount, txTimes);
+  }
+}
+
+/** Stitch a fresh archive from the chain and, when Redis is available,
+ * rewrite the cache (a write failure never surfaces here — see
+ * `attemptRebuild`). Null when every transaction fetch failed. */
+async function stitchAndCache(
+  handle: string,
+  txids: string[],
+  hash: string,
+  fetchTxArchive: typeof fetchTxArchiveDefault,
+  redis: Redis | null,
+): Promise<{ archive: XArchive; meta: ArchiveMeta } | null> {
+  const fresh = await stitchFresh(txids, fetchTxArchive, redis !== null);
+  if (!fresh) return null;
+  const meta = redis
+    ? await attemptRebuild(handle, fresh.archive, hash, fresh.latestTxid, fresh.txCount, fresh.txTimes, redis)
+    : freshMeta(fresh.archive, hash, fresh.latestTxid, fresh.txCount, fresh.txTimes);
+  return { archive: fresh.archive, meta };
 }
 
 /** Resolve a handle to its archive: the cache when it's still valid for the
@@ -246,16 +290,13 @@ async function resolveHandle(
     if (redis) {
       const cachedMeta = await redis.get<ArchiveMeta>(metaKey(handle));
       if (cachedMeta && cachedMeta.v === META_VERSION && cachedMeta.txidSetHash === hash) {
-        return { kind: "cached", meta: cachedMeta, redis };
+        return { kind: "cached", meta: cachedMeta, redis, txids, hash };
       }
     }
 
-    const fresh = await stitchFresh(txids, fetchTxArchive, redis !== null);
-    if (fresh) {
-      const meta = redis
-        ? await rebuildCache(handle, fresh.archive, hash, fresh.latestTxid, fresh.txCount, fresh.txTimes, redis)
-        : freshMeta(fresh.archive, hash, fresh.latestTxid, fresh.txCount, fresh.txTimes);
-      return { kind: "fresh", archive: fresh.archive, meta };
+    const stitched = await stitchAndCache(handle, txids, hash, fetchTxArchive, redis);
+    if (stitched) {
+      return { kind: "fresh", archive: stitched.archive, meta: stitched.meta };
     }
     // Every per-transaction fetch failed — fall through to the preview map,
     // same as the un-cached page did before this module existed.
@@ -267,19 +308,24 @@ async function resolveHandle(
 }
 
 /** Read only the chunks a `[start, end)` post window touches, and slice out
- * exactly that window — never the whole cached archive. */
+ * exactly that window — never the whole cached archive. Null means at least
+ * one of the needed chunks is missing (evicted, or never written despite a
+ * valid meta) — a genuine cache miss the caller must not paper over by
+ * treating the hole as "no posts there"; that would silently shift every
+ * post after the gap by however many posts the missing chunk held. */
 async function readChunkRange(
   handle: string,
   start: number,
   end: number,
   redis: Redis,
-): Promise<XPost[]> {
+): Promise<XPost[] | null> {
   if (start >= end) return [];
   const firstChunk = Math.floor(start / CHUNK_SIZE);
   const lastChunk = Math.floor((end - 1) / CHUNK_SIZE);
   const indices = Array.from({ length: lastChunk - firstChunk + 1 }, (_, i) => firstChunk + i);
   const chunks = await Promise.all(indices.map((n) => redis.get<XPost[]>(chunkKey(handle, n))));
-  const posts = chunks.flatMap((chunk) => chunk ?? []);
+  if (chunks.some((chunk) => chunk === null)) return null;
+  const posts = (chunks as XPost[][]).flat();
   const chunkStart = firstChunk * CHUNK_SIZE;
   return posts.slice(start - chunkStart, end - chunkStart);
 }
@@ -320,7 +366,24 @@ export async function getArchivePage(
   if (resolved.kind === "cached") {
     const { start, end } = slicePage(resolved.meta.postCount, offset, limit);
     const posts = await readChunkRange(handle, start, end, resolved.redis);
-    return { posts, ...pageInfoFromMeta(resolved.meta) };
+    if (posts !== null) {
+      return { posts, ...pageInfoFromMeta(resolved.meta) };
+    }
+    // The meta says these chunks exist, but one is missing — an interrupted
+    // rebuild, or an evicted key. Don't serve a hole or a shifted slice:
+    // re-stitch fresh from the chain for this request, and try to repair
+    // the cache so a later read doesn't hit the same gap.
+    const repaired = await stitchAndCache(handle, resolved.txids, resolved.hash, fetchTxArchive, resolved.redis);
+    if (!repaired) {
+      // Every transaction fetch failed on the repair attempt too — nothing
+      // fresh to serve. An empty page beats a misaligned one.
+      return { posts: [], ...pageInfoFromMeta(resolved.meta) };
+    }
+    const repairedRange = slicePage(repaired.meta.postCount, offset, limit);
+    return {
+      posts: repaired.archive.posts.slice(repairedRange.start, repairedRange.end),
+      ...pageInfoFromMeta(repaired.meta),
+    };
   }
 
   if (resolved.kind === "fresh") {

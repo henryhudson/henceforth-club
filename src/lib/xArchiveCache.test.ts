@@ -178,6 +178,35 @@ function fakeRedis(): Redis {
   } as unknown as Redis;
 }
 
+/** A `fakeRedis` whose `set` rejects for any key `shouldFail` matches —
+ * standing in for a Redis write that fails partway through a rebuild. */
+function fakeRedisFailingWrites(shouldFail: (key: string) => boolean): Redis {
+  const store = new Map<string, unknown>();
+  return {
+    get: async <T,>(key: string) => (store.has(key) ? (store.get(key) as T) : null),
+    set: async (key: string, value: unknown) => {
+      if (shouldFail(key)) throw new Error(`simulated write failure: ${key}`);
+      store.set(key, value);
+      return "OK";
+    },
+  } as unknown as Redis;
+}
+
+/** Like `fakeRedis`, but also hands back the underlying store so a test can
+ * simulate a chunk going missing (evicted, or never written) without going
+ * through `set` — a plain `.delete()` on the map, not a Redis API call. */
+function fakeRedisWithBackdoor(): { redis: Redis; deleteKey: (key: string) => void } {
+  const store = new Map<string, unknown>();
+  const redis = {
+    get: async <T,>(key: string) => (store.has(key) ? (store.get(key) as T) : null),
+    set: async (key: string, value: unknown) => {
+      store.set(key, value);
+      return "OK";
+    },
+  } as unknown as Redis;
+  return { redis, deleteKey: (key: string) => store.delete(key) };
+}
+
 /** An on-chain archive containing the given (unsorted) posts under one txid. */
 function socialArchive(handle: string, posts: SocialArchive["posts"]): SocialArchive {
   return { source: "x", handle, profile: { displayName: `${handle} display` }, posts };
@@ -467,6 +496,58 @@ describe("getArchivePage", () => {
 
     expect(counts.time).toBe(1);
     expect(page?.txTimes).toEqual({ txA: 1000 });
+  });
+
+  // A rebuild's chunk and meta writes used to fire in one Promise.all, so a
+  // chunk write failing after the meta write already landed would leave
+  // Redis holding new-meta pointing at missing/stale chunks — every later
+  // read would pass the hash check and silently serve misaligned posts
+  // until the next delta changed the hash. Meta must only be written once
+  // every chunk (and the children map) has actually landed, and a write
+  // failure must never fail the request that triggered the rebuild.
+  it("never writes meta when a chunk write fails, and still serves correct posts for this request", async () => {
+    mockGetXTxids.mockResolvedValue(["txA"]);
+    const redis = fakeRedisFailingWrites((key) => key === "x:posts:h:0");
+    const fetchTxArchive = fetchTxArchiveFrom({ txA: socialArchive("h", chainOf("1", "2", "3")) });
+
+    const page = await getArchivePage("h", 0, 30, fetchTxArchive, redis);
+
+    // The request itself still serves the correct, freshly-stitched posts —
+    // a cache-write failure is not the caller's problem.
+    expect(page?.posts.map((p) => p.id)).toEqual(["3", "2", "1"]);
+    // The commit point (meta) was never reached, since the chunk write it
+    // depends on failed first.
+    expect(await redis.get("x:posts:h:meta")).toBeNull();
+  });
+
+  // A meta that still hash-matches the live txid set is not, on its own,
+  // proof the chunks it points at are actually there — a chunk can go
+  // missing (partial eviction, an interrupted earlier rebuild) while meta
+  // stays put. Reading such a gap must fall back to a fresh stitch instead
+  // of quietly flattening the hole away into a shifted, wrong-content page.
+  it("falls back to a fresh stitch when a chunk is missing under an otherwise-valid meta", async () => {
+    mockGetXTxids.mockResolvedValue(["txA"]);
+    const { redis, deleteKey } = fakeRedisWithBackdoor();
+    const ids = Array.from({ length: 150 }, (_, i) => String(1000 + i)); // 1000..1149, two chunks
+    const fetchTxArchive = vi.fn(fetchTxArchiveFrom({ txA: socialArchive("h", chainOf(...ids)) }));
+
+    await getArchivePage("h", 0, 30, fetchTxArchive, redis); // warms the cache: 2 chunks + meta
+    deleteKey("x:posts:h:1"); // simulate the second chunk having gone missing
+
+    // A window that only touches the still-present chunk 0 is unaffected.
+    const untouched = await getArchivePage("h", 0, 30, fetchTxArchive, redis);
+    expect(untouched?.posts).toHaveLength(30);
+    expect(untouched?.posts[0].id).toBe("1149");
+
+    // A window that needs the missing chunk 1 must not drop or misalign
+    // posts — every offset still returns the correct posts.
+    const affected = await getArchivePage("h", 120, 30, fetchTxArchive, redis);
+    expect(affected?.posts).toHaveLength(30);
+    expect(affected?.posts[0].id).toBe("1029");
+    expect(affected?.posts.at(-1)?.id).toBe("1000");
+
+    // The gap was also repaired, so a later read doesn't hit it again.
+    expect(await redis.get("x:posts:h:1")).not.toBeNull();
   });
 });
 
