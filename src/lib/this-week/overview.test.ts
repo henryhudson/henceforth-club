@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { it, expect } from 'vitest'
 import type { DigestData } from './types'
 import { prepareDivisions, shortenDept, shortenDivTitle, trimSentences } from './overview'
 
