@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
-import type { XArchive } from "../parseArchive";
-import { dedupePosts } from "@/lib/xArchiveCache";
+import { dedupePosts, type XArchive } from "../parseArchive";
 import PostCard, { Avatar, computeShowParent, formatDate, formatUnixSeconds } from "./PostCard";
 import { buildPermanenceLine } from "./permanenceLine";
 

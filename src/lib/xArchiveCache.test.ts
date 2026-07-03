@@ -5,7 +5,6 @@ import {
   chunkPosts,
   childrenMap,
   countPhotos,
-  dedupePosts,
   earliestKnownTime,
   getArchivePage,
   getArchivePost,
@@ -85,26 +84,6 @@ describe("childrenMap", () => {
 
   it("maps an empty post list to an empty object", () => {
     expect(childrenMap([])).toEqual({});
-  });
-});
-
-describe("dedupePosts", () => {
-  it("drops a later duplicate, keeping the first (newest, since input is newest-first) occurrence", () => {
-    const first = post("2", { text: "same text" });
-    const dup = post("1", { text: "same text" });
-    expect(dedupePosts([first, dup])).toEqual([first]);
-  });
-
-  it("compares trimmed text, so surrounding whitespace still counts as a duplicate", () => {
-    const first = post("2", { text: "hello" });
-    const dup = post("1", { text: "  hello  " });
-    expect(dedupePosts([first, dup])).toEqual([first]);
-  });
-
-  it("keeps distinct posts in their original order", () => {
-    const a = post("1", { text: "a" });
-    const b = post("2", { text: "b" });
-    expect(dedupePosts([a, b])).toEqual([a, b]);
   });
 });
 

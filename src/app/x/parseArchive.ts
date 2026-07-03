@@ -41,6 +41,26 @@ function unwrap(js: string): unknown {
   return JSON.parse(json);
 }
 
+/**
+ * Drop a duplicate post by trimmed text, keeping the first occurrence. Posts
+ * arrive newest-first, so the kept copy is always the newest one. Doing this
+ * once, before chunking or rendering, is what keeps a page offset meaning
+ * the same thing every time it's read — re-deduplicating on every render
+ * would silently shift indices as soon as reads were paged. Lives here (a
+ * pure module with no side-effectful imports) rather than in `xArchiveCache`
+ * so a component that only needs this can't accidentally pull in Redis,
+ * on-chain fetching, or anything else that module depends on.
+ */
+export function dedupePosts(posts: XPost[]): XPost[] {
+  const seen = new Set<string>();
+  return posts.filter((p) => {
+    const key = p.text.trim();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 export function parseArchive(
   tweetsJS: string,
   profileJS: string,
