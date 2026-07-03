@@ -119,6 +119,7 @@ export function socialArchiveToXArchive(sa: SocialArchive, txid?: string): XArch
         at: p.at,
         text: p.text,
         replyToId: p.replyToId,
+        txid,
         media:
           txid && p.mediaHashes?.length
             ? p.mediaHashes.map((vout) => ({ type: "photo", url: ordfsUrl(txid, vout) }))

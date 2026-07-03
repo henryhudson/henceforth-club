@@ -88,6 +88,18 @@ describe("socialArchiveToXArchive", () => {
     expect(x.posts).toHaveLength(2);
     expect(x.posts[1].replyToId).toBe("9");
   });
+
+  it("tags each post with the txid of the archive that carried it", () => {
+    const sa = socialArchiveFromScripts([opReturnScript(archiveJSON)])!;
+    const x = socialArchiveToXArchive(sa, "abc123");
+    expect(x.posts.every((p) => p.txid === "abc123")).toBe(true);
+  });
+
+  it("leaves posts untagged when no txid is given (a preview archive)", () => {
+    const sa = socialArchiveFromScripts([opReturnScript(archiveJSON)])!;
+    const x = socialArchiveToXArchive(sa);
+    expect(x.posts.every((p) => p.txid === undefined)).toBe(true);
+  });
 });
 
 describe("socialArchiveToXArchive media", () => {
@@ -143,6 +155,9 @@ describe("stitchToXArchive", () => {
     const p1 = x.posts.find((p) => p.id === "p1");
     expect(p1?.media).toEqual([{ type: "photo", url: "https://ordfs.network/TXB_0" }]);
     expect(x.posts.find((p) => p.id === "p2")?.media).toBeUndefined();
+    // The newest copy's txid wins, same as its other fields.
+    expect(p1?.txid).toBe("TXB");
+    expect(x.posts.find((p) => p.id === "p2")?.txid).toBe("TXA");
   });
 
   it("keeps media from an older archive when a newer text-only copy re-carries the post", () => {

@@ -21,6 +21,9 @@ export interface XPost {
   replyToId?: string;
   media?: Array<{ type: string; url: string; preview?: string }>;
   parent?: { author: string; text: string };
+  /** The transaction whose archive carried this post's newest copy. Absent
+   * for a preview-archive post, which was never inscribed. */
+  txid?: string;
 }
 
 export interface XArchive {
