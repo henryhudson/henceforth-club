@@ -55,10 +55,11 @@ export default function PostsScrollLoader({
       try {
         const url = `/api/x/posts?handle=${encodeURIComponent(handle)}&offset=${offset}&mode=latest`;
         const res = await fetch(url);
-        if (!res.ok) {
-          setExhausted(true);
-          return;
-        }
+        // A non-OK response (e.g. a transient server error) is exactly as
+        // retryable as a thrown network error — fall through to the same
+        // "leave the sentinel in place" recovery below rather than
+        // permanently exhausting the feed over one bad response.
+        if (!res.ok) return;
         const body = (await res.json()) as PostsResponse;
         setPosts((prev) => [...prev, ...body.posts]);
         setTxTimes(body.txTimes);
