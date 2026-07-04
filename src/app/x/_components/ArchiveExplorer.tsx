@@ -59,7 +59,7 @@ export default function ArchiveExplorer() {
           </p>
         )}
       </div>
-      <ProfileView archive={archive} />
+      <ProfileView archive={archive} isPreview />
     </div>
   );
 }
