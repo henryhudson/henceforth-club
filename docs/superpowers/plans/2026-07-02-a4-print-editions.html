@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A4 print editions — implementation plan</title>
+<style>
+  :root { --bg:#f4f1ea; --ink:#1c1a16; --muted:#6b6358; --rule:#d8d0c0; --accent:#a8431f; --accent-soft:#c4a572; --card:#fbf9f4; --code-bg:#1e1e1e; --code-ink:#e8e8e8; --ok:#2f6f3e; --warn:#a8431f; --shadow:0 1px 3px rgba(0,0,0,0.08); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.65;}
+  .wrap{max-width:880px;margin:0 auto;padding:56px 32px;} header.doc{margin-bottom:40px;border-bottom:2px solid var(--rule);padding-bottom:24px;}
+  .eyebrow{font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:34px;line-height:1.15;margin:0 0 12px;font-weight:700;} h2{font-size:24px;margin:48px 0 14px;padding-top:20px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 10px;} .lede{font-size:19px;color:var(--muted);margin:0;} p{margin:14px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(0,0,0,0.06);padding:2px 6px;border-radius:4px;}
+  pre{background:var(--code-bg);color:var(--code-ink);padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  .task{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:8px 22px 18px;margin:22px 0;box-shadow:var(--shadow);}
+  .task .tasknum{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);}
+  .files{font-size:14px;background:#efe9dc;border-radius:6px;padding:10px 14px;margin:10px 0;}
+  .note{background:#f6efe0;border-left:4px solid var(--accent-soft);padding:10px 16px;border-radius:0 6px 6px 0;margin:14px 0;}
+  ul{margin:12px 0;padding-left:24px;} li{margin:5px 0;}
+  ul.steps{list-style:none;padding-left:4px;} ul.steps>li{margin:12px 0;padding-left:30px;position:relative;}
+  ul.steps>li input[type=checkbox]{position:absolute;left:0;top:5px;width:18px;height:18px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Implementation plan · 2026-07-02 · Morning Board</div>
+<h1>A4 print editions</h1>
+<p class="lede">Print stylesheet as the A4 form, publish-time PDF rendering via local Chrome, Vercel Blob storage behind gated download routes — per the approved spec <code>docs/superpowers/specs/2026-07-02-a4-print-editions-design.html</code>.</p>
+</header>
+
+<p><strong>For agentic workers:</strong> REQUIRED SUB-SKILL: <code>superpowers:subagent-driven-development</code> or <code>superpowers:executing-plans</code>, task-by-task. Checkbox steps for tracking.</p>
+
+<p><strong>Goal:</strong> every daily and weekly edition prints as an article-styled A4 page and exists as an archived PDF downloadable behind the board gate.</p>
+<p><strong>Architecture:</strong> the print CSS is the single source of the A4 layout; <code>scripts/board/render-pdf.mjs</code> (puppeteer-core → installed Chrome) freezes the live pages to PDF at publish time and uploads to Vercel Blob at fixed pathnames; thin gated route handlers stream the files.</p>
+<p><strong>Tech stack:</strong> Tailwind v4 <code>print:</code> variant + a global <code>@media print</code> block, puppeteer-core (devDependency), pdf-lib (devDependency, page-count budget), @vercel/blob (dependency), existing @upstash/redis.</p>
+
+<h2>Global constraints</h2>
+<ul>
+  <li>Branch <code>feat/a4-print-editions</code> (already holds the spec) in a worktree at <code>~/Programming/Main/hc-print</code>; never touch <code>~/Programming/Main/henceforth-club</code>.</li>
+  <li>Blob pathnames exactly <code>board-pdfs/daily-&lt;date&gt;.pdf</code> / <code>board-pdfs/week-&lt;date&gt;.pdf</code>; download filenames exactly <code>henceforth-daily-&lt;date&gt;.pdf</code> / <code>henceforth-week-&lt;date&gt;.pdf</code>.</li>
+  <li>Page budgets are enforced, not advisory: daily = 1 A4 page, weekly ≤ 2 — the render script exits non-zero on breach.</li>
+  <li>Blob URLs never surface to the client; the gated routes are the only readers. Download routes are read-only GETs (no side effects — see this morning's logout lesson).</li>
+  <li>No acronyms in visible copy or commit prose. TypeScript strict. <code>npm run build</code> before any push; commit per task, scoped adds.</li>
+  <li>BLOB_READ_WRITE_TOKEN will NOT exist until Henry enables Blob (ship-time step) — every Blob touchpoint must degrade gracefully without it (script: <code>--out</code> local mode; routes: friendly 404).</li>
+</ul>
+
+<div class="task">
+<div class="tasknum">Task 0 · Worktree + baseline <span style="color:#6b6358">~5 min</span></div>
+<ul class="steps">
+  <li><input type="checkbox"> <code>cd ~/Programming/Main/henceforth-club && git fetch --quiet && git worktree add ../hc-print feat/a4-print-editions && cp .env.local ../hc-print/.env.local && cd ../hc-print && git rebase --quiet origin/main && npm install</code> (the branch predates today's merges — rebase onto current origin/main; it contains only the spec commit, so the rebase is trivial).</li>
+  <li><input type="checkbox"> Baseline: <code>npm test</code> (expect 123 tests — 117 + Task 1's 6 from the reports feature… run and record the actual count), <code>npm run build</code> green. Push the rebased branch: <code>git push --no-verify --force-with-lease</code> (safe: the branch is ours alone, spec-only, just rebased).</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 1 · Pathname/filename helpers, test-first <span style="color:#6b6358">~10 min</span></div>
+<div class="files"><strong>Files:</strong> create <code>src/lib/board-pdf.ts</code> · create <code>src/lib/board-pdf.test.ts</code><br>
+<strong>Produces:</strong> <code>type EditionKind = "daily" | "week"</code> · <code>blobPathname(kind: EditionKind, date: string): string</code> · <code>downloadFilename(kind: EditionKind, date: string): string</code> — Tasks 3 (as literals in the script, kept in sync), 4 consume these.</div>
+<ul class="steps">
+  <li><input type="checkbox"> <strong>Failing tests</strong> — <code>src/lib/board-pdf.test.ts</code>:
+<pre><code>import { describe, expect, it } from "vitest";
+import { blobPathname, downloadFilename } from "./board-pdf";
+
+describe("board-pdf naming", () =&gt; {
+  it("builds blob pathnames", () =&gt; {
+    expect(blobPathname("daily", "2026-07-02")).toBe("board-pdfs/daily-2026-07-02.pdf");
+    expect(blobPathname("week", "2026-06-29")).toBe("board-pdfs/week-2026-06-29.pdf");
+  });
+  it("builds download filenames", () =&gt; {
+    expect(downloadFilename("daily", "2026-07-02")).toBe("henceforth-daily-2026-07-02.pdf");
+    expect(downloadFilename("week", "2026-06-29")).toBe("henceforth-week-2026-06-29.pdf");
+  });
+});</code></pre>
+  Run <code>npx vitest run src/lib/board-pdf.test.ts</code> → FAIL (module not found).</li>
+  <li><input type="checkbox"> <strong>Implement</strong> — <code>src/lib/board-pdf.ts</code>:
+<pre><code>export type EditionKind = "daily" | "week";
+
+export function blobPathname(kind: EditionKind, date: string): string {
+  return `board-pdfs/${kind}-${date}.pdf`;
+}
+
+export function downloadFilename(kind: EditionKind, date: string): string {
+  return `henceforth-${kind}-${date}.pdf`;
+}</code></pre>
+  Run again → 2 passed.</li>
+  <li><input type="checkbox"> <strong>Commit.</strong> <code>git add src/lib/board-pdf.ts src/lib/board-pdf.test.ts && git commit -m "feat(board): blob pathname and download filename helpers for print editions"</code></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 2 · The A4 print stylesheet <span style="color:#6b6358">~40 min</span></div>
+<div class="files"><strong>Files:</strong> modify <code>src/app/globals.css</code> (append at end) · modify <code>src/app/board/reports/[date]/page.tsx</code> · modify <code>src/app/board/reports/week/[date]/page.tsx</code></div>
+<ul class="steps">
+  <li><input type="checkbox"> <strong>Global print block</strong> — append to <code>src/app/globals.css</code>. The site is dark-only on screen; print must invert to ink-on-paper by overriding the theme tokens. Open the <code>@theme inline</code> block at the top of this same file and use ITS exact custom-property names (the board pages consume: foreground, muted, card-border, card-bg, accent, accent-green, accent-warm, background) — the block below shows the shape with the expected names; correct any that differ in the theme block:
+<pre><code>/* ── A4 print editions (board report pages) ─────────────────── */
+@page { size: A4; margin: 12mm; }
+
+@media print {
+  :root {
+    --background: #ffffff;
+    --color-foreground: #1c1917;
+    --color-muted: #57534e;
+    --color-card-border: #d6d3d1;
+    --color-card-bg: #fafaf9;
+    --color-accent: #0e7490;
+    --color-accent-green: #166534;
+    --color-accent-warm: #92400e;
+  }
+  html { background: #ffffff !important; }
+  body { background: #ffffff !important; color: #1c1917 !important; font-size: 11px; line-height: 1.45; }
+  body::before { display: none !important; }   /* noise texture overlay */
+  nav { display: none !important; }             /* site navbar */
+  .print-hidden { display: none !important; }
+  main { max-width: none !important; padding: 0 !important; }
+  section { break-inside: avoid; }
+  a { color: inherit !important; text-decoration: none !important; }
+  input[type="checkbox"] { width: 9px; height: 9px; }
+
+  /* weekly edition: small type, two-page ceiling */
+  .print-weekly { font-size: 9.5px; line-height: 1.35; }
+  .print-weekly h1 { font-size: 18px; }
+  .print-weekly h2 { font-size: 12px; margin-top: 10px; }
+}</code></pre></li>
+  <li><input type="checkbox"> <strong>Daily edition page</strong> — <code>src/app/board/reports/[date]/page.tsx</code>: add <code>print:hidden</code> to (a) the header links div (the one holding Reports/Board/Week), (b) the <code>&lt;details&gt;</code> fold (className becomes <code>"mt-10 print:hidden"</code>). Content sections (emergencies, plan, cadence, verdicts) stay printable.</li>
+  <li><input type="checkbox"> <strong>Weekly edition page</strong> — <code>src/app/board/reports/week/[date]/page.tsx</code>: add <code>print-weekly</code> to the <code>&lt;main&gt;</code> className; <code>print:hidden</code> on the header links div and the <code>&lt;details&gt;</code> fold. The high-level sections (headline, sales strip, accomplished-vs-planned) stay printable.</li>
+  <li><input type="checkbox"> <strong>Verify by eye</strong> — <code>npm run dev</code>, log in (<code>/board/login</code>, board password), open today's daily, Cmd+P print preview: one A4 page, white background, ink text, no navbar/links/fold. Weekly likewise in smaller type. Fix token names if colours look wrong. Record what you saw in the report. Kill the server.</li>
+  <li><input type="checkbox"> <strong>Gate + commit.</strong> <code>npm run build</code> green. <code>git add src/app/globals.css "src/app/board/reports/[date]/page.tsx" "src/app/board/reports/week/[date]/page.tsx" && git commit -m "feat(board): A4 print stylesheet — daily one-page brief, weekly compact"</code></li>
+</ul>
+<div class="note">If the daily overflows one page in preview, tighten in this order: base font 11px → 10px; section margins; the plan items' detail line-height. The Task 3 budget check is the enforcement backstop — tune here until it passes there.</div>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 3 · The render script <span style="color:#6b6358">~45 min</span></div>
+<div class="files"><strong>Files:</strong> create <code>scripts/board/render-pdf.mjs</code> · modify <code>package.json</code> (devDependencies)<br>
+<strong>Consumes:</strong> the print CSS (Task 2); live pages at www.henceforth.club. <strong>Produces:</strong> blobs at the Task 1 pathnames; modes <code>daily &lt;date&gt;</code> · <code>week &lt;weekOf&gt;</code> · <code>--all</code> · <code>--out &lt;path&gt;</code> (local file, skip upload).</div>
+<ul class="steps">
+  <li><input type="checkbox"> <strong>Install:</strong> <code>npm install --save-dev puppeteer-core pdf-lib</code></li>
+  <li><input type="checkbox"> <strong>Write the script</strong> — <code>scripts/board/render-pdf.mjs</code>:
+<pre><code>// Render board report editions to A4 PDFs with the locally installed Chrome,
+// enforce the page budget, and upload to Vercel Blob at fixed pathnames.
+// Publish FIRST, render SECOND — this reads the LIVE pages.
+//
+// Usage (from henceforth-club):
+//   node --env-file=.env.local scripts/board/render-pdf.mjs daily 2026-07-02
+//   node --env-file=.env.local scripts/board/render-pdf.mjs week 2026-06-29
+//   node --env-file=.env.local scripts/board/render-pdf.mjs --all
+//   ... daily 2026-07-02 --out /tmp/daily.pdf   (local file, no upload)
+import puppeteer from "puppeteer-core";
+import { createHmac } from "node:crypto";
+import { writeFile } from "node:fs/promises";
+import { PDFDocument } from "pdf-lib";
+import { Redis } from "@upstash/redis";
+
+const SITE = "https://www.henceforth.club";
+const BUDGET = { daily: 1, week: 2 };
+// Keep in sync with src/lib/board-pdf.ts (the script cannot import TypeScript).
+const blobPathname = (kind, date) =&gt; `board-pdfs/${kind}-${date}.pdf`;
+
+function mintSession(secret, ttlMs = 10 * 60 * 1000) {
+  const payload = Buffer.from(JSON.stringify({ exp: Date.now() + ttlMs })).toString("base64url");
+  const sig = createHmac("sha256", secret).update(payload).digest("base64url");
+  return `${payload}.${sig}`;
+}
+
+async function render(browser, kind, date, outPath) {
+  const path = kind === "week" ? `week/${date}` : date;
+  const url = `${SITE}/board/reports/${path}`;
+  const page = await browser.newPage();
+  await page.setCookie({
+    name: "board_session",
+    value: mintSession(process.env.BOARD_COOKIE_SECRET),
+    domain: "www.henceforth.club",
+    path: "/",
+    httpOnly: true,
+    secure: true,
+  });
+  const resp = await page.goto(url, { waitUntil: "networkidle0", timeout: 45_000 });
+  if (!resp || !resp.ok()) throw new Error(`${url} answered ${resp ? resp.status() : "nothing"} — not rendering`);
+  const pdf = await page.pdf({ format: "A4", preferCSSPageSize: true, printBackground: true });
+  await page.close();
+
+  const pages = (await PDFDocument.load(pdf)).getPageCount();
+  if (pages &gt; BUDGET[kind]) {
+    throw new Error(`${kind} ${date}: ${pages} pages exceeds the budget of ${BUDGET[kind]} — tighten the print stylesheet, do not skip`);
+  }
+
+  if (outPath) {
+    await writeFile(outPath, pdf);
+    console.log(`wrote ${outPath} (${pages} page${pages === 1 ? "" : "s"}, ${pdf.length} bytes) — upload skipped`);
+    return;
+  }
+  const { put } = await import("@vercel/blob");
+  const blob = await put(blobPathname(kind, date), Buffer.from(pdf), {
+    access: "public",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    contentType: "application/pdf",
+  });
+  console.log(`uploaded ${blob.pathname} (${pages} page${pages === 1 ? "" : "s"}, ${pdf.length} bytes)`);
+}
+
+const args = process.argv.slice(2);
+const outIdx = args.indexOf("--out");
+const outPath = outIdx &gt;= 0 ? args[outIdx + 1] : null;
+if (outIdx &gt;= 0) args.splice(outIdx, 2);
+
+if (!process.env.BOARD_COOKIE_SECRET) { console.error("BOARD_COOKIE_SECRET missing — run with --env-file=.env.local"); process.exit(1); }
+if (!outPath &amp;&amp; !process.env.BLOB_READ_WRITE_TOKEN) { console.error("BLOB_READ_WRITE_TOKEN missing — enable Blob + `vercel env pull`, or pass --out for a local render"); process.exit(1); }
+
+const jobs = [];
+if (args[0] === "--all") {
+  const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  const redis = new Redis({ url, token });
+  for (const d of ((await redis.smembers("board:report:dates")) ?? []).sort()) jobs.push(["daily", d]);
+  for (const w of ((await redis.smembers("board:weeks")) ?? []).sort()) jobs.push(["week", w]);
+} else {
+  const [kind, date] = args;
+  if (!["daily", "week"].includes(kind) || !/^\d{4}-\d{2}-\d{2}$/.test(date ?? "")) {
+    console.error("usage: render-pdf.mjs (daily|week) YYYY-MM-DD [--out path] | --all"); process.exit(1);
+  }
+  jobs.push([kind, date]);
+}
+
+const browser = await puppeteer.launch({ channel: "chrome", headless: true });
+let failed = 0;
+try {
+  for (const [kind, date] of jobs) {
+    try { await render(browser, kind, date, outPath); }
+    catch (e) { failed++; console.error(`FAILED ${kind} ${date}: ${e.message}`); }
+  }
+} finally { await browser.close(); }
+if (failed) { console.error(`${failed}/${jobs.length} render(s) failed`); process.exit(1); }</code></pre></li>
+  <li><input type="checkbox"> <strong>Verify locally (no Blob token yet)</strong> — today's daily against the LIVE site:
+  <code>node --env-file=.env.local scripts/board/render-pdf.mjs daily 2026-07-02 --out /tmp/daily-test.pdf</code>
+  Expected: <code>wrote /tmp/daily-test.pdf (1 page, …)</code>. If the budget check throws, tune Task 2's print CSS (font 11px → 10px, margins) and re-run — that loop is the point. Then <code>… week 2026-06-29 --out /tmp/week-test.pdf</code> → ≤ 2 pages. <code>open /tmp/daily-test.pdf</code> and describe what it looks like in your report (article-styled? fold gone? readable?).</li>
+  <li><input type="checkbox"> <strong>Commit.</strong> <code>git add scripts/board/render-pdf.mjs package.json package-lock.json && git commit -m "feat(board): publish-time A4 renderer — local Chrome to Vercel Blob with an enforced page budget"</code></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 4 · Download routes + PDF buttons <span style="color:#6b6358">~35 min</span></div>
+<div class="files"><strong>Files:</strong> create <code>src/lib/board-pdf-serve.ts</code> · create <code>src/app/board/reports/[date]/pdf/route.ts</code> · create <code>src/app/board/reports/week/[date]/pdf/route.ts</code> · modify both edition pages + <code>src/app/board/reports/page.tsx</code> (buttons) · modify <code>package.json</code> (dependency)</div>
+<ul class="steps">
+  <li><input type="checkbox"> <strong>Install:</strong> <code>npm install @vercel/blob</code></li>
+  <li><input type="checkbox"> <strong>Shared server helper</strong> — <code>src/lib/board-pdf-serve.ts</code>:
+<pre><code>import { NextResponse } from "next/server";
+import { list } from "@vercel/blob";
+import { blobPathname, downloadFilename, type EditionKind } from "./board-pdf";
+
+const notRendered = () =&gt;
+  NextResponse.json({ error: "Not rendered yet — the next /hh run creates it." }, { status: 404 });
+
+/** Streams a stored edition PDF from Vercel Blob, or a friendly 404 when the
+ *  blob (or the Blob token itself, in local dev) is absent. Read-only. */
+export async function servePdf(kind: EditionKind, date: string): Promise&lt;Response&gt; {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return notRendered();
+  try {
+    const pathname = blobPathname(kind, date);
+    const { blobs } = await list({ prefix: pathname, limit: 1 });
+    const hit = blobs.find((b) =&gt; b.pathname === pathname);
+    if (!hit) return notRendered();
+    const upstream = await fetch(hit.url);
+    if (!upstream.ok || !upstream.body) return notRendered();
+    return new Response(upstream.body, {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `inline; filename="${downloadFilename(kind, date)}"`,
+        "Cache-Control": "private, no-store",
+      },
+    });
+  } catch {
+    return notRendered();
+  }
+}</code></pre></li>
+  <li><input type="checkbox"> <strong>Routes</strong> — <code>src/app/board/reports/[date]/pdf/route.ts</code>:
+<pre><code>import { servePdf } from "@/lib/board-pdf-serve";
+
+export const dynamic = "force-dynamic";
+
+export async function GET(_req: Request, { params }: { params: Promise&lt;{ date: string }&gt; }) {
+  const { date } = await params;
+  return servePdf("daily", date);
+}</code></pre>
+  and <code>src/app/board/reports/week/[date]/pdf/route.ts</code> identical with <code>servePdf("week", date)</code>.</li>
+  <li><input type="checkbox"> <strong>Buttons</strong> — in each edition page's header links div (daily: <code>&lt;a href={`/board/reports/${date}/pdf`} className="underline print:hidden"&gt;PDF&lt;/a&gt;</code>; weekly: <code>href={`/board/reports/week/${date}/pdf`}</code>). On the Reports index, add a small trailing link on each row inside the &lt;li&gt; after the main Link: <code>&lt;a href={`${e.href.replace("/board/reports", "/board/reports") }/pdf`} …&gt;</code> — concretely: <code>&lt;a href={`${e.href}/pdf`} className="ml-auto text-xs text-muted underline"&gt;pdf&lt;/a&gt;</code> (the edition hrefs from editionIndex compose directly: <code>/board/reports/2026-07-02/pdf</code>, <code>/board/reports/week/2026-06-29/pdf</code>). Make the row a flex container if it is not (<code>className="… flex items-baseline gap-3"</code> already present on the inner Link — put the pdf anchor as a sibling of the Link inside the li, with the li getting <code>flex items-baseline</code>).</li>
+  <li><input type="checkbox"> <strong>Verify</strong> — <code>npm run dev</code>, log in: <code>curl -b &lt;cookie&gt; localhost:3000/board/reports/2026-07-02/pdf</code> → 404 JSON with the friendly message (no token locally = graceful). Bad date → same 404. Buttons visible on both editions + index. Kill server.</li>
+  <li><input type="checkbox"> <strong>Gate + commit.</strong> <code>npm test</code> (board-pdf tests still green), <code>npm run build</code>. <code>git add -A src/ package.json package-lock.json && git commit -m "feat(board): gated PDF download routes and buttons for the print editions"</code></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 5 · Command docs <span style="color:#6b6358">~10 min</span></div>
+<div class="files"><strong>Files:</strong> modify <code>~/.claude/commands/hh.md</code> · modify <code>~/.claude/commands/whh.md</code> (outside git — no commits)</div>
+<ul class="steps">
+  <li><input type="checkbox"> hh.md step 7, after the sync-docs bullet, append a new bullet:
+<pre><code>- **Render the print editions** (publish first, render second): from henceforth-club run
+  `node --env-file=.env.local scripts/board/render-pdf.mjs daily $(date +%F)` and
+  `node --env-file=.env.local scripts/board/render-pdf.mjs week &lt;current weekOf&gt;`
+  (the week re-renders daily because the planner's done-marks change). The daily MUST
+  pass its one-page budget — a failure means tighten the print stylesheet, never skip.
+  Requires BLOB_READ_WRITE_TOKEN in .env.local.</code></pre></li>
+  <li><input type="checkbox"> whh.md, after its publish step, append: <code>Render the weekly edition PDF: node --env-file=.env.local scripts/board/render-pdf.mjs week &lt;weekOf&gt;.</code></li>
+  <li><input type="checkbox"> Verify by grep: both insertions present exactly once; include the grep output in the report.</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 6 · Ship — gate, pull request, Blob enable, backfill, live verify <span style="color:#6b6358">~25 min + Henry's step</span></div>
+<ul class="steps">
+  <li><input type="checkbox"> Full gate in the worktree: <code>npm test</code> · <code>npm run lint</code> · <code>npm run build</code> — all green.</li>
+  <li><input type="checkbox"> Push; open the pull request titled "A4 print editions: print stylesheet, publish-time PDF renderer, gated downloads" with a body summarising the three parts + spec link + the note that PDFs appear after the Blob token lands and the backfill runs.</li>
+  <li><input type="checkbox"> <strong>HENRY'S STEP (blocks the rest):</strong> enable Blob on the henceforth-club Vercel project (Storage → Create → Blob), then in the main checkout run <code>vercel env pull</code> and copy the refreshed <code>.env.local</code> into the worktree. The controller asks Henry for this — do not proceed without the token.</li>
+  <li><input type="checkbox"> Backfill: <code>node --env-file=.env.local scripts/board/render-pdf.mjs --all</code> → every daily renders at 1 page, weeks ≤ 2, all uploaded. Any budget failure loops back to Task 2 tuning.</li>
+  <li><input type="checkbox"> Merge the pull request (Henry has pre-authorised this feature's merge only if he says so at the time — ask). After deploy: authenticated curl of <code>/board/reports/2026-07-02/pdf</code> returns <code>application/pdf</code> with the right filename; the PDF opens and is one A4 page; a never-rendered date 404s friendly.</li>
+</ul>
+</div>
+
+<h2>Self-review (spec coverage)</h2>
+<ul>
+  <li>Spec §1 print stylesheet + budgets + Cmd+P parity → Tasks 2, 3 (budget enforcement).</li>
+  <li>Spec §2 render script (engine, auth mint, render, budget, upload, modes, callers) → Tasks 3, 5.</li>
+  <li>Spec §3 routes + buttons + friendly 404 → Task 4 (date guard included in servePdf).</li>
+  <li>Spec dependencies table → Tasks 3 (devDeps) and 4 (dependency).</li>
+  <li>Spec definition of done items 1–5 → Task 2 step 4 (Cmd+P), Task 6 backfill, Task 6 live verify, Task 4 verify (friendly 404), Task 6 gate.</li>
+  <li>Out of scope respected: no serverless Chromium, no ungated links, no other pages' print styles.</li>
+</ul>
+
+</div>
+</body>
+</html>

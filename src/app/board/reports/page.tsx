@@ -21,7 +21,7 @@ export default async function ReportsIndex() {
       <p className="text-sm text-muted">One-page editions, newest first — daily morning briefs and weekly reviews.</p>
       <ol className="mt-6 flex flex-col">
         {editions.map((e) => (
-          <li key={e.href} className="border-b border-card-border py-3 last:border-b-0">
+          <li key={e.href} className="flex items-baseline border-b border-card-border py-3 last:border-b-0">
             <Link href={e.href} className="group flex items-baseline gap-3">
               <span
                 className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
@@ -36,6 +36,7 @@ export default async function ReportsIndex() {
                 {e.type === "weekly" ? `Week of ${e.date}` : e.date}
               </span>
             </Link>
+            <a href={`${e.href}/pdf`} className="ml-auto text-xs text-muted underline hover:text-foreground">pdf</a>
           </li>
         ))}
         {editions.length === 0 && <p className="py-6 text-muted">No editions yet — run /hh.</p>}

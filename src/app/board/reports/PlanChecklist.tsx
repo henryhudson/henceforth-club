@@ -91,7 +91,7 @@ export default function PlanChecklist({
                   </span>
                   {it.title}
                 </p>
-                <p className="mt-1 text-sm leading-relaxed text-muted">{it.detail}</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted print:hidden">{it.detail}</p>
               </div>
             </li>
           );
