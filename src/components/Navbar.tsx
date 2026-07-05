@@ -41,19 +41,30 @@ export default function Navbar() {
   // Liquid-glass pill, mirroring the henceforth CTA (rounded-full + translucent
   // tint + backdrop-blur + accent glow). Green = signed out (sign in); red =
   // signed in (sign out, which clears the httpOnly session server-side).
-  const authButton = (extra = "") => (
-    <Link
-      href={signedIn ? "/board/logout" : "/board"}
-      onClick={() => setOpen(false)}
-      className={`inline-flex items-center justify-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium backdrop-blur-md transition-all ${
-        signedIn
-          ? "border-red-500/40 bg-red-500/10 text-red-400 shadow-lg shadow-red-500/10 hover:border-red-500/60 hover:bg-red-500/20 hover:shadow-red-500/20"
-          : "border-accent-green/40 bg-accent-green/10 text-accent-green shadow-lg shadow-accent-green/10 hover:border-accent-green/60 hover:bg-accent-green/20 hover:shadow-accent-green/20"
-      } ${extra}`}
-    >
-      {signedIn ? "Sign out" : "Sign in"}
-    </Link>
-  );
+  //
+  // Sign out is a form POST, never a <Link>: the router prefetches Link hrefs,
+  // and a prefetched cookie-clearing GET signs the user out on page render
+  // instead of on click (the 2026-07-05 session-drop bug). The form uses
+  // display:contents so the flex layouts see only the button.
+  const pill = (extra: string) =>
+    `inline-flex items-center justify-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium backdrop-blur-md transition-all ${
+      signedIn
+        ? "border-red-500/40 bg-red-500/10 text-red-400 shadow-lg shadow-red-500/10 hover:border-red-500/60 hover:bg-red-500/20 hover:shadow-red-500/20"
+        : "border-accent-green/40 bg-accent-green/10 text-accent-green shadow-lg shadow-accent-green/10 hover:border-accent-green/60 hover:bg-accent-green/20 hover:shadow-accent-green/20"
+    } ${extra}`;
+
+  const authButton = (extra = "") =>
+    signedIn ? (
+      <form action="/board/logout" method="POST" className="contents">
+        <button type="submit" onClick={() => setOpen(false)} className={pill(extra)}>
+          Sign out
+        </button>
+      </form>
+    ) : (
+      <Link href="/board" onClick={() => setOpen(false)} className={pill(extra)}>
+        Sign in
+      </Link>
+    );
 
   return (
     <nav className="animate-slide-down sticky top-0 z-50 border-b border-card-border/50 bg-background/70 backdrop-blur-xl">
