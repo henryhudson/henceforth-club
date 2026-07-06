@@ -1,0 +1,35 @@
+# The Hansard is on the App Store
+
+**A native iOS browser for the UK Parliament — every Member, every Lord, every constituency boundary, working offline from first launch. Out now for 99p.**
+
+*Henry Hudson · Henceforth · July 2026*
+
+[The Hansard](https://apps.apple.com/gb/app/the-hansard/id6762037651) went live on the App Store on 2 July 2026. It shows Parliament as it actually sits: the House of Commons drawn seat by seat, around 650 of them coloured by party, and the House of Lords in its own chamber of roughly 800. Tap a seat and you get the person — voting record, written questions, latest election result, registered interests, and the debates they have spoken in.
+
+---
+
+## What it does
+
+- **Both chambers, seat by seat.** Search a name and the chamber highlights where that member sits. Pick a division and watch the seats split into Ayes and Noes — a vote replayed on the actual floor plan.
+- **A constituency map.** Every UK constituency boundary — more than 1,100 polygons — drawn on an interactive map and coloured by the sitting member's party.
+- **Find your MP.** Type a postcode and the app resolves your constituency and takes you straight to your member.
+- **The written record.** Search Hansard debates, follow bills through both houses, browse petitions, and read divisions from the Commons and the Lords.
+- **Follow the people you care about.** Per-member notifications, refreshed quietly in the background, for new votes and contributions.
+
+## Offline from the first launch
+
+The app ships with bundled snapshots of the data it needs: full constituency geometry, both rosters, and about 1,500 compressed member profiles. A fresh install renders every list, every profile, and the whole map with networking switched off — try it in airplane mode. When you do have signal, the app syncs against the official Parliament data services (members-api.parliament.uk and its siblings), so the network's job is freshness rather than being a requirement for the app to work at all.
+
+<Notebox>
+This is the same engineering stance as the Henceforth wallet's [Trust Local, But Verify](/articles/trust-local-but-verify): the local snapshot is the source of truth you can hold in your hand, and the network hands you newer evidence when it can. It turns out a Parliament browser wants the same architecture as a Bitcoin wallet.
+</Notebox>
+
+## 99p, everything included
+
+The Hansard costs 99p, once. There are no in-app purchases and no subscription — notifications and every other feature ship unlocked with the purchase, and there is no account to create. It is written entirely in Swift 6 and SwiftUI, with no third-party libraries, which is a large part of why it opens fast and feels native everywhere.
+
+## What's next
+
+The working cadence is one update a week. The first will refresh the bundled representation data, so by-election results and party changes appear on the map and in the chambers without waiting for you to open the app on a good connection. If something looks wrong or missing, [tell me](/contact) — the data pipeline regenerates from the official sources, and a report from a constituent who knows their patch is worth more than any automated check I can write.
+
+[**Get The Hansard on the App Store →**](https://apps.apple.com/gb/app/the-hansard/id6762037651)

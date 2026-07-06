@@ -10,6 +10,13 @@ export const metadata: Metadata = {
 
 const articles = [
   {
+    href: "/articles/hansard-is-live",
+    title: "The Hansard is on the App Store",
+    blurb:
+      "A native iOS browser for the UK Parliament — every Member, every Lord, every constituency boundary, working offline from first launch. Both chambers seat by seat, division replay, a full constituency map, and postcode lookup. Out now for 99p.",
+    date: "2026",
+  },
+  {
     href: "/articles/trust-local-but-verify",
     title: "Trust Local, But Verify",
     blurb:
