@@ -8,7 +8,7 @@
 //   node --env-file=.env.local scripts/board/render-pdf.mjs --all
 //   ... daily 2026-07-02 --out /tmp/daily.pdf   (local file, no inscription)
 //   ... daily 2026-07-02 week 2026-06-29 --dry-run   (build+fee+sign against a
-//       fake 10,000-satoshi source, deterministic 1 sat/kb fee, never broadcast)
+//       fake 10,000-satoshi source, same pinned 100 sat/kb fee as live, never broadcast)
 //
 // RENDER_PDF_BASE overrides the site origin (default https://www.henceforth.club).
 // For pre-merge verification, point it at a local production server, e.g.
@@ -26,12 +26,14 @@ const SITE_HOST = new URL(SITE).hostname;
 const BUDGET = { daily: 1, week: 2 };
 // Keep in sync with src/lib/board-pdf-crypto.ts (the script cannot import TypeScript).
 const INSCRIPTION_MARKER = "HHRPT1";
-// Expected daily fee is ~60 satoshis; this is generous headroom. The sdk's
-// Transaction.fee() silently DELETES the change output when change <= 0, so
-// without the assertions below a pathological fee rate or a low-balance key
-// would burn the whole input as miner fee. Never broadcast a transaction
-// whose only output is the OP_RETURN.
-const FEE_CEILING_SATS = 5000;
+// Expected fees at 100 satoshis per kilobyte (the rate BOTH transaction
+// processors advertise — arc.taal.com/v1/policy and arc.gorillapool.io/v1/policy,
+// checked 2026-07-07): daily ≈ 5,250 satoshis, week ≈ 4,050. The ceiling is
+// generous headroom above that. The sdk's Transaction.fee() silently DELETES the
+// change output when change <= 0, so without the assertions below a pathological
+// fee rate or a low-balance key would burn the whole input as miner fee. Never
+// broadcast a transaction whose only output is the OP_RETURN.
+const FEE_CEILING_SATS = 10_000;
 
 function mintSession(secret, ttlMs = 10 * 60 * 1000) {
   const payload = Buffer.from(JSON.stringify({ exp: Date.now() + ttlMs })).toString("base64url");
@@ -128,9 +130,12 @@ async function inscribe(kind, date, pdf, prevTx, dryRun) {
   tx.addOutput({ lockingScript: opReturn, satoshis: 0 });
   tx.addP2PKHOutput(address); // change output; sdk computes the amount via fee()
 
-  // Dry-run pins the rate at 1 sat/kb so the numbers are deterministic and no
-  // network is touched; the real path uses the sdk default (LivePolicy).
-  await tx.fee(dryRun ? new SatoshisPerKilobyte(1) : undefined);
+  // 100 sat/kb in BOTH modes — the rate both miners' policy endpoints advertise
+  // (see FEE_CEILING_SATS note). Pinned rather than LivePolicy so dry-run and live
+  // price identically and deterministically; pinning at less than the advertised
+  // policy risks an accepted-but-never-mined transaction that the script would
+  // index as success (adversarial review, 2026-07-07).
+  await tx.fee(new SatoshisPerKilobyte(100));
 
   // Guard against the sdk's silent change deletion (see FEE_CEILING_SATS note).
   const fee = tx.getFee();
