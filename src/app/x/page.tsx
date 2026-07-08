@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getArchivePage, PAGE_SIZE } from "@/lib/xArchiveCache";
-import ProfilePage from "./_components/ProfilePage";
+import ProfileView from "./_components/ProfileView";
 import ArchiveDropZone from "./_components/ArchiveDropZone";
 import { WITNESS_HANDLE } from "./witness";
 
@@ -16,7 +16,11 @@ export default async function XPage() {
   const witness = await getArchivePage(WITNESS_HANDLE, 0, PAGE_SIZE);
 
   return (
-    <main className="min-h-screen bg-background pt-20">
+    // A <div>, not a <main>: the root layout already provides the single <main>
+    // landmark for every page (see app/layout.tsx). The homepage and app pages all
+    // follow this — a page that adds its own <main> nests a second landmark, which
+    // is invalid and confuses screen-reader navigation.
+    <div className="min-h-screen bg-background pt-20">
       <header className="mx-auto max-w-2xl px-6 py-10 text-center">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
           Reclaimed from X
@@ -26,11 +30,17 @@ export default async function XPage() {
       </header>
 
       {witness ? (
-        <ProfilePage
+        // The inner view, not the ProfilePage shell: ProfilePage brings its own
+        // <main> and header, which would nest a second landmark inside this page's
+        // <main> and repeat the "Reclaimed from X" eyebrow. It also mounts the
+        // infinite-scroll loader and reader-key navigation, which belong on the
+        // dedicated /x/<handle> reading route — here they would fight the spine
+        // that carries the visitor down to the drop zone. The block-explorer proof
+        // is not lost: it is the Proof block below.
+        <ProfileView
           archive={{ profile: witness.profile, posts: witness.posts }}
-          txid={witness.latestTxid}
           postCount={witness.postCount}
-          handle={WITNESS_HANDLE}
+          isPreview={false}
           txCount={witness.txCount}
           photoCount={witness.photoCount}
           firstInscribedAt={witness.firstInscribedAt}
@@ -43,6 +53,6 @@ export default async function XPage() {
       )}
 
       <ArchiveDropZone />
-    </main>
+    </div>
   );
 }
