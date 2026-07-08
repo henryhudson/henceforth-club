@@ -32,18 +32,26 @@ if (!sibling) {
   console.warn(`\n  SKIPPING cost parity: ${FIXTURE} not found.\n  The Swift estimator is the source of truth; this check needs it.\n`);
 }
 
-describe.skipIf(!sibling)("parity with the app's Swift estimator", () => {
-  const fixture = JSON.parse(readFileSync(FIXTURE, "utf8")) as {
-    feePerKb: number;
-    rows: Array<{
-      byteCount: number;
-      totalTxBytes: number;
-      minerFeeSats: number;
-      rewardSats: number;
-      totalSats: number;
-    }>;
-  };
+type ParityFixture = {
+  feePerKb: number;
+  rows: Array<{
+    byteCount: number;
+    totalTxBytes: number;
+    minerFeeSats: number;
+    rewardSats: number;
+    totalSats: number;
+  }>;
+};
 
+// Read the fixture at module scope, guarded. A describe.skipIf callback body still
+// runs at collection time — skipIf gates the tests inside, not the callback itself —
+// so reading the file inside the describe body would crash with ENOENT on any machine
+// without the sibling repository, rather than skipping. Reading here keeps the skip honest.
+const fixture: ParityFixture = sibling
+  ? (JSON.parse(readFileSync(FIXTURE, "utf8")) as ParityFixture)
+  : { feePerKb: 100, rows: [] };
+
+describe.skipIf(!sibling)("parity with the app's Swift estimator", () => {
   it.each(fixture.rows)("reproduces the fixture row for $byteCount bytes", (row) => {
     expect(estimateSingleOpReturn(row.byteCount, fixture.feePerKb)).toEqual({
       totalTxBytes: row.totalTxBytes,
