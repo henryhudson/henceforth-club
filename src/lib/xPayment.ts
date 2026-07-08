@@ -21,33 +21,6 @@ export const X_ARCHIVE_REWARD_ADDRESS = "1mSxVgV1h7crdb8Qr3e7o3H18GczcUsiC";
 const WOC = "https://api.whatsonchain.com/v1/bsv/main";
 const SATS_PER_BSV = 100_000_000;
 
-/**
- * Satoshis a caller must pay us for each X resource we are about to read.
- *
- * X charges $0.005 a resource. At BSV $12.975 that is 38,536 satoshis; with about
- * 29% margin, 49,505. The floor therefore SCALES with what a call will cost:
- * /api/x/fetch reads 101 resources and /api/x/archive reads 201, because it pages
- * the timeline twice — once for text, once for media. A single flat floor charged
- * both the same and lost money on the second.
- *
- * The price is pinned rather than fetched. A price feed can fail, and a failing
- * price feed must either fail open (spend money on a guess) or fail the endpoint,
- * and both are worse than a number a human chose and can see. The consequence is
- * that a fall in the BSV price erodes the margin: below about $10.10 a BSV this
- * no longer covers a call. Raise X_ARCHIVE_SATS_PER_RESOURCE when that happens.
- */
-export const SATS_PER_RESOURCE = 49_505;
-
-/** Reads only the one variable it needs, so a test can pass a bare object. */
-export function minPaymentSatsFor(
-  resources: number,
-  env: Record<string, string | undefined> = process.env,
-): number {
-  const raw = Number(env.X_ARCHIVE_SATS_PER_RESOURCE);
-  const perResource = Number.isFinite(raw) && raw > 0 ? raw : SATS_PER_RESOURCE;
-  return Math.max(1, Math.ceil(Math.max(0, resources) * perResource));
-}
-
 export function isTxid(value: string | null | undefined): value is string {
   return typeof value === "string" && /^[0-9a-fA-F]{64}$/.test(value);
 }
