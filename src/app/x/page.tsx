@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import ArchiveExplorer from "./_components/ArchiveExplorer";
+import ArchiveDropZone from "./_components/ArchiveDropZone";
 
 export const metadata: Metadata = {
   title: "My X profile, on Bitcoin",
@@ -18,7 +18,7 @@ export default function XPage() {
           Rendered straight from your X archive. Replies show who you replied to.
         </p>
       </header>
-      <ArchiveExplorer />
+      <ArchiveDropZone />
     </main>
   );
 }
