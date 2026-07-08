@@ -310,37 +310,26 @@ describe("getArchivePage", () => {
     expect(page?.postCount).toBe(2);
   });
 
-  it("falls back to the un-cached preview archive for a handle that isn't indexed", async () => {
+  it("returns null, and writes nothing to the cache, for a handle that isn't indexed", async () => {
     mockGetXTxids.mockResolvedValue([]);
     const redis = fakeRedis();
 
     const page = await getArchivePage("henryhudson6", 0, 5, fetchTxArchiveFrom({}), redis);
 
-    expect(page).not.toBeNull();
-    expect(page?.latestTxid).toBeNull();
+    expect(page).toBeNull();
     expect(await redis.get("x:posts:henryhudson6:meta")).toBeNull();
   });
 
-  it("returns null for a handle with no on-chain archive and no preview", async () => {
+  it("returns null for a handle with no on-chain archive", async () => {
     mockGetXTxids.mockResolvedValue([]);
     const page = await getArchivePage("totally-unknown", 0, 5, fetchTxArchiveFrom({}), fakeRedis());
     expect(page).toBeNull();
   });
 
-  it("falls back to the preview when every indexed transaction fails to fetch", async () => {
+  it("returns null when every indexed transaction fails to fetch — nothing to fall back to", async () => {
     mockGetXTxids.mockResolvedValue(["txMissing"]);
     const page = await getArchivePage("henryhudson6", 0, 5, fetchTxArchiveFrom({}), fakeRedis());
-    expect(page).not.toBeNull();
-    expect(page?.latestTxid).toBeNull();
-  });
-
-  it("gives a preview page no transaction data — it was never inscribed", async () => {
-    mockGetXTxids.mockResolvedValue([]);
-    const page = await getArchivePage("henryhudson6", 0, 5, fetchTxArchiveFrom({}), fakeRedis());
-    expect(page?.txCount).toBeUndefined();
-    expect(page?.photoCount).toBeUndefined();
-    expect(page?.firstInscribedAt).toBeUndefined();
-    expect(page?.txTimes).toEqual({});
+    expect(page).toBeNull();
   });
 
   it("counts photos across the deduplicated posts into photoCount", async () => {
@@ -549,13 +538,17 @@ describe("getArchivePost", () => {
     expect(await getArchivePost("h", "999", fetchTxArchive, redis)).toBeNull();
   });
 
-  it("finds a post in the un-cached preview archive", async () => {
-    mockGetXTxids.mockResolvedValue([]);
-    const page = await getArchivePage("henryhudson6", 0, 1, fetchTxArchiveFrom({}), fakeRedis());
-    const firstId = page?.posts[0]?.id;
-    expect(firstId).toBeTruthy();
+  it("finds a post via a freshly-stitched (not yet cached) archive", async () => {
+    mockGetXTxids.mockResolvedValue(["txA"]);
+    const fetchTxArchive = fetchTxArchiveFrom({ txA: socialArchive("h", chainOf("1", "2")) });
 
-    const found = await getArchivePost("henryhudson6", firstId ?? "", fetchTxArchiveFrom({}), fakeRedis());
-    expect(found?.id).toBe(firstId);
+    const found = await getArchivePost("h", "2", fetchTxArchive, fakeRedis());
+    expect(found?.text).toBe("chain post 2");
+  });
+
+  it("returns null for a handle with no on-chain archive at all", async () => {
+    mockGetXTxids.mockResolvedValue([]);
+    const found = await getArchivePost("totally-unknown", "1", fetchTxArchiveFrom({}), fakeRedis());
+    expect(found).toBeNull();
   });
 });

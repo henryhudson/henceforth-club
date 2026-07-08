@@ -4,7 +4,6 @@ import { getRedis } from "./redis";
 import { getXTxids } from "./xIndex";
 import { fetchTxArchiveWithTime as fetchTxArchiveDefault } from "./whatsonchain";
 import { stitchToXArchive, type SocialArchive } from "@/app/x/onchain";
-import { realArchive } from "@/app/x/real";
 import { dedupePosts, type XArchive, type XPost, type XProfile } from "@/app/x/parseArchive";
 
 // Reading a handle's whole archive used to mean stitching every archive
@@ -51,12 +50,6 @@ export type ArchivePage = {
   firstInscribedAt?: number;
   txTimes: Record<string, number>;
 };
-
-// Pre-inscription fallbacks (live preview rendered until a handle is indexed
-// on-chain). Once a profile is inscribed and registered, the on-chain read
-// wins. These are never written to Redis — a preview mirrors X live, so
-// caching it would go stale the moment the real profile posts again.
-const previewArchives: Record<string, XArchive> = { henryhudson6: realArchive };
 
 const metaKey = (handle: string) => `x:posts:${handle.toLowerCase()}:meta`;
 const chunkKey = (handle: string, n: number) => `x:posts:${handle.toLowerCase()}:${n}`;
@@ -114,12 +107,11 @@ export function slicePage(
   return { start, end };
 }
 
-/** What one page read resolves a handle to, before slicing: either a preview
- * (never cached), an on-chain archive whose cache is still valid (read
- * chunks from Redis), or one just freshly stitched and rewritten (or, with
- * no Redis available, held only in memory for this request). */
+/** What one page read resolves a handle to, before slicing: either an
+ * on-chain archive whose cache is still valid (read chunks from Redis), or
+ * one just freshly stitched and rewritten (or, with no Redis available, held
+ * only in memory for this request). */
 type Resolved =
-  | { kind: "preview"; archive: XArchive }
   | { kind: "cached"; meta: ArchiveMeta; redis: Redis; txids: string[]; hash: string }
   | { kind: "fresh"; archive: XArchive; meta: ArchiveMeta };
 
@@ -260,9 +252,9 @@ async function stitchAndCache(
 }
 
 /** Resolve a handle to its archive: the cache when it's still valid for the
- * current txid set, a freshly-stitched (and, when Redis is available,
- * rewritten) one otherwise, or the pre-inscription preview as a last resort —
- * matching the un-cached fallback behaviour the profile page always had.
+ * current txid set, or a freshly-stitched (and, when Redis is available,
+ * rewritten) one otherwise. Null when the handle has no indexed transactions,
+ * or every one of them fails to fetch — there is nothing to fall back to.
  * Wrapped in React's `cache()` so one request resolves a handle at most
  * once: the permalink route calls this (via `getArchivePost` and
  * `getArchivePage`) from both `generateMetadata` and the page body, which
@@ -276,26 +268,19 @@ const resolveHandle = cache(async function resolveHandle(
   redis: Redis | null,
 ): Promise<Resolved | null> {
   const txids = await getXTxids(handle);
-  if (txids.length > 0) {
-    const hash = txidSetHash(txids);
-    if (redis) {
-      const cachedMeta = await redis.get<ArchiveMeta>(metaKey(handle));
-      if (cachedMeta && cachedMeta.v === META_VERSION && cachedMeta.txidSetHash === hash) {
-        return { kind: "cached", meta: cachedMeta, redis, txids, hash };
-      }
-    }
+  if (txids.length === 0) return null;
 
-    const stitched = await stitchAndCache(handle, txids, hash, fetchTxArchive, redis);
-    if (stitched) {
-      return { kind: "fresh", archive: stitched.archive, meta: stitched.meta };
+  const hash = txidSetHash(txids);
+  if (redis) {
+    const cachedMeta = await redis.get<ArchiveMeta>(metaKey(handle));
+    if (cachedMeta && cachedMeta.v === META_VERSION && cachedMeta.txidSetHash === hash) {
+      return { kind: "cached", meta: cachedMeta, redis, txids, hash };
     }
-    // Every per-transaction fetch failed — fall through to the preview map,
-    // same as the un-cached page did before this module existed.
   }
 
-  const preview = previewArchives[handle.toLowerCase()];
-  if (!preview) return null;
-  return { kind: "preview", archive: { profile: preview.profile, posts: dedupePosts(preview.posts) } };
+  const stitched = await stitchAndCache(handle, txids, hash, fetchTxArchive, redis);
+  if (!stitched) return null; // every per-transaction fetch failed
+  return { kind: "fresh", archive: stitched.archive, meta: stitched.meta };
 });
 
 /** Read only the chunks a `[start, end)` post window touches, and slice out
@@ -377,20 +362,9 @@ export async function getArchivePage(
     };
   }
 
-  if (resolved.kind === "fresh") {
-    const { start, end } = slicePage(resolved.meta.postCount, offset, limit);
-    return { posts: resolved.archive.posts.slice(start, end), ...pageInfoFromMeta(resolved.meta) };
-  }
-
-  // Preview — never inscribed, so there's no transaction data to report.
-  const { start, end } = slicePage(resolved.archive.posts.length, offset, limit);
-  return {
-    posts: resolved.archive.posts.slice(start, end),
-    postCount: resolved.archive.posts.length,
-    profile: resolved.archive.profile,
-    latestTxid: null,
-    txTimes: {},
-  };
+  // Only "fresh" remains once "cached" is handled above.
+  const { start, end } = slicePage(resolved.meta.postCount, offset, limit);
+  return { posts: resolved.archive.posts.slice(start, end), ...pageInfoFromMeta(resolved.meta) };
 }
 
 function pageInfoFromMeta(meta: ArchiveMeta): Omit<ArchivePage, "posts"> {
