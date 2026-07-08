@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The xtext showroom — implementation plan</title>
+<style>
+  :root { --bg:#f4f1ea; --ink:#1c1a16; --muted:#6b6358; --rule:#d8d0c0; --accent:#a8431f; --accent-soft:#c4a572; --card:#fbf9f4; --code-bg:#1e1e1e; --code-ink:#e8e8e8; --ok:#2f6f3e; --warn:#a8431f; --shadow:0 1px 3px rgba(0,0,0,0.08); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.65;}
+  .wrap{max-width:880px;margin:0 auto;padding:56px 32px;} header.doc{margin-bottom:40px;border-bottom:2px solid var(--rule);padding-bottom:24px;}
+  .eyebrow{font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:34px;line-height:1.15;margin:0 0 12px;font-weight:700;} h2{font-size:24px;margin:48px 0 14px;padding-top:20px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 10px;} .lede{font-size:19px;color:var(--muted);margin:0;} p{margin:14px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(0,0,0,0.06);padding:2px 6px;border-radius:4px;}
+  pre{background:var(--code-bg);color:var(--code-ink);padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;} th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .task{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:8px 22px 18px;margin:22px 0;box-shadow:var(--shadow);}
+  .task .tasknum{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);}
+  .files{font-size:14px;background:#efe9dc;border-radius:6px;padding:10px 14px;margin:10px 0;}
+  .try{background:#eef3e9;border-left:4px solid var(--ok);padding:10px 16px;border-radius:0 6px 6px 0;margin:14px 0;} .try strong{color:var(--ok);}
+  .note{background:#f6efe0;border-left:4px solid var(--accent-soft);padding:10px 16px;border-radius:0 6px 6px 0;margin:14px 0;}
+  ul{margin:12px 0;padding-left:24px;} li{margin:5px 0;}
+  ul.steps{list-style:none;padding-left:4px;} ul.steps>li{margin:12px 0;padding-left:30px;position:relative;}
+  ul.steps>li input[type=checkbox]{position:absolute;left:0;top:5px;width:18px;height:18px;}
+  .badge{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:2px 8px;border-radius:999px;white-space:nowrap;}
+  .b-site{background:#dfe8ee;color:#2a5a7a;} .b-app{background:#f3dcd2;color:var(--accent);} .b-both{background:#e7e0f0;color:#5a3a8a;}
+  .effort{font-size:13px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Implementation plan &middot; 2026-07-08 &middot; henceforth.club/x &middot; spec A of four</div>
+<h1>The xtext showroom</h1>
+<p class="lede">Seven tasks. The site makes zero calls to X, holds no keys, and costs nothing to run. Each task ends green and committed.</p>
+</header>
+
+<div class="note"><strong>For agentic workers:</strong> REQUIRED SUB-SKILL &mdash; use <code>superpowers:subagent-driven-development</code> (recommended) or <code>superpowers:executing-plans</code> to implement this plan task by task. Steps are real checkboxes.</div>
+
+<p><strong>Goal:</strong> turn <code>/x</code> from a previewer that goes nowhere into a showroom that makes the risk felt, the payout demonstrable, and the next step trivial &mdash; without ever touching X&rsquo;s application programming interface.</p>
+
+<p><strong>Architecture:</strong> two archive sources, one renderer, and a type that makes the illegal one unrepresentable. A profile already on Bitcoin is the witness and the proof, read from the chain for free. The visitor&rsquo;s own X export is the payoff, parsed in their browser and never uploaded. A pure cost function mirrors the app&rsquo;s Swift estimator byte for byte, pinned by a fixture both languages read.</p>
+
+<p><strong>Tech stack:</strong> Next.js 16 (App Router, React 19 server components), TypeScript strict, Tailwind version 4, vitest. Path alias <code>@/*</code> &rarr; <code>./src/*</code>.</p>
+
+<h2>Global constraints</h2>
+<ul>
+<li><strong>No acronyms or initialisms in prose</strong> &mdash; comments, commit messages, page copy. Code identifiers and file paths are exempt. (The repository instructions file says so.)</li>
+<li><strong>The site makes zero calls to <code>api.twitter.com</code>.</strong> This is the product claim; Task 2 asserts it.</li>
+<li><strong>The site holds no keys and no money.</strong> Nothing here reads <code>X_BEARER_TOKEN</code> or any wallet.</li>
+<li><strong>Cost constants, copied verbatim from Swift:</strong> <code>p2pkhInputSize = 148</code>, <code>p2pkhOutputSize = 34</code>, <code>txOverheadSize = 10</code>, <code>opReturnFramingBytes = 12</code>, <code>maxArchiveRewardSats = 50_000</code>, reward <code>= min(2 &times; minerFee, cap)</code>, fee <code>= ceil(bytes &times; ratePerKb / 1000)</code>, advertised rate <code>100</code> satoshis per kilobyte.</li>
+<li><strong>This repository has no continuous integration.</strong> <code>npx vitest run</code>, <code>npx tsc --noEmit</code>, <code>npm run build</code> and <code>npx eslint src</code> are the gate, run locally before every commit. Every task&rsquo;s final step runs all four.</li>
+<li><strong>Never pipe a gate into <code>tail</code> or <code>grep</code> and read that exit code.</strong> Run the command, then read <code>$?</code>. Piping reports the exit code of the last command in the pipe, not the one you care about.</li>
+</ul>
+
+<h2>File structure</h2>
+<table>
+<tr><th>file</th><th>responsibility</th></tr>
+<tr><td><code>src/app/x/source.ts</code> <em>(new)</em></td><td>the archive algebra: <code>Portable | OnChain</code>, and <code>Inscribable = Portable</code></td></tr>
+<tr><td><code>src/app/x/noXApi.test.ts</code> <em>(new)</em></td><td>asserts the <code>/x</code> tree never reaches X</td></tr>
+<tr><td><code>src/lib/archiveCost.ts</code> <em>(new)</em></td><td>pure quote, mirroring <code>ArchiveCostEstimator.estimateSingleOpReturn</code></td></tr>
+<tr><td><code>src/app/x/witness.ts</code> <em>(new)</em></td><td>which archived profile the showroom shows, and why</td></tr>
+<tr><td><code>src/app/x/dropZone.ts</code> <em>(new)</em></td><td>pure file selection and every failure message</td></tr>
+<tr><td><code>src/app/x/archiveBytes.ts</code> <em>(new)</em></td><td>about how many bytes an archive occupies on chain</td></tr>
+<tr><td><code>src/app/x/_components/ArchiveDropZone.tsx</code> <em>(new)</em></td><td>the drop and the parse, in the browser</td></tr>
+<tr><td><code>src/app/x/_components/CostQuote.tsx</code> <em>(new)</em></td><td>the itemised price, and the sentence about irreversibility</td></tr>
+<tr><td><code>src/app/x/_components/Proof.tsx</code> <em>(new)</em></td><td>links to a block explorer we do not run</td></tr>
+<tr><td><code>src/app/x/page.tsx</code> <em>(rewrite)</em></td><td>the six-move spine</td></tr>
+<tr><td><code>src/app/x/real.ts</code>, <code>real-data.json</code> <em>(delete)</em></td><td>a build-time snapshot masquerading as live</td></tr>
+<tr><td><code>src/app/x/_components/ArchiveExplorer.tsx</code> <em>(delete)</em></td><td>replaced by <code>ArchiveDropZone</code></td></tr>
+</table>
+
+<hr>
+
+<div class="task">
+<div class="tasknum">Task 1 <span class="badge b-site">site</span> <span class="effort">~30 minutes</span></div>
+<h3>The archive algebra &mdash; make the illegal source unrepresentable</h3>
+<div class="files"><strong>Create:</strong> <code>src/app/x/source.ts</code>, <code>src/app/x/source.test.ts</code></div>
+<p><strong>Interfaces produced</strong> (Tasks 5 and 6 consume these): <code>Portable</code>, <code>OnChain</code>, <code>Rendered</code>, <code>Inscribable</code>, <code>portable(archive: XArchive) &rarr; Portable</code>, <code>onChain(archive: XArchive, txid: string) &rarr; OnChain</code>, <code>isInscribable(source: Rendered) &rarr; source is Inscribable</code>.</p>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &middot; Write the failing test</strong> at <code>src/app/x/source.test.ts</code>. The third case is a <em>compile-time</em> assertion: <code>@ts-expect-error</code> makes <code>tsc</code> fail if the error it expects does not occur.
+<pre><code>import { describe, expect, it } from "vitest";
+import { isInscribable, onChain, portable, type Inscribable } from "./source";
+import type { XArchive } from "./parseArchive";
+
+const archive: XArchive = { profile: { handle: "someone" }, posts: [] };
+const TXID = "f".repeat(64);
+
+describe("archive sources", () =&gt; {
+  it("an archive the visitor exported is inscribable", () =&gt; {
+    expect(isInscribable(portable(archive))).toBe(true);
+  });
+
+  it("an archive read from the chain is not", () =&gt; {
+    expect(isInscribable(onChain(archive, TXID))).toBe(false);
+  });
+
+  it("an archive read from the chain cannot even be TYPED as inscribable", () =&gt; {
+    // @ts-expect-error OnChain must never satisfy Inscribable. If this line ever
+    // compiles, the boundary between looking and keeping has been erased.
+    const impossible: Inscribable = onChain(archive, TXID);
+    expect(impossible.kind).toBe("onchain");
+  });
+
+  it("carries the transaction id only on the chain-read side", () =&gt; {
+    expect(onChain(archive, TXID).txid).toBe(TXID);
+  });
+});</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 2 &middot; Run it and watch it fail.</strong> Run <code>npx vitest run src/app/x/source.test.ts</code>. Expected: <code>Failed to resolve import "./source"</code>.</li>
+
+<li><input type="checkbox"> <strong>Step 3 &middot; Write the minimal implementation</strong> at <code>src/app/x/source.ts</code>.
+<pre><code>import type { XArchive } from "./parseArchive";
+
+/**
+ * Where an archive came from, and therefore what may be done with it.
+ *
+ * X's Developer Policy forbids storing post content off X, and permits
+ * redistributing only post identifiers. An OP_RETURN cannot be deleted and post
+ * text is not an identifier, so content read from X's application programming
+ * interface must never reach an inscription. That rule lives here, as a type,
+ * rather than in a comment somebody will forget: `Inscribable` is `Portable` and
+ * nothing else, so the compiler refuses what the policy forbids.
+ */
+
+/** The visitor exported this from X themselves. The only thing we may inscribe. */
+export type Portable = { readonly kind: "portable"; readonly archive: XArchive };
+
+/** Already on Bitcoin. Renderable forever, never re-inscribable. */
+export type OnChain = {
+  readonly kind: "onchain";
+  readonly archive: XArchive;
+  readonly txid: string;
+};
+
+export type Rendered = Portable | OnChain;
+export type Inscribable = Portable;
+
+export const portable = (archive: XArchive): Portable =&gt; ({ kind: "portable", archive });
+
+export const onChain = (archive: XArchive, txid: string): OnChain =&gt; ({
+  kind: "onchain",
+  archive,
+  txid,
+});
+
+export const isInscribable = (source: Rendered): source is Inscribable =&gt;
+  source.kind === "portable";</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 4 &middot; Run the tests and the typechecker.</strong> <code>npx vitest run src/app/x/source.test.ts</code> &rarr; 4 passed. Then <code>npx tsc --noEmit</code> &rarr; exit 0. If <code>tsc</code> reports <em>&ldquo;Unused '@ts-expect-error' directive&rdquo;</em>, the algebra is wrong: <code>OnChain</code> is assignable to <code>Inscribable</code> and the boundary does not exist.</li>
+
+<li><input type="checkbox"> <strong>Step 5 &middot; Commit.</strong>
+<pre><code>git add src/app/x/source.ts src/app/x/source.test.ts
+git commit -m "The archive algebra: only an export the visitor made may be inscribed"</code></pre></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 2 <span class="badge b-site">site</span> <span class="effort">~30 minutes</span></div>
+<h3>Assert the site never reaches X</h3>
+<div class="files"><strong>Create:</strong> <code>src/app/x/noXApi.test.ts</code></div>
+<div class="note">The claim <em>&ldquo;we never asked X for permission&rdquo;</em> is the product. A claim that <em>is</em> the product must be a test. Write this before the deletions in Task 4, so the ratchet is already in place when the code moves.</div>
+<p><strong>Interfaces produced:</strong> none. This task adds a gate, not an interface.</p>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &middot; Write the test</strong> at <code>src/app/x/noXApi.test.ts</code>.
+<pre><code>import { describe, expect, it } from "vitest";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
+
+/** Every source file under the /x route tree, recursively, tests excluded. */
+function sourcesUnder(dir: string): string[] {
+  return readdirSync(dir).flatMap((entry) =&gt; {
+    const path = join(dir, entry);
+    if (statSync(path).isDirectory()) return sourcesUnder(path);
+    return /\.(ts|tsx)$/.test(entry) &amp;&amp; !entry.includes(".test.") ? [path] : [];
+  });
+}
+
+const FORBIDDEN = [
+  "api.twitter.com",  // X's application programming interface, by hostname
+  "xfetch",           // the module that holds the bearer token
+  "xPaginate",        // the module that pages a timeline
+  "X_BEARER_TOKEN",   // the token itself
+];
+
+describe("the showroom never reaches X", () =&gt; {
+  const files = sourcesUnder("src/app/x");
+
+  it("finds source files to check, because a vacuous pass is not a pass", () =&gt; {
+    expect(files.length).toBeGreaterThan(5);
+  });
+
+  it.each(FORBIDDEN)("no file under src/app/x mentions %s", (needle) =&gt; {
+    const offenders = files.filter((f) =&gt; readFileSync(f, "utf8").includes(needle));
+    expect(offenders).toEqual([]);
+  });
+
+  it("costs nothing to run: no file under src/app/x reads an environment variable", () =&gt; {
+    const offenders = files.filter((f) =&gt; readFileSync(f, "utf8").includes("process.env"));
+    expect(offenders).toEqual([]);
+  });
+});</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 2 &middot; Run it.</strong> <code>npx vitest run src/app/x/noXApi.test.ts</code>. Expected: <strong>all pass immediately</strong> &mdash; the <code>/x</code> tree does not currently import <code>xfetch</code>. That is not a mistake. This test is a ratchet, not a bug report. Its job is to fail the day somebody wires the previewer to the application programming interface to win back the type-your-handle hook we deliberately gave up.</li>
+
+<li><input type="checkbox"> <strong>Step 3 &middot; Prove the ratchet bites.</strong> Temporarily add the line <code>// api.twitter.com</code> to the top of <code>src/app/x/page.tsx</code>. Run <code>npx vitest run src/app/x/noXApi.test.ts</code>. Expected: FAIL, listing <code>src/app/x/page.tsx</code>. Remove the line and re-run. A test you have never seen fail is a decoration.</li>
+
+<li><input type="checkbox"> <strong>Step 4 &middot; Run the whole gate.</strong> Run each command separately and read its own exit code:
+<pre><code>npx vitest run;      echo "vitest  $?"
+npx tsc --noEmit;    echo "tsc     $?"
+npm run build;       echo "build   $?"
+npx eslint src;      echo "eslint  $?"</code></pre>
+All four must print <code>0</code>.</li>
+
+<li><input type="checkbox"> <strong>Step 5 &middot; Commit.</strong>
+<pre><code>git add src/app/x/noXApi.test.ts
+git commit -m "Assert the showroom never reaches X: the claim is the product, so it is a test"</code></pre></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 3 <span class="badge b-both">site + app</span> <span class="effort">~1 hour</span></div>
+<h3>The cost quote, pinned to the app&rsquo;s Swift estimator</h3>
+<div class="files"><strong>Create:</strong> <code>src/lib/archiveCost.ts</code>, <code>src/lib/archiveCost.test.ts</code> &middot; <strong>Create in the sibling repository:</strong> <code>FORTHapp/FORTH/Henceforth_Tests/Fixtures/archive-cost-fixture.json</code> &middot; <strong>Modify:</strong> <code>FORTHapp/FORTH/Henceforth_Tests/Bitcoin Tests/ArchiveCostEstimator_Tests.swift</code></div>
+<div class="note">This repository has no continuous integration, so its tests only ever run on a machine where <code>FORTHapp</code> is a sibling directory. That is precisely what makes <em>one</em> shared fixture possible instead of two copies that drift apart. When the sibling is absent the parity block skips, and says so loudly.</div>
+<p><strong>Interfaces produced</strong> (Task 6 consumes): <code>estimateSingleOpReturn(byteCount: number, feePerKb?: number, computeFee?: (bytes: number, ratePerKb: number) =&gt; number) &rarr; ArchiveCost</code>, where <code>ArchiveCost = { totalTxBytes: number; minerFeeSats: number; rewardSats: number; totalSats: number }</code>. Also <code>MAX_ARCHIVE_REWARD_SATS</code> and <code>DEFAULT_FEE_PER_KB</code>.</p>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &middot; Write the fixture</strong> at <code>FORTHapp/FORTH/Henceforth_Tests/Fixtures/archive-cost-fixture.json</code>. These five rows are the contract between the two languages. The last row is where the reward cap engages, because twice 54,328 exceeds 50,000.
+<pre><code>{
+  "feePerKb": 100,
+  "note": "byteCount is the OP_RETURN payload. Both estimators must reproduce every row.",
+  "rows": [
+    { "byteCount": 0,      "totalTxBytes": 0,      "minerFeeSats": 0,     "rewardSats": 0,     "totalSats": 0 },
+    { "byteCount": 1,      "totalTxBytes": 239,    "minerFeeSats": 24,    "rewardSats": 48,    "totalSats": 72 },
+    { "byteCount": 3394,   "totalTxBytes": 3632,   "minerFeeSats": 364,   "rewardSats": 728,   "totalSats": 1092 },
+    { "byteCount": 208731, "totalTxBytes": 208969, "minerFeeSats": 20897, "rewardSats": 41794, "totalSats": 62691 },
+    { "byteCount": 543040, "totalTxBytes": 543278, "minerFeeSats": 54328, "rewardSats": 50000, "totalSats": 104328 }
+  ]
+}</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 2 &middot; Write the failing TypeScript test</strong> at <code>src/lib/archiveCost.test.ts</code>.
+<pre><code>import { describe, expect, it } from "vitest";
+import { existsSync, readFileSync } from "node:fs";
+import { estimateSingleOpReturn, MAX_ARCHIVE_REWARD_SATS } from "./archiveCost";
+
+const FORTHAPP = "/Users/henryhudson/Programming/Main/FORTHapp";
+const FIXTURE = `${FORTHAPP}/FORTH/Henceforth_Tests/Fixtures/archive-cost-fixture.json`;
+const ESTIMATOR = `${FORTHAPP}/FORTH/FORTH/Bitcoin/Social Archive/ArchiveCostEstimator.swift`;
+const CONSTANTS = `${FORTHAPP}/FORTH/FORTH/Helper /Extensions/ExtensionsForNumberFormatters.swift`;
+
+describe("estimateSingleOpReturn", () =&gt; {
+  it("charges nothing for nothing", () =&gt; {
+    expect(estimateSingleOpReturn(0)).toEqual({
+      totalTxBytes: 0, minerFeeSats: 0, rewardSats: 0, totalSats: 0,
+    });
+  });
+
+  it("the user pays the miner fee AND the reward, not the miner fee alone", () =&gt; {
+    const cost = estimateSingleOpReturn(208731);
+    expect(cost.totalSats).toBe(cost.minerFeeSats + cost.rewardSats);
+    expect(cost.totalSats).toBe(3 * cost.minerFeeSats);
+  });
+
+  it("caps the reward, so a large media archive cannot tip a quarter of a coin", () =&gt; {
+    expect(estimateSingleOpReturn(543040).rewardSats).toBe(MAX_ARCHIVE_REWARD_SATS);
+  });
+});
+
+// The parity gate. If Swift and TypeScript ever disagree about what an archive
+// costs, the number on the web page is a lie about the number in the wallet.
+const sibling = existsSync(FIXTURE);
+if (!sibling) {
+  console.warn(`\n  SKIPPING cost parity: ${FIXTURE} not found.\n  The Swift estimator is the source of truth; this check needs it.\n`);
+}
+
+describe.skipIf(!sibling)("parity with the app's Swift estimator", () =&gt; {
+  const fixture = JSON.parse(readFileSync(FIXTURE, "utf8")) as {
+    feePerKb: number;
+    rows: Array&lt;{ byteCount: number; totalTxBytes: number; minerFeeSats: number; rewardSats: number; totalSats: number }&gt;;
+  };
+
+  it.each(fixture.rows)("reproduces the fixture row for $byteCount bytes", (row) =&gt; {
+    expect(estimateSingleOpReturn(row.byteCount, fixture.feePerKb)).toEqual({
+      totalTxBytes: row.totalTxBytes,
+      minerFeeSats: row.minerFeeSats,
+      rewardSats: row.rewardSats,
+      totalSats: row.totalSats,
+    });
+  });
+
+  it("uses the same byte constants the app uses", () =&gt; {
+    const consts = readFileSync(CONSTANTS, "utf8");
+    expect(consts).toContain("let p2pkhInputSize = 148");
+    expect(consts).toContain("let p2pkhOutputSize = 34");
+    expect(consts).toContain("let txOverheadSize = 10");
+  });
+
+  it("uses the same framing and reward cap the app uses", () =&gt; {
+    const swift = readFileSync(ESTIMATOR, "utf8");
+    expect(swift).toContain("opReturnFramingBytes = 12");
+    expect(swift).toContain("maxArchiveRewardSats = 50_000");
+  });
+});</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 3 &middot; Run it and watch it fail.</strong> <code>npx vitest run src/lib/archiveCost.test.ts</code>. Expected: <code>Failed to resolve import "./archiveCost"</code>.</li>
+
+<li><input type="checkbox"> <strong>Step 4 &middot; Write the implementation</strong> at <code>src/lib/archiveCost.ts</code>.
+<pre><code>/**
+ * What an xtext archive costs, mirroring the app's ArchiveCostEstimator exactly.
+ *
+ * The user pays the miner fee AND the developer reward. Quoting the miner fee
+ * alone understates the price threefold, and a price on a web page that the
+ * wallet then contradicts is the one lie this site cannot afford: its whole
+ * product is that you can check things for yourself.
+ *
+ * Swift is the source of truth. The fixture in FORTHapp pins the two together.
+ */
+
+export const P2PKH_INPUT_BYTES = 148;
+export const P2PKH_OUTPUT_BYTES = 34;
+export const TX_OVERHEAD_BYTES = 10;
+
+/** OP_FALSE, OP_RETURN, the pushdata length prefix, and the data output's own bytes. */
+export const OP_RETURN_FRAMING_BYTES = 12;
+
+/** The reward is twice the miner fee, which scales punishingly on a large media archive. */
+export const MAX_ARCHIVE_REWARD_SATS = 50_000;
+
+/** The advertised rate, verified in production. */
+export const DEFAULT_FEE_PER_KB = 100;
+
+export type ArchiveCost = {
+  totalTxBytes: number;
+  minerFeeSats: number;
+  rewardSats: number;
+  totalSats: number;
+};
+
+const defaultComputeFee = (bytes: number, ratePerKb: number): number =&gt;
+  Math.ceil((bytes * ratePerKb) / 1000);
+
+export function estimateSingleOpReturn(
+  byteCount: number,
+  feePerKb: number = DEFAULT_FEE_PER_KB,
+  computeFee: (bytes: number, ratePerKb: number) =&gt; number = defaultComputeFee,
+): ArchiveCost {
+  if (byteCount &lt;= 0) return { totalTxBytes: 0, minerFeeSats: 0, rewardSats: 0, totalSats: 0 };
+
+  const totalTxBytes =
+    P2PKH_INPUT_BYTES + byteCount + OP_RETURN_FRAMING_BYTES + P2PKH_OUTPUT_BYTES * 2 + TX_OVERHEAD_BYTES;
+  const minerFeeSats = Math.max(1, computeFee(totalTxBytes, feePerKb));
+  const rewardSats = Math.max(1, Math.min(2 * minerFeeSats, MAX_ARCHIVE_REWARD_SATS));
+
+  return { totalTxBytes, minerFeeSats, rewardSats, totalSats: minerFeeSats + rewardSats };
+}</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 5 &middot; Add the Swift half.</strong> Append to <code>FORTHapp/FORTH/Henceforth_Tests/Bitcoin Tests/ArchiveCostEstimator_Tests.swift</code>:
+<pre><code>func testMatchesSharedFixture() throws {
+    // The same fixture the website's TypeScript estimator reads. If these two ever
+    // disagree, the price the site quotes is not the price the wallet charges.
+    let url = Bundle(for: type(of: self)).url(forResource: "archive-cost-fixture", withExtension: "json")
+    let data = try Data(contentsOf: try XCTUnwrap(url, "fixture missing from Copy Bundle Resources"))
+
+    struct Row: Decodable { let byteCount, totalTxBytes, minerFeeSats, rewardSats, totalSats: Int }
+    struct Fixture: Decodable { let feePerKb: Double; let rows: [Row] }
+    let fixture = try JSONDecoder().decode(Fixture.self, from: data)
+
+    for row in fixture.rows {
+        let cost = ArchiveCostEstimator.estimateSingleOpReturn(
+            byteCount: row.byteCount,
+            feePerKb: fixture.feePerKb,
+            computeFee: { bytes, rate in Int(ceil(Double(bytes) * rate / 1000.0)) })
+        XCTAssertEqual(cost.totalTxBytes, row.totalTxBytes, "totalTxBytes at \(row.byteCount) bytes")
+        XCTAssertEqual(cost.minerFeeSats, row.minerFeeSats, "minerFeeSats at \(row.byteCount) bytes")
+        XCTAssertEqual(cost.rewardSats, row.rewardSats, "rewardSats at \(row.byteCount) bytes")
+        XCTAssertEqual(cost.totalSats, row.totalSats, "totalSats at \(row.byteCount) bytes")
+    }
+}</code></pre>
+Add <code>archive-cost-fixture.json</code> to the <code>Henceforth_Tests</code> target&rsquo;s <em>Copy Bundle Resources</em> build phase in Xcode. Without it, <code>Bundle.url(forResource:)</code> returns nil and the test fails with an unwrap error rather than a parity error &mdash; which is why the <code>XCTUnwrap</code> above carries a message.</li>
+
+<li><input type="checkbox"> <strong>Step 6 &middot; Run both halves.</strong> TypeScript: <code>npx vitest run src/lib/archiveCost.test.ts</code> &rarr; every row passes and <em>no</em> skip warning is printed. Swift: <code>xcodebuild test -project FORTH/FORTH.xcodeproj -scheme FORTH -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 17' "-only-testing:Henceforth_Tests/ArchiveCostEstimator_Tests/testMatchesSharedFixture"</code> &rarr; <code>** TEST SUCCEEDED **</code>.</li>
+
+<li><input type="checkbox"> <strong>Step 7 &middot; Prove the parity gate bites.</strong> Change one fixture row&rsquo;s <code>totalSats</code> by a single satoshi. Both suites must go red. Restore it. A parity test that has never caught a divergence has not been shown to be a parity test.</li>
+
+<li><input type="checkbox"> <strong>Step 8 &middot; Run the gate and commit both repositories.</strong>
+<pre><code>npx vitest run;      echo "vitest  $?"
+npx tsc --noEmit;    echo "tsc     $?"
+npm run build;       echo "build   $?"
+npx eslint src;      echo "eslint  $?"
+
+git add src/lib/archiveCost.ts src/lib/archiveCost.test.ts
+git commit -m "The cost quote, pinned to the app's estimator by a shared fixture"</code></pre>
+Then, in <code>FORTHapp</code>, commit the fixture and the Swift test on a branch and open a pull request &mdash; that repository&rsquo;s pre-push hook runs the full suite.</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 4 <span class="badge b-site">site</span> <span class="effort">~45 minutes</span></div>
+<h3>Delete the sample; the landing page shows a witness read from Bitcoin</h3>
+<div class="files"><strong>Delete:</strong> <code>src/app/x/real.ts</code>, <code>src/app/x/real-data.json</code> &middot; <strong>Create:</strong> <code>src/app/x/witness.ts</code>, <code>src/app/x/witness.test.ts</code> &middot; <strong>Modify:</strong> <code>src/app/x/page.tsx</code>, <code>src/app/x/_components/ArchiveExplorer.tsx</code></div>
+<div class="note">Today a stranger&rsquo;s first impression is Henry&rsquo;s timeline, under the words <em>&ldquo;Live from X &mdash; @henryhudson6, 10 most recent&rdquo;</em>. It is not live: <code>real.ts</code> imports a build-time <code>real-data.json</code>. And the page renders twenty posts, not ten. Two false claims in the furniture of a page whose product is <em>&ldquo;verify this without trusting us&rdquo;</em>.</div>
+<p><strong>Interfaces consumed:</strong> none from earlier tasks. <strong>Produces:</strong> <code>WITNESS_HANDLE: string</code>, consumed by Task 7.</p>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &middot; Write the failing test</strong> at <code>src/app/x/witness.test.ts</code>.
+<pre><code>import { describe, expect, it } from "vitest";
+import { existsSync } from "node:fs";
+import { WITNESS_HANDLE } from "./witness";
+
+describe("the witness", () =&gt; {
+  it("names a handle X would accept", () =&gt; {
+    expect(WITNESS_HANDLE).toMatch(/^[A-Za-z0-9_]{1,15}$/);
+  });
+
+  it("the build-time sample is gone, along with the two claims it made", () =&gt; {
+    expect(existsSync("src/app/x/real.ts")).toBe(false);
+    expect(existsSync("src/app/x/real-data.json")).toBe(false);
+  });
+});</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 2 &middot; Run it and watch it fail.</strong> <code>npx vitest run src/app/x/witness.test.ts</code>. Expected: <code>Failed to resolve import "./witness"</code>.</li>
+
+<li><input type="checkbox"> <strong>Step 3 &middot; Create <code>src/app/x/witness.ts</code>.</strong>
+<pre><code>/**
+ * The profile the showroom shows to a visitor who has not yet asked X for their
+ * own archive.
+ *
+ * It is read from Bitcoin, which is why it costs nothing to show and why it can
+ * be the proof rather than a screenshot. It is not a default rendering of Henry's
+ * timeline: a stranger arriving cold used to read his posts before understanding
+ * what the site was for.
+ */
+export const WITNESS_HANDLE = "henryhudson6";</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 4 &middot; Delete the sample and its caller.</strong>
+<pre><code>git rm src/app/x/real.ts src/app/x/real-data.json</code></pre>
+In <code>src/app/x/_components/ArchiveExplorer.tsx</code>: remove <code>import { realArchive } from "../real";</code>; change <code>useState&lt;XArchive&gt;(realArchive)</code> to <code>useState&lt;XArchive | null&gt;(null)</code>; delete the <code>isSample</code> state and the entire <code>{isSample &amp;&amp; (...)}</code> block containing <em>&ldquo;Live from X &mdash; @henryhudson6, 10 most recent&rdquo;</em>; render <code>{archive &amp;&amp; &lt;ProfileView archive={archive} isPreview /&gt;}</code>. Task 5 replaces this component entirely, but it must compile and pass in between &mdash; every task ends green.</li>
+
+<li><input type="checkbox"> <strong>Step 5 &middot; Rewrite <code>src/app/x/page.tsx</code></strong> to read the witness from the chain. The set of archive transactions is immutable, so revalidate hourly rather than on every request.
+<pre><code>import type { Metadata } from "next";
+import { getArchivePage, PAGE_SIZE } from "@/lib/xArchiveCache";
+import ProfilePage from "./_components/ProfilePage";
+import { WITNESS_HANDLE } from "./witness";
+
+export const revalidate = 3600;
+
+export const metadata: Metadata = {
+  title: "An archive X can't revoke",
+  description:
+    "Your X profile, written to Bitcoin. Readable from any block explorer, forever, without us.",
+};
+
+export default async function XPage() {
+  const witness = await getArchivePage(WITNESS_HANDLE, 0, PAGE_SIZE);
+
+  return (
+    &lt;main className="min-h-screen bg-background pt-20"&gt;
+      &lt;header className="mx-auto max-w-2xl px-6 py-10 text-center"&gt;
+        &lt;p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted"&gt;
+          Reclaimed from X
+        &lt;/p&gt;
+        &lt;h1 className="mt-3 text-3xl font-bold text-foreground"&gt;An archive X can&amp;rsquo;t revoke&lt;/h1&gt;
+        &lt;p className="mt-2 text-sm text-muted"&gt;Because we never asked X for permission.&lt;/p&gt;
+      &lt;/header&gt;
+
+      {witness ? (
+        &lt;ProfilePage
+          archive={{ profile: witness.profile, posts: witness.posts }}
+          txid={witness.latestTxid}
+          postCount={witness.postCount}
+          handle={WITNESS_HANDLE}
+          txCount={witness.txCount}
+          photoCount={witness.photoCount}
+          firstInscribedAt={witness.firstInscribedAt}
+          txTimes={witness.txTimes}
+        /&gt;
+      ) : (
+        &lt;p className="mx-auto max-w-2xl px-6 text-center text-muted"&gt;
+          The witness archive could not be read from Bitcoin just now. It is still there.
+        &lt;/p&gt;
+      )}
+    &lt;/main&gt;
+  );
+}</code></pre>
+Note the failure branch. It says the <em>reader</em> failed, not that the archive is gone, and it renders nothing stale. Never present a cached archive as if it were freshly read, and never imply permanence failed when a network call did.</li>
+
+<li><input type="checkbox"> <strong>Step 6 &middot; Run the whole gate,</strong> each command separately, all exit 0. Task 2&rsquo;s ratchet must still pass. Then <code>npm run build &amp;&amp; npm run start</code> and open <code>http://localhost:3000/x</code>: the witness renders, and the permanence line reads <em>&ldquo;archived across N transactions &middot; first inscribed &hellip;&rdquo;</em> rather than <em>&ldquo;live preview&rdquo;</em>.</li>
+
+<li><input type="checkbox"> <strong>Step 7 &middot; Commit.</strong>
+<pre><code>git add -A src/app/x
+git commit -m "The landing page shows an archive read from Bitcoin, not a snapshot pretending to be live"</code></pre></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 5 <span class="badge b-site">site</span> <span class="effort">~1 hour</span></div>
+<h3>The drop zone, and a sentence for every way it can fail</h3>
+<div class="files"><strong>Create:</strong> <code>src/app/x/dropZone.ts</code>, <code>src/app/x/dropZone.test.ts</code>, <code>src/app/x/_components/ArchiveDropZone.tsx</code> &middot; <strong>Delete:</strong> <code>src/app/x/_components/ArchiveExplorer.tsx</code></div>
+<p><strong>Interfaces consumed:</strong> <code>portable(archive) &rarr; Portable</code> and the <code>Portable</code> type from Task 1. <strong>Produces</strong> (Task 7 consumes <code>ArchiveDropZone</code>): <code>selectArchiveFiles(files: File[]) &rarr; Selection</code>, <code>dropFailureMessage(reason: DropFailure) &rarr; string</code>. Both pure, so every message is testable without a browser.</p>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &middot; Write the failing test</strong> at <code>src/app/x/dropZone.test.ts</code>.
+<pre><code>import { describe, expect, it } from "vitest";
+import { dropFailureMessage, selectArchiveFiles } from "./dropZone";
+
+const file = (name: string) =&gt; ({ name }) as File;
+
+describe("selectArchiveFiles", () =&gt; {
+  it("finds the three files X gives you, whatever else is in the folder", () =&gt; {
+    const picked = selectArchiveFiles([
+      file("manifest.js"), file("tweets.js"), file("account.js"), file("profile.js"),
+    ]);
+    expect(picked.ok).toBe(true);
+    if (picked.ok) expect(picked.tweets.name).toBe("tweets.js");
+  });
+
+  it("is not fooled by tweets-media.js when tweets.js is absent", () =&gt; {
+    const picked = selectArchiveFiles([file("tweets-media.js"), file("profile.js"), file("account.js")]);
+    expect(picked).toEqual({ ok: false, reason: "missing-tweets" });
+  });
+
+  it("names the file that is missing rather than shrugging", () =&gt; {
+    expect(selectArchiveFiles([file("tweets.js"), file("account.js")]))
+      .toEqual({ ok: false, reason: "missing-profile" });
+    expect(selectArchiveFiles([file("tweets.js"), file("profile.js")]))
+      .toEqual({ ok: false, reason: "missing-account" });
+    expect(selectArchiveFiles([])).toEqual({ ok: false, reason: "nothing-dropped" });
+  });
+});
+
+describe("dropFailureMessage", () =&gt; {
+  it("tells the visitor what to do, not merely what went wrong", () =&gt; {
+    expect(dropFailureMessage("missing-tweets")).toContain("tweets.js");
+    expect(dropFailureMessage("nothing-dropped")).toContain("data");
+    expect(dropFailureMessage("unparseable")).toContain("browser");
+  });
+
+  it("never blames the visitor", () =&gt; {
+    const reasons = ["nothing-dropped", "missing-tweets", "missing-profile", "missing-account", "unparseable"] as const;
+    for (const reason of reasons) {
+      expect(dropFailureMessage(reason).toLowerCase()).not.toContain("you failed");
+      expect(dropFailureMessage(reason).toLowerCase()).not.toContain("invalid");
+    }
+  });
+});</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 2 &middot; Run it and watch it fail.</strong> Expected: <code>Failed to resolve import "./dropZone"</code>.</li>
+
+<li><input type="checkbox"> <strong>Step 3 &middot; Write <code>src/app/x/dropZone.ts</code>.</strong> The existing code matches on <code>f.name.includes("tweets")</code>, which also matches <code>tweets-media.js</code> &mdash; and a real X archive contains both files.
+<pre><code>export type DropFailure =
+  | "nothing-dropped"
+  | "missing-tweets"
+  | "missing-profile"
+  | "missing-account"
+  | "unparseable";
+
+export type Selection =
+  | { ok: true; tweets: File; profile: File; account: File }
+  | { ok: false; reason: DropFailure };
+
+/** Exact filenames, because a real X archive also contains tweets-media.js. */
+const exactly = (files: File[], name: string): File | undefined =&gt;
+  files.find((f) =&gt; f.name.toLowerCase() === name);
+
+export function selectArchiveFiles(files: File[]): Selection {
+  if (files.length === 0) return { ok: false, reason: "nothing-dropped" };
+  const tweets = exactly(files, "tweets.js");
+  if (!tweets) return { ok: false, reason: "missing-tweets" };
+  const profile = exactly(files, "profile.js");
+  if (!profile) return { ok: false, reason: "missing-profile" };
+  const account = exactly(files, "account.js");
+  if (!account) return { ok: false, reason: "missing-account" };
+  return { ok: true, tweets, profile, account };
+}
+
+export function dropFailureMessage(reason: DropFailure): string {
+  switch (reason) {
+    case "nothing-dropped":
+      return "Nothing arrived. Ask X for your data, then drop the files from the archive's data folder.";
+    case "missing-tweets":
+      return "That folder has no tweets.js. Look inside the data folder of the archive X sent you — tweets-media.js is a different file.";
+    case "missing-profile":
+      return "Found tweets.js, but no profile.js. Both live in the archive's data folder.";
+    case "missing-account":
+      return "Found tweets.js and profile.js, but no account.js. All three live in the archive's data folder.";
+    case "unparseable":
+      return "Those files did not read as an X archive. Nothing left your browser, so nothing was lost — try the originals X gave you.";
+  }
+}</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 4 &middot; Run the test.</strong> <code>npx vitest run src/app/x/dropZone.test.ts</code> &rarr; 5 passed.</li>
+
+<li><input type="checkbox"> <strong>Step 5 &middot; Write <code>src/app/x/_components/ArchiveDropZone.tsx</code>,</strong> using the pure selector and <code>portable()</code> from Task 1.
+<pre><code>"use client";
+
+import { useState } from "react";
+import { parseArchive } from "../parseArchive";
+import { portable, type Portable } from "../source";
+import { dropFailureMessage, selectArchiveFiles } from "../dropZone";
+import ProfileView from "./ProfileView";
+import CostQuote from "./CostQuote";
+
+export default function ArchiveDropZone() {
+  const [source, setSource] = useState&lt;Portable | null&gt;(null);
+  const [error, setError] = useState&lt;string | null&gt;(null);
+
+  async function onFiles(list: FileList | null) {
+    setError(null);
+    const picked = selectArchiveFiles(list ? Array.from(list) : []);
+    if (!picked.ok) return setError(dropFailureMessage(picked.reason));
+    try {
+      setSource(portable(parseArchive(
+        await picked.tweets.text(),
+        await picked.profile.text(),
+        await picked.account.text(),
+      )));
+    } catch {
+      setError(dropFailureMessage("unparseable"));
+    }
+  }
+
+  return (
+    &lt;div&gt;
+      &lt;div className="mx-auto max-w-2xl px-6 pb-6"&gt;
+        &lt;label className="block cursor-pointer rounded-xl border border-dashed border-card-border bg-card-bg/50 p-5 text-center text-sm text-muted transition hover:border-accent"&gt;
+          &lt;input
+            type="file"
+            multiple
+            accept=".js,.json"
+            className="hidden"
+            onChange={(e) =&gt; onFiles(e.target.files)}
+          /&gt;
+          Drop your &lt;span className="text-foreground"&gt;tweets.js &middot; profile.js &middot; account.js&lt;/span&gt;
+          &lt;span className="mt-1 block text-xs"&gt;Parsed in your browser. Nothing is uploaded.&lt;/span&gt;
+        &lt;/label&gt;
+        {error &amp;&amp; &lt;p className="mt-3 text-sm text-accent-orange"&gt;{error}&lt;/p&gt;}
+      &lt;/div&gt;
+
+      {source &amp;&amp; (
+        &lt;&gt;
+          &lt;ProfileView archive={source.archive} isPreview /&gt;
+          &lt;CostQuote source={source} /&gt;
+        &lt;/&gt;
+      )}
+    &lt;/div&gt;
+  );
+}</code></pre>
+<code>CostQuote</code> arrives in Task 6. Implement Task 6 before running this component, or temporarily omit the <code>&lt;CostQuote /&gt;</code> line and restore it there.</li>
+
+<li><input type="checkbox"> <strong>Step 6 &middot; Delete the old component.</strong> <code>git rm src/app/x/_components/ArchiveExplorer.tsx</code>, then update any import of it (search: <code>grep -rn ArchiveExplorer src</code>).</li>
+
+<li><input type="checkbox"> <strong>Step 7 &middot; Run the gate and commit.</strong>
+<pre><code>npx vitest run;      echo "vitest  $?"
+npx tsc --noEmit;    echo "tsc     $?"
+npm run build;       echo "build   $?"
+npx eslint src;      echo "eslint  $?"
+
+git add -A src/app/x
+git commit -m "The drop zone names the file it is missing, and stops matching tweets-media.js as tweets.js"</code></pre></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 6 <span class="badge b-site">site</span> <span class="effort">~45 minutes</span></div>
+<h3>The quote, itemised &mdash; and the sentence before the pay button</h3>
+<div class="files"><strong>Create:</strong> <code>src/app/x/archiveBytes.ts</code>, <code>src/app/x/archiveBytes.test.ts</code>, <code>src/app/x/_components/CostQuote.tsx</code></div>
+<div class="note">The byte count is an <em>estimate</em>: the app assembles the real inscription payload and may differ by a few bytes. The cost <em>function</em> has parity; the <em>size</em> does not. So the page says &ldquo;about&rdquo;, and means it. And when the price feed is down, print satoshis and no pounds &mdash; never interpolate a fiat figure from a stale rate.</div>
+<p><strong>Interfaces consumed:</strong> <code>estimateSingleOpReturn</code> from Task 3; <code>Portable</code> from Task 1. <strong>Produces:</strong> <code>estimateArchiveBytes(archive: XArchive) &rarr; number</code>, and the <code>CostQuote</code> component with props <code>{ source: Portable; bsvUsd?: number }</code>.</p>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &middot; Write the failing test</strong> at <code>src/app/x/archiveBytes.test.ts</code>.
+<pre><code>import { describe, expect, it } from "vitest";
+import { estimateArchiveBytes } from "./archiveBytes";
+import type { XArchive } from "./parseArchive";
+
+const post = (id: string, text: string) =&gt; ({ id, at: "2012-09-02T00:00:00Z", text });
+
+describe("estimateArchiveBytes", () =&gt; {
+  it("is zero for an archive with no posts", () =&gt; {
+    expect(estimateArchiveBytes({ profile: { handle: "a" }, posts: [] })).toBe(0);
+  });
+
+  it("counts bytes, not characters — an emoji is four bytes, not one", () =&gt; {
+    const plain: XArchive = { profile: { handle: "a" }, posts: [post("1", "x")] };
+    const emoji: XArchive = { profile: { handle: "a" }, posts: [post("1", "\u{1F600}")] };
+    expect(estimateArchiveBytes(emoji)).toBe(estimateArchiveBytes(plain) + 3);
+  });
+
+  it("grows with the number of posts", () =&gt; {
+    const one: XArchive = { profile: { handle: "a" }, posts: [post("1", "hello")] };
+    const two: XArchive = { profile: { handle: "a" }, posts: [post("1", "hello"), post("2", "hello")] };
+    expect(estimateArchiveBytes(two)).toBeGreaterThan(estimateArchiveBytes(one));
+  });
+});</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 2 &middot; Run it and watch it fail.</strong> Expected: <code>Failed to resolve import "./archiveBytes"</code>.</li>
+
+<li><input type="checkbox"> <strong>Step 3 &middot; Write <code>src/app/x/archiveBytes.ts</code>.</strong>
+<pre><code>import type { XArchive } from "./parseArchive";
+
+/**
+ * About how many bytes this archive will occupy in an OP_RETURN.
+ *
+ * The app assembles the real payload, so this is an estimate and the page must
+ * say so. It is honest in the way that matters: it counts encoded bytes rather
+ * than characters, so an emoji costs what an emoji actually costs.
+ */
+export function estimateArchiveBytes(archive: XArchive): number {
+  if (archive.posts.length === 0) return 0;
+
+  const payload = {
+    v: 1,
+    source: "x",
+    handle: archive.profile.handle,
+    profile: archive.profile,
+    posts: archive.posts.map((p) =&gt; ({ id: p.id, at: p.at, text: p.text, replyToId: p.replyToId })),
+  };
+  return new TextEncoder().encode(JSON.stringify(payload)).length;
+}</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 4 &middot; Run the test.</strong> <code>npx vitest run src/app/x/archiveBytes.test.ts</code> &rarr; 3 passed.</li>
+
+<li><input type="checkbox"> <strong>Step 5 &middot; Write <code>src/app/x/_components/CostQuote.tsx</code>.</strong> Naming the reward as ours is the disarming move: it shows that permanence itself is nearly free, and that what you are paying for is us.
+<pre><code>import { estimateSingleOpReturn } from "@/lib/archiveCost";
+import { estimateArchiveBytes } from "../archiveBytes";
+import type { Portable } from "../source";
+
+/** Pounds per dollar. Only ever used to soften a figure, never to compute one. */
+const GBP_PER_USD = 0.79;
+
+export default function CostQuote({ source, bsvUsd }: { source: Portable; bsvUsd?: number }) {
+  const bytes = estimateArchiveBytes(source.archive);
+  const cost = estimateSingleOpReturn(bytes);
+  const pounds = bsvUsd === undefined ? undefined : (cost.totalSats / 1e8) * bsvUsd * GBP_PER_USD;
+  const n = (v: number) =&gt; v.toLocaleString("en-GB");
+
+  return (
+    &lt;section className="mx-auto max-w-2xl px-6 py-8"&gt;
+      &lt;p className="text-sm text-muted"&gt;
+        {n(source.archive.posts.length)} posts, about {n(Math.round(bytes / 1024))} kilobytes on Bitcoin.
+      &lt;/p&gt;
+
+      &lt;dl className="mt-3 space-y-1 text-sm"&gt;
+        &lt;div className="flex justify-between"&gt;&lt;dt&gt;Miner fee&lt;/dt&gt;&lt;dd&gt;{n(cost.minerFeeSats)} satoshis&lt;/dd&gt;&lt;/div&gt;
+        &lt;div className="flex justify-between"&gt;&lt;dt&gt;Our reward&lt;/dt&gt;&lt;dd&gt;{n(cost.rewardSats)} satoshis&lt;/dd&gt;&lt;/div&gt;
+        &lt;div className="flex justify-between border-t border-card-border pt-1 font-semibold text-foreground"&gt;
+          &lt;dt&gt;Total&lt;/dt&gt;
+          &lt;dd&gt;{n(cost.totalSats)} satoshis{pounds !== undefined &amp;&amp; ` — about £${pounds.toFixed(3)}`}&lt;/dd&gt;
+        &lt;/div&gt;
+      &lt;/dl&gt;
+
+      &lt;p className="mt-5 font-semibold text-foreground"&gt;
+        You cannot delete this later. You can only say, permanently, that you took it back.
+      &lt;/p&gt;
+    &lt;/section&gt;
+  );
+}</code></pre>
+When <code>bsvUsd</code> is undefined the pounds figure simply does not render. That <em>is</em> the price-feed failure mode; it needs no branch of its own.</li>
+
+<li><input type="checkbox"> <strong>Step 6 &middot; Run the gate and commit.</strong>
+<pre><code>npx vitest run;      echo "vitest  $?"
+npx tsc --noEmit;    echo "tsc     $?"
+npm run build;       echo "build   $?"
+npx eslint src;      echo "eslint  $?"
+
+git add src/app/x/archiveBytes.ts src/app/x/archiveBytes.test.ts src/app/x/_components/CostQuote.tsx
+git commit -m "Quote the archive: miner fee, our reward, and what permanence costs you"</code></pre></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 7 <span class="badge b-site">site</span> <span class="effort">~1 hour</span></div>
+<h3>The spine, and a snapshot of what it composes to</h3>
+<div class="files"><strong>Create:</strong> <code>src/app/x/_components/Proof.tsx</code>, <code>src/app/x/fixtures/witness.json</code>, <code>src/app/x/_components/ProfileView.snapshot.test.tsx</code> &middot; <strong>Modify:</strong> <code>src/app/x/page.tsx</code></div>
+<p><strong>Interfaces consumed:</strong> <code>WITNESS_HANDLE</code> (Task 4), <code>ArchiveDropZone</code> (Task 5).</p>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &middot; Write <code>src/app/x/_components/Proof.tsx</code>.</strong> It links to a service we do not run. That is the entire point of it.
+<pre><code>export default function Proof({ txid }: { txid: string }) {
+  return (
+    &lt;section className="mx-auto max-w-2xl px-6 py-8 text-sm text-muted"&gt;
+      &lt;p&gt;
+        This page is a convenience, not a dependency. The same archive is{" "}
+        &lt;a className="text-accent hover:underline" href={`/x/tx/${txid}`}&gt;
+          readable from the transaction
+        &lt;/a&gt;{" "}
+        and from{" "}
+        &lt;a
+          className="text-accent hover:underline"
+          rel="noreferrer"
+          target="_blank"
+          href={`https://whatsonchain.com/tx/${txid}`}
+        &gt;
+          a block explorer we do not run
+        &lt;/a&gt;. Plain readable text in an OP_RETURN output. No key, no server, no permission.
+      &lt;/p&gt;
+    &lt;/section&gt;
+  );
+}</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 2 &middot; Assemble the six moves in <code>src/app/x/page.tsx</code>,</strong> in this order, with this copy. Witness &rarr; Proof &rarr; Risk &rarr; Invitation &rarr; Recognition &rarr; Price. The witness block and the failure branch from Task 4 stay exactly as they are; insert the rest after them.
+<pre><code>{/* 2 · PROOF — only when we actually have a transaction to point at */}
+{witness?.latestTxid &amp;&amp; &lt;Proof txid={witness.latestTxid} /&gt;}
+
+{/* 3 · RISK — one sentence. No animation, no fade to grey. */}
+&lt;p className="mx-auto max-w-2xl px-6 text-center text-foreground"&gt;
+  X&amp;rsquo;s terms let them remove all of it, without telling you why.
+&lt;/p&gt;
+
+{/* 4 · INVITATION — the wait is the argument */}
+&lt;p className="mx-auto max-w-2xl px-6 pt-6 text-center text-sm text-muted"&gt;
+  Ask X for your archive. It takes about a day. That&amp;rsquo;s how much of it is yours.
+&lt;/p&gt;
+
+{/* 5 · RECOGNITION and 6 · PRICE — the drop zone renders CostQuote once parsed */}
+&lt;ArchiveDropZone /&gt;
+
+{/* the app */}
+&lt;p className="mx-auto max-w-2xl px-6 py-10 text-center text-sm text-muted"&gt;
+  Inscribing needs a wallet and a key that is yours.{" "}
+  &lt;a className="text-accent hover:underline" href="https://apps.apple.com/app/henceforth/id1602896145"&gt;
+    Henceforth, £9.99
+  &lt;/a&gt;
+&lt;/p&gt;</code></pre>
+No animation. If any sentence sells rather than shows, cut it: an audience of journalists smells manipulation before it finishes the sentence.</li>
+
+<li><input type="checkbox"> <strong>Step 3 &middot; Commit a fixture archive</strong> at <code>src/app/x/fixtures/witness.json</code> &mdash; three posts, no personal data, one emoji and one reply so the renderer is exercised.
+<pre><code>{
+  "profile": {
+    "handle": "someone",
+    "displayName": "Someone",
+    "bio": "A fixture, not a person.",
+    "createdAt": "2012-09-02T00:00:00Z"
+  },
+  "posts": [
+    { "id": "1", "at": "2012-09-02T09:00:00Z", "text": "First." },
+    { "id": "2", "at": "2013-01-01T00:00:00Z", "text": "Happy new year 🎉" },
+    { "id": "3", "at": "2014-06-30T12:00:00Z", "text": "Replying to someone.", "replyToId": "1" }
+  ]
+}</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 4 &middot; Write the snapshot test</strong> at <code>src/app/x/_components/ProfileView.snapshot.test.tsx</code>. For a page whose unit is the visual composition, the snapshot <em>is</em> the assertion.
+<pre><code>import { describe, expect, it } from "vitest";
+import { renderToStaticMarkup } from "react-dom/server";
+import ProfileView from "./ProfileView";
+import fixture from "../fixtures/witness.json";
+import type { XArchive } from "../parseArchive";
+
+const archive = fixture as XArchive;
+
+describe("ProfileView", () =&gt; {
+  it("renders a chain-read archive without the words 'live preview'", () =&gt; {
+    const html = renderToStaticMarkup(&lt;ProfileView archive={archive} /&gt;);
+    expect(html).not.toContain("live preview");
+    expect(html).toMatchSnapshot();
+  });
+
+  it("renders a dropped export WITH 'live preview', because it is not inscribed", () =&gt; {
+    const html = renderToStaticMarkup(&lt;ProfileView archive={archive} isPreview /&gt;);
+    expect(html).toContain("live preview");
+  });
+});</code></pre>
+If vitest is not yet configured for <code>.tsx</code>, add <code>environment: "node"</code> and ensure <code>esbuild</code> handles JSX &mdash; Next.js&rsquo;s TypeScript config already sets <code>"jsx": "preserve"</code>, so vitest needs <code>jsx: "automatic"</code> in its <code>esbuild</code> options.</li>
+
+<li><input type="checkbox"> <strong>Step 5 &middot; Run the gate, then read the page as a stranger.</strong> All four commands exit 0. Then <code>npm run build &amp;&amp; npm run start</code> and read <code>/x</code> top to bottom. Check the two claims the site now makes about itself: no request to <code>api.twitter.com</code> in the browser network panel, and the transaction link resolves on a block explorer.</li>
+
+<li><input type="checkbox"> <strong>Step 6 &middot; Commit.</strong>
+<pre><code>git add -A src/app/x
+git commit -m "The spine: witness, proof, risk, invitation, recognition, price"</code></pre></li>
+</ul>
+</div>
+
+<h2>Self-review</h2>
+
+<p><strong>Spec coverage.</strong> Section 3 (the page) &rarr; Tasks 4, 5, 7. Section 4 (data flow, the type boundary, deleting the false claims) &rarr; Tasks 1 and 4. Section 5 (the quote and parity) &rarr; Tasks 3 and 6. Section 6 (failure modes) &rarr; Task 5 for the drop zone, Task 4 step 5 for a failed chain read, Task 6 step 5 for a dead price feed. Section 7 (definition of done) &rarr; the zero-X-API test is Task 2; the compile-time <code>Inscribable</code> assertion is Task 1 step 1; the shared fixture is Task 3; the snapshot is Task 7. <em>Deliberately not covered:</em> whether the copy converts. That is a launch, not a test, and the spec says so.</p>
+
+<p><strong>Type consistency.</strong> <code>portable()</code>, <code>onChain()</code>, <code>isInscribable()</code> and the <code>Portable</code> type are used in Tasks 5 and 6 exactly as defined in Task 1. <code>estimateSingleOpReturn(byteCount, feePerKb?, computeFee?)</code> is used in Task 6 exactly as defined in Task 3. <code>estimateArchiveBytes(archive)</code> is defined and used only in Task 6. The <code>ArchivePage</code> fields consumed in Task 4 &mdash; <code>profile</code>, <code>posts</code>, <code>postCount</code>, <code>latestTxid</code>, <code>txCount</code>, <code>photoCount</code>, <code>firstInscribedAt</code>, <code>txTimes</code> &mdash; match <code>src/lib/xArchiveCache.ts</code> as it stands today.</p>
+
+<p><strong>Ordering constraint, stated because it is easy to miss.</strong> Task 5&rsquo;s <code>ArchiveDropZone</code> imports <code>CostQuote</code>, which Task 6 creates. Implement 6 before running 5, or omit the one line and restore it in Task 6. Every task must still end green.</p>
+
+<p><strong>Known gap, stated rather than hidden.</strong> <code>estimateArchiveBytes</code> approximates the payload the app assembles. The cost <em>function</em> has parity with Swift; the <em>byte count</em> does not. Task 6 therefore says &ldquo;about&rdquo; on the page. Closing it properly means the app exposing its assembler, which belongs to spec C rather than here.</p>
+
+</div>
+</body>
+</html>
