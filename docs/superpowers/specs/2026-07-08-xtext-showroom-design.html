@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The archive X can't revoke &mdash; xtext showroom design</title>
+<style>
+  :root { --bg:#f4ecd8; --ink:#2a2318; --muted:#6b5d45; --rule:#c9b98f; --accent:#8b3a1a; --card:#faf4e4; --shadow:0 1px 3px rgba(60,40,10,0.15); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.68;}
+  .wrap{max-width:860px;margin:0 auto;padding:56px 32px;}
+  header.doc{margin-bottom:40px;border-bottom:3px double var(--rule);padding-bottom:26px;}
+  .eyebrow{font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:33px;line-height:1.16;margin:0 0 12px;font-weight:700;}
+  h2{font-size:24px;margin:46px 0 12px;padding-top:18px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 8px;}
+  .lede{font-size:19px;color:var(--muted);margin:0;font-style:italic;}
+  p{margin:13px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(120,90,30,0.12);padding:2px 6px;border-radius:4px;}
+  pre{background:#2a2318;color:#f0e6cf;padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;background:var(--card);}
+  th,td{text-align:left;padding:9px 12px;border:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .decision{background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 18px;margin:18px 0;box-shadow:var(--shadow);}
+  .decision strong{color:var(--accent);}
+  ul{margin:12px 0;padding-left:26px;} li{margin:6px 0;}
+  .flow{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px 20px;margin:16px 0;box-shadow:var(--shadow);}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Design spec &middot; 2026-07-08 &middot; henceforth.club/x &middot; scope: A of four</div>
+<h1>The archive X can&rsquo;t revoke</h1>
+<p class="lede">The showroom has one job: make the risk felt, make the payout demonstrable, make the next step trivial. Everything else on the page is text.</p>
+</header>
+
+<p><strong>What exists.</strong> <code>/x</code> is a local file previewer. You drop <code>tweets.js</code>, <code>profile.js</code> and <code>account.js</code>; the browser parses them; your profile renders. Then nothing happens. <code>permanenceLine.ts</code> says so scrupulously &mdash; <em>&ldquo;20 posts &middot; live preview &mdash; not yet inscribed&rdquo;</em> &mdash; which is honest, and an admission that the page&rsquo;s main interaction has no payoff. There is no &ldquo;archive my profile&rdquo; affordance anywhere on it. The default state renders <em>Henry&rsquo;s</em> timeline to strangers. The corpus is one profile.</p>
+
+<p><strong>The one-line thesis:</strong> the archive is plain, self-describing JSON in an <code>OP_RETURN</code>, readable forever from any block explorer with no cooperation from X, from Henry, or from this website. That is the rarest thing here, and the page never mentions it.</p>
+
+<h2>1 &middot; Three constraints, one architecture</h2>
+
+<p>Three independent facts were established today. Each was checked against a primary source, not inferred.</p>
+
+<h3>X&rsquo;s Developer Policy forbids the mechanism</h3>
+<p>Verbatim, from <code>docs.x.com/developer-terms/policy</code>:</p>
+<blockquote><em>Content compliance</em> &mdash; &ldquo;If you store X Content offline, you must keep it up to date with the current state of that content on X. Specifically, you must delete or modify any content you have if it is deleted or modified on X&hellip; within 24 hours after receiving a request.&rdquo;</blockquote>
+<blockquote><em>Content redistribution</em> &mdash; &ldquo;you may only distribute Post IDs, Direct Message IDs, and/or User IDs&rdquo;, except &ldquo;up to 500 public Posts Objects and/or User Objects to each person who uses your service on a daily basis if this is done via non-automated means (e.g., download of spreadsheets or PDFs).&rdquo;</blockquote>
+<p>An <code>OP_RETURN</code> cannot be deleted, and post text is not a Post ID. The carve-out X wrote is a door for <em>looking</em>, about a third of a page wide. <code>xtext</code> drives a lorry through it: the whole profile, 1,230 to 3,200 posts, fetched by an app and broadcast to a blockchain. Separately, <a href="https://www.edpb.europa.eu/system/files/2025-04/edpb_guidelines_202502_blockchain_en.pdf">EDPB Guidelines 02/2025</a>: <em>&ldquo;As a basic rule, the EDPB recommends not storing personal data directly in a blockchain at all.&rdquo;</em></p>
+
+<h3>The economics are inverted by three orders of magnitude</h3>
+<p>X bills <strong>per resource returned</strong>: <code>$0.005</code> a post. The <code>$0.001</code> &ldquo;owned read&rdquo; rate requires the authenticated account to be <em>the owner of the developer app</em>, so it never applies to a customer&rsquo;s timeline.</p>
+<table>
+<tr><th>posts</th><th>X charges us</th><th>archive reward earns us</th><th>net</th></tr>
+<tr><td>200</td><td>$1.00</td><td>6,836 sats = $0.0009</td><td>&minus;$1.00</td></tr>
+<tr><td>1,230</td><td>$6.15</td><td>41,794 sats = $0.0054</td><td>&minus;$6.14</td></tr>
+<tr><td>3,200</td><td>$16.00</td><td>50,000 sats = $0.0065 <em>(capped)</em></td><td>&minus;$15.99</td></tr>
+</table>
+<p>Both sides scale linearly with post count, so the ratio &mdash; <strong>1,134&times;</strong> &mdash; is a constant. There is no profitable account size. Break-even needs BSV at <code>$14,714</code>. The reward cap (<code>maxArchiveRewardSats = 50_000</code>, added to stop media archives tipping 0.24&nbsp;BSV) makes it unfixable by pricing.</p>
+
+<h3>Henry&rsquo;s rule</h3>
+<p><em>&ldquo;We must make a profit at the time of sale in terms of the BSV price. We might lose in the long run but that&rsquo;s a risk we have to take.&rdquo;</em> And: <em>&ldquo;we don&rsquo;t want to pay any API fees without first being compensated.&rdquo;</em></p>
+
+<div class="decision"><strong>The three collapse into one architecture.</strong> The API is for looking; the export is for keeping. Policy forbids inscribing API-sourced content. The economics make it a $6 loss. And the rule forbids spending before payment &mdash; which, since a fetch must precede the inscription transaction that pays for it, cannot be satisfied in one transaction. The export path has nothing to gate, because there is no bill.</div>
+
+<h2>2 &middot; The consequence nobody wanted</h2>
+
+<p>The showroom&rsquo;s hero was to be an input: type <code>@yourhandle</code>, see your own timeline, feel the loss. It cannot be.</p>
+
+<p>The cheapest possible version &mdash; <code>users/by/username?user.fields=public_metrics,created_at</code>, one resource, giving <code>tweet_count</code> and the join date without reading a single post &mdash; still costs <code>$0.005</code> per visitor. Under the rule, that is money spent before compensation. A thousand strangers is five dollars for nothing, and the per-address rate limiter defends against one scraper, not against a thousand people. Cost-wise a successful launch and a denial-of-service attack are indistinguishable.</p>
+
+<div class="decision"><strong>The showroom makes no X API calls at all.</strong> Not one. The claim <em>&ldquo;we never asked X for permission&rdquo;</em> becomes literally true, which for an audience of journalists is worth more than any hook. Operating cost at any scale: zero.</div>
+
+<p>What replaces the hook is Henry&rsquo;s own suggestion, and it is free: <strong>an account that has already been archived</strong>, read from the chain. The worked example, the proof, and the shop window at once. Seeding the corpus costs nothing &mdash; his own accounts, and consenting friends&rsquo;, from their own exports.</p>
+
+<h2>3 &middot; The page</h2>
+
+<div class="flow">
+<strong>1 &middot; WITNESS</strong> &mdash; a real archived profile, rendered from a transaction. Not a screenshot.<br>
+<strong>2 &middot; PROOF</strong> &mdash; the same data at <code>/x/tx/&lt;txid&gt;</code>, and again on a block explorer we do not run. 3,394 bytes of plain JSON. <em>&ldquo;This page is a convenience, not a dependency.&rdquo;</em><br>
+<strong>3 &middot; RISK</strong> &mdash; one sentence, no theatrics: <em>&ldquo;X&rsquo;s terms let them remove all of it, without telling you why.&rdquo;</em><br>
+<strong>4 &middot; INVITATION</strong> &mdash; <em>&ldquo;Ask X for your archive. It takes about a day.&rdquo;</em><br>
+<strong>5 &middot; RECOGNITION</strong> &mdash; drop <code>tweets.js</code>. All 1,230 posts, in your browser, nothing uploaded. This is the product.<br>
+<strong>6 &middot; PRICE</strong> &mdash; the quote, itemised. Then: Henceforth, &pound;9.99.
+</div>
+
+<div class="decision"><strong>Restraint is the design.</strong> A fade-to-grey animation of the visitor&rsquo;s timeline would be a gimmick, and journalists smell manipulation before they finish the sentence. <code>1,230</code> and <code>2 September 2012</code> come from their own file. If we ever write &ldquo;your years of work&rdquo;, we have started selling instead of showing.</div>
+
+<div class="decision"><strong>The wait is the argument.</strong> X takes about a day to hand over a copy of your own words. Say so: <em>&ldquo;That&rsquo;s how much of them are yours.&rdquo;</em></div>
+
+<div class="decision"><strong>Irreversibility is stated before the pay button, not in a footer.</strong> <em>&ldquo;You cannot delete this later. You can only say, permanently, that you took it back.&rdquo;</em> A tombstone is an admission; X lets you delete silently and Bitcoin never will. If we sell permanence without saying what permanence costs, the first person who regrets it is right to be angry.</div>
+
+<h2>4 &middot; Data flow</h2>
+
+<p>Two sources, one renderer, and the boundary is a type rather than a policy document:</p>
+<pre>type Portable    = { kind: "portable"; archive: XArchive; source: "user-export" }
+type OnChain     = { kind: "onchain";  archive: XArchive; txid: string }
+
+type Rendered    = Portable | OnChain     // ProfileView accepts either
+type Inscribable = Portable               // only this can reach the app</pre>
+<p>A chain-read archive cannot be re-inscribed and an API archive cannot exist, because there is no constructor for one. Illegal states unrepresentable, in the one place where <em>&ldquo;someone will remember&rdquo;</em> is not good enough.</p>
+
+<p>Existing code, unchanged in substance: <code>parseArchive()</code> (FileReader, nothing crosses the network), <code>getArchivePage()</code> / <code>xArchiveCache</code> (chunks the stitched on-chain archive, keyed on a hash of the ordered txid list), <code>/x/tx/[txid]</code> (<em>&ldquo;No index lookup &mdash; the txid IS the address&rdquo;</em>).</p>
+
+<p>Deleted: <code>real.ts</code>, <code>real-data.json</code>, and the two false claims they support &mdash; <em>&ldquo;Live from X&rdquo;</em> above a build-time snapshot, and <em>&ldquo;10 most recent&rdquo;</em> above twenty rendered posts. On a page selling <em>&ldquo;verify this without trusting us&rdquo;</em>, a false claim in the furniture is a hole below the waterline.</p>
+
+<h2>5 &middot; The quote</h2>
+
+<p>A pure TypeScript function mirroring <code>ArchiveCostEstimator.estimateSingleOpReturn</code> exactly: the same <code>148 / 34 / 10 / 12</code> byte constants, the same <code>reward = min(2 &times; minerFee, 50_000)</code>, the same injected fee rate. The user pays <code>minerFee + reward</code>, not the miner fee alone &mdash; a distinction that makes the real number three times the naive one.</p>
+
+<table>
+<tr><th>posts</th><th>payload</th><th>miner fee</th><th>reward</th><th>total</th><th></th></tr>
+<tr><td>200</td><td>33 KiB</td><td>3,418</td><td>6,836</td><td><strong>10,254 sats</strong></td><td>&pound;0.001</td></tr>
+<tr><td>1,230</td><td>204 KiB</td><td>20,897</td><td>41,794</td><td><strong>62,691 sats</strong></td><td>&pound;0.006</td></tr>
+<tr><td>3,200</td><td>530 KiB</td><td>54,328</td><td>50,000</td><td><strong>104,328 sats</strong></td><td>&pound;0.011</td></tr>
+</table>
+
+<div class="decision"><strong>Parity or silence.</strong> One shared fixture table, <code>(byteCount, feePerKb) &rarr; totalSats</code>, read by both <code>ArchiveCostEstimatorTests</code> and vitest. If Swift and TypeScript ever disagree about what an archive costs, both suites go red. That is the only way a number on a web page stays true to a number in a wallet.</div>
+
+<p>Price from WhatsOnChain <code>exchangerate</code>, free, cached 60&nbsp;s to match the app. <strong>If the price feed is down, quote satoshis and no pounds.</strong> Never interpolate a fiat figure.</p>
+
+<h2>6 &middot; Failure modes</h2>
+<table>
+<tr><th>state</th><th>what the page says</th></tr>
+<tr><td>no export dropped yet</td><td>the witness profile, and how to ask X for yours</td></tr>
+<tr><td>wrong files dropped</td><td>names the three it needs, does not shrug</td></tr>
+<tr><td>archive has zero posts</td><td><code>permanenceLine</code> already omits what it does not know</td></tr>
+<tr><td>handle not archived</td><td>&ldquo;This profile isn&rsquo;t archived on Bitcoin yet.&rdquo; (exists)</td></tr>
+<tr><td>chain read fails</td><td>say so. Never render a cached archive as if it were live</td></tr>
+<tr><td>price feed down</td><td>quote in satoshis</td></tr>
+</table>
+
+<h2>7 &middot; Definition of done</h2>
+<ul>
+<li>Pure functions for the quote, the permanence line, and the archive fold &mdash; each with tests, no I/O.</li>
+<li>The shared cost fixture, red in both languages when they diverge.</li>
+<li>A test asserting the site makes <strong>zero</strong> calls to <code>api.twitter.com</code>. The claim is the product; assert it.</li>
+<li>A test that <code>Inscribable</code> cannot be constructed from an on-chain archive. If it compiles, it is wrong.</li>
+<li>Visual composition: snapshot the rendered profile against a committed fixture archive.</li>
+<li><em>Not assertable, and said out loud:</em> whether the copy converts. That is a launch, not a test.</li>
+</ul>
+
+<h2>8 &middot; Scope, and what is deliberately not here</h2>
+<p>This grew into four subsystems. Only <strong>A</strong> is specified here.</p>
+<table>
+<tr><th></th><th>depends on</th><th>holds keys?</th><th>holds money?</th></tr>
+<tr><td><strong>A &middot; the showroom</strong> <em>(this spec)</em></td><td>nothing</td><td>no</td><td>no</td></tr>
+<tr><td>B &middot; web-paid inscription (QR, a worker that signs)</td><td>a key somewhere</td><td><strong>yes</strong></td><td><strong>yes</strong></td></tr>
+<tr><td>C &middot; handle&harr;key binding, claim, verified mark</td><td>app signing</td><td>the user&rsquo;s</td><td>no</td></tr>
+<tr><td>D &middot; bounty routing (an archiver pays the owner)</td><td>C</td><td>no</td><td>no</td></tr>
+</table>
+<p><strong>C is the strategic one</strong> and belongs in the next spec. &ldquo;Prove the account is yours&rdquo; fails at the moment of the insurance event: the day X suspends you, you can no longer prove the archive was ever yours, and whoever holds the handle next can claim it. The fix inverts it &mdash; while you still control the account, publish a line containing your Henceforth identity public key (<code>m/13'/0'</code>, already in the app, hardened, isolated from the receive tree). Inscribe that binding. Thereafter you prove ownership by <em>signing</em>. Your identity outlives your account, and the bounty becomes non-custodial because the archiver&rsquo;s transaction can pay the owner&rsquo;s registered address directly.</p>
+<p><strong>D is premature.</strong> A bounty economy for a corpus of one profile is a flywheel with nothing on it.</p>
+
+<h2>9 &middot; Already shipped, today</h2>
+<p>Before any of this, two endpoints were emptying the operator&rsquo;s balance. <code>/api/x/fetch</code> and <code>/api/x/archive</code> were public, unauthenticated, paged the whole timeline (archive paged it <em>twice</em>, so $32 a call), and were guarded only by <code>if (redis) { &hellip;ten per address per hour&hellip; }</code> &mdash; a guard that vanished when Upstash was unreachable. One address, one hour: $480.</p>
+<p>Fixed in <code>4d6e3d5</code>, <code>4d97529</code>, <code>3c41f25</code>. Three defences, in order: a payment (a transaction id that provably paid the reward address, verified on chain and burned single-use); a hard daily budget, reserved before the spend, failing closed when it cannot be counted; and a page cap of one, replacing X&rsquo;s 32-page ceiling &mdash; which was a runaway-cursor guard and never a cost guard. The floor is computed from the BSV price <em>at the moment of sale</em>, because a pinned constant obeys the rule only on the day it is written.</p>
+
+<h2>10 &middot; Open questions</h2>
+<ul>
+<li><strong>Legal, and needing a lawyer rather than a workflow.</strong> Whether a user&rsquo;s own X data export falls outside the Developer Policy&rsquo;s &ldquo;X Content&rdquo; (the policy is framed around API access, but X does not say so). Whether rendering an already-inscribed archive from the chain counts as redistribution. The verbatim clauses above are settled; these two readings are not.</li>
+<li><strong>Zero-confirmation payments.</strong> <code>verifyPayment</code> accepts a mempool transaction. A payer could double-spend after we have spent the credit. Exposure is about &pound;1 a time and BSV&rsquo;s culture accepts zero-conf &mdash; but it should be chosen, not inherited.</li>
+<li><strong>A burned payment on a failed fetch.</strong> Verify &rarr; burn &rarr; reserve &rarr; fetch. If the fetch then fails, the payer loses their payment and receives nothing. Profitable, and wrong.</li>
+<li><strong>Consent.</strong> Anyone can archive anyone once they hold an export. The export is the natural gate &mdash; you cannot obtain someone else&rsquo;s &mdash; but Henry has asked for third-party archiving with an owner claim. That belongs to C, and it is where the GDPR exposure lives.</li>
+<li><strong>xtext in 4.46</strong> now receives <code>402</code>. Agreed and deliberate. <strong>4.47 must repoint it at the user&rsquo;s own export</strong>, at which point cost, policy exposure and revocation risk all vanish together, and the archive reward becomes pure margin.</li>
+</ul>
+
+</div>
+
+</body>
+</html>
