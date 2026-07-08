@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getArchivePage, PAGE_SIZE } from "@/lib/xArchiveCache";
 import ProfileView from "./_components/ProfileView";
 import ArchiveDropZone from "./_components/ArchiveDropZone";
+import Proof from "./_components/Proof";
 import { WITNESS_HANDLE } from "./witness";
 
 export const revalidate = 3600;
@@ -52,7 +53,32 @@ export default async function XPage() {
         </p>
       )}
 
+      {/* Proof — only when there is a transaction to point at */}
+      {witness?.latestTxid && <Proof txid={witness.latestTxid} />}
+
+      {/* Risk — one sentence, no theatrics */}
+      <p className="mx-auto max-w-2xl px-6 text-center text-foreground">
+        X&rsquo;s terms let them remove all of it, without telling you why.
+      </p>
+
+      {/* Invitation — the wait is the argument */}
+      <p className="mx-auto max-w-2xl px-6 pt-6 text-center text-sm text-muted">
+        Ask X for your archive. It takes about a day. That&rsquo;s how much of it is yours.
+      </p>
+
+      {/* Recognition and price — the drop zone renders the quote once a file is parsed */}
       <ArchiveDropZone />
+
+      {/* The app */}
+      <p className="mx-auto max-w-2xl px-6 py-10 text-center text-sm text-muted">
+        Inscribing needs a wallet and a key that is yours.{" "}
+        <a
+          className="text-accent hover:underline"
+          href="https://apps.apple.com/app/henceforth/id1602896145"
+        >
+          Henceforth, &pound;9.99
+        </a>
+      </p>
     </div>
   );
 }
