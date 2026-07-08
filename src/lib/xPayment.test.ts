@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
-  DEFAULT_MIN_PAYMENT_SATS,
+  SATS_PER_RESOURCE,
   X_ARCHIVE_REWARD_ADDRESS,
   isTxid,
-  minPaymentSats,
+  minPaymentSatsFor,
   satsPaidTo,
   verifyPayment,
 } from "./xPayment";
+import { RESOURCES_TEXT_ONLY, RESOURCES_WITH_MEDIA } from "./xGate";
+import { resourcesToUsd } from "./xSpend";
 
 const OTHER = "1GsP511Tf1xEXAMPLEaddressNOTours";
 
@@ -60,17 +62,41 @@ describe("isTxid", () => {
   });
 });
 
-describe("minPaymentSats", () => {
-  it("covers a capped call: 101 resources at $0.005 is $0.505, about 3.9M sats at $12.98/BSV", () => {
-    const worstCaseUsd = 101 * 0.005;
-    const satsNeededAtCurrentPrice = (worstCaseUsd / 12.975) * 1e8;
-    expect(DEFAULT_MIN_PAYMENT_SATS).toBeGreaterThan(satsNeededAtCurrentPrice);
+const BSV_USD = 12.975; // the price SATS_PER_RESOURCE was pinned at
+
+describe("minPaymentSatsFor", () => {
+  // The invariant. Every endpoint must demand more than it will spend. A flat floor
+  // charged /api/x/archive the same as /api/x/fetch, and archive pages the timeline
+  // twice — so it lost 36 cents a call. This is the test that catches that.
+  it.each([
+    ["text-only endpoint", RESOURCES_TEXT_ONLY],
+    ["media endpoint (pages the timeline twice)", RESOURCES_WITH_MEDIA],
+  ])("%s: the payment floor exceeds what the call costs us", (_name, resources) => {
+    const costUsd = resourcesToUsd(resources);
+    const floorUsd = (minPaymentSatsFor(resources) / 1e8) * BSV_USD;
+    expect(floorUsd).toBeGreaterThan(costUsd);
+  });
+
+  it("the media endpoint costs about twice the text endpoint, and is priced so", () => {
+    const text = minPaymentSatsFor(RESOURCES_TEXT_ONLY);
+    const media = minPaymentSatsFor(RESOURCES_WITH_MEDIA);
+    expect(media / text).toBeGreaterThan(1.9);
+  });
+
+  it("scales linearly with resources, because X bills per resource", () => {
+    expect(minPaymentSatsFor(2)).toBe(2 * SATS_PER_RESOURCE);
+    expect(minPaymentSatsFor(200)).toBe(200 * SATS_PER_RESOURCE);
+  });
+
+  it("never asks for zero, even for a zero-resource call", () => {
+    expect(minPaymentSatsFor(0)).toBe(1);
+    expect(minPaymentSatsFor(-5)).toBe(1);
   });
 
   it("reads the environment and ignores nonsense", () => {
-    expect(minPaymentSats({ X_ARCHIVE_MIN_PAYMENT_SATS: "9000000" })).toBe(9_000_000);
-    expect(minPaymentSats({ X_ARCHIVE_MIN_PAYMENT_SATS: "0" })).toBe(DEFAULT_MIN_PAYMENT_SATS);
-    expect(minPaymentSats({})).toBe(DEFAULT_MIN_PAYMENT_SATS);
+    expect(minPaymentSatsFor(1, { X_ARCHIVE_SATS_PER_RESOURCE: "60000" })).toBe(60_000);
+    expect(minPaymentSatsFor(1, { X_ARCHIVE_SATS_PER_RESOURCE: "0" })).toBe(SATS_PER_RESOURCE);
+    expect(minPaymentSatsFor(1, {})).toBe(SATS_PER_RESOURCE);
   });
 });
 

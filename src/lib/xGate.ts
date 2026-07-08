@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { consumePayment, isTxid, minPaymentSats, verifyPayment } from "./xPayment";
+import { consumePayment, isTxid, minPaymentSatsFor, verifyPayment } from "./xPayment";
 import { reserveXApiSpend } from "./xSpend";
 
 /**
@@ -32,7 +32,9 @@ export async function payAndReserve(
 ): Promise<Gate> {
   if (!isTxid(payment)) return deny(402, "payment-required");
 
-  const verdict = await verifyPayment(payment, minPaymentSats());
+  // The floor scales with what this call will cost us, so the media endpoint —
+  // which pages the timeline twice — cannot be bought at the text endpoint's price.
+  const verdict = await verifyPayment(payment, minPaymentSatsFor(worstCaseResources));
   if (!verdict.ok) {
     // A payment that does not exist or does not pay enough is the caller's
     // problem, not ours; an underpayment is not an error we should retry.

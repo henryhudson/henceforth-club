@@ -22,27 +22,30 @@ const WOC = "https://api.whatsonchain.com/v1/bsv/main";
 const SATS_PER_BSV = 100_000_000;
 
 /**
- * The floor a caller must pay before we read anything from X.
+ * Satoshis a caller must pay us for each X resource we are about to read.
  *
- * A capped call reads one user object plus one page of 100 posts: 101 resources
- * at $0.005 = $0.505. At BSV $12.98 that is ~3,892,000 satoshis, so 5,000,000
- * carries about 29% margin.
+ * X charges $0.005 a resource. At BSV $12.975 that is 38,536 satoshis; with about
+ * 29% margin, 49,505. The floor therefore SCALES with what a call will cost:
+ * /api/x/fetch reads 101 resources and /api/x/archive reads 201, because it pages
+ * the timeline twice — once for text, once for media. A single flat floor charged
+ * both the same and lost money on the second.
  *
- * This floor is denominated in satoshis and the cost is denominated in dollars,
- * so a fall in the BSV price erodes the margin. Below roughly $10.10 a BSV, five
- * million satoshis no longer covers a capped call. Raise X_ARCHIVE_MIN_PAYMENT_SATS
- * if that happens; there is no automatic price feed here on purpose, because a
- * price feed that fails would have to fail open or fail the endpoint, and both are
- * worse than a number a human chose.
+ * The price is pinned rather than fetched. A price feed can fail, and a failing
+ * price feed must either fail open (spend money on a guess) or fail the endpoint,
+ * and both are worse than a number a human chose and can see. The consequence is
+ * that a fall in the BSV price erodes the margin: below about $10.10 a BSV this
+ * no longer covers a call. Raise X_ARCHIVE_SATS_PER_RESOURCE when that happens.
  */
-export const DEFAULT_MIN_PAYMENT_SATS = 5_000_000;
+export const SATS_PER_RESOURCE = 49_505;
 
 /** Reads only the one variable it needs, so a test can pass a bare object. */
-export function minPaymentSats(
+export function minPaymentSatsFor(
+  resources: number,
   env: Record<string, string | undefined> = process.env,
 ): number {
-  const raw = Number(env.X_ARCHIVE_MIN_PAYMENT_SATS);
-  return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : DEFAULT_MIN_PAYMENT_SATS;
+  const raw = Number(env.X_ARCHIVE_SATS_PER_RESOURCE);
+  const perResource = Number.isFinite(raw) && raw > 0 ? raw : SATS_PER_RESOURCE;
+  return Math.max(1, Math.ceil(Math.max(0, resources) * perResource));
 }
 
 export function isTxid(value: string | null | undefined): value is string {
