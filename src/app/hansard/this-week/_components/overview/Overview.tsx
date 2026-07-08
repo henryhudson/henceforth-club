@@ -13,9 +13,9 @@ import MostActiveFooter from './MostActiveFooter'
 // One-A4 space budget: a page carrying the week-in-brief, or a week with a
 // heavy division count, runs denser, so the aggregate sections tighten. The
 // heavy-week caps are new, more conservative values verified by the visual gate.
-const CHART_CAP_WITH_BRIEF = 5
-const CHART_CAP_HEAVY = 8
-const TOPICS_CAP_WITH_BRIEF = 5
+const CHART_CAP_WITH_BRIEF = 6
+const CHART_CAP_HEAVY = 6
+const TOPICS_CAP_WITH_BRIEF = 6
 const TOPICS_CAP_HEAVY = 6
 const TOPICS_CAP = 10
 const QA_MAX_DENSE = 2

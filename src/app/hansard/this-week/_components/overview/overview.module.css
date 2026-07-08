@@ -4,7 +4,7 @@
   margin: 0 auto;
   background: #fff;
   color: #141414;
-  padding: 9mm 14mm 6mm;
+  padding: 8mm 9mm 6mm;
   font: 10.5pt/1.4 Georgia, serif;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
@@ -113,8 +113,10 @@
   min-width: 0;
   color: #333;
   overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.18;
 }
 
 .rbar { display: flex; height: 9px; border-radius: 5px; overflow: hidden; background: #eee; }
