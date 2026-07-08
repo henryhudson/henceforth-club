@@ -13,6 +13,8 @@ export type Card = {
   desc?: string;
   source?: string;
   rev?: number;
+  movedAt?: string;
+  doneAt?: string;
 };
 
 const COLUMNS = [
@@ -58,12 +60,17 @@ function kindBorder(kind: string): string {
 // Per-card last-writer-wins: keep the locally-saved column only when the saved
 // rev is >= the data-file rev (i.e. /hh hasn't touched the card since you moved
 // it); otherwise the data file wins. Mirrors the local kanban.
-function reconcile(data: Card[], saved: Record<string, { col: string; rev: number }>): Card[] {
+function reconcile(
+  data: Card[],
+  saved: Record<string, { col: string; rev: number; movedAt?: string; doneAt?: string }>,
+): Card[] {
   return data.map((c) => {
     const prev = saved[c.id];
     const dRev = c.rev ?? 0;
     if (prev && COL_IDS.includes(prev.col) && prev.rev >= dRev) {
-      return { ...c, col: prev.col };
+      // Pre-stamp localStorage entries carry no movedAt — keep the data file's stamps.
+      if (!prev.movedAt) return { ...c, col: prev.col };
+      return { ...c, col: prev.col, movedAt: prev.movedAt, doneAt: prev.doneAt };
     }
     return { ...c };
   });
@@ -94,8 +101,9 @@ export default function BoardClient({
   }, []);
 
   function persist(next: Card[]) {
-    const map: Record<string, { col: string; rev: number }> = {};
-    for (const c of next) map[c.id] = { col: c.col, rev: c.rev ?? 0 };
+    const map: Record<string, { col: string; rev: number; movedAt?: string; doneAt?: string }> = {};
+    for (const c of next)
+      map[c.id] = { col: c.col, rev: c.rev ?? 0, movedAt: c.movedAt, doneAt: c.doneAt };
     try {
       localStorage.setItem(STORE, JSON.stringify(map));
     } catch {
@@ -104,8 +112,13 @@ export default function BoardClient({
   }
 
   function move(id: string, targetCol: string) {
+    const now = new Date().toISOString();
     setCards((prev) => {
-      const next = prev.map((c) => (c.id === id ? { ...c, col: targetCol } : c));
+      const next = prev.map((c) =>
+        c.id === id
+          ? { ...c, col: targetCol, movedAt: now, doneAt: targetCol === "done" ? now : undefined }
+          : c,
+      );
       persist(next);
       return next;
     });
@@ -116,6 +129,11 @@ export default function BoardClient({
   const shown = cards.filter(inScope);
   const count = (col: string) => shown.filter((c) => c.col === col).length;
   const done = shown.filter((c) => c.col === "done").length;
+  const byDoneAt = (a: Card, b: Card) => (b.doneAt ?? "").localeCompare(a.doneAt ?? "");
+  const inCol = (colId: string) => {
+    const cs = shown.filter((c) => c.col === colId);
+    return colId === "done" ? [...cs].sort(byDoneAt) : cs;
+  };
 
   return (
     <main className="w-full px-4 py-8 sm:px-6 lg:px-8">
@@ -125,8 +143,8 @@ export default function BoardClient({
           <span>
             {done}/{shown.length} done · updated {generated}
           </span>
-          <Link href="/board/report" className="text-accent-green underline">
-            Morning report →
+          <Link href="/board/reports" className="text-accent-green underline">
+            Reports →
           </Link>
           <Link href="/board/docs" className="text-accent-green underline">
             Plans &amp; specs →
@@ -177,11 +195,9 @@ export default function BoardClient({
           ))}
         </div>
         <div className="flex flex-col gap-3">
-          {shown
-            .filter((c) => c.col === mobileCol)
-            .map((c) => (
-              <CardView key={c.id} card={c} onMove={move} />
-            ))}
+          {inCol(mobileCol).map((c) => (
+            <CardView key={c.id} card={c} onMove={move} />
+          ))}
           {count(mobileCol) === 0 && <p className="py-6 text-center text-sm text-muted/50">Nothing here.</p>}
         </div>
       </div>
@@ -202,18 +218,16 @@ export default function BoardClient({
               </span>
             </h2>
             <div className="flex flex-col gap-3">
-              {shown
-                .filter((c) => c.col === col.id)
-                .map((c) => (
-                  <CardView
-                    key={c.id}
-                    card={c}
-                    onMove={move}
-                    draggable
-                    onDragStart={() => setDragId(c.id)}
-                    onDragEnd={() => setDragId(null)}
-                  />
-                ))}
+              {inCol(col.id).map((c) => (
+                <CardView
+                  key={c.id}
+                  card={c}
+                  onMove={move}
+                  draggable
+                  onDragStart={() => setDragId(c.id)}
+                  onDragEnd={() => setDragId(null)}
+                />
+              ))}
               {count(col.id) === 0 && <p className="px-1 py-3 text-sm text-muted/40">—</p>}
             </div>
           </section>
@@ -261,6 +275,9 @@ function CardView({
         <span className="text-[11px] uppercase tracking-wide text-muted">{card.kind}</span>
       </div>
       <p className="text-base font-semibold leading-snug text-foreground">{card.title}</p>
+      {card.col === "done" && card.doneAt && (
+        <p className="mt-1 text-xs font-semibold text-accent-green">✓ {card.doneAt.slice(0, 10)}</p>
+      )}
       {card.source && <p className="mt-1 text-xs italic text-muted">from {card.source}</p>}
       <div className="mt-2 flex flex-wrap gap-1.5">
         {apps.map((label) => (

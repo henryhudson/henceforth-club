@@ -1,0 +1,323 @@
+{
+  "week": "2026-07-08",
+  "windowLabel": "1 Jul – 8 Jul 2026",
+  "headline": "Nigel Farage resigns his seat",
+  "mode": "normal",
+  "generatedAt": "2026-07-08T09:30:00.000Z",
+  "recessReturnISO": null,
+  "stats": {
+    "divisions": 7,
+    "questions": 2078,
+    "distinctAskers": 243
+  },
+  "departments": [
+    {
+      "department": "Department of Health and Social Care",
+      "count": 272
+    },
+    {
+      "department": "Ministry of Defence",
+      "count": 254
+    },
+    {
+      "department": "Department for Transport",
+      "count": 248
+    },
+    {
+      "department": "Home Office",
+      "count": 151
+    },
+    {
+      "department": "Ministry of Justice",
+      "count": 128
+    },
+    {
+      "department": "Department for Environment, Food and Rural Affairs",
+      "count": 128
+    },
+    {
+      "department": "Treasury",
+      "count": 122
+    },
+    {
+      "department": "Cabinet Office",
+      "count": 121
+    },
+    {
+      "department": "Ministry of Housing, Communities and Local Government",
+      "count": 109
+    },
+    {
+      "department": "Department for Business and Trade",
+      "count": 102
+    },
+    {
+      "department": "Department for Education",
+      "count": 98
+    },
+    {
+      "department": "Department for Science, Innovation and Technology",
+      "count": 70
+    },
+    {
+      "department": "13 other departments",
+      "count": 275
+    }
+  ],
+  "body": [
+    "The week’s biggest story was a resignation the official record has yet to catch up with. On Tuesday 7 July Nigel Farage announced that he would resign as the Member for Clacton and fight the by-election his departure will trigger — “the people versus the establishment,” as he cast it. A Member cannot simply quit: he must be appointed to a nominal Crown office, the Chiltern Hundreds, and the seat falls vacant only when the Chancellor signs the warrant. Until then the record still lists him as Clacton’s sitting Member, and as this issue goes out, it does. He took the seat in 2024 with 21,225 votes and a majority of 8,405 on a 46 per cent share; whatever the by-election decides will be measured against those numbers. The move follows press reports of undeclared support before that election, now before Parliament’s standards commissioner; Farage denies any wrongdoing.",
+    "Around that announcement, the Commons had a heavier legislative week than the headlines suggested. It ended with a new national-security law on the statute book: on Wednesday 8 July the National Security (State Threats) Bill received Royal Assent, two days after the Commons agreed — by 394 votes to 85 — the Lords amendment that added a humanitarian-activity defence. The Act gives the Home Secretary a power close to proscription: to designate an organisation acting for a foreign power’s state-threat activity, and to make it a criminal offence, punishable by up to fourteen years, to support or take material benefit from a designated body.",
+    "The same theme, foreign interference, was set out plainly on Monday 6 July, when the Government published its response to Philip Rycroft’s independent review and accepted every recommendation. The democracy minister, Samantha Dixon, promised tighter rules on overseas and cryptoasset donations — carried through the Representation of the People Bill — and coordination through the Defending Democracy Task Force. The same afternoon it acquired a sharper, human edge.",
+    "That edge was an urgent question on the release of a Rochdale grooming-gang leader. Shabir Ahmed, jailed for fourteen years, was let out on licence on 2 July and cannot, as the law stands, be deported: his arrival in the United Kingdom before 1973 exempts him under the Immigration Act 1971. The Home Office minister, Alex Norris, told the House that “all options are on the table,” emergency legislation among them; the Conservatives pressed for an amendment to the Immigration and Asylum Bill, which returns to the Commons on 13 July. Borders and removal will not leave the order paper soon.",
+    "Beneath the Chamber, the written record ran to 2,078 questions from 243 members. Two currents stood out. The first was artificial intelligence, which recurred from four departments at once — Defence, Transport, Business and Trade, and HM Revenue and Customs — forty-seven questions in all, the week’s most-asked subject across government. The second was a single name. Immigration led the topic table with twenty, but close behind, and far more concentrated, were nineteen questions filed under the heading “Lord Mandelson” — the sharpest hand of the week, and the subject of this issue’s feature.",
+    "The divisions themselves were mostly routine. Three opposition new clauses to the Taxation (Energy and Vehicles) Bill fell in committee on 1 July; a pair of employment-tribunal orders passed comfortably the same day; and a Conservative opposition-day motion on the early release of prisoners was carried on 7 July without a single vote against, the Government abstaining by the usual convention. The week’s weight was not in the lobbies. It was in a new Act, a review accepted whole, and a man who cannot be sent home."
+  ],
+  "feature": {
+    "title": "The Mandelson file: twenty-four questions, one member",
+    "asker": "Mike Wood",
+    "party": "Conservative",
+    "department": "Cabinet Office",
+    "count": 24,
+    "kicker": "24 questions",
+    "status": "written questions tabled 1 – 8 Jul; almost all to the Cabinet Office",
+    "summary": "The most concentrated written-question press of the week was not a broad concern raised from many directions. It was one member, again and again, on one subject. Mike Wood (Conservative, Kingswinford and South Staffordshire) tabled twenty-four questions on the appointment of Lord Mandelson as ambassador to Washington — the security-vetting decision and its overrule, the redaction and disclosure of the appointment papers, and the roles of the Cabinet Secretary, the Prime Minister, and Mandelson’s former firm Global Counsel. Several of the Government’s answers note material withheld “at the request of the Metropolitan Police,” a reminder that a criminal inquiry sits behind the paper trail. The questions test what a Humble Address actually compels the executive to produce.",
+    "questions": [
+      "Mike Wood (Conservative, Kingswinford and South Staffordshire) — twenty-four questions, the single largest hand: whether the Cabinet Office discussed the response to the Humble Address with Global Counsel; the reasoning behind the overrule of the security-vetting decision; and which documents relating to the appointment were withheld, redacted, or deposited in the House Library.",
+      "Alex Burghart (Conservative, Brentwood and Ongar) — four questions, pressing the same seam on the paper trail between the Cabinet Office and the appointment.",
+      "The cluster sits under the Cabinet Office and the Foreign, Commonwealth and Development Office, and follows the Government’s “Return to an Address” laying documents before the House."
+    ]
+  },
+  "topTopics": [
+    {
+      "heading": "Immigration",
+      "count": 20
+    },
+    {
+      "heading": "Lord Mandelson",
+      "count": 19
+    },
+    {
+      "heading": "Conversion Therapy",
+      "count": 15
+    },
+    {
+      "heading": "Pregnancy: Thromboembolism",
+      "count": 14
+    },
+    {
+      "heading": "Ministry of Defence: Artificial Intelligence",
+      "count": 13
+    },
+    {
+      "heading": "Pre-school Education: Teachers",
+      "count": 13
+    },
+    {
+      "heading": "Department for Transport: Artificial Intelligence",
+      "count": 12
+    },
+    {
+      "heading": "Forests: Environment Protection",
+      "count": 12
+    },
+    {
+      "heading": "Department for Business and Trade: Artificial Intelligence",
+      "count": 11
+    },
+    {
+      "heading": "Revenue and Customs: Artificial Intelligence",
+      "count": 11
+    }
+  ],
+  "qa": [
+    {
+      "heading": "Local Government Finance",
+      "asker": "Blake Stephenson",
+      "party": "Conservative",
+      "constituency": "Mid Bedfordshire",
+      "department": "Treasury",
+      "question": "What assessment she has made of the potential impact of her policies for fiscal devolution in relation to income tax on trends in the level of funding for local authorities.",
+      "answer": "At her Mais Lecture, the Chancellor committed to work with mayors, businesses and other stakeholders to develop a fiscal devolution roadmap, to be published at the Budget, setting out plans to give regional leaders control over the allocation of a share of some national taxes. This work includes considering income tax alongside other taxes. Reforms will support growth while maintaining fiscal responsibility, with appropriate equalisation and safeguards to manage revenue volatility."
+    },
+    {
+      "heading": "Employment and Poverty: Voluntary Organisations",
+      "asker": "Patrick Hurley",
+      "party": "Labour",
+      "constituency": "Southport",
+      "department": "Department for Work and Pensions",
+      "question": "What assessment his Department has made of the adequacy of the contribution of local voluntary, community and social enterprise organisations to reducing poverty and supporting employment outcomes.",
+      "answer": "The voluntary, community and social enterprise sector is the bedrock of our communities, providing vital support to families experiencing poverty or unemployment. Over the last five years we have spent £650 million within it, the vast majority in employment services, and these organisations will be fundamental to our £500 million Better Futures Fund."
+    }
+  ],
+  "highlights": {
+    "votes": [
+      {
+        "row": {
+          "id": 1,
+          "title": "National Security Bill, Lords Amendment 1",
+          "date": "2026-07-06",
+          "ayes": 394,
+          "noes": 85
+        },
+        "blurb": "The week’s decisive division. The Commons agreed the Lords’ humanitarian-activity defence 394 to 85, clearing the Bill’s last hurdle before Royal Assent two days later."
+      },
+      {
+        "row": {
+          "id": 2,
+          "title": "Opposition Day, Early Release of Prisoners",
+          "date": "2026-07-07",
+          "ayes": 115,
+          "noes": 0
+        },
+        "blurb": "A Conservative opposition-day motion carried without a single vote against, the Government abstaining by convention."
+      },
+      {
+        "row": {
+          "id": 3,
+          "title": "Employment Tribunal time-limit regulations",
+          "date": "2026-07-01",
+          "ayes": 322,
+          "noes": 107
+        },
+        "blurb": "Extending tribunal time limits, carried comfortably."
+      },
+      {
+        "row": {
+          "id": 4,
+          "title": "Employment Tribunals jurisdiction order",
+          "date": "2026-07-01",
+          "ayes": 318,
+          "noes": 107
+        },
+        "blurb": "The companion order on tribunal jurisdiction, on near-identical numbers."
+      },
+      {
+        "row": {
+          "id": 5,
+          "title": "Taxation (Energy and Vehicles) Bill, New Clause 5",
+          "date": "2026-07-01",
+          "ayes": 177,
+          "noes": 308
+        },
+        "blurb": "The largest of three opposition new clauses to the energy-and-vehicles tax bill, defeated in committee."
+      },
+      {
+        "row": {
+          "id": 6,
+          "title": "Taxation (Energy and Vehicles) Bill, New Clause 4",
+          "date": "2026-07-01",
+          "ayes": 173,
+          "noes": 282
+        },
+        "blurb": "A second new clause to the same bill, defeated."
+      },
+      {
+        "row": {
+          "id": 7,
+          "title": "Taxation (Energy and Vehicles) Bill, New Clause 2",
+          "date": "2026-07-01",
+          "ayes": 80,
+          "noes": 281
+        },
+        "blurb": "The third new clause, defeated by the widest margin of the three."
+      }
+    ],
+    "questions": [],
+    "bills": [
+      {
+        "row": {
+          "id": 4140,
+          "title": "National Security (State Threats) Bill",
+          "house": "Unassigned",
+          "stage": "Royal Assent",
+          "lastUpdate": "2026-07-08"
+        },
+        "blurb": "Completed its passage and received Royal Assent on 8 July, after the Commons accepted the Lords’ humanitarian-activity defence."
+      },
+      {
+        "row": {
+          "id": 4001,
+          "title": "Railways Bill",
+          "house": "Lords",
+          "stage": "Committee stage",
+          "lastUpdate": "2026-07-08"
+        },
+        "blurb": "In Lords committee through the week."
+      },
+      {
+        "row": {
+          "id": 4002,
+          "title": "Armed Forces Bill",
+          "house": "Lords",
+          "stage": "Committee stage",
+          "lastUpdate": "2026-07-07"
+        },
+        "blurb": "Also in Lords committee."
+      },
+      {
+        "row": {
+          "id": 4003,
+          "title": "Steel Industry (Nationalisation) Bill",
+          "house": "Lords",
+          "stage": "Report stage",
+          "lastUpdate": "2026-07-07"
+        },
+        "blurb": "Reached Lords report stage."
+      },
+      {
+        "row": {
+          "id": 4004,
+          "title": "Taxation (Energy and Vehicles) Bill",
+          "house": "Lords",
+          "stage": "2nd reading",
+          "lastUpdate": "2026-07-07"
+        },
+        "blurb": "Went up to the Lords for second reading after its Commons committee votes."
+      }
+    ]
+  },
+  "intro": "The week’s biggest story was a resignation the official record has yet to catch up with. On Tuesday 7 July Nigel Farage announced that he would resign as the Member for Clacton and fight the by-election his departure will trigger — “the people versus the establishment,” as he cast it. A Member cannot simply quit: he must be appointed to a nominal Crown office, the Chiltern Hundreds, and the seat falls vacant only when the Chancellor signs the warrant. Until then the record still lists him as Clacton’s sitting Member, and as this issue goes out, it does. He took the seat in 2024 with 21,225 votes and a majority of 8,405 on a 46 per cent share; whatever the by-election decides will be measured against those numbers. The move follows press reports of undeclared support before that election, now before Parliament’s standards commissioner; Farage denies any wrongdoing. Around the announcement, the Commons had a heavier legislative week than the headlines suggested — a new state-threats law on the statute book, and a reckoning with foreign money in politics.",
+  "overview": {
+    "headline": "Nigel Farage resigns his seat",
+    "intro": "The week's biggest story was a resignation the official record has yet to catch up with. On Tuesday 7 July Nigel Farage announced that he would resign as the Member of Parliament for Clacton and fight the by-election his departure will trigger. A Member cannot simply quit. He must be appointed to a nominal Crown office known as the Chiltern Hundreds, and the seat falls vacant only when the Chancellor signs the warrant. Until then the record still lists him as the sitting Member, and as this goes out it does. He took the seat in 2024 with 21,225 votes and a majority of 8,405. The move follows press reports of undeclared support now before Parliament's standards commissioner. Farage denies any wrongdoing. The Commons also had a heavy legislative week, led by a new National Security (State Threats) Act and a review of foreign interference in politics.",
+    "brief": [
+      {
+        "title": "Royal Assent for the State Threats Act",
+        "when": "8 July",
+        "note": "The National Security (State Threats) Bill became law, giving the Home Secretary a designation power close to proscription for organisations acting for a foreign power. The Commons had agreed the Lords humanitarian activity defence two days earlier by 394 votes to 85."
+      },
+      {
+        "title": "Foreign Interference in UK Politics",
+        "when": "6 July",
+        "note": "The democracy minister Samantha Dixon made a statement publishing the Government response to Philip Rycroft's independent review. The Government accepted every recommendation and promised tighter rules on overseas and cryptoasset donations."
+      },
+      {
+        "title": "Rochdale grooming gang deportation",
+        "when": "6 July",
+        "note": "A Home Office minister took an urgent question on Shabir Ahmed, released on licence on 2 July, who cannot be deported because he arrived before 1973. Alex Norris said all options were on the table, including emergency legislation."
+      },
+      {
+        "title": "Early release of prisoners",
+        "when": "7 July",
+        "note": "A Conservative opposition day motion on the early release of prisoners was carried 115 votes to nil, the Government abstaining by the usual convention."
+      }
+    ],
+    "feature": {
+      "title": "The Mandelson file: twenty-four questions, one member",
+      "summary": "The most concentrated written question press of the week came from one member. Mike Wood, the Conservative for Kingswinford and South Staffordshire, tabled twenty-four questions on the appointment of Lord Mandelson as ambassador to Washington. They probe the security vetting decision, the redaction and disclosure of the appointment papers, and the roles of senior officials. Several answers note material withheld at the request of the Metropolitan Police."
+    },
+    "mostActive": {
+      "asker": {
+        "name": "Ben Obese-Jecty",
+        "party": "Conservative",
+        "count": 81
+      },
+      "answerer": {
+        "name": "Mrs Sharon Hodgson",
+        "party": "Labour",
+        "count": 144
+      }
+    }
+  },
+  "status": "published"
+}

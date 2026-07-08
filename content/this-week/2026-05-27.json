@@ -10,6 +10,22 @@
     "distinctAskers": 0
   },
   "departments": [],
+  "overview": {
+    "headline": "",
+    "intro": "Parliament is on half-term recess and the lobbies are empty. 650 Members of Parliament are ostensibly 'engaging with constituents'. In practice that means a mixture of school visits, local fetes, and sleeping in. Official business resumes on 2 June. We'll be back then with the usual forensic accounting of who voted how and on what.",
+    "mostActive": {
+      "asker": {
+        "name": "James McMurdock",
+        "party": "Independent",
+        "count": 40
+      },
+      "answerer": {
+        "name": "Keir Mather",
+        "party": "Labour",
+        "count": 106
+      }
+    }
+  },
   "highlights": {
     "votes": [],
     "questions": [],

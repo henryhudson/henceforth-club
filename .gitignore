@@ -57,3 +57,4 @@ scripts/hansard-anthem.mp4
 
 # private Morning Board data (served from a private store in prod, not committed)
 content/board/
+.env*.local

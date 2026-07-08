@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One-page reports + dated Done ledger — design spec</title>
+<style>
+  :root { --bg:#f4ecd8; --ink:#2a2318; --muted:#6b5d45; --rule:#c9b98f; --accent:#8b3a1a; --card:#faf4e4; --shadow:0 1px 3px rgba(60,40,10,0.15); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.68;}
+  .wrap{max-width:860px;margin:0 auto;padding:56px 32px;}
+  header.doc{margin-bottom:40px;border-bottom:3px double var(--rule);padding-bottom:26px;}
+  .eyebrow{font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:33px;line-height:1.16;margin:0 0 12px;font-weight:700;}
+  h2{font-size:24px;margin:46px 0 12px;padding-top:18px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 8px;}
+  .lede{font-size:19px;color:var(--muted);margin:0;font-style:italic;}
+  p{margin:13px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(120,90,30,0.12);padding:2px 6px;border-radius:4px;}
+  pre{background:#2a2318;color:#f0e6cf;padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;background:var(--card);}
+  th,td{text-align:left;padding:9px 12px;border:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .decision{background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 18px;margin:18px 0;box-shadow:var(--shadow);}
+  .decision strong{color:var(--accent);}
+  ul{margin:12px 0;padding-left:26px;} li{margin:6px 0;}
+  .flow{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px 20px;margin:16px 0;box-shadow:var(--shadow);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Design spec · 2026-07-02 · Morning Board</div>
+<h1>One-page reports + dated Done ledger</h1>
+<p class="lede">The daily and weekly report pages become single-page briefs — high-level actions and the plan, seen all at once — and every board card carries timestamps so the Done page reads as a chronological record of accomplishment, identical on the website and the local viewer.</p>
+</header>
+
+<h2>Why</h2>
+<p>Henry (2026-07-02): the current <code>/board/report</code> is clunky — long, sectioned, scroll-heavy. Like the This Week in Parliament one-page editions (pull requests #35/#36), each report should be one page containing just the high-level actions and the plan. Separately, the week planner incident this morning (Wednesday's accomplishments briefly erased by an unmarked roll) showed the deeper want: <em>seeing what was accomplished, when</em>. The kanban board and its Done page should mirror each other, with timestamps.</p>
+
+<div class="decision"><strong>Decision 1 — location.</strong> The board area gets three peer sections, all behind the <code>board_session</code> gate: the <strong>kanban board</strong> (<code>/board</code>), the <strong>weekly schedule</strong> (<code>/board/week</code>, planner grid only), and a new <strong>Reports section</strong> (<code>/board/reports</code>) housing the one-page editions — daily <code>/hh</code> briefs and weekly <code>/whh</code> briefs together, newest first. No local HTML report artifact returns. (Henry, 2026-07-02: “keeping the weekly schedule and kanban board, then we are going to have a reports section as well.”)</div>
+<div class="decision"><strong>Decision 2 — content.</strong> Each page shows actions + plan + cadence + a one-line verdict per app. The full per-app adjudication detail (evidence, falsifications, recommendations) stays on the page but inside a collapsed fold — one tap to expand, invisible otherwise. Nothing is lost; nothing clutters.</div>
+<div class="decision"><strong>Decision 3 — timestamps.</strong> Cards gain <code>movedAt</code> (stamped on every column change) and <code>doneAt</code> (stamped on landing in Done, cleared on reopen). The Done page becomes a dated, newest-first ledger, rendered identically by the local viewer and the website board. No backfill of historical cards.</div>
+
+<h2>0 · Site structure — the Reports section</h2>
+<div class="flow">
+<p style="margin:4px 0"><code>/board</code> — kanban board (active columns + the dated Done ledger, §3)<br>
+<code>/board/week</code> — the weekly <em>schedule only</em>: the planner grid with its strike-through done marks (the deep weekly-review detail moves into the weekly report edition)<br>
+<code>/board/reports</code> — <strong>new index</strong>: one line per edition, newest first, a type chip on each — <strong>Daily</strong> (from <code>board:report:dates</code>) interleaved with <strong>Weekly</strong> (from <code>board:weeks</code>)<br>
+<code>/board/reports/&lt;date&gt;</code> — a daily one-pager (§1)<br>
+<code>/board/reports/week/&lt;date&gt;</code> — a weekly one-pager (§2)<br>
+<code>/board/report</code> — redirects to the newest daily edition (old links keep working)</p>
+</div>
+<p>The gated board pages cross-link as peers: Board · Week · Reports · Docs.</p>
+
+<h2>1 · The daily one-pager — <code>/board/reports/&lt;date&gt;</code></h2>
+<p><strong>Data contract unchanged.</strong> The page renders the same report JSON <code>/hh</code> already publishes (<code>board:report:&lt;date&gt;</code>: <code>emergencies</code>, <code>appStore</code>, <code>apps[].findings</code>, <code>plan</code>). The archive keeps rendering; the existing renderer in <code>src/app/board/report/page.tsx</code> is redesigned and rehomed under the Reports section.</p>
+<p><strong>Layout, top to bottom (one screen, edition-style):</strong></p>
+<ul>
+  <li><strong>Emergency band</strong> — as today, tighter. Empty state stays explicit: “Nothing on fire — clear to build.”</li>
+  <li><strong>Today's plan</strong> — the existing tickable checklist (<code>PlanChecklist.tsx</code>, report JSON <code>plan</code> field) promoted to the centrepiece, directly under the emergencies.</li>
+  <li><strong>Ship-cadence strip</strong> — one row per app from <code>appStore.apps</code>: live version · days since release · what is in review · blocker, rendered as a single compact line each.</li>
+  <li><strong>Verdict line per app</strong> — one line each, computed client-side from <code>apps[].findings</code> verdict counts, e.g. <code>deck @ 5a6141e — 0 defects · 2 crafts carded · 1 dismissed</code>. No table.</li>
+  <li><strong>“Full verdicts” fold</strong> — the current per-app evidence tables moved inside a collapsed <code>&lt;details&gt;</code> at the bottom. Default collapsed on every visit.</li>
+</ul>
+<p>Date navigation moves to the Reports index (the picker on the page itself goes away — the index is the archive).</p>
+
+<h2>2 · The weekly one-pager — <code>/board/reports/week/&lt;date&gt;</code></h2>
+<p>Sibling shape to the daily, rendered from the same <code>board:week:&lt;date&gt;</code> data <code>/whh</code> already writes (no new keys):</p>
+<ul>
+  <li><strong>Week headline + sales strip</strong> at the top (existing <code>/whh</code> aggregate data; the sales plumbing itself is untouched).</li>
+  <li><strong>Accomplished-vs-planned readout</strong> — the week's done-marked milestones per day, compact.</li>
+  <li><strong>“Full week detail” fold</strong> — the deep aggregation sections collapsed below, mirroring the daily page.</li>
+</ul>
+<p><code>/board/week</code> itself becomes the schedule alone: <code>WeekPlanner.tsx</code> (behaviour unchanged — struck-through done marks per day remain the live record) plus a link to the week's report edition.</p>
+
+<h2>3 · Timestamps + the Done ledger</h2>
+<h3>Card schema (additive, no migration)</h3>
+<table>
+  <tr><th>Field</th><th>Type</th><th>Written when</th><th>By</th></tr>
+  <tr><td><code>movedAt</code></td><td>ISO datetime string</td><td>Any column change</td><td><code>/hh</code> edits to <code>morning-board-data.js</code>; local drags stamp their localStorage overlay</td></tr>
+  <tr><td><code>doneAt</code></td><td>ISO datetime string</td><td>Card lands in <code>done</code>; <em>cleared</em> if the card is reopened</td><td>Same writers</td></tr>
+</table>
+<p>Both fields flow through <code>sync-board</code>/<code>publish.mjs</code>/<code>latest.json</code> untouched (cards are copied verbatim). The rev-based last-writer-wins reconcile is unchanged — <code>/hh</code> remains the owner of the data file; browser drags stay a local overlay exactly as column changes are today.</p>
+<h3>The Done page, mirrored</h3>
+<ul>
+  <li><strong>Local viewer</strong> (<code>2026-06-20-morning-review-dashboard-kanban.html</code> Done page) and the <strong>website board</strong> (a Done view in <code>BoardClient.tsx</code>) render the same thing: done cards sorted <code>doneAt</code> descending, each with a small date chip (date only; the datetime is kept in the data).</li>
+  <li>Historical cards without <code>doneAt</code> sort below the stamped ones, chip omitted. Completion dates already written in card descriptions stay as prose — <strong>no backfill</strong>.</li>
+  <li>The board's active columns and the Done ledger are thereby two views of one stamped dataset — they cannot drift.</li>
+</ul>
+<h3>Writer updates</h3>
+<ul>
+  <li><code>~/.claude/commands/hh.md</code> — step 4 gains one rule: every column change sets <code>movedAt</code> (+<code>doneAt</code> when the move is into <code>done</code>; clear <code>doneAt</code> on reopen), alongside the existing rev bump.</li>
+  <li>The viewer's drag/move handlers stamp the overlay on drop and on ←/→ moves.</li>
+</ul>
+
+<h2>Delivery &amp; verification</h2>
+<ul>
+  <li><strong>henceforth-club</strong> changes ship on a feature branch → pull request → Vercel preview eyeballed against today's real report/week JSON before merge (main auto-deploys).</li>
+  <li><strong>Definition of done:</strong> (1) <code>/board/reports</code> lists daily and weekly editions interleaved newest-first with type chips; (2) today's and at least one older daily JSON render as the one-pager with the fold collapsed; (3) the current week renders as a weekly edition, and <code>/board/week</code> shows the schedule alone; (4) <code>/board/report</code> redirects to the newest daily; (5) a card moved to Done by <code>/hh</code> shows its date chip on both Done views, newest first; (6) <code>npm run build</code> green. Page-render behaviour is asserted by the Vercel preview walk-through (visual composition — the preview is the assertion); the pure verdict-count and edition-index helpers get unit tests.</li>
+  <li>The local viewer edit is verified by opening the board, dragging a card to Done, and confirming the chip + ordering.</li>
+</ul>
+
+<h2>Deliberately out of scope</h2>
+<ul>
+  <li>Backfilling <code>doneAt</code> onto historical cards.</li>
+  <li>Any change to the report JSON schema, the publish pipeline, or the Upstash keys.</li>
+  <li>The <code>/whh</code> sales aggregation internals.</li>
+  <li>A returning local HTML report artifact.</li>
+</ul>
+
+</div>
+</body>
+</html>

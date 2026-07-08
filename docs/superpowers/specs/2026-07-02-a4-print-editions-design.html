@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A4 print editions — design spec</title>
+<style>
+  :root { --bg:#f4ecd8; --ink:#2a2318; --muted:#6b5d45; --rule:#c9b98f; --accent:#8b3a1a; --card:#faf4e4; --shadow:0 1px 3px rgba(60,40,10,0.15); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.68;}
+  .wrap{max-width:860px;margin:0 auto;padding:56px 32px;}
+  header.doc{margin-bottom:40px;border-bottom:3px double var(--rule);padding-bottom:26px;}
+  .eyebrow{font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:33px;line-height:1.16;margin:0 0 12px;font-weight:700;}
+  h2{font-size:24px;margin:46px 0 12px;padding-top:18px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 8px;}
+  .lede{font-size:19px;color:var(--muted);margin:0;font-style:italic;}
+  p{margin:13px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(120,90,30,0.12);padding:2px 6px;border-radius:4px;}
+  pre{background:#2a2318;color:#f0e6cf;padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;background:var(--card);}
+  th,td{text-align:left;padding:9px 12px;border:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .decision{background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 18px;margin:18px 0;box-shadow:var(--shadow);}
+  .decision strong{color:var(--accent);}
+  ul{margin:12px 0;padding-left:26px;} li{margin:6px 0;}
+  .flow{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px 20px;margin:16px 0;box-shadow:var(--shadow);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Design spec · 2026-07-02 · Morning Board</div>
+<h1>A4 print editions</h1>
+<p class="lede">Every daily and weekly report edition becomes a real, archived A4 document — laid out by a print stylesheet, rendered to PDF at publish time by the Chrome on Henry's Mac, stored in Vercel Blob, and downloadable behind the board gate.</p>
+</header>
+
+<h2>Why</h2>
+<p>Henry (2026-07-02): the daily report should sit on one A4 page like the This Week in Parliament articles; the weekly can use small type but must be printable — "make them a pdf then they will be constrained?". The mechanism answer: a PDF cannot contain live HTML, but HTML <em>is</em> the source format for PDFs — a print stylesheet (<code>@page { size: A4 }</code>) constrains the page, and a browser engine freezes it into the file. The A4 discipline lives in CSS; the PDF is the frozen output.</p>
+
+<div class="decision"><strong>Decision 1 — generation happens at publish time, on the Mac.</strong> Not in a serverless function. A puppeteer script beside the publish scripts drives the locally installed Chrome, renders the just-published edition pages, and uploads the PDFs. Zero serverless weight, no cold starts, and every edition accumulates as a real file — the article archive feel. (Chosen over on-demand Vercel Chromium, ~50 MB function + cold starts.)</div>
+<div class="decision"><strong>Decision 2 (amended 2026-07-02, Henry) — storage is the BSV blockchain, encrypted.</strong> Vercel Blob is not used. Each edition PDF is encrypted with AES-256-GCM under a dedicated random secret (<code>BOARD_ARCHIVE_KEY</code>, 32 bytes hex — deliberately NOT derived from the low-entropy board password; lives in <code>.env.local</code> AND the Vercel environment, and MUST be backed up in the password manager: the chain guarantees the record exists, not that it stays readable) and inscribed in a single <code>OP_RETURN</code> output — the xtext single-transaction pattern — signed by a sacrificial archive key (<code>BOARD_ARCHIVE_WIF</code>, Mac-side only, funded with a few pounds of BSV; at ~50 KB per daily a small top-up lasts years). The transaction id is indexed in Upstash (<code>board:pdftx:&lt;kind&gt;:&lt;date&gt;</code>). The gated routes fetch the raw transaction from WhatsOnChain (the same raw-transaction-hex pattern the xtext reader already uses), extract the payload, decrypt, and stream. Re-renders inscribe a NEW transaction and repoint the index — the chain keeps every historical version by construction. <em>Henry's manual steps: fund the archive address; add <code>BOARD_ARCHIVE_KEY</code> to the Vercel environment; back both up.</em></div>
+<div class="decision"><strong>Decision 3 — page budgets.</strong> The daily prints as <strong>strictly one A4 page</strong>: emergencies → plan → cadence → verdict lines, in article typography; the "Full verdicts" fold, navigation, and buttons are excluded from print. The weekly prints in small type (~9.5px), targets one page, and may run to a second on a heavy week — page-break rules keep sections whole. The render script <em>enforces</em> the daily budget: it fails loudly if the daily PDF exceeds one page.</div>
+
+<h2>1 · The print stylesheet (the A4 form itself)</h2>
+<p>Both edition pages (<code>/board/reports/[date]</code>, <code>/board/reports/week/[date]</code>) gain print rules — global (<code>globals.css</code> print section) plus per-page classes:</p>
+<ul>
+  <li><code>@page { size: A4; margin: 12mm }</code>; body switches to print-friendly colours (dark-on-light — the site is dark-mode-only on screen, so print inverts to ink-on-paper).</li>
+  <li>Article typography echoing the This Week editions: compact serif headings, tight leading, rules between sections.</li>
+  <li><code>@media print</code> hides: the site navigation, the peer links, all buttons, the daily page's <code>&lt;details&gt;</code> fold, and the index/archive chrome. The weekly's fold detail is also excluded — print carries the high-level brief only, per "high level actions and plan".</li>
+  <li><code>break-inside: avoid</code> on each section; the weekly gets a ~9.5px base with two-column treatment for its accomplished-vs-planned list if needed to hold one page.</li>
+  <li>Bonus by construction: Cmd+P on either page yields the identical A4 result with no PDF pipeline involved.</li>
+</ul>
+
+<h2>2 · The render script — <code>scripts/board/render-pdf.mjs</code></h2>
+<ul>
+  <li><strong>Engine:</strong> <code>puppeteer-core</code> launching the installed Chrome (<code>channel: "chrome"</code>); no bundled browser download.</li>
+  <li><strong>Auth:</strong> mints its own <code>board_session</code> cookie from <code>BOARD_COOKIE_SECRET</code> in <code>.env.local</code> — a ~15-line node-crypto mirror of <code>createSession</code> in <code>src/lib/board-auth.ts</code> (HMAC-SHA256 over a base64url <code>{exp}</code> payload). No password stored anywhere.</li>
+  <li><strong>Render:</strong> loads the live edition URL (<code>https://www.henceforth.club/board/reports/…</code> — publish precedes render, so the data is already live), waits for network idle, <code>page.pdf({ format: "A4", preferCSSPageSize: true, printBackground: true })</code>.</li>
+  <li><strong>Budget check:</strong> parses the page count (<code>pdf-lib</code>); a daily over 1 page or a weekly over 2 exits non-zero with a clear message — the constraint is enforced, not hoped for.</li>
+  <li><strong>Inscribe (amended):</strong> encrypt the PDF (AES-256-GCM, <code>BOARD_ARCHIVE_KEY</code>, payload = 12-byte nonce ‖ 16-byte tag ‖ ciphertext), build a transaction with one <code>OP_FALSE OP_RETURN</code> data output pushing <code>["HHRPT1", kind, date, payload]</code>, funded and signed by <code>BOARD_ARCHIVE_WIF</code> (@bsv/sdk; inputs from WhatsOnChain unspent-output lookup for the archive address; change back to the same address), broadcast via WhatsOnChain, then <code>SET board:pdftx:&lt;kind&gt;:&lt;date&gt; = txid</code> in Upstash. The login-gate render guard and page budgets are unchanged.</li>
+  <li><strong>Modes:</strong> <code>render-pdf.mjs daily &lt;date&gt;</code> · <code>week &lt;weekOf&gt;</code> · <code>--all</code> (backfill every date in <code>board:report:dates</code> + every week in <code>board:weeks</code>).</li>
+  <li><strong>Callers:</strong> /hh after its Upstash publish renders today's daily AND the current week (the planner's done-marks change daily); /whh renders the fresh weekly. Command docs updated accordingly. One-time backfill run at ship time.</li>
+</ul>
+
+<h2>3 · Download routes + buttons</h2>
+<ul>
+  <li><code>src/app/board/reports/[date]/pdf/route.ts</code> and <code>src/app/board/reports/week/[date]/pdf/route.ts</code> — GET, safe (read-only), already behind the cookie middleware. Validate the date segment, <code>GET board:pdftx:&lt;kind&gt;:&lt;date&gt;</code> from Upstash, fetch the raw transaction hex from WhatsOnChain, extract the <code>HHRPT1</code> OP_RETURN payload (verifying kind + date match), decrypt with <code>BOARD_ARCHIVE_KEY</code>, stream with <code>Content-Disposition: inline; filename="henceforth-daily-2026-07-02.pdf"</code> (weekly: <code>henceforth-week-&lt;weekOf&gt;.pdf</code>) and <code>Cache-Control: private, no-store</code>. Missing index entry, unreachable transaction, marker mismatch, or failed decryption → 404 JSON <code>{ error: "Not rendered yet — the next /hh run creates it." }</code>.</li>
+  <li>A small <strong>PDF</strong> button on each edition page (hidden in print) and a <strong>pdf</strong> chip on each Reports-index row linking the route.</li>
+</ul>
+
+<h2>Dependencies</h2>
+<table>
+  <tr><th>Package</th><th>Where</th><th>Why</th></tr>
+  <tr><td><code>@bsv/sdk</code></td><td>dependency (routes parse raw transactions; the script builds and signs them)</td><td>transaction build/sign/parse</td></tr>
+  <tr><td><code>puppeteer-core</code></td><td>devDependency (script only)</td><td>drives installed Chrome</td></tr>
+  <tr><td><code>pdf-lib</code></td><td>devDependency (script only)</td><td>page-count budget check</td></tr>
+</table>
+
+<h2>Verification</h2>
+<ul>
+  <li>Pure helpers (blob pathname / download filename builders) unit-tested with vitest.</li>
+  <li>The render script's page-budget check is the standing assertion of the A4 constraint; the backfill run is its first full exercise.</li>
+  <li>Definition of done: (1) Cmd+P on today's daily shows one clean A4 page, article-styled, no navigation or fold; (2) the backfill renders all existing dailies + the current week without a budget failure; (3) the PDF button on today's edition downloads a correctly named file behind the gate; (4) a never-rendered date 404s with the friendly message; (5) build + suite green.</li>
+</ul>
+
+<h2>Deliberately out of scope</h2>
+<ul>
+  <li>On-demand serverless Chromium.</li>
+  <li>Vercel Blob (superseded by the 2026-07-02 amendment — the chain is the store).</li>
+  <li>Publishing the reports unencrypted (Henry chose permanence WITHOUT publicity; the encrypted payload is unreadable without <code>BOARD_ARCHIVE_KEY</code>).</li>
+  <li>Re-rendering historical editions whose data has not changed (the backfill is once; /hh re-renders only what it republishes).</li>
+  <li>Print styles for any page other than the two editions.</li>
+  <li>Public (ungated) PDF links.</li>
+</ul>
+
+</div>
+</body>
+</html>

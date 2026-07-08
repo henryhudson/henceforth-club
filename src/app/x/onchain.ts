@@ -22,7 +22,7 @@ export interface SocialArchive {
     accountId?: string;
     createdAt?: string;
   };
-  posts: Array<{ id: string; at: string; text: string; replyToId?: string }>;
+  posts: Array<{ id: string; at: string; text: string; replyToId?: string; mediaHashes?: string[] }>;
 }
 
 const PUSHDATA1 = 0x4c;
@@ -94,8 +94,15 @@ function tryParseArchive(chunk: Uint8Array): SocialArchive | null {
   return null;
 }
 
-/** Map the lean on-chain archive to the shape the profile page renders. */
-export function socialArchiveToXArchive(sa: SocialArchive): XArchive {
+/** ORDFS serves an inscription's bytes with the correct Content-Type by outpoint. */
+export function ordfsUrl(txid: string, vout: string): string {
+  return `https://ordfs.network/${txid}_${vout}`;
+}
+
+/** Map the lean on-chain archive to the shape the profile page renders. When a
+ * `txid` is given, each post's media references (the ordinal vouts the app
+ * recorded) resolve to ORDFS-backed photo items against that archive transaction. */
+export function socialArchiveToXArchive(sa: SocialArchive, txid?: string): XArchive {
   return {
     profile: {
       handle: sa.handle,
@@ -107,9 +114,65 @@ export function socialArchiveToXArchive(sa: SocialArchive): XArchive {
       createdAt: sa.profile?.createdAt,
     },
     posts: (sa.posts ?? []).map(
-      (p): XPost => ({ id: p.id, at: p.at, text: p.text, replyToId: p.replyToId }),
+      (p): XPost => ({
+        id: p.id,
+        at: p.at,
+        text: p.text,
+        replyToId: p.replyToId,
+        txid,
+        media:
+          txid && p.mediaHashes?.length
+            ? p.mediaHashes.map((vout) => ({ type: "photo", url: ordfsUrl(txid, vout) }))
+            : undefined,
+      }),
     ),
   };
+}
+
+/**
+ * Merge several on-chain archives of one handle into the renderable profile,
+ * resolving each post's media against the transaction it was ACTUALLY inscribed
+ * in — a photo backfilled in a later transaction must form its ORDFS outpoint
+ * from that transaction's id, not the newest one. Posts are de-duplicated by id:
+ * fields come from the newest archive's copy, but media is the UNION across all
+ * copies (newest first, de-duplicated by url) — a later text-only re-archive
+ * must never erase photos inscribed, and paid for, earlier. The profile comes
+ * from the most recent archive; posts come out newest-first by post id. Input
+ * is oldest-first.
+ */
+export function stitchToXArchive(
+  pairs: Array<{ archive: SocialArchive; txid: string }>,
+): XArchive {
+  const rendered = pairs.map(({ archive, txid }) => socialArchiveToXArchive(archive, txid));
+  const latest = rendered[rendered.length - 1];
+  const merged = new Map<string, XPost>();
+  for (let i = rendered.length - 1; i >= 0; i--) {
+    for (const post of rendered[i].posts) {
+      const newer = merged.get(post.id);
+      merged.set(post.id, newer ? withMediaFromOlderCopy(newer, post) : post);
+    }
+  }
+  return { profile: latest.profile, posts: [...merged.values()].sort(byNewestId) };
+}
+
+/** The newer copy's fields, with any media the older copy carries that the newer
+ * one lacks appended. Media urls identify inscriptions exactly — each already
+ * embeds the transaction the photo was inscribed in — so de-duplicating by url
+ * is safe. */
+function withMediaFromOlderCopy(newer: XPost, older: XPost): XPost {
+  const kept = newer.media ?? [];
+  const knownUrls = new Set(kept.map((m) => m.url));
+  const carried = (older.media ?? []).filter((m) => !knownUrls.has(m.url));
+  const media = [...kept, ...carried];
+  return { ...newer, media: media.length > 0 ? media : undefined };
+}
+
+/** Newest post first. X post ids are numeric snowflakes that grow over time but
+ * exceed the safe-integer range, so compare as strings: a longer id is newer;
+ * ids of equal length compare lexicographically. */
+function byNewestId(a: XPost, b: XPost): number {
+  if (a.id.length !== b.id.length) return b.id.length - a.id.length;
+  return a.id === b.id ? 0 : a.id < b.id ? 1 : -1;
 }
 
 function hexToBytes(hex: string): Uint8Array {

@@ -47,10 +47,10 @@ export default function Home() {
                 tagline="UK Parliament browser"
                 description="Browse Members of the Commons, the House of Lords, and every constituency on an interactive map — coloured by political party. Offline-first with bundled parliamentary data."
                 href="/hansard"
-                appStoreUrl={null}
+                appStoreUrl="https://apps.apple.com/app/the-hansard/id6762037651"
                 accentClass="text-accent-green"
                 glowClass="card-glow-green"
-                badge="iOS · Coming Soon"
+                badge="iOS"
               />
             </FadeIn>
           </div>

@@ -1,4 +1,5 @@
 import type { SocialArchive } from "@/app/x/onchain";
+import { fetchAllUserTweets } from "./xPaginate";
 import { fullResXAvatar } from "@/app/x/xAvatar";
 
 const BASE = "https://api.twitter.com/2";
@@ -20,11 +21,14 @@ export async function fetchXArchive(handle: string, token: string): Promise<Soci
   const u = (await usersRes.json())?.data;
   if (!u?.id) return null;
 
-  const tweetsRes = await fetch(
-    `${BASE}/users/${u.id}/tweets?max_results=20&tweet.fields=created_at,in_reply_to_user_id`,
-    { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
-  );
-  const tweets = tweetsRes.ok ? await tweetsRes.json() : { data: [] };
+  // Whole timeline, not just the recent page: fetchAllUserTweets loops the X
+  // pagination cursor to the ~3200-tweet ceiling.
+  const { data: tweets } = await fetchAllUserTweets<{
+    id: string;
+    created_at?: string;
+    text: string;
+    in_reply_to_user_id?: string;
+  }>(u.id, token, "tweet.fields=created_at,in_reply_to_user_id");
 
   return {
     v: 1,
@@ -39,13 +43,11 @@ export async function fetchXArchive(handle: string, token: string): Promise<Soci
       accountId: u.id,
       createdAt: u.created_at,
     },
-    posts: (tweets.data ?? []).map(
-      (t: { id: string; created_at?: string; text: string; in_reply_to_user_id?: string }) => ({
-        id: t.id,
-        at: t.created_at ?? "",
-        text: t.text,
-        replyToId: t.in_reply_to_user_id,
-      }),
-    ),
+    posts: tweets.map((t) => ({
+      id: t.id,
+      at: t.created_at ?? "",
+      text: t.text,
+      replyToId: t.in_reply_to_user_id,
+    })),
   };
 }
