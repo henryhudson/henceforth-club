@@ -18,8 +18,9 @@ export async function fetchTweetsWithMedia(
   token: string,
   fetchFn: typeof fetch = fetch
 ): Promise<TweetsWithMedia> {
-  // Whole timeline, media included: page the cursor to the ~3200-tweet ceiling
-  // so a full archive captures every photo, not just the recent 20 posts.
+  // One page of posts, media included, unless a caller asks for more. This used
+  // to page to the ~3200-post ceiling — a second full timeline read on top of the
+  // one fetchXArchive already made, so a single /api/x/archive call could cost $32.
   const { data, media } = await fetchAllUserTweets<Tweet>(
     userId,
     token,

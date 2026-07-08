@@ -4,9 +4,25 @@ const BASE = "https://api.twitter.com/2";
 
 /**
  * X serves at most ~3200 most-recent tweets — 32 pages of 100. A hard cap so a
- * runaway or repeating cursor can never loop forever.
+ * runaway or repeating cursor can never loop forever. This bounds the LOOP; it
+ * has never bounded the COST.
  */
-const MAX_PAGES = 32;
+const PAGE_CEILING = 32;
+
+/**
+ * Pages a caller gets unless it asks for more, and pays for more.
+ *
+ * X bills per resource returned: $0.005 a post. A page is 100 posts, so a page
+ * is 50 cents and the full 32 pages are $16. Defaulting to the ceiling meant one
+ * unauthenticated request to /api/x/fetch cost up to $16, and /api/x/archive —
+ * which pages the timeline twice — cost up to $32. The default is now one page,
+ * so the expensive behaviour has to be asked for explicitly, in a call site a
+ * reader can find.
+ */
+export const DEFAULT_MAX_PAGES = 1;
+
+/** Posts X returns per page. One page is the unit of cost. */
+export const POSTS_PER_PAGE = 100;
 
 type TweetsPage<T> = {
   data?: T[];
@@ -27,12 +43,14 @@ export async function fetchAllUserTweets<T = unknown>(
   token: string,
   params: string,
   fetchFn: typeof fetch = fetch,
+  maxPages: number = DEFAULT_MAX_PAGES,
 ): Promise<{ data: T[]; media: XMedia[] }> {
   const data: T[] = [];
   const media: XMedia[] = [];
   let paginationToken: string | undefined;
+  const pages = Math.max(1, Math.min(Math.floor(maxPages), PAGE_CEILING));
 
-  for (let page = 0; page < MAX_PAGES; page++) {
+  for (let page = 0; page < pages; page++) {
     const url =
       `${BASE}/users/${userId}/tweets?max_results=100&${params}` +
       (paginationToken ? `&pagination_token=${paginationToken}` : "");

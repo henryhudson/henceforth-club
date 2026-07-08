@@ -2,16 +2,21 @@ import { NextResponse } from "next/server";
 import { fetchXArchive } from "@/lib/xfetch";
 import { fetchTweetsWithMedia, selectRefs, downloadItems } from "@/lib/xArchive";
 import { extractMediaRefs } from "@/lib/xMedia";
-import { getRedis } from "@/lib/redis";
+import { payAndReserve, RESOURCES_WITH_MEDIA } from "@/lib/xGate";
 
 /**
- * GET /api/x/archive?handle=<h>&images=1&videos=0
+ * GET /api/x/archive?handle=<h>&payment=<txid>&images=1&videos=0
  *
  * Like /api/x/fetch, but also returns downloaded media bytes so the app can
  * inscribe photos and videos alongside the text archive. The shared X bearer
- * token lives only here (env var X_BEARER_TOKEN) and is never returned or
- * logged. Rate-limited per IP, separately from /api/x/fetch, because this
- * call spends more credits and bandwidth (it downloads media too).
+ * token lives only here (env var X_BEARER_TOKEN) and is never returned or logged.
+ *
+ * This is the expensive endpoint: it pages the timeline twice — once for text and
+ * again for media — so before the page cap it could cost $32 in a single
+ * unauthenticated request. It now demands a `payment` transaction id, verified on
+ * chain against the archive reward address and burned so one payment buys one
+ * read, and it reserves its worst-case cost against a hard daily budget before it
+ * touches X. See lib/xGate.
  */
 
 function flag(value: string | null, defaultValue: boolean): boolean {
@@ -32,17 +37,8 @@ export async function GET(req: Request) {
   const includeImages = flag(url.searchParams.get("images"), true);
   const includeVideos = flag(url.searchParams.get("videos"), false);
 
-  // Abuse guard: 10 fetches / IP / hour. Real money per call.
-  const redis = getRedis();
-  if (redis) {
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    const key = `xarchive:rl:${ip}`;
-    const n = await redis.incr(key);
-    if (n === 1) await redis.expire(key, 3600);
-    if (n > 10) {
-      return NextResponse.json({ ok: false, reason: "rate-limited" }, { status: 429 });
-    }
-  }
+  const gate = await payAndReserve(url.searchParams.get("payment"), RESOURCES_WITH_MEDIA);
+  if (!gate.ok) return gate.response;
 
   const archive = await fetchXArchive(handle, token);
   const userId = archive?.profile.accountId;

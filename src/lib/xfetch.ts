@@ -20,8 +20,9 @@ export async function fetchXArchive(handle: string, token: string): Promise<Soci
   const u = (await usersRes.json())?.data;
   if (!u?.id) return null;
 
-  // Whole timeline, not just the recent page: fetchAllUserTweets loops the X
-  // pagination cursor to the ~3200-tweet ceiling.
+  // One page — 100 posts — unless a caller explicitly asks for more. X bills per
+  // resource returned, so pages are the unit of cost: a page is 50 cents and the
+  // whole 3,200-post timeline is $16. See fetchAllUserTweets' DEFAULT_MAX_PAGES.
   const { data: tweets } = await fetchAllUserTweets<{
     id: string;
     created_at?: string;
