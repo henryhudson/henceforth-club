@@ -1,4 +1,5 @@
 import type { XPost } from "../parseArchive";
+import { fullResXAvatar } from "../xAvatar";
 
 function formatDateObj(d: Date): string {
   return d.toLocaleDateString("en-GB", { year: "numeric", month: "short", day: "numeric" });
@@ -33,7 +34,7 @@ export function Avatar({
   return avatarUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={avatarUrl}
+      src={fullResXAvatar(avatarUrl)}
       alt=""
       className="rounded-full object-cover"
       style={{ width: size, height: size }}
