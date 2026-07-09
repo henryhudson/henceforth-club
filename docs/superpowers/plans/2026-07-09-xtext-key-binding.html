@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The handle-to-key binding — implementation plan</title>
+<style>
+  :root { --bg:#f4f1ea; --ink:#1c1a16; --muted:#6b6358; --rule:#d8d0c0; --accent:#a8431f; --accent-soft:#c4a572; --card:#fbf9f4; --code-bg:#1e1e1e; --code-ink:#e8e8e8; --ok:#2f6f3e; --warn:#a8431f; --shadow:0 1px 3px rgba(0,0,0,0.08); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.65;}
+  .wrap{max-width:880px;margin:0 auto;padding:56px 32px;} header.doc{margin-bottom:40px;border-bottom:2px solid var(--rule);padding-bottom:24px;}
+  .eyebrow{font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:34px;line-height:1.15;margin:0 0 12px;font-weight:700;} h2{font-size:24px;margin:48px 0 14px;padding-top:20px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 10px;} .lede{font-size:19px;color:var(--muted);margin:0;} p{margin:14px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(0,0,0,0.06);padding:2px 6px;border-radius:4px;}
+  pre{background:var(--code-bg);color:var(--code-ink);padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;} th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .task{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:8px 22px 18px;margin:22px 0;box-shadow:var(--shadow);}
+  .task .tasknum{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);}
+  .files{font-size:14px;background:#efe9dc;border-radius:6px;padding:10px 14px;margin:10px 0;}
+  .try{background:#eef3e9;border-left:4px solid var(--ok);padding:10px 16px;border-radius:0 6px 6px 0;margin:14px 0;} .try strong{color:var(--ok);}
+  .note{background:#f6efe0;border-left:4px solid var(--accent-soft);padding:10px 16px;border-radius:0 6px 6px 0;margin:14px 0;}
+  ul{margin:12px 0;padding-left:24px;} li{margin:5px 0;}
+  ul.steps{list-style:none;padding-left:4px;} ul.steps>li{margin:12px 0;padding-left:30px;position:relative;}
+  ul.steps>li input[type=checkbox]{position:absolute;left:0;top:5px;width:18px;height:18px;}
+  .badge{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:2px 8px;border-radius:999px;white-space:nowrap;}
+  .b-site{background:#dfe8ee;color:#2a5a7a;} .b-app{background:#f3dcd2;color:var(--accent);} .b-both{background:#e7e0f0;color:#5a3a8a;}
+  .effort{font-size:13px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Implementation plan &middot; 2026-07-09 &middot; henceforth.club/x &middot; spec C of four &middot; website side</div>
+<h1>The handle-to-key binding</h1>
+<p class="lede">Five tasks. Close the register endpoint&rsquo;s open door: a claimed handle can only be extended by the key its account committed to on X. The site holds no key; it verifies with the SDK it already ships.</p>
+</header>
+
+<div class="note"><strong>For agentic workers:</strong> REQUIRED SUB-SKILL &mdash; use <code>superpowers:subagent-driven-development</code> (recommended) or <code>superpowers:executing-plans</code> to implement this plan task by task. Steps are real checkboxes.</div>
+
+<p><strong>Goal:</strong> an X-account owner claims their handle by proving control of the Henceforth identity address they committed to in a tweet; the site records the owner, gates registration on that owner&rsquo;s signature once claimed, resets the canonical feed to the owner&rsquo;s archive on claim, and shows a verified tick with the tweet&rsquo;s permalink one click away.</p>
+
+<p><strong>Architecture:</strong> a pure crypto core (parse the committed address out of an archive, build the registration message, verify a Bitcoin Signed Message via <code>@bsv/sdk</code>), a tiny Redis-backed owner record with a pure claim-decision function, the register route wired to both, and a purely additive verified prop threaded into the profile header. No key is ever held by the site; verification is <code>pubkey.toAddress() === committedAddress</code> followed by <code>BSM.verify</code>.</p>
+
+<p><strong>Tech stack:</strong> Next.js 16 (App Router, React 19 server components), TypeScript strict, Tailwind version 4, vitest, Upstash Redis, <code>@bsv/sdk</code> 2.1.6 (already installed).</p>
+
+<h2>Global constraints</h2>
+<ul>
+<li><strong>No acronyms or initialisms in prose</strong> &mdash; comments, commit messages, page copy. Code identifiers, file paths, and established proper nouns (X, Redis, Bitcoin) are exempt.</li>
+<li><strong>The site holds no keys and no money.</strong> Verification uses only public inputs: the committed address, the public key, the signature. No private key appears in any file or any test &mdash; test signatures are produced with throwaway <code>PrivateKey.fromRandom()</code> keys generated inside the test.</li>
+<li><strong>Verification is two SDK calls, in this order</strong>, both proven against <code>@bsv/sdk</code> 2.1.6: <code>PublicKey.fromString(pubkeyHex).toAddress() === committedAddress</code>, then <code>BSM.verify(Utils.toArray(message,'utf8'), Signature.fromCompact(Utils.toArray(sigBase64,'base64')), publicKey)</code>. The address check MUST precede the signature check &mdash; a signature valid for the wrong key is worthless if that key does not derive to the committed address.</li>
+<li><strong>Binding tweet format, exact:</strong> <code>Verifying my Henceforth identity: &lt;address&gt;</code>. The parser matches this prefix and extracts the Base58 address after it.</li>
+<li><strong>Registration message, exact:</strong> <code>henceforth-x-register:&lt;handle&gt;:&lt;txid&gt;</code> &mdash; the lowercased handle and the transaction id, so a signature cannot be replayed onto another handle or another archive.</li>
+<li><strong>This repository has no continuous integration.</strong> The gate, run locally before every commit, each command separately, reading <code>$?</code> directly &mdash; never piped into <code>tail</code>/<code>grep</code>/<code>head</code>:
+<pre><code>npx vitest run;   echo "vitest $?"
+npx tsc --noEmit; echo "tsc    $?"
+npm run build;    echo "build  $?"
+npx eslint src;   echo "eslint $?"</code></pre>
+All four must print <code>0</code>.</li>
+<li><strong>Backward compatible.</strong> The app today posts <code>{ handle, txid }</code> with no claim. That must keep working for an <em>unclaimed</em> handle (open registration, no tick). The tick appears only once the app is updated to send claims &mdash; which is a separate FORTHapp deliverable, out of this plan.</li>
+</ul>
+
+<h2>Scope</h2>
+<p>This plan is the <strong>website side only</strong>. The Henceforth iOS app changes &mdash; showing the identity address, giving the user the exact binding-tweet text to copy, and extending <code>registerXArchive(handle:txid:)</code> to sign the claim and include <code>{ address, pubkey, signature }</code> in the post &mdash; are a separate FORTHapp deliverable (different repository, heavy pre-push hook), noted at the end. Everything here ships and is fully tested with throwaway-key fixtures, without the app.</p>
+
+<h2>File structure</h2>
+<table>
+<tr><th>file</th><th>responsibility</th></tr>
+<tr><td><code>src/lib/xBinding.ts</code> <em>(new)</em></td><td>pure crypto core: parse the committed address from an archive&rsquo;s posts, build the registration message, verify a claim (address match + Bitcoin Signed Message)</td></tr>
+<tr><td><code>src/lib/xOwner.ts</code> <em>(new)</em></td><td>the owner record type, its Redis read/write (<code>x:owner:&lt;handle&gt;</code>), and the pure claim-outcome decision</td></tr>
+<tr><td><code>src/lib/xIndex.ts</code> <em>(modify)</em></td><td>add <code>setXTxids</code> so a claim can reset the canonical feed</td></tr>
+<tr><td><code>src/app/api/x/register/route.ts</code> <em>(modify)</em></td><td>the gate: open until claimed, owner-signed after; establish + reset on first valid claim</td></tr>
+<tr><td><code>src/app/x/_components/ProfileView.tsx</code> <em>(modify)</em></td><td>render the verified tick beside <code>@handle</code></td></tr>
+<tr><td><code>src/app/x/_components/ProfilePage.tsx</code> <em>(modify)</em></td><td>thread the <code>verified</code> prop through to ProfileView</td></tr>
+<tr><td><code>src/app/x/[handle]/page.tsx</code>, <code>src/app/x/tx/[txid]/page.tsx</code> <em>(modify)</em></td><td>look up the owner record and pass <code>verified</code></td></tr>
+</table>
+
+<hr>
+
+<div class="task">
+<div class="tasknum">Task 1 <span class="badge b-site">site</span> <span class="effort">~1 hour</span></div>
+<h3>The binding crypto core</h3>
+<div class="files"><strong>Create:</strong> <code>src/lib/xBinding.ts</code>, <code>src/lib/xBinding.test.ts</code></div>
+<p><strong>Interfaces produced</strong> (Tasks 4 consumes): <code>parseBindingAddress(posts: { text: string }[]) &rarr; string | null</code>; <code>registrationMessage(handle: string, txid: string) &rarr; string</code>; <code>verifyClaim(input: { message: string; signatureBase64: string; pubkeyHex: string; committedAddress: string }) &rarr; boolean</code>.</p>
+<div class="note">The single highest-risk unit: if verification is wrong, the tick is a lie. It goes first, alone, with a throwaway-key round-trip that also proves tamper- and wrong-key-rejection. The exact <code>@bsv/sdk</code> call shapes below were verified against version 2.1.6 in this repository.</div>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &middot; Write the failing test</strong> at <code>src/lib/xBinding.test.ts</code>. Throwaway keys, no real key anywhere.
+<pre><code>import { describe, expect, it } from "vitest";
+import { BSM, PrivateKey, Utils } from "@bsv/sdk";
+import { parseBindingAddress, registrationMessage, verifyClaim } from "./xBinding";
+
+/** Produce a valid claim the way the app will, with a throwaway key. */
+function makeClaim(handle: string, txid: string) {
+  const priv = PrivateKey.fromRandom();
+  const pub = priv.toPublicKey();
+  const address = pub.toAddress();
+  const message = registrationMessage(handle, txid);
+  const signatureBase64 = BSM.sign(Utils.toArray(message, "utf8"), priv, "base64") as string;
+  return { address, pubkeyHex: pub.toString(), signatureBase64, message };
+}
+
+describe("registrationMessage", () =&gt; {
+  it("binds the lowercased handle and the txid, so a signature cannot be replayed", () =&gt; {
+    expect(registrationMessage("HenryHudson6", "a".repeat(64)))
+      .toBe(`henceforth-x-register:henryhudson6:${"a".repeat(64)}`);
+  });
+});
+
+describe("parseBindingAddress", () =&gt; {
+  it("extracts the address from the exact binding format", () =&gt; {
+    const posts = [
+      { text: "good morning" },
+      { text: "Verifying my Henceforth identity: 1GsP511Tf1xEXAMPLEaddr7WSqc7hCfva — henceforth.club/x" },
+    ];
+    expect(parseBindingAddress(posts)).toBe("1GsP511Tf1xEXAMPLEaddr7WSqc7hCfva");
+  });
+
+  it("returns null when no post carries the binding line", () =&gt; {
+    expect(parseBindingAddress([{ text: "just a normal tweet about 1coins" }])).toBeNull();
+  });
+
+  it("is not fooled by the words without the exact prefix", () =&gt; {
+    expect(parseBindingAddress([{ text: "my Henceforth identity is great" }])).toBeNull();
+  });
+});
+
+describe("verifyClaim", () =&gt; {
+  const handle = "henryhudson6";
+  const txid = "b".repeat(64);
+
+  it("accepts a signature by the key that derives to the committed address", () =&gt; {
+    const c = makeClaim(handle, txid);
+    expect(verifyClaim({
+      message: registrationMessage(handle, txid),
+      signatureBase64: c.signatureBase64,
+      pubkeyHex: c.pubkeyHex,
+      committedAddress: c.address,
+    })).toBe(true);
+  });
+
+  it("rejects a signature over a tampered message", () =&gt; {
+    const c = makeClaim(handle, txid);
+    expect(verifyClaim({
+      message: registrationMessage("someoneelse", txid),
+      signatureBase64: c.signatureBase64,
+      pubkeyHex: c.pubkeyHex,
+      committedAddress: c.address,
+    })).toBe(false);
+  });
+
+  it("rejects when the public key does not derive to the committed address", () =&gt; {
+    const c = makeClaim(handle, txid);
+    const other = PrivateKey.fromRandom().toPublicKey();
+    expect(verifyClaim({
+      message: registrationMessage(handle, txid),
+      signatureBase64: c.signatureBase64,
+      pubkeyHex: c.pubkeyHex,
+      committedAddress: other.toAddress(), // a different address than the signing key's
+    })).toBe(false);
+  });
+
+  it("rejects a malformed signature without throwing", () =&gt; {
+    const c = makeClaim(handle, txid);
+    expect(verifyClaim({
+      message: registrationMessage(handle, txid),
+      signatureBase64: "not-base64-!!!",
+      pubkeyHex: c.pubkeyHex,
+      committedAddress: c.address,
+    })).toBe(false);
+  });
+});</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 2 &middot; Run it and watch it fail.</strong> <code>npx vitest run src/lib/xBinding.test.ts</code> &mdash; expect <code>Failed to resolve import "./xBinding"</code>.</li>
+
+<li><input type="checkbox"> <strong>Step 3 &middot; Write <code>src/lib/xBinding.ts</code>.</strong>
+<pre><code>import { BSM, PublicKey, Signature, Utils } from "@bsv/sdk";
+
+/**
+ * The cryptographic core of the handle-to-key binding. Pure: no I/O, no Redis,
+ * no network. The site holds no private key — every input here is public (the
+ * committed address, the public key, the signature), and the whole file's job is
+ * to answer one question honestly: did the key the account committed to sign this?
+ */
+
+/** The exact line an account posts on X to commit to its identity address. */
+const BINDING_PREFIX = "Verifying my Henceforth identity:";
+
+/** A Base58 P2PKH address is 26–35 characters of the Bitcoin Base58 alphabet. */
+const ADDRESS = /\b([13][1-9A-HJ-NP-Za-km-z]{25,34})\b/;
+
+/**
+ * The first address an account committed to, scanning its archived posts for the
+ * exact binding line. Returns null if no post carries it — the common case, since
+ * most handles never bind.
+ */
+export function parseBindingAddress(posts: { text: string }[]): string | null {
+  for (const { text } of posts) {
+    const at = text.indexOf(BINDING_PREFIX);
+    if (at === -1) continue;
+    const match = ADDRESS.exec(text.slice(at + BINDING_PREFIX.length));
+    if (match) return match[1];
+  }
+  return null;
+}
+
+/**
+ * The message a claimant signs. Lowercasing the handle matches how the index keys
+ * it; including the txid stops a signature being replayed onto another archive.
+ */
+export function registrationMessage(handle: string, txid: string): string {
+  return `henceforth-x-register:${handle.toLowerCase()}:${txid}`;
+}
+
+/**
+ * True only if `signatureBase64` is a Bitcoin Signed Message over `message` by a
+ * key whose address is `committedAddress`. The address check comes first on
+ * purpose: a signature valid for some key proves nothing unless that key is the
+ * one the account publicly committed to.
+ */
+export function verifyClaim(input: {
+  message: string;
+  signatureBase64: string;
+  pubkeyHex: string;
+  committedAddress: string;
+}): boolean {
+  try {
+    const pub = PublicKey.fromString(input.pubkeyHex);
+    if (pub.toAddress() !== input.committedAddress) return false;
+    const sig = Signature.fromCompact(Utils.toArray(input.signatureBase64, "base64"));
+    return BSM.verify(Utils.toArray(input.message, "utf8"), sig, pub);
+  } catch {
+    // Malformed public key or signature is a rejection, not a crash.
+    return false;
+  }
+}</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 4 &middot; Run the test.</strong> <code>npx vitest run src/lib/xBinding.test.ts</code> &rarr; all pass. If <code>verifyClaim</code>&rsquo;s happy path fails, the <code>@bsv/sdk</code> call shape is wrong &mdash; re-check against the values proven in this plan&rsquo;s preamble (sign returns a base64 string; verify takes <code>message: number[]</code>, a <code>Signature</code>, and a <code>PublicKey</code>).</li>
+
+<li><input type="checkbox"> <strong>Step 5 &middot; Run the gate and commit.</strong>
+<pre><code>npx vitest run;   echo "vitest $?"
+npx tsc --noEmit; echo "tsc    $?"
+npm run build;    echo "build  $?"
+npx eslint src;   echo "eslint $?"
+git add src/lib/xBinding.ts src/lib/xBinding.test.ts
+git commit -m "The binding crypto core: verify a claim without holding a key"</code></pre></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 2 <span class="badge b-site">site</span> <span class="effort">~40 minutes</span></div>
+<h3>The owner record and the claim decision</h3>
+<div class="files"><strong>Create:</strong> <code>src/lib/xOwner.ts</code>, <code>src/lib/xOwner.test.ts</code></div>
+<p><strong>Interfaces produced</strong> (Task 4 consumes): the <code>XOwner</code> type; <code>getOwner(handle: string) &rarr; Promise&lt;XOwner | null&gt;</code>; <code>setOwner(handle: string, owner: XOwner) &rarr; Promise&lt;boolean&gt;</code>; the pure <code>claimOutcome(existing: XOwner | null, claimantAddress: string) &rarr; "establish" | "append" | "reject"</code>.</p>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &middot; Write the failing test</strong> at <code>src/lib/xOwner.test.ts</code>. The decision is pure, so it is tested without Redis.
+<pre><code>import { describe, expect, it } from "vitest";
+import { claimOutcome, type XOwner } from "./xOwner";
+
+const owner = (address: string): XOwner =&gt; ({
+  address, pubkey: "02".padEnd(66, "a"), boundAt: 1, bindingTxid: "c".repeat(64), bindingPostId: "1",
+});
+
+describe("claimOutcome", () =&gt; {
+  it("establishes ownership when the handle is unclaimed", () =&gt; {
+    expect(claimOutcome(null, "1AAA")).toBe("establish");
+  });
+
+  it("appends when the claimant is the existing owner", () =&gt; {
+    expect(claimOutcome(owner("1AAA"), "1AAA")).toBe("append");
+  });
+
+  it("rejects a claim by a different address than the owner", () =&gt; {
+    expect(claimOutcome(owner("1AAA"), "1BBB")).toBe("reject");
+  });
+});</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 2 &middot; Run it and watch it fail.</strong> <code>npx vitest run src/lib/xOwner.test.ts</code> &mdash; <code>Failed to resolve import "./xOwner"</code>.</li>
+
+<li><input type="checkbox"> <strong>Step 3 &middot; Write <code>src/lib/xOwner.ts</code>,</strong> following the exact shape of the sibling <code>xIndex.ts</code> (nullable Redis, lowercased key).
+<pre><code>import { getRedis } from "./redis";
+
+/**
+ * The verified owner of a handle. The permanent evidence is the binding tweet on
+ * Bitcoin (bindingTxid + bindingPostId); this record is a rebuildable access gate,
+ * not the source of truth — if it were lost, an owner re-establishes it by
+ * re-signing, because they still hold the key and the tweet is still on chain.
+ */
+export type XOwner = {
+  address: string;       // the committed identity address, A
+  pubkey: string;        // the public key that derives to A (checked, not trusted)
+  boundAt: number;       // unix seconds, from the claim transaction's chain time
+  bindingTxid: string;   // the archive carrying the binding tweet
+  bindingPostId: string; // the X post id, so the site can surface the permalink
+};
+
+const key = (handle: string) =&gt; `x:owner:${handle.toLowerCase()}`;
+
+export async function getOwner(handle: string): Promise&lt;XOwner | null&gt; {
+  const redis = getRedis();
+  if (!redis) return null;
+  return (await redis.get&lt;XOwner&gt;(key(handle))) ?? null;
+}
+
+export async function setOwner(handle: string, owner: XOwner): Promise&lt;boolean&gt; {
+  const redis = getRedis();
+  if (!redis) return false;
+  await redis.set(key(handle), owner);
+  return true;
+}
+
+/**
+ * Pure. What a claim by `claimantAddress` should do, given the current owner.
+ * First valid claim wins: an unclaimed handle is established; the established
+ * owner may append more of their own archives; anyone else is refused.
+ */
+export function claimOutcome(
+  existing: XOwner | null,
+  claimantAddress: string,
+): "establish" | "append" | "reject" {
+  if (!existing) return "establish";
+  return existing.address === claimantAddress ? "append" : "reject";
+}</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 4 &middot; Run the test.</strong> <code>npx vitest run src/lib/xOwner.test.ts</code> &rarr; 3 pass.</li>
+
+<li><input type="checkbox"> <strong>Step 5 &middot; Run the gate and commit.</strong>
+<pre><code>npx vitest run;   echo "vitest $?"
+npx tsc --noEmit; echo "tsc    $?"
+npm run build;    echo "build  $?"
+npx eslint src;   echo "eslint $?"
+git add src/lib/xOwner.ts src/lib/xOwner.test.ts
+git commit -m "The owner record and the first-valid-claim-wins decision"</code></pre></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 3 <span class="badge b-site">site</span> <span class="effort">~20 minutes</span></div>
+<h3>Let the index be reset</h3>
+<div class="files"><strong>Modify:</strong> <code>src/lib/xIndex.ts</code> &middot; <strong>Test:</strong> <code>src/lib/xIndex.test.ts</code> (create if absent)</div>
+<p><strong>Interfaces produced</strong> (Task 4 consumes): <code>setXTxids(handle: string, txids: string[]) &rarr; Promise&lt;boolean&gt;</code>. <code>xIndex.ts</code> today only appends; claiming needs to replace the list with the owner&rsquo;s archive.</p>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &middot; Write the failing test.</strong> The existing <code>getRedis</code> returns null without configuration, so this test asserts the null-safe contract without a live Redis (matching how the file is already written).
+<pre><code>import { describe, expect, it } from "vitest";
+import { setXTxids } from "./xIndex";
+
+describe("setXTxids", () =&gt; {
+  it("returns false when Redis is unconfigured, never throwing", async () =&gt; {
+    // No KV_REST_API_URL in the test environment -&gt; getRedis() is null.
+    await expect(setXTxids("henryhudson6", ["a".repeat(64)])).resolves.toBe(false);
+  });
+});</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 2 &middot; Run it and watch it fail.</strong> <code>npx vitest run src/lib/xIndex.test.ts</code> &mdash; <code>setXTxids is not a function</code> / import error.</li>
+
+<li><input type="checkbox"> <strong>Step 3 &middot; Add <code>setXTxids</code> to <code>src/lib/xIndex.ts</code></strong>, directly after <code>appendXTxid</code>:
+<pre><code>/** Replace a handle's entire txid list. Used when an owner claims a handle and
+ * the canonical feed is reset to their archive, dropping any pre-claim
+ * stranger-inscribed transactions (which remain reachable by their own txid). */
+export async function setXTxids(handle: string, txids: string[]): Promise&lt;boolean&gt; {
+  const redis = getRedis();
+  if (!redis) return false;
+  await redis.set(key(handle), txids);
+  return true;
+}</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 4 &middot; Run the test.</strong> <code>npx vitest run src/lib/xIndex.test.ts</code> &rarr; passes.</li>
+
+<li><input type="checkbox"> <strong>Step 5 &middot; Run the gate and commit.</strong>
+<pre><code>npx vitest run;   echo "vitest $?"
+npx tsc --noEmit; echo "tsc    $?"
+npm run build;    echo "build  $?"
+npx eslint src;   echo "eslint $?"
+git add src/lib/xIndex.ts src/lib/xIndex.test.ts
+git commit -m "xIndex: reset a handle's canonical feed on claim"</code></pre></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 4 <span class="badge b-site">site</span> <span class="effort">~1.5 hours</span></div>
+<h3>The register endpoint: the door, closed</h3>
+<div class="files"><strong>Modify:</strong> <code>src/app/api/x/register/route.ts</code> &middot; <strong>Test:</strong> <code>src/app/api/x/register/route.test.ts</code></div>
+<p><strong>Interfaces consumed:</strong> <code>parseBindingAddress</code>, <code>registrationMessage</code>, <code>verifyClaim</code> (Task 1); <code>getOwner</code>, <code>setOwner</code>, <code>claimOutcome</code>, <code>XOwner</code> (Task 2); <code>setXTxids</code> (Task 3); the existing <code>fetchTxArchive</code>, <code>appendXTxid</code>, <code>getXTxids</code>, <code>archiveDigest</code>, <code>setTxDigest</code>.</p>
+<div class="note">The route reads Redis and the chain, so it is tested by injecting fakes through the module boundary: the test mocks <code>@/lib/whatsonchain</code>, <code>@/lib/xIndex</code>, <code>@/lib/xOwner</code> and <code>@/lib/xDigest</code> with <code>vi.mock</code>, and exercises the real decision logic against them. The crypto (<code>xBinding</code>) is NOT mocked — real signatures, real verification, throwaway keys.</div>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &middot; Write the failing test</strong> at <code>src/app/api/x/register/route.test.ts</code>. This is the behaviour that matters, so it is thorough.
+<pre><code>import { beforeEach, describe, expect, it, vi } from "vitest";
+import { BSM, PrivateKey, Utils } from "@bsv/sdk";
+import { registrationMessage } from "@/lib/xBinding";
+
+// In-memory fakes for the I/O boundaries.
+const store = { archives: new Map&lt;string, unknown&gt;(), owners: new Map&lt;string, unknown&gt;(), lists: new Map&lt;string, string[]&gt;() };
+
+vi.mock("@/lib/whatsonchain", () =&gt; ({
+  fetchTxArchive: async (txid: string) =&gt; store.archives.get(txid) ?? null,
+}));
+vi.mock("@/lib/xDigest", () =&gt; ({ archiveDigest: () =&gt; ({}), setTxDigest: async () =&gt; {} }));
+vi.mock("@/lib/xIndex", () =&gt; ({
+  getXTxids: async (h: string) =&gt; store.lists.get(h.toLowerCase()) ?? [],
+  appendXTxid: async (h: string, t: string) =&gt; { const k = h.toLowerCase(); store.lists.set(k, [...(store.lists.get(k) ?? []), t]); return true; },
+  setXTxids: async (h: string, t: string[]) =&gt; { store.lists.set(h.toLowerCase(), t); return true; },
+}));
+vi.mock("@/lib/xOwner", async (orig) =&gt; ({
+  ...(await orig&lt;typeof import("@/lib/xOwner")&gt;()),
+  getOwner: async (h: string) =&gt; store.owners.get(h.toLowerCase()) ?? null,
+  setOwner: async (h: string, o: unknown) =&gt; { store.owners.set(h.toLowerCase(), o); return true; },
+}));
+
+import { POST } from "./route";
+
+const TXID = "a".repeat(64);
+const HANDLE = "henryhudson6";
+
+function archive(handle: string, extraPostText?: string) {
+  return { v: 1, source: "x", handle, profile: {}, posts: [
+    { id: "1", at: "2012-09-02T00:00:00Z", text: "gm" },
+    ...(extraPostText ? [{ id: "2", at: "2013-01-01T00:00:00Z", text: extraPostText }] : []),
+  ] };
+}
+function claimFor(handle: string, txid: string) {
+  const priv = PrivateKey.fromRandom();
+  const pub = priv.toPublicKey();
+  const address = pub.toAddress();
+  const signature = BSM.sign(Utils.toArray(registrationMessage(handle, txid), "utf8"), priv, "base64") as string;
+  return { address, pubkey: pub.toString(), signature };
+}
+const post = (body: unknown) =&gt; POST(new Request("http://x/api/x/register", { method: "POST", body: JSON.stringify(body) }));
+
+beforeEach(() =&gt; { store.archives.clear(); store.owners.clear(); store.lists.clear(); });
+
+describe("POST /api/x/register", () =&gt; {
+  it("still accepts an unsigned registration for an unclaimed handle (backward compatible)", async () =&gt; {
+    store.archives.set(TXID, archive(HANDLE));
+    const res = await post({ handle: HANDLE, txid: TXID });
+    expect(res.status).toBe(200);
+    expect(store.lists.get(HANDLE)).toEqual([TXID]);
+    expect(store.owners.get(HANDLE)).toBeUndefined(); // no owner, no tick
+  });
+
+  it("establishes ownership and RESETS the feed when a valid claim arrives", async () =&gt; {
+    store.lists.set(HANDLE, ["stranger-txid"]); // pre-claim pollution
+    const c = claimFor(HANDLE, TXID);
+    store.archives.set(TXID, archive(HANDLE, `Verifying my Henceforth identity: ${c.address}`));
+    const res = await post({ handle: HANDLE, txid: TXID, address: c.address, pubkey: c.pubkey, signature: c.signature });
+    expect(res.status).toBe(200);
+    expect(store.lists.get(HANDLE)).toEqual([TXID]); // reset — stranger-txid dropped
+    expect((store.owners.get(HANDLE) as { address: string }).address).toBe(c.address);
+  });
+
+  it("rejects an unsigned registration once the handle is claimed", async () =&gt; {
+    store.owners.set(HANDLE, { address: "1OWNER", pubkey: "x", boundAt: 1, bindingTxid: TXID, bindingPostId: "1" });
+    store.archives.set(TXID, archive(HANDLE));
+    const res = await post({ handle: HANDLE, txid: TXID });
+    expect(res.status).toBe(403);
+  });
+
+  it("rejects a claim whose signature is not by the committed address", async () =&gt; {
+    const c = claimFor(HANDLE, TXID);
+    const wrong = claimFor(HANDLE, TXID); // different key
+    store.archives.set(TXID, archive(HANDLE, `Verifying my Henceforth identity: ${c.address}`));
+    const res = await post({ handle: HANDLE, txid: TXID, address: c.address, pubkey: wrong.pubkey, signature: wrong.signature });
+    expect(res.status).toBe(403);
+  });
+
+  it("rejects a claim when the archive carries no binding tweet for that address", async () =&gt; {
+    const c = claimFor(HANDLE, TXID);
+    store.archives.set(TXID, archive(HANDLE)); // no binding post
+    const res = await post({ handle: HANDLE, txid: TXID, address: c.address, pubkey: c.pubkey, signature: c.signature });
+    expect(res.status).toBe(422);
+  });
+
+  it("lets the established owner append another archive with their signature", async () =&gt; {
+    const priv = PrivateKey.fromRandom(); const pub = priv.toPublicKey(); const address = pub.toAddress();
+    store.owners.set(HANDLE, { address, pubkey: pub.toString(), boundAt: 1, bindingTxid: TXID, bindingPostId: "1" });
+    store.lists.set(HANDLE, [TXID]);
+    const DELTA = "d".repeat(64);
+    const signature = BSM.sign(Utils.toArray(registrationMessage(HANDLE, DELTA), "utf8"), priv, "base64") as string;
+    store.archives.set(DELTA, archive(HANDLE));
+    const res = await post({ handle: HANDLE, txid: DELTA, address, pubkey: pub.toString(), signature });
+    expect(res.status).toBe(200);
+    expect(store.lists.get(HANDLE)).toEqual([TXID, DELTA]); // appended, not reset
+  });
+});</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 2 &middot; Run it and watch it fail.</strong> <code>npx vitest run src/app/api/x/register/route.test.ts</code> &mdash; the current route ignores the claim fields, so the ownership tests fail (unsigned-on-claimed returns 200, not 403; claim does not reset).</li>
+
+<li><input type="checkbox"> <strong>Step 3 &middot; Rewrite <code>src/app/api/x/register/route.ts</code>.</strong> The handle-match and digest-priming stay; the gate is inserted.
+<pre><code>import { NextResponse } from "next/server";
+import { fetchTxArchive } from "@/lib/whatsonchain";
+import { appendXTxid, setXTxids } from "@/lib/xIndex";
+import { archiveDigest, setTxDigest } from "@/lib/xDigest";
+import { getOwner, setOwner, claimOutcome, type XOwner } from "@/lib/xOwner";
+import { parseBindingAddress, registrationMessage, verifyClaim } from "@/lib/xBinding";
+
+/**
+ * POST /api/x/register  { handle, txid, address?, pubkey?, signature? }
+ *
+ * Indexes handle -> archive txids so /x/&lt;handle&gt; reads the profile from chain.
+ * Holds no keys and no money — a txid and a public key are already public.
+ *
+ * Unclaimed handle: open, as it has always been (anyone can archive anyone).
+ * Claimed handle: only the owner's signature may extend it. The first valid
+ * claim establishes ownership and resets the canonical feed to the owner's
+ * archive, so a stranger's pre-claim inscription leaves the owner's feed (it
+ * stays reachable by its own txid — nothing on Bitcoin is destroyed).
+ */
+export async function POST(req: Request) {
+  let body: { handle?: string; txid?: string; address?: string; pubkey?: string; signature?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ ok: false, reason: "bad-json" }, { status: 400 });
+  }
+
+  const handle = body.handle?.trim().replace(/^@/, "");
+  const txid = body.txid?.trim();
+  if (!handle || !txid || !/^[0-9a-fA-F]{64}$/.test(txid)) {
+    return NextResponse.json({ ok: false, reason: "bad-input" }, { status: 400 });
+  }
+
+  const archive = await fetchTxArchive(txid);
+  if (!archive) {
+    return NextResponse.json({ ok: false, reason: "no-archive-in-tx" }, { status: 422 });
+  }
+  if (archive.handle.toLowerCase() !== handle.toLowerCase()) {
+    return NextResponse.json({ ok: false, reason: "handle-mismatch", onChain: archive.handle }, { status: 422 });
+  }
+
+  await setTxDigest(txid, archiveDigest(archive));
+
+  const owner = await getOwner(handle);
+  const hasClaim = Boolean(body.address && body.pubkey && body.signature);
+
+  // A claimed handle may only be extended by a signed claim.
+  if (owner && !hasClaim) {
+    return NextResponse.json({ ok: false, reason: "handle-claimed" }, { status: 403 });
+  }
+
+  if (hasClaim) {
+    const address = body.address!.trim();
+    // The archive being registered must itself carry the account's commitment to
+    // this address — the binding evidence and the archive are one transaction.
+    if (parseBindingAddress(archive.posts) !== address) {
+      return NextResponse.json({ ok: false, reason: "no-binding-in-tx" }, { status: 422 });
+    }
+    const ok = verifyClaim({
+      message: registrationMessage(handle, txid),
+      signatureBase64: body.signature!,
+      pubkeyHex: body.pubkey!,
+      committedAddress: address,
+    });
+    if (!ok) {
+      return NextResponse.json({ ok: false, reason: "bad-signature" }, { status: 403 });
+    }
+
+    const outcome = claimOutcome(owner, address);
+    if (outcome === "reject") {
+      return NextResponse.json({ ok: false, reason: "not-the-owner" }, { status: 403 });
+    }
+    if (outcome === "establish") {
+      const record: XOwner = {
+        address,
+        pubkey: body.pubkey!,
+        boundAt: Math.floor(Date.now() / 1000),
+        bindingTxid: txid,
+        bindingPostId: bindingPostId(archive.posts, address),
+      };
+      await setOwner(handle, record);
+      await setXTxids(handle, [txid]); // reset the feed to the owner's archive
+      return NextResponse.json({ ok: true, handle, txid, verified: true, reset: true, url: `/x/${handle}` });
+    }
+    // outcome === "append": the established owner adds another of their archives.
+  }
+
+  const stored = await appendXTxid(handle, txid);
+  if (!stored) {
+    return NextResponse.json({ ok: false, reason: "index-unavailable" }, { status: 503 });
+  }
+  return NextResponse.json({ ok: true, handle, txid, verified: Boolean(owner || hasClaim), posts: archive.posts.length, url: `/x/${handle}` });
+}
+
+/** The id of the post that carries the binding line for `address`, for the permalink. */
+function bindingPostId(posts: { id: string; text: string }[], address: string): string {
+  return posts.find((p) =&gt; p.text.includes("Verifying my Henceforth identity:") &amp;&amp; p.text.includes(address))?.id ?? "";
+}</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 4 &middot; Run the test.</strong> <code>npx vitest run src/app/api/x/register/route.test.ts</code> &rarr; all six pass. If the establish-and-reset test still shows the stranger txid, the reset call is missing or ordered after the append.</li>
+
+<li><input type="checkbox"> <strong>Step 5 &middot; Run the gate and commit.</strong>
+<pre><code>npx vitest run;   echo "vitest $?"
+npx tsc --noEmit; echo "tsc    $?"
+npm run build;    echo "build  $?"
+npx eslint src;   echo "eslint $?"
+git add src/app/api/x/register/route.ts src/app/api/x/register/route.test.ts
+git commit -m "Gate registration on the owner's signature once a handle is claimed"</code></pre></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 5 <span class="badge b-site">site</span> <span class="effort">~1 hour</span></div>
+<h3>The verified tick</h3>
+<div class="files"><strong>Modify:</strong> <code>src/app/x/_components/ProfileView.tsx</code>, <code>src/app/x/_components/ProfilePage.tsx</code>, <code>src/app/x/[handle]/page.tsx</code>, <code>src/app/x/tx/[txid]/page.tsx</code> &middot; <strong>Test:</strong> <code>src/app/x/_components/ProfileView.verified.test.tsx</code></div>
+<p><strong>Interfaces consumed:</strong> <code>getOwner</code>, <code>XOwner</code> (Task 2). <strong>Produces:</strong> a <code>verified?: { bindingPostId: string }</code> prop on <code>ProfileView</code> and <code>ProfilePage</code>.</p>
+<div class="note">The tick is honest: it says &ldquo;check the tweet&rdquo; and links the permalink, rather than imitating a platform checkmark. It renders from an owner record and is simply absent without one.</div>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &middot; Write the failing test</strong> at <code>src/app/x/_components/ProfileView.verified.test.tsx</code>. (The <code>.tsx</code> glob was already added to <code>vitest.config.ts</code> in the showroom work.)
+<pre><code>import { describe, expect, it } from "vitest";
+import { renderToStaticMarkup } from "react-dom/server";
+import ProfileView from "./ProfileView";
+import type { XArchive } from "../parseArchive";
+
+const archive: XArchive = {
+  profile: { handle: "henryhudson6", displayName: "Henry" },
+  posts: [{ id: "1", at: "2012-09-02T00:00:00Z", text: "gm" }],
+};
+
+describe("ProfileView verified tick", () =&gt; {
+  it("shows the tick and links the binding tweet when verified", () =&gt; {
+    const html = renderToStaticMarkup(
+      &lt;ProfileView archive={archive} isPreview={false} verified={{ bindingPostId: "1789" }} /&gt;,
+    );
+    expect(html).toContain("Verified");
+    expect(html).toContain("x.com/henryhudson6/status/1789");
+  });
+
+  it("shows no tick without an owner record", () =&gt; {
+    const html = renderToStaticMarkup(&lt;ProfileView archive={archive} isPreview={false} /&gt;);
+    expect(html).not.toContain("Verified");
+  });
+});</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 2 &middot; Run it and watch it fail.</strong> <code>npx vitest run src/app/x/_components/ProfileView.verified.test.tsx</code> &mdash; <code>verified</code> is not a prop yet; no tick renders.</li>
+
+<li><input type="checkbox"> <strong>Step 3 &middot; Add the prop and the tick to <code>ProfileView.tsx</code>.</strong> Extend the prop type with <code>verified?: { bindingPostId: string }</code>, and render the tick in the header block beside the handle. Replace the existing name/handle block:
+<pre><code>&lt;div&gt;
+  &lt;h2 className="text-xl font-bold text-foreground"&gt;{profile.displayName ?? profile.handle}&lt;/h2&gt;
+  &lt;p className="flex items-center gap-1.5 text-accent"&gt;
+    @{profile.handle}
+    {verified &amp;&amp; (
+      &lt;a
+        href={`https://x.com/${profile.handle}/status/${verified.bindingPostId}`}
+        target="_blank"
+        rel="noreferrer"
+        title="Verified: this account committed to a key on X. Check the tweet."
+        className="inline-flex items-center gap-1 rounded-full border border-accent/40 px-2 py-0.5 text-[11px] font-semibold text-accent hover:bg-accent/10"
+      &gt;
+        &#10003; Verified
+      &lt;/a&gt;
+    )}
+  &lt;/p&gt;
+&lt;/div&gt;</code></pre>
+Add <code>verified</code> to the destructured props and the prop type:
+<pre><code>export default function ProfileView({
+  archive, postCount, footer, isPreview, photoCount, txCount, firstInscribedAt, txTimes = {}, verified,
+}: {
+  archive: XArchive; postCount?: number; footer?: ReactNode; isPreview: boolean;
+  photoCount?: number; txCount?: number; firstInscribedAt?: number;
+  txTimes?: Record&lt;string, number&gt;; verified?: { bindingPostId: string };
+}) {</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 4 &middot; Thread it through <code>ProfilePage.tsx</code>.</strong> Add <code>verified</code> to ProfilePage&rsquo;s prop type (<code>verified?: { bindingPostId: string }</code>), destructure it, and pass it into the <code>&lt;ProfileView ... verified={verified} /&gt;</code> call.</li>
+
+<li><input type="checkbox"> <strong>Step 5 &middot; Look up the owner in the two page components.</strong> In <code>src/app/x/[handle]/page.tsx</code> and <code>src/app/x/tx/[txid]/page.tsx</code>, import <code>getOwner</code>, resolve it for the handle being rendered, and pass <code>verified</code> when present:
+<pre><code>import { getOwner } from "@/lib/xOwner";
+// ... in the async component, after the archive is loaded:
+const owner = await getOwner(handle); // in tx/[txid], use archive.handle
+// ... on the &lt;ProfilePage&gt; element:
+verified={owner ? { bindingPostId: owner.bindingPostId } : undefined}</code></pre>
+For <code>tx/[txid]/page.tsx</code>, the handle comes from the fetched archive (<code>socialArchiveToXArchive</code> result&rsquo;s <code>profile.handle</code>); resolve <code>getOwner(that handle)</code> and only show the tick if the owner&rsquo;s <code>bindingTxid</code> matches the txid being viewed, so a stray transaction never borrows the tick:
+<pre><code>verified={owner &amp;&amp; owner.bindingTxid === txid ? { bindingPostId: owner.bindingPostId } : undefined}</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 6 &middot; Run the gate, then look.</strong> All four commands exit 0. Then <code>npm run build &amp;&amp; npm run start</code>; <code>/x/henryhudson6</code> shows no tick yet (no owner record exists until the app posts a claim) &mdash; which is correct. The tick&rsquo;s presence is proven by the render test, not by production data that does not exist yet.</li>
+
+<li><input type="checkbox"> <strong>Step 7 &middot; Commit.</strong>
+<pre><code>git add src/app/x/_components/ProfileView.tsx src/app/x/_components/ProfilePage.tsx src/app/x/[handle]/page.tsx src/app/x/tx/[txid]/page.tsx src/app/x/_components/ProfileView.verified.test.tsx
+git commit -m "The verified tick: honest, with the binding tweet one click away"</code></pre></li>
+</ul>
+</div>
+
+<h2>Self-review</h2>
+<p><strong>Spec coverage.</strong> Section 3 (the protocol) &rarr; the message format (Task 1), the binding parse (Task 1), the claim verification (Tasks 1, 4). Section 4 (data model) &rarr; <code>XOwner</code> and its Redis record (Task 2), the exact message and tweet formats (Task 1, global constraints). Section 5 (gating + reset) &rarr; Task 4 with <code>setXTxids</code> from Task 3. Section 6 (the tick) &rarr; Task 5. Section 8 (failure modes) &rarr; the six route tests in Task 4 (no binding, bad signature, already-claimed, owner append) plus the malformed-signature test in Task 1. <em>Deliberately out of scope:</em> the app side (section 7) and the bounty (section 10, spec D).</p>
+<p><strong>Type consistency.</strong> <code>verifyClaim</code>&rsquo;s input object, <code>registrationMessage(handle, txid)</code>, <code>parseBindingAddress(posts)</code>, <code>XOwner</code>&rsquo;s five fields, <code>claimOutcome</code>&rsquo;s three-value return, and <code>setXTxids</code>&rsquo;s signature are used in Task 4 exactly as defined in Tasks 1&ndash;3. The <code>verified?: { bindingPostId }</code> prop is identical in ProfileView (Task 5 step 3), ProfilePage (step 4) and both page components (step 5).</p>
+<p><strong>Known refinement from the spec.</strong> The spec&rsquo;s section 4 described verification as address-recovery from the signature alone. <code>@bsv/sdk</code> 2.1.6 does not expose clean address-recovery, so the registration carries the <strong>public key</strong> and the site checks <code>pubkey.toAddress() === committedAddress</code> before verifying &mdash; identical security (the public key is worthless unless it derives to the committed address), simpler code, and the app already has the public key in hand. The post body gains one field, <code>pubkey</code>; nothing else changes.</p>
+
+<h2>Not in this plan &mdash; the FORTHapp app side</h2>
+<p>A separate deliverable in the Henceforth iOS repository, because it lives in a different repository with a heavy pre-push hook:</p>
+<ul>
+<li>Show the identity address <code>A</code> (from the existing <code>m/13'/0'</code> key) and the exact tweet to copy: <code>Verifying my Henceforth identity: &lt;A&gt; &mdash; henceforth.club/x</code>. The app does not post to X; the user does, from the account being proven.</li>
+<li>Extend <code>registerXArchive(handle:txid:)</code> to sign <code>henceforth-x-register:&lt;handle&gt;:&lt;txid&gt;</code> with the <code>m/13'/0'</code> key (the existing Bitcoin Signed Message path, already interop-tested against <code>@bsv/sdk</code>) and include <code>{ address, pubkey, signature }</code> in the post. <code>pubkey</code> is the identity key&rsquo;s public key hex; <code>address</code> is its address.</li>
+</ul>
+<p>Until that ships, the website side is inert-but-correct: unsigned registrations keep working for unclaimed handles, and no tick appears &mdash; exactly the backward-compatible behaviour the tests pin.</p>
+
+</div>
+</body>
+</html>
