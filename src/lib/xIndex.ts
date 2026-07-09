@@ -36,3 +36,13 @@ export async function appendXTxid(handle: string, txid: string): Promise<boolean
   await redis.set(key(handle), [...existing, txid]);
   return true;
 }
+
+/** Replace a handle's entire txid list. Used when an owner claims a handle and
+ * the canonical feed is reset to their archive, dropping any pre-claim
+ * stranger-inscribed transactions (which remain reachable by their own txid). */
+export async function setXTxids(handle: string, txids: string[]): Promise<boolean> {
+  const redis = getRedis();
+  if (!redis) return false;
+  await redis.set(key(handle), txids);
+  return true;
+}
