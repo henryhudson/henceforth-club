@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The handle-to-key binding — xtext spec C design</title>
+<style>
+  :root { --bg:#f4ecd8; --ink:#2a2318; --muted:#6b5d45; --rule:#c9b98f; --accent:#8b3a1a; --card:#faf4e4; --shadow:0 1px 3px rgba(60,40,10,0.15); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.68;}
+  .wrap{max-width:860px;margin:0 auto;padding:56px 32px;}
+  header.doc{margin-bottom:40px;border-bottom:3px double var(--rule);padding-bottom:26px;}
+  .eyebrow{font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:33px;line-height:1.16;margin:0 0 12px;font-weight:700;}
+  h2{font-size:24px;margin:46px 0 12px;padding-top:18px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 8px;}
+  .lede{font-size:19px;color:var(--muted);margin:0;font-style:italic;}
+  p{margin:13px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(120,90,30,0.12);padding:2px 6px;border-radius:4px;}
+  pre{background:#2a2318;color:#f0e6cf;padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;background:var(--card);}
+  th,td{text-align:left;padding:9px 12px;border:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .decision{background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 18px;margin:18px 0;box-shadow:var(--shadow);}
+  .decision strong{color:var(--accent);}
+  ul{margin:12px 0;padding-left:26px;} li{margin:6px 0;}
+  .flow{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px 20px;margin:16px 0;box-shadow:var(--shadow);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Design spec &middot; 2026-07-09 &middot; henceforth.club/x &middot; scope: C of four</div>
+<h1>The handle you can prove is yours</h1>
+<p class="lede">Bind a key to your X handle while you still control the account, so that when X takes the account, the proof it was yours outlives it &mdash; and no one else can claim it in your place.</p>
+</header>
+
+<p><strong>What exists.</strong> The showroom (spec A) shipped: <code>/x</code> shows archives read from Bitcoin and lets a visitor drop their own export. The handle&rarr;archive index is a Redis key <code>x:&lt;handle&gt;</code> holding an ordered list of transaction ids, written by <code>POST /api/x/register</code>. That endpoint&rsquo;s only check today is that the transaction&rsquo;s inscribed <code>handle</code> string matches the claim &mdash; so <strong>anyone who knows a handle and any transaction declaring it can register it</strong>. There is no notion of who owns a handle, no signature, no per-handle owner or payout address, anywhere on the site.</p>
+
+<p><strong>The one-line thesis:</strong> an X account, while it is alive, publishes a commitment to a key it controls; that commitment is captured on Bitcoin inside the ordinary archive; thereafter the account holder proves ownership by <em>signing</em>, not by logging in to X &mdash; so the proof survives the account&rsquo;s death, and the ownership record is a public key the account itself endorsed.</p>
+
+<p><strong>Why now, and why this shape.</strong> The naive design &mdash; &ldquo;log in to X and post a code to prove it&rsquo;s you&rdquo; &mdash; fails at the exact moment the product exists to insure against. The day X suspends you, you cannot log in, so you cannot prove anything; and X recycles handles, so whoever holds <code>@you</code> next could. The fix inverts the timing: you bind the key <em>before</em> the event, while you still hold the account, and prove control <em>after</em> it by holding the key.</p>
+
+<h2>1 &middot; The primitives already exist</h2>
+
+<p>This is almost entirely wiring. Both sides were surveyed against the real code.</p>
+
+<table>
+<tr><th>Piece</th><th>Where it lives</th></tr>
+<tr><td>Identity key <code>m/13'/0'</code></td><td>Henceforth app, <code>Wallet.swift</code> &mdash; hardened, deliberately isolated from transaction-signing (a nonce-reuse defence its own comment documents), already used to sign air-gap address packs. Its public key is exposed on the wire; its address is derivable.</td></tr>
+<tr><td>Sign a challenge</td><td><code>BitcoinSignedMessage.sign/verify</code> (the classic Bitcoin Signed Message, base64, address-based) &mdash; terminal words <code>SIGN-MSG</code> / <code>VERIFY-MSG</code>. Interop-tested: a signature the app produces round-trips through <code>@bsv/sdk</code>.</td></tr>
+<tr><td>Verify a signature on the site</td><td><code>@bsv/sdk</code> 2.1.6, already a dependency. <code>PublicKey.verify(msg, sig)</code> and <code>.toAddress()</code>. The site can check a signature and derive an address <strong>holding no key of its own</strong>.</td></tr>
+<tr><td>The hole</td><td><code>POST /api/x/register</code> in <code>src/app/api/x/register/route.ts</code> &mdash; appends a transaction id to <code>x:&lt;handle&gt;</code> after only a handle-string match.</td></tr>
+</table>
+
+<div class="decision"><strong>The trust chain is already wired end to end.</strong> The app signs a Bitcoin Signed Message; <code>@bsv/sdk</code> on the site verifies it; there is an interop test proving exactly that round-trip. What is missing is not cryptography. It is the <em>format</em> of the commitment, the <em>gate</em> on registration, and the <em>tick</em> in the interface.</div>
+
+<h2>2 &middot; What the tick asserts</h2>
+
+<p>The verified tick means, precisely:</p>
+
+<p style="margin-left:24px;font-style:italic">&ldquo;<code>@handle</code> published a commitment to address <code>A</code> on X &mdash; here is the tweet, check it yourself &mdash; and that commitment was captured on Bitcoin at time <code>T</code>. Address <code>A</code> controls this handle&rsquo;s archive. The first valid claim wins.&rdquo;</p>
+
+<div class="decision"><strong>It is verifiable, not vouched &mdash; and the spec says so.</strong> Without reading X, no one can <em>cryptographically</em> prove a real account authored the commitment: the archive is self-asserted JSON, so an impostor could inscribe a fake <code>@handle</code> timeline containing a fake binding tweet and sign it with their own key. The site cannot tell a real binding tweet from a fabricated one. Two things bound the damage, and neither is hidden from the user:
+<ul>
+<li><strong>Delegated checking.</strong> The site surfaces the binding tweet&rsquo;s permalink, exactly as the showroom surfaces a block explorer it does not run. A skeptic opens <code>x.com/&lt;handle&gt;/status/&lt;id&gt;</code> and sees the account really said it. A fabrication has no such live tweet.</li>
+<li><strong>Bind while alive.</strong> The first valid claim wins, and claims are timestamped on Bitcoin. The real owner, acting while their account is healthy &mdash; which is the product&rsquo;s whole advice &mdash; wins the race. Against someone who squats a dormant handle first, this is a real limit; the tick&rsquo;s wording must never overstate past it.</li>
+</ul>
+This is the strongest guarantee available without live X reads, and live X reads were rejected by the very problem being solved: you cannot read an account X has already deleted.</div>
+
+<h2>3 &middot; The protocol, in three acts</h2>
+
+<div class="flow">
+<strong>BIND</strong> &mdash; while the account is alive.<br>
+The app shows the owner their identity address <code>A</code> (Base58, about 34 characters), derived from <code>m/13'/0'</code>. The owner posts one tweet, verbatim:<br>
+<code>Verifying my Henceforth identity: A &mdash; henceforth.club/x</code><br>
+The owner then archives their profile through xtext as normal. The binding tweet is now one of the posts inside the archive, inscribed on Bitcoin at transaction <code>T</code>.
+</div>
+
+<div class="flow">
+<strong>CLAIM</strong> &mdash; proving it is them.<br>
+The app signs the message <code>henceforth-x-register:&lt;handle&gt;:&lt;T&gt;</code> with <code>A</code>&rsquo;s key, as a Bitcoin Signed Message, and sends:<br>
+<code>POST /api/x/register { handle, txid: T, address: A, signature }</code>
+</div>
+
+<div class="flow">
+<strong>VERIFY</strong> &mdash; on the site, holding no key.<br>
+Fetch the archive at <code>T</code>. Confirm a post matches the exact binding format and commits address <code>A</code>. Verify the Bitcoin Signed Message against <code>A</code> with <code>@bsv/sdk</code>. If the handle is unclaimed, this establishes the owner (first valid claim wins). Store the owner record; the tick now renders.
+</div>
+
+<p>The address <code>A</code> is published (in the tweet) but control requires the private key. Revealing the address lets anyone <em>read</em> the commitment; only the key holder can <em>claim</em>. That is why the public tweet is safe.</p>
+
+<h2>4 &middot; Data model (purely additive)</h2>
+
+<p><strong>New Redis key</strong> <code>x:owner:&lt;handle&gt;</code>, one record per claimed handle:</p>
+<pre><code>{ address: string,        // A, the committed identity address
+  boundAt: number,        // unix seconds, from the claim transaction's chain time
+  bindingTxid: string,    // T, the archive that carries the binding tweet
+  bindingPostId: string } // the X post id, so the site can surface the permalink</code></pre>
+
+<p><strong>Binding tweet format</strong> &mdash; an exact, greppable prefix so parsing is unambiguous:</p>
+<pre><code>Verifying my Henceforth identity: &lt;address&gt;</code></pre>
+<p>The parser scans the archived posts for this prefix and extracts the Base58 address after it. The trailing <code>&mdash; henceforth.club/x</code> is human sugar, not parsed.</p>
+
+<p><strong>Signed message</strong> &mdash; binds the signature to both the handle and the specific transaction, so a signature can never be replayed onto another handle or another archive:</p>
+<pre><code>henceforth-x-register:&lt;handle&gt;:&lt;txid&gt;</code></pre>
+<p>Because the commitment is an <em>address</em>, not a public key, verification is Bitcoin Signed Message recovery: <code>@bsv/sdk</code> recovers the public key from the compact signature, derives its address, and compares it to <code>A</code>. No public key need be supplied &mdash; the address <code>A</code> from the tweet is the whole input, and this is exactly the round-trip the app&rsquo;s interop test already covers. The site stores no private key and never has.</p>
+
+<div class="decision"><strong>The Redis owner record is a rebuildable gate, not the source of truth.</strong> The permanent evidence is the binding tweet on Bitcoin. If Redis were lost, an owner re-establishes the record by re-signing &mdash; they still hold the key, and the tweet is still on-chain. So the record is allowed to be mutable and off-chain; it gates access, it does not <em>constitute</em> ownership.</div>
+
+<h2>5 &middot; Registration gating &mdash; the hole, closed</h2>
+
+<table>
+<tr><th>State</th><th>Who may register a transaction id to <code>x:&lt;handle&gt;</code></th></tr>
+<tr><td><strong>Unclaimed</strong> (no <code>x:owner</code>)</td><td>Anyone &mdash; the showroom principle holds: anyone can archive anyone and populate a handle. Registration stays open, exactly as today, but only to <em>establish content</em>, never to establish ownership.</td></tr>
+<tr><td><strong>Claimed</strong> (owner <code>A</code> set)</td><td>Only a registration carrying a valid Bitcoin Signed Message by <code>A</code>. A stranger can no longer append to the owner&rsquo;s canonical timeline.</td></tr>
+</table>
+
+<p>A third party&rsquo;s archive of <code>@handle</code> is always viewable at <code>/x/tx/&lt;txid&gt;</code> &mdash; the canonical, index-free view. It simply does not enter a claimed owner&rsquo;s <code>/x/&lt;handle&gt;</code> feed, and never wears the tick.</p>
+
+<div class="decision"><strong>Claiming resets the canonical index to the owner&rsquo;s archive.</strong> A handle populated by strangers before its owner claimed could hold junk. On the first valid claim, <code>x:&lt;handle&gt;</code> is reset to the claim transaction <code>T</code>; thereafter only the owner&rsquo;s signed registrations append. The stranger-inscribed transactions are not destroyed &mdash; nothing on Bitcoin can be &mdash; they simply leave the owner&rsquo;s canonical feed and remain reachable by transaction id. This is the owner&rsquo;s recourse against pre-claim pollution.</div>
+
+<h2>6 &middot; The tick</h2>
+
+<p>A purely additive prop, threaded <code>ProfilePage &rarr; ProfileView</code> and rendered beside the <code>@handle</code> line where the profile header already lives:</p>
+<pre><code>verified?: { address: string; bindingPostId: string }</code></pre>
+<p>Rendered as a small mark whose hover/tap text is honest &mdash; <em>&ldquo;Bound on-chain. Check the tweet.&rdquo;</em> &mdash; linking <code>x.com/&lt;handle&gt;/status/&lt;bindingPostId&gt;</code>. It is not a blue checkmark cosplay; it is a claim with its evidence one click away. The three <code>/x</code> page components look up <code>x:owner:&lt;handle&gt;</code> at the same call sites that already read the archive index, and thread the prop down.</p>
+
+<h2>7 &middot; App side (Henceforth iOS)</h2>
+
+<p>Glue over primitives that already exist:</p>
+<ul>
+<li>A word or affordance to <strong>show the identity address <code>A</code></strong> (from the existing <code>m/13'/0'</code> key) and the <strong>exact binding-tweet text to copy</strong>. The app does not post to X; the user posts it themselves, from the account they are proving.</li>
+<li>An extension of the existing <code>registerXArchive(handle:txid:)</code> to <strong>sign the claim</strong> with the <code>m/13'/0'</code> key and include <code>{ address, signature }</code> in the <code>POST</code>.</li>
+</ul>
+<p>No new key path, no new signing primitive, no new on-chain transaction beyond the archive the user was already making.</p>
+
+<h2>8 &middot; Failure modes</h2>
+<table>
+<tr><th>Situation</th><th>Behaviour</th></tr>
+<tr><td>Claim with no binding tweet in the archive</td><td>Rejected &mdash; the archive at <code>T</code> contains no post committing <code>A</code>. The owner must post the tweet and re-archive.</td></tr>
+<tr><td>Signature does not verify against <code>A</code></td><td>Rejected &mdash; the registrant does not hold <code>A</code>&rsquo;s key.</td></tr>
+<tr><td>Handle already claimed by a different address</td><td>Rejected &mdash; first valid claim wins; the later claim carries no authority over the established owner.</td></tr>
+<tr><td>Owner re-archives (a later delta)</td><td>Accepted with the owner&rsquo;s signature over the new <code>txid</code>; the binding tweet need not be re-proven, only the owner&rsquo;s control.</td></tr>
+<tr><td>Owner loses the key, account already dead</td><td>The handle is frozen &mdash; no rebinding is possible without either the key or the live account. Stated plainly: this is the cost of self-custody, and the archive itself is unharmed.</td></tr>
+<tr><td>Redis owner record lost</td><td>The owner re-establishes it by re-signing; the on-chain binding tweet is the durable evidence.</td></tr>
+</table>
+
+<h2>9 &middot; Definition of done</h2>
+<ul>
+<li>Pure functions, each unit-tested with no I/O: parse a binding address out of an archive&rsquo;s posts; build and verify the registration message; the claim decision (unclaimed &rarr; establish; claimed &rarr; require owner signature).</li>
+<li>The signature verification runs against a fixture signature produced by the app&rsquo;s Bitcoin Signed Message path &mdash; the interop is asserted, not assumed. A key-free fixture; no private key in any test.</li>
+<li>A test that an unclaimed handle accepts an anonymous registration, and that the same handle, once claimed, rejects an unsigned or wrong-key registration.</li>
+<li>A test that claiming resets the canonical index and that a pre-claim transaction is dropped from <code>/x/&lt;handle&gt;</code> yet still resolves at <code>/x/tx/&lt;txid&gt;</code>.</li>
+<li>The tick renders from an owner record and is absent without one; the permalink points at the recorded <code>bindingPostId</code>.</li>
+<li><em>Not assertable, and said out loud:</em> whether a real account authored the commitment &mdash; that is the skeptic&rsquo;s click, by design.</li>
+</ul>
+
+<h2>10 &middot; Scope &mdash; what C is, and is not</h2>
+<p><strong>C establishes ownership and shows it.</strong> The binding, the gated registration, the index reset, the tick. It deliberately stops there.</p>
+<p><strong>D is the bounty, and C unblocks it with one value.</strong> The address <code>A</code> that C binds and proves is, unchanged, the destination a later archiver&rsquo;s transaction pays &mdash; non-custodial, no escrow, because paying an arbitrary owner address is identical in shape to the reward payout xtext already makes. C stores <code>A</code>; D spends to it. Nothing in C needs to anticipate D beyond keeping <code>A</code> exactly as it is: an address, publicly committed, provably controlled.</p>
+<p><strong>Not in C:</strong> any bounty routing, any escrow, any second on-chain binding record (the tweet is the record), and any live X read (the permalink is the check).</p>
+
+<h2>11 &middot; Open questions</h2>
+<ul>
+<li><strong>Address format in the tweet.</strong> A bare Base58 address is greppable but featureless; a light prefix or checksum tag could reduce the chance a parser mistakes an unrelated address in someone&rsquo;s post for a binding. The exact regex is a plan-level decision; the format must be pinned before the app ships copy that users paste.</li>
+<li><strong>Rebinding while alive.</strong> An owner who wants to rotate keys posts a new binding tweet and re-archives; the site takes the latest account-authored binding as authoritative. The precedence rule (latest-wins among the owner&rsquo;s own bindings, but first-wins across different claimants) needs stating precisely in the plan so a rotation cannot be used to hijack.</li>
+<li><strong>Legal, deferred to the same lawyer as spec A.</strong> A verified tick asserting a person controls a handle edges toward an identity claim; the wording should be reviewed alongside the archival-permanence questions spec A already raised.</li>
+</ul>
+
+</div>
+</body>
+</html>
