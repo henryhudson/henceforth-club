@@ -22,6 +22,7 @@ export default function ProfileView({
   txCount,
   firstInscribedAt,
   txTimes = {},
+  verified,
 }: {
   archive: XArchive;
   postCount?: number;
@@ -31,6 +32,7 @@ export default function ProfileView({
   txCount?: number;
   firstInscribedAt?: number;
   txTimes?: Record<string, number>;
+  verified?: { bindingPostId: string };
 }) {
   const { profile } = archive;
   const posts = dedupePosts(archive.posts);
@@ -53,7 +55,20 @@ export default function ProfileView({
             <Avatar size={64} avatarUrl={profile.avatarUrl} initial={initial} />
             <div>
               <h2 className="text-xl font-bold text-foreground">{profile.displayName ?? profile.handle}</h2>
-              <p className="text-accent">@{profile.handle}</p>
+              <p className="text-accent">
+                @{profile.handle}
+                {verified && (
+                  <a
+                    href={`https://x.com/${profile.handle}/status/${verified.bindingPostId}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    title="Verified — check the binding tweet"
+                    className="ml-2 text-xs text-foreground/70 hover:underline"
+                  >
+                    ✓ Verified
+                  </a>
+                )}
+              </p>
             </div>
           </div>
           {profile.bio && <p className="mt-4 text-foreground/90">{profile.bio}</p>}

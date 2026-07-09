@@ -22,6 +22,7 @@ export default function ProfilePage({
   photoCount,
   firstInscribedAt,
   txTimes = {},
+  verified,
 }: {
   archive: XArchive;
   txid?: string | null;
@@ -31,6 +32,7 @@ export default function ProfilePage({
   photoCount?: number;
   firstInscribedAt?: number;
   txTimes?: Record<string, number>;
+  verified?: { bindingPostId: string };
 }) {
   const scrollLoader =
     handle !== undefined && postCount !== undefined && postCount > archive.posts.length ? (
@@ -72,6 +74,7 @@ export default function ProfilePage({
         txCount={txCount}
         firstInscribedAt={firstInscribedAt}
         txTimes={txTimes}
+        verified={verified}
       />
       <ReaderKeys handle={handle} />
     </main>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getArchivePage, PAGE_SIZE } from "@/lib/xArchiveCache";
+import { getOwner } from "@/lib/xOwner";
 import ProfilePage from "../_components/ProfilePage";
 
 export async function generateMetadata(
@@ -36,6 +37,8 @@ export default async function HandlePage(
     );
   }
 
+  const owner = await getOwner(handle);
+
   return (
     <ProfilePage
       archive={{ profile: page.profile, posts: page.posts }}
@@ -46,6 +49,7 @@ export default async function HandlePage(
       photoCount={page.photoCount}
       firstInscribedAt={page.firstInscribedAt}
       txTimes={page.txTimes}
+      verified={owner ? { bindingPostId: owner.bindingPostId } : undefined}
     />
   );
 }
