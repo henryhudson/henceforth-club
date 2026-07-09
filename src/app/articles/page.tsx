@@ -10,6 +10,13 @@ export const metadata: Metadata = {
 
 const articles = [
   {
+    href: "/articles/farage-resigns-clacton",
+    title: "The Member for Clacton, for now",
+    blurb:
+      "Nigel Farage resigned his Clacton seat to fight it again at a by-election. What a resignation actually does to the parliamentary record — the Chiltern Hundreds mechanism, the warrant that closed his membership a day later, and how the vacancy reaches The Hansard.",
+    date: "2026",
+  },
+  {
     href: "/articles/hansard-is-live",
     title: "The Hansard is on the App Store",
     blurb:
