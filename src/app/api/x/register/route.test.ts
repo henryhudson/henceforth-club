@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BSM, PrivateKey, Utils } from "@bsv/sdk";
 import { registrationMessage } from "@/lib/xBinding";
 
-// In-memory fakes for the I/O boundaries.
+// In-memory fakes for the input/output boundaries.
 const store = { archives: new Map(), owners: new Map(), lists: new Map() };
 
 vi.mock("@/lib/whatsonchain", () => ({

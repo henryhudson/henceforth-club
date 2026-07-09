@@ -80,8 +80,15 @@ export async function POST(req: Request) {
         bindingTxid: txid,
         bindingPostId: bindingPostId(archive.posts, address),
       };
-      await setOwner(handle, record);
-      await setXTxids(handle, [txid]); // reset the feed to the owner's archive
+      // Reset the feed before recording the owner: if either write fails (no
+      // Redis), the route returns 503 rather than a false success, and a retry
+      // re-establishes cleanly because no owner was recorded to short-circuit it.
+      if (!(await setXTxids(handle, [txid]))) {
+        return NextResponse.json({ ok: false, reason: "index-unavailable" }, { status: 503 });
+      }
+      if (!(await setOwner(handle, record))) {
+        return NextResponse.json({ ok: false, reason: "index-unavailable" }, { status: 503 });
+      }
       return NextResponse.json({ ok: true, handle, txid, verified: true, reset: true, url: `/x/${handle}` });
     }
     // outcome === "append": the established owner adds another of their archives.

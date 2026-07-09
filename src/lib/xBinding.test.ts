@@ -32,7 +32,13 @@ describe("parseBindingAddress", () => {
     expect(parseBindingAddress([{ text: "just a normal tweet about 1coins" }])).toBeNull();
   });
 
-  it("is not fooled by the words without the exact prefix", () => {
+  it("requires the exact prefix — a genuine near-miss is rejected", () => {
+    // The words but no colon, so no commitment: a loosened parser would wrongly
+    // accept this, so it must return null.
+    expect(parseBindingAddress([
+      { text: "Verifying my Henceforth identity 1GsP511Tf1xEXAMPLEaddr7WSqc7hCfva" },
+    ])).toBeNull();
+    // The colon but a different phrase entirely.
     expect(parseBindingAddress([{ text: "my Henceforth identity is great" }])).toBeNull();
   });
 });
