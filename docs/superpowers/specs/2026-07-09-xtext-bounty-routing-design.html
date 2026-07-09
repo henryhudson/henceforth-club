@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Archiving someone pays them — xtext spec D design</title>
+<style>
+  :root { --bg:#f4ecd8; --ink:#2a2318; --muted:#6b5d45; --rule:#c9b98f; --accent:#8b3a1a; --card:#faf4e4; --shadow:0 1px 3px rgba(60,40,10,0.15); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.68;}
+  .wrap{max-width:860px;margin:0 auto;padding:56px 32px;}
+  header.doc{margin-bottom:40px;border-bottom:3px double var(--rule);padding-bottom:26px;}
+  .eyebrow{font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:33px;line-height:1.16;margin:0 0 12px;font-weight:700;}
+  h2{font-size:24px;margin:46px 0 12px;padding-top:18px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 8px;}
+  .lede{font-size:19px;color:var(--muted);margin:0;font-style:italic;}
+  p{margin:13px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(120,90,30,0.12);padding:2px 6px;border-radius:4px;}
+  pre{background:#2a2318;color:#f0e6cf;padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;background:var(--card);}
+  th,td{text-align:left;padding:9px 12px;border:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .decision{background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 18px;margin:18px 0;box-shadow:var(--shadow);}
+  .decision strong{color:var(--accent);}
+  ul{margin:12px 0;padding-left:26px;} li{margin:6px 0;}
+  .flow{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px 20px;margin:16px 0;box-shadow:var(--shadow);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Design spec &middot; 2026-07-09 &middot; xtext &middot; scope: D of four &middot; app-side (FORTHapp)</div>
+<h1>Archiving someone pays them</h1>
+<p class="lede">The reward you already pay to archive a profile goes to the person you archived, if they have said where to send it &mdash; so preserving someone becomes a way to pay them, and claiming your account becomes worth doing.</p>
+</header>
+
+<p><strong>What exists.</strong> Spec A shipped the showroom; spec C shipped the handle-to-key binding, so an account can commit an identity address on X (<code>Verifying my Henceforth identity: &lt;address&gt;</code>), prove control by signing, and wear a verified tick. Every xtext archive already pays a reward &mdash; twice the miner fee, capped at 50,000 satoshis &mdash; to a single fixed developer address (<code>xArchiveRewardAddress</code>, <code>1mSxVgV1h7crdb8Qr3e7o3H18GczcUsiC</code>). The archive transaction is built entirely in the Henceforth app; the website is not involved in paying it.</p>
+
+<p><strong>The one-line thesis:</strong> point that reward at the address the archived account committed to, instead of the developer. The account already published where to send its funds; D simply sends them there.</p>
+
+<p><strong>Why it closes the sequence.</strong> Spec C&rsquo;s whole promise was that claiming your account is worth doing. D is the reason. Once you have bound an address, anyone who archives you &mdash; a reader preserving a voice they value &mdash; pays you, not us. And archiving yourself returns the reward to your own address, so it costs only the miner fee. The bounty is not a new pool of money; it is the reward that already changes hands, redirected to the person it is about.</p>
+
+<h2>1 &middot; Where it lives</h2>
+
+<div class="decision"><strong>App-side only. The website needs no change.</strong> Spec C put the owner&rsquo;s address on X and on chain and taught the site to read it. D reads the same address and chooses it as the reward output&rsquo;s destination in the transaction the app already builds. There is no new endpoint, no site query, no server code &mdash; one output address differs, decided inside <code>broadcastXArchive</code>.</div>
+
+<h2>2 &middot; The mechanic</h2>
+
+<div class="flow">
+Before building the archive transaction, parse the fetched timeline (<code>pending.fullArchive.posts</code>) for the exact binding line spec C defined &mdash; <code>Verifying my Henceforth identity: &lt;address&gt;</code> &mdash; and read the committed address out of it. Then choose the reward output&rsquo;s destination:
+<pre><code>owner address found in the archived timeline  →  reward pays the owner
+none                                          →  reward pays the developer (unchanged)</code></pre>
+Everything else is identical: the same reward amount, the same single output, the same non-custodial build. One address is different.
+</div>
+
+<p>The address is read from the <em>full fetched timeline</em>, not only the newly-inscribed delta, because the binding tweet may have been inscribed in an earlier archive and is no longer among the new posts. C checks the inscribed posts (the site must see the commitment at that transaction to grant the tick); D checks the whole timeline (it only needs to know where the account said to send funds). Same line, read for a different purpose.</p>
+
+<h2>3 &middot; What it does, case by case</h2>
+<table>
+<tr><th>You archive&hellip;</th><th>Reward goes to</th><th>Effect</th></tr>
+<tr><td>someone else&rsquo;s bound handle</td><td>them</td><td>you tip the person you preserved</td></tr>
+<tr><td>your own bound handle</td><td>you</td><td>self-archiving costs only the miner fee</td></tr>
+<tr><td>an unclaimed handle</td><td>the developer</td><td>unchanged from today</td></tr>
+</table>
+
+<div class="decision"><strong>Claimed users stop paying the developer the reward on their own archives.</strong> This is a deliberate, accepted change. The reward is about &pound;0.006; the developer&rsquo;s income is the app sale, not this. Redirecting the reward to owners &mdash; including the self-archive, where it returns to you &mdash; is the whole point of D, and the near-zero sum makes the trade costless in practice.</div>
+
+<h2>4 &middot; Trust and safety</h2>
+<div class="decision"><strong>The routed address is trustless by construction.</strong> Only the account can post to its own timeline, so the only binding address the app can find in @jack&rsquo;s real timeline is @jack&rsquo;s own. Someone who fabricates a fake @jack archive containing their own address routes the reward to <em>themselves</em> &mdash; they pay their own address, and there is no victim. The site&rsquo;s verified-tick check (which requires a signature) is unaffected; a fabrication earns no tick.</div>
+<ul>
+<li><strong>Route on the commitment, not on the site record.</strong> D reads the address from the archived timeline, not from the site&rsquo;s <code>x:owner</code> record, so it needs no site call and inherits no site-trust for the payout. The rare difference &mdash; an account that published its address but never completed the signed claim &mdash; still receives routing, which is correct: it stated its payout. The signature is what grants the tick, not what directs the money.</li>
+<li><strong>Non-custodial, no escrow, no retroactive routing.</strong> The destination is chosen at build time from data already in hand. Nothing is held; nothing accrues. An owner who claims <em>after</em> being archived does not retroactively collect &mdash; only future archives pay them. This is the direct consequence of the no-escrow constraint, stated plainly rather than worked around.</li>
+<li><strong>The residual trust already exists.</strong> The app trusts the fetched timeline to build the archive at all; D adds no new trusted input. And the sum at stake per archive is about &pound;0.006.</li>
+</ul>
+
+<h2>5 &middot; The shared address</h2>
+<p>C and D read the <em>same</em> value: the identity address the account committed to. C uses it as the thing a signature must prove control of, to grant the verified tick. D uses it as the thing the reward pays. One address, published once, does both jobs &mdash; the ownership proof and the payout destination are the same string, which is exactly what made C worth building before D.</p>
+
+<h2>6 &middot; Definition of done</h2>
+<ul>
+<li>A pure function &mdash; <code>rewardPayeeAddress(archivedPosts, developerAddress) &rarr; address</code> &mdash; that returns the binding address when the timeline carries one, and the developer address otherwise. No wallet, no network; the three cases above become assertions, plus a fourth: a fabricated binding line containing a malformed address falls through to the developer rather than producing an invalid payee.</li>
+<li>A test that the reward <em>amount</em> is unchanged &mdash; D moves the destination, never the sum &mdash; so a regression that also changed the amount is caught.</li>
+<li>The parser shares the exact prefix constant with the claim path (spec C), so the two can never drift on what a binding line looks like.</li>
+<li><em>Not assertable, and said out loud:</em> whether anyone actually archives anyone else. With one bound profile today, D is mostly mechanism; its economy waits on a corpus. The code is correct and ready; the flywheel is a launch question, not a test.</li>
+</ul>
+
+<h2>7 &middot; Scope &mdash; deliberately one output address</h2>
+<p><strong>In:</strong> the reward output&rsquo;s destination, chosen from the binding tweet. That is the whole feature.</p>
+<p><strong>Out:</strong> a bounty board (someone posts a bounty to get a profile archived), a pool, a reimbursement waterfall, and any &ldquo;owner earnings&rdquo; dashboard on the site. The showroom spec called the marketplace flywheel empty until there is a corpus, and D does not need it: routing the reward that already moves is complete on its own, and unlocks the marketplace later without presupposing it now.</p>
+
+<h2>8 &middot; Open questions</h2>
+<ul>
+<li><strong>Surfacing the payout to the archiver.</strong> When the reward routes to an owner, the terminal could say so &mdash; <em>&ldquo;your reward went to @jack, the verified owner&rdquo;</em> &mdash; so the archiver understands where their money went and why. A one-line addition; the exact wording is a plan-level detail.</li>
+<li><strong>Multiple binding lines.</strong> If a timeline somehow carries more than one binding line (an account that rotated keys), the parser must pick one deterministically &mdash; the most recent by post order is the natural rule, matching &ldquo;latest binding wins&rdquo; from spec C&rsquo;s rotation note. The plan pins this.</li>
+<li><strong>Legal, deferred to the same lawyer as A and C.</strong> Routing a payment to a person identified by their social handle is a light touch, but it is a payment to a third party; worth a glance alongside the archival-permanence questions already raised.</li>
+</ul>
+
+</div>
+</body>
+</html>
