@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bounty routing — implementation plan</title>
+<style>
+  :root { --bg:#f4f1ea; --ink:#1c1a16; --muted:#6b6358; --rule:#d8d0c0; --accent:#a8431f; --accent-soft:#c4a572; --card:#fbf9f4; --code-bg:#1e1e1e; --code-ink:#e8e8e8; --ok:#2f6f3e; --warn:#a8431f; --shadow:0 1px 3px rgba(0,0,0,0.08); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.65;}
+  .wrap{max-width:880px;margin:0 auto;padding:56px 32px;} header.doc{margin-bottom:40px;border-bottom:2px solid var(--rule);padding-bottom:24px;}
+  .eyebrow{font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:34px;line-height:1.15;margin:0 0 12px;font-weight:700;} h2{font-size:24px;margin:48px 0 14px;padding-top:20px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 10px;} .lede{font-size:19px;color:var(--muted);margin:0;} p{margin:14px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(0,0,0,0.06);padding:2px 6px;border-radius:4px;}
+  pre{background:var(--code-bg);color:var(--code-ink);padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;} th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .task{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:8px 22px 18px;margin:22px 0;box-shadow:var(--shadow);}
+  .task .tasknum{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);}
+  .files{font-size:14px;background:#efe9dc;border-radius:6px;padding:10px 14px;margin:10px 0;}
+  .note{background:#f6efe0;border-left:4px solid var(--accent-soft);padding:10px 16px;border-radius:0 6px 6px 0;margin:14px 0;}
+  ul{margin:12px 0;padding-left:24px;} li{margin:5px 0;}
+  ul.steps{list-style:none;padding-left:4px;} ul.steps>li{margin:12px 0;padding-left:30px;position:relative;}
+  ul.steps>li input[type=checkbox]{position:absolute;left:0;top:5px;width:18px;height:18px;}
+  .badge{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:2px 8px;border-radius:999px;white-space:nowrap;background:#f3dcd2;color:var(--accent);}
+  .effort{font-size:13px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Implementation plan &middot; 2026-07-09 &middot; xtext &middot; spec D &middot; app-side (FORTHapp)</div>
+<h1>Bounty routing</h1>
+<p class="lede">Two tasks. A pure function that reads the owner&rsquo;s payout address out of the archived timeline, and the one line that points the reward at it. No new files, no website change.</p>
+</header>
+
+<div class="note"><strong>For agentic workers:</strong> REQUIRED SUB-SKILL &mdash; use <code>superpowers:executing-plans</code> or <code>superpowers:subagent-driven-development</code>. Steps are real checkboxes. NOTE: this repository builds with Xcode, so a subagent that cannot run <code>xcodebuild</code> should stop at the pure-function task; the controller runs the build and the wiring inline.</div>
+
+<p><strong>Goal:</strong> when xtext broadcasts an archive, pay the reward to the address the archived account committed to in its binding tweet, falling back to the developer address when there is none.</p>
+
+<p><strong>Architecture:</strong> one pure function chooses the reward output&rsquo;s destination; the existing <code>createTransaction</code> call passes it instead of the fixed developer constant. Everything else &mdash; the reward amount, the single output, the non-custodial build &mdash; is unchanged.</p>
+
+<p><strong>Tech stack:</strong> Swift 6, Xcode 26, Swift Testing (<code>@Test</code>/<code>#expect</code>), SwiftBSV. Repository <code>/Users/henryhudson/Programming/Main/FORTHapp</code>; implement in an isolated worktree off <code>origin/main</code>.</p>
+
+<h2>Global constraints</h2>
+<ul>
+<li><strong>No acronyms or initialisms in prose</strong> &mdash; comments and commit messages. Code identifiers and proper nouns are exempt.</li>
+<li><strong>The binding prefix is one shared constant.</strong> The parser must key on the exact string spec C uses &mdash; <code>Verifying my Henceforth identity:</code> &mdash; and must not introduce a second copy that could drift from the claim path.</li>
+<li><strong>A malformed or fabricated address must never reach the transaction builder.</strong> Validate every candidate with <code>Address(fromString:)</code> (a failable initializer that rejects a bad checksum or wrong network); an invalid candidate falls through to the developer address, so a bad payee can never fail the whole broadcast.</li>
+<li><strong>The reward amount never changes.</strong> D moves the destination only. <code>pending.rewardSats</code> is passed exactly as before.</li>
+<li><strong>No new files</strong> (a new file needs a <code>project.pbxproj</code> edit, which this work avoids). The function lives in <code>xtextWord.swift</code>; the tests in the existing <code>XArchiveWiring_Tests.swift</code>.</li>
+<li><strong>Build + test on an iOS 26 simulator</strong> (the app&rsquo;s deployment target is iOS 26.0): <code>xcodebuild test -project FORTH/FORTH.xcodeproj -scheme FORTH -sdk iphonesimulator -destination 'platform=iOS Simulator,id=&lt;an iOS 26 device id&gt;' -only-testing:Henceforth_Tests/XArchiveWiring_Tests</code>.</li>
+</ul>
+
+<h2>File structure</h2>
+<table>
+<tr><th>file</th><th>change</th></tr>
+<tr><td><code>FORTH/FORTH/Terminal MVVM/View Model/Functions/xtextWord.swift</code></td><td>add <code>rewardPayeeAddress(posts:developerAddress:)</code>; point the reward <code>PayeeOutput</code> at it</td></tr>
+<tr><td><code>FORTH/Henceforth_Tests/Bitcoin Tests/XArchiveWiring_Tests.swift</code></td><td>tests for the pure router (five cases)</td></tr>
+</table>
+
+<hr>
+
+<div class="task">
+<div class="tasknum">Task 1 <span class="badge">app</span> <span class="effort">~40 minutes</span></div>
+<h3>The pure router</h3>
+<div class="files"><strong>Modify:</strong> <code>xtextWord.swift</code> (add one static function) &middot; <strong>Test:</strong> <code>XArchiveWiring_Tests.swift</code></div>
+<p><strong>Interfaces produced</strong> (Task 2 consumes): <code>static func rewardPayeeAddress(posts: [SocialArchive.SocialPost], developerAddress: String) -&gt; String</code>.</p>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &middot; Write the failing tests</strong> in <code>XArchiveWiring_Tests.swift</code>, in the ownership-claim section added by spec C (the file already imports <code>SwiftBSV</code> and <code>@testable import FORTH</code>).
+<pre><code>@Test("the reward routes to the binding address, and falls back to the developer")
+func testRewardPayeeAddress() {
+    let dev = "1mSxVgV1h7crdb8Qr3e7o3H18GczcUsiC"
+    let post = { (id: String, text: String) in
+        SocialArchive.SocialPost(id: id, at: "", text: text, replyToId: nil, mediaHashes: nil)
+    }
+    // A real, checksum-valid mainnet address for the owner (throwaway key).
+    let ownerKey = Bip32(seed: Bip39.createSeed(mnemonic: "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")).privateKey!
+    let owner = ownerKey.address.toString()
+
+    // No binding tweet -> developer.
+    #expect(WalletState.rewardPayeeAddress(posts: [post("1", "good morning")], developerAddress: dev) == dev)
+
+    // The account's binding tweet -> the owner's address, extracted from the line.
+    let bound = [post("1", "hi"), post("2", WalletState.xBindingTweet(address: owner))]
+    #expect(WalletState.rewardPayeeAddress(posts: bound, developerAddress: dev) == owner)
+
+    // A malformed address in the binding line -> developer (never a bad payee).
+    let broken = [post("1", "Verifying my Henceforth identity: 1notARealAddress0OIl — henceforth.club/x")]
+    #expect(WalletState.rewardPayeeAddress(posts: broken, developerAddress: dev) == dev)
+
+    // Two binding lines (a key rotation): the last valid one in post order wins.
+    let otherKey = Bip32(seed: Bip39.createSeed(mnemonic: "legal winner thank year wave sausage worth useful legal winner thank yellow")).privateKey!
+    let other = otherKey.address.toString()
+    let rotated = [post("1", WalletState.xBindingTweet(address: owner)),
+                   post("2", WalletState.xBindingTweet(address: other))]
+    #expect(WalletState.rewardPayeeAddress(posts: rotated, developerAddress: dev) == other)
+
+    // An empty timeline -> developer.
+    #expect(WalletState.rewardPayeeAddress(posts: [], developerAddress: dev) == dev)
+}</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 2 &middot; Run it and watch it fail</strong> (the function does not exist yet). Scoped: <code>xcodebuild test ... -only-testing:Henceforth_Tests/XArchiveWiring_Tests/testRewardPayeeAddress</code> &mdash; expect a compile error, <code>rewardPayeeAddress</code> not found.</li>
+
+<li><input type="checkbox"> <strong>Step 3 &middot; Add the function</strong> to <code>xtextWord.swift</code>, in the <code>extension WalletState</code> ownership-claim block (next to <code>buildXClaim</code>, so it shares the prefix), reusing spec C&rsquo;s exact prefix.
+<pre><code>/// The address the archived account committed to in its binding tweet, or the
+/// developer address when the timeline carries none. This is spec D: the reward
+/// output's destination. Reads the WHOLE timeline (not only the newly-inscribed
+/// delta) because the binding tweet may have been inscribed in an earlier
+/// archive. Every candidate is validated as a real mainnet address, so a
+/// fabricated or malformed binding line falls through to the developer rather
+/// than producing a payee that would fail the broadcast. On a key rotation with
+/// two binding lines, the last valid one in post order wins.
+static func rewardPayeeAddress(
+    posts: [SocialArchive.SocialPost],
+    developerAddress: String,
+) -&gt; String {
+    let prefix = "Verifying my Henceforth identity: "
+    var routed: String?
+    for post in posts {
+        guard let start = post.text.range(of: prefix)?.upperBound else { continue }
+        // The address is the first whitespace-delimited token after the prefix.
+        guard let token = post.text[start...]
+            .split(whereSeparator: { $0 == " " || $0 == "\n" }).first else { continue }
+        let candidate = String(token)
+        if Address(fromString: candidate) != nil { routed = candidate }
+    }
+    return routed ?? developerAddress
+}</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 4 &middot; Run the test</strong> &mdash; the five cases pass on an iOS 26 simulator. If the &ldquo;malformed&rdquo; case fails, <code>Address(fromString:)</code> is accepting a bad string &mdash; confirm it is the failable initializer (returns <code>Address?</code>), not a force-unwrap.</li>
+
+<li><input type="checkbox"> <strong>Step 5 &middot; Commit.</strong>
+<pre><code>git add "FORTH/FORTH/Terminal MVVM/View Model/Functions/xtextWord.swift" \
+        "FORTH/Henceforth_Tests/Bitcoin Tests/XArchiveWiring_Tests.swift"
+git commit -m "The bounty router: read the owner's payout address from the binding tweet"</code></pre></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 2 <span class="badge">app</span> <span class="effort">~20 minutes</span></div>
+<h3>Point the reward at it, and say so</h3>
+<div class="files"><strong>Modify:</strong> <code>xtextWord.swift</code> (the <code>createTransaction</code> call in <code>broadcastXArchive</code>, and one terminal line)</div>
+<p><strong>Interfaces consumed:</strong> <code>rewardPayeeAddress(posts:developerAddress:)</code> (Task 1).</p>
+<div class="note">This is a wiring change on a code path that needs a funded wallet to exercise end to end, so it is not unit-tested directly &mdash; the routing logic&rsquo;s test coverage lives entirely in Task 1&rsquo;s pure function. Task 2 is verified by the build succeeding and by reading the diff: the address argument changed, the amount did not.</div>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &middot; Choose the reward address before building the transaction.</strong> In <code>broadcastXArchive</code>, just above the <code>let tx = try Wallet.instance.createTransaction(</code> call, add:
+<pre><code>            // Spec D: the reward goes to the account's committed payout address if
+            // its binding tweet is in the timeline, else the developer. Read from the
+            // full fetched timeline, since the binding tweet may predate this delta.
+            let rewardAddress = Self.rewardPayeeAddress(
+                posts: pending.fullArchive.posts,
+                developerAddress: Self.xArchiveRewardAddress)</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 2 &middot; Use it in the payee.</strong> Change the <code>payees:</code> argument of that <code>createTransaction</code> call from the fixed constant to the chosen address (the amount is untouched):
+<pre><code>                payees: [PayeeOutput(address: rewardAddress, amount: pending.rewardSats)],</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 3 &middot; Tell the archiver where their reward went.</strong> In <code>broadcastXArchive</code>, right after the successful-broadcast block that registers the archive (after the <code>registerXArchive</code> call and its verify-hint), add a line that names the recipient only when the reward was actually routed away from the developer:
+<pre><code>                if rewardAddress != Self.xArchiveRewardAddress {
+                    interpreter.terminalResponses.append("reward → \(rewardAddress) (the verified owner of @\(pending.handle))")
+                }</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 4 &middot; Build and run the wiring suite.</strong> <code>xcodebuild test ... -only-testing:Henceforth_Tests/XArchiveWiring_Tests</code> &mdash; the whole suite builds and passes (Task 1&rsquo;s five new assertions among them). A green build proves the wiring type-checks against the real <code>createTransaction</code> signature.</li>
+
+<li><input type="checkbox"> <strong>Step 5 &middot; Read the diff, then commit.</strong> Confirm exactly two things changed in the <code>createTransaction</code> region: a new <code>rewardAddress</code> binding, and the <code>PayeeOutput</code> address argument. The <code>amount: pending.rewardSats</code> is identical.
+<pre><code>git add "FORTH/FORTH/Terminal MVVM/View Model/Functions/xtextWord.swift"
+git commit -m "Point the archive reward at the owner, and name where it went"</code></pre></li>
+</ul>
+</div>
+
+<h2>Self-review</h2>
+<p><strong>Spec coverage.</strong> Section 2 (the mechanic) &rarr; Tasks 1 and 2. Section 3 (the case table) &rarr; Task 1&rsquo;s five assertions, one per row plus the malformed and empty guards. Section 4 (trust and safety) &rarr; the <code>Address(fromString:)</code> validation in Task 1 (a fabrication routes to a valid-or-developer address, never a broken payee). Section 6 (definition of done) &rarr; the pure function and its tests; the amount-unchanged requirement is enforced by Task 2 passing <code>pending.rewardSats</code> verbatim and checked by the diff read in Task 2 step 5. Section 8 open questions &rarr; the terminal line (Task 2 step 3) and the multiple-binding tiebreak (Task 1, last-valid-wins) are both resolved here.</p>
+<p><strong>Type consistency.</strong> <code>rewardPayeeAddress(posts:developerAddress:) -&gt; String</code> is defined in Task 1 and consumed in Task 2 with the same argument labels. <code>SocialArchive.SocialPost(id:at:text:replyToId:mediaHashes:)</code> and <code>xBindingTweet(address:)</code> match the shapes spec C already added to this file and test suite.</p>
+<p><strong>Not covered, and said out loud.</strong> The end-to-end broadcast (a real transaction paying a real owner) is a manual low-funds run, never an automated test &mdash; the same key-free boundary the pre-push hook enforces. The pure router carries the logic; the wiring is verified by the build.</p>
+
+</div>
+</body>
+</html>
