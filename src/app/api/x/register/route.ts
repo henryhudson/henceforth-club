@@ -1,18 +1,24 @@
 import { NextResponse } from "next/server";
 import { fetchTxArchive } from "@/lib/whatsonchain";
-import { appendXTxid } from "@/lib/xIndex";
+import { appendXTxid, setXTxids } from "@/lib/xIndex";
 import { archiveDigest, setTxDigest } from "@/lib/xDigest";
+import { getOwner, setOwner, claimOutcome, type XOwner } from "@/lib/xOwner";
+import { parseBindingAddress, registrationMessage, verifyClaim } from "@/lib/xBinding";
 
 /**
- * POST /api/x/register  { handle, txid }
+ * POST /api/x/register  { handle, txid, address?, pubkey?, signature? }
  *
- * Indexes handle -> root-TXID so /x/<handle> can read the profile from chain.
- * Holds no keys and no money — a TXID is already public. Verification keeps the
- * index honest: the txid's on-chain inscription must actually archive `handle`,
- * so nobody can point a handle at an unrelated transaction.
+ * Indexes handle -> archive txids so /x/ reads the profile from chain.
+ * Holds no keys and no money — a txid and a public key are already public.
+ *
+ * Unclaimed handle: open, as it has always been (anyone can archive anyone).
+ * Claimed handle: only the owner's signature may extend it. The first valid
+ * claim establishes ownership and resets the canonical feed to the owner's
+ * archive, so a stranger's pre-claim inscription leaves the owner's feed (it
+ * stays reachable by its own txid — nothing on Bitcoin is destroyed).
  */
 export async function POST(req: Request) {
-  let body: { handle?: string; txid?: string };
+  let body: { handle?: string; txid?: string; address?: string; pubkey?: string; signature?: string };
   try {
     body = await req.json();
   } catch {
@@ -27,36 +33,68 @@ export async function POST(req: Request) {
 
   const archive = await fetchTxArchive(txid);
   if (!archive) {
-    return NextResponse.json(
-      { ok: false, reason: "no-archive-in-tx" },
-      { status: 422 },
-    );
+    return NextResponse.json({ ok: false, reason: "no-archive-in-tx" }, { status: 422 });
   }
   if (archive.handle.toLowerCase() !== handle.toLowerCase()) {
-    return NextResponse.json(
-      { ok: false, reason: "handle-mismatch", onChain: archive.handle },
-      { status: 422 },
-    );
+    return NextResponse.json({ ok: false, reason: "handle-mismatch", onChain: archive.handle }, { status: 422 });
   }
 
-  // Prime the per-transaction digest cache: this route just fetched and
-  // verified the archive, so the archived endpoint never needs to re-download
-  // this transaction to learn what it contains.
   await setTxDigest(txid, archiveDigest(archive));
+
+  const owner = await getOwner(handle);
+  const hasClaim = Boolean(body.address && body.pubkey && body.signature);
+
+  // A claimed handle may only be extended by a signed claim.
+  if (owner && !hasClaim) {
+    return NextResponse.json({ ok: false, reason: "handle-claimed" }, { status: 403 });
+  }
+
+  if (hasClaim) {
+    const address = body.address!.trim();
+    const ok = verifyClaim({
+      message: registrationMessage(handle, txid),
+      signatureBase64: body.signature!,
+      pubkeyHex: body.pubkey!,
+      committedAddress: address,
+    });
+    if (!ok) {
+      return NextResponse.json({ ok: false, reason: "bad-signature" }, { status: 403 });
+    }
+
+    const outcome = claimOutcome(owner, address);
+    if (outcome === "reject") {
+      return NextResponse.json({ ok: false, reason: "not-the-owner" }, { status: 403 });
+    }
+    if (outcome === "establish") {
+      // The archive establishing ownership must itself carry the account's
+      // commitment to this address — the binding evidence and the archive are
+      // one transaction. A later append is covered by the owner's signature
+      // alone; it need not repeat the binding tweet.
+      if (parseBindingAddress(archive.posts) !== address) {
+        return NextResponse.json({ ok: false, reason: "no-binding-in-tx" }, { status: 422 });
+      }
+      const record: XOwner = {
+        address,
+        pubkey: body.pubkey!,
+        boundAt: Math.floor(Date.now() / 1000),
+        bindingTxid: txid,
+        bindingPostId: bindingPostId(archive.posts, address),
+      };
+      await setOwner(handle, record);
+      await setXTxids(handle, [txid]); // reset the feed to the owner's archive
+      return NextResponse.json({ ok: true, handle, txid, verified: true, reset: true, url: `/x/${handle}` });
+    }
+    // outcome === "append": the established owner adds another of their archives.
+  }
 
   const stored = await appendXTxid(handle, txid);
   if (!stored) {
-    return NextResponse.json(
-      { ok: false, reason: "index-unavailable" },
-      { status: 503 },
-    );
+    return NextResponse.json({ ok: false, reason: "index-unavailable" }, { status: 503 });
   }
+  return NextResponse.json({ ok: true, handle, txid, verified: Boolean(owner || hasClaim), posts: archive.posts.length, url: `/x/${handle}` });
+}
 
-  return NextResponse.json({
-    ok: true,
-    handle,
-    txid,
-    posts: archive.posts.length,
-    url: `/x/${handle}`,
-  });
+/** The id of the post that carries the binding line for `address`, for the permalink. */
+function bindingPostId(posts: { id: string; text: string }[], address: string): string {
+  return posts.find((p) => p.text.includes("Verifying my Henceforth identity:") && p.text.includes(address))?.id ?? "";
 }
