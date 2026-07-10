@@ -71,8 +71,10 @@ export function refundAddressOf(rawFundingTx) {
 
 /** One unspent-outputs request, shaped for matchPayment. Any read failure
  * (network error, non-200, an unexpected body) answers "nothing seen yet"
- * rather than throwing — the next tick tries again. */
-async function fetchUnspentOutputs(address, fetchFn) {
+ * rather than throwing — the next tick tries again. Exported so the sweep and
+ * late watch (worker.mjs) read the address the same way, never a second poll
+ * implementation. */
+export async function fetchUnspentOutputs(address, fetchFn) {
   let res;
   try {
     res = await fetchFn(`${WOC}/address/${address}/unspent`);
@@ -84,8 +86,10 @@ async function fetchUnspentOutputs(address, fetchFn) {
   return Array.isArray(body) ? body.map((o) => ({ txid: o.tx_hash, vout: o.tx_pos, sats: o.value })) : [];
 }
 
-/** The funding transaction's raw hex, or null on any read failure. */
-async function fetchRawTxHex(txid, fetchFn) {
+/** The funding transaction's raw hex, or null on any read failure. Exported
+ * for the sweep, which resolves the refund address from the funding
+ * transaction's first input exactly as the payment watch does. */
+export async function fetchRawTxHex(txid, fetchFn) {
   let res;
   try {
     res = await fetchFn(`${WOC}/tx/${txid}/hex`);
@@ -93,6 +97,27 @@ async function fetchRawTxHex(txid, fetchFn) {
     return null;
   }
   return res.ok ? await res.text() : null;
+}
+
+/** Whether a broadcast transaction has its first confirmation yet. Any read
+ * failure or an as-yet-unconfirmed transaction answers false — the sweep waits
+ * and asks again next tick. The sweep records its broadcast (sweep-broadcast)
+ * immediately, but only advances to swept once this reports a confirmation. */
+export async function fetchTxConfirmed(txid, fetchFn) {
+  let res;
+  try {
+    res = await fetchFn(`${WOC}/tx/hash/${txid}`);
+  } catch {
+    return false;
+  }
+  if (!res.ok) return false;
+  let body;
+  try {
+    body = await res.json();
+  } catch {
+    return false;
+  }
+  return typeof body.confirmations === "number" && body.confirmations > 0;
 }
 
 /**

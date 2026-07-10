@@ -18,8 +18,9 @@
 import { pathToFileURL } from "node:url";
 import { P2PKH } from "@bsv/sdk";
 import { createJobKey, deleteJobKey, loadJobKey } from "./keystore.mjs";
-import { runWatchTick } from "./payments.mjs";
+import { fetchRawTxHex, fetchTxConfirmed, fetchUnspentOutputs, refundAddressOf, runWatchTick } from "./payments.mjs";
 import { broadcastArchive, buildInscriptionTx, registerHandle } from "./inscribe.mjs";
+import { buildSweepTx } from "./sweep.mjs";
 
 // HARD RULE 1 — the premium's destination is Henry's cold revenue address, and
 // it is NOT known here. This placeholder stays empty until Henry sets it as a
@@ -31,6 +32,27 @@ export const REVENUE_ADDRESS = "";
 // cannot import the TypeScript module at runtime. The quote priced the archive
 // at this same rate, so the visitor's payment covers the inscription's fee.
 export const FEE_PER_KB = 100;
+
+// Keep in sync with src/lib/textJob/constants.ts LATE_WATCH_DAYS — the same
+// runtime-import constraint. How long after a job's quote expiry the worker
+// keeps watching a swept job's custody address for a straggler and, only once
+// that window has closed, deletes the retained key (the reaper).
+const LATE_WATCH_DAYS = 7;
+const LATE_WATCH_MS = LATE_WATCH_DAYS * 24 * 60 * 60 * 1000;
+
+// Warn ONCE per job per process, not every tick. The sweep and late watch flag
+// unresolved cases (no refund address, a missing key) for manual intervention;
+// without these seen-sets the worker would print the same flag on every poll.
+// Module-level so they persist across ticks within the running worker.
+const warnedRefundless = new Set();
+const warnedMissingKey = new Set();
+const warnedLateStraggler = new Set();
+
+function warnOnce(seen, jobId, message) {
+  if (seen.has(jobId)) return;
+  seen.add(jobId);
+  console.warn(message);
+}
 
 /**
  * Why the worker refuses to start on a bad revenue address (hard rule 1),
@@ -144,10 +166,132 @@ async function registerInscribed({ listJobsInState, advance, jobsDir, registerBa
 }
 
 /**
+ * sweeping -> swept: return every unspent output on the custody address to the
+ * payer. A job reaches sweeping when a broadcast failed or a quote expired with
+ * money on the address, and it MUST end with the visitor's coin back home.
+ *
+ * Two phases per job. If a sweep is already broadcast (sweepTxid recorded), the
+ * only work is to wait for its first confirmation, then advance to swept —
+ * ignoring stragglers, which the late watch owns after swept. Otherwise the
+ * sweep is built and broadcast: the refund address is resolved on chain from
+ * the funding transaction's first input (never guessed — an unresolved address
+ * keeps the job sweeping, flagged once for ops), the custody key is loaded, and
+ * every unspent leg is spent in one transaction to that address. A rejected
+ * broadcast simply returns — the money must go home, so this retries next tick
+ * indefinitely — and because the build is deterministic the retry replays the
+ * same txid. A dust residue that cannot build a broadcastable transaction is
+ * resolved directly to swept (nothing sweepable remains); the original failure
+ * reason stays on the job and the dust amount is logged for ops.
+ *
+ * The key is deliberately NOT deleted here — a swept job's address is watched
+ * for late payments until LATE_WATCH_MS past expiry, and only the reaper (in
+ * the late watch) deletes the key once that window has closed.
+ */
+async function sweepSweeping({ listJobsInState, advance, wrapKey, jobsDir, fetchFn, taalApiKey, feeRate, nowMs }) {
+  const sweeping = await listJobsInState("sweeping");
+  for (const job of sweeping) {
+    await guarded("sweep", job.jobId, async () => {
+      if (job.sweepTxid) {
+        if (await fetchTxConfirmed(job.sweepTxid, fetchFn)) {
+          await advance(job.jobId, { kind: "sweep-confirmed" }, nowMs);
+        }
+        return; // an outstanding sweep — wait for its confirmation, don't rebuild
+      }
+
+      const utxos = await fetchUnspentOutputs(job.address, fetchFn);
+      if (utxos.length === 0) return; // nothing on the address yet — retry next tick
+
+      // The refund goes to the funding transaction's first input. The recorded
+      // funding txid drives it on the broadcast-failed path; an expired-residue
+      // job never recorded one, so the actual unspent leg's own source is used
+      // — its real sender, not a guess.
+      const refundTxid = job.fundingTxid ?? utxos[0].txid;
+      const rawFundingTx = await fetchRawTxHex(refundTxid, fetchFn);
+      const refundAddress = rawFundingTx ? refundAddressOf(rawFundingTx) : null;
+      if (!refundAddress) {
+        warnOnce(warnedRefundless, job.jobId, `xtext-worker: sweeping job ${job.jobId} has no resolvable refund address — flagged for ops, will retry`);
+        return;
+      }
+
+      const jobKey = loadJobKey(job.jobId, wrapKey, jobsDir);
+      if (!jobKey) {
+        warnOnce(warnedMissingKey, job.jobId, `xtext-worker: sweeping job ${job.jobId} has no custody key on disk — flagged for ops`);
+        return;
+      }
+
+      const built = await buildSweepTx({ jobKey, fundings: utxos, refundAddress, feeRate });
+      if (built.ok === false) {
+        const residue = utxos.reduce((sum, u) => sum + u.sats, 0);
+        console.warn(`xtext-worker: sweeping job ${job.jobId} residue ${residue} sats is dust — nothing broadcastable, resolving as swept`);
+        await advance(job.jobId, { kind: "sweep-confirmed" }, nowMs);
+        return;
+      }
+
+      const broadcast = await broadcastArchive(built.hex, { fetchFn, taalApiKey });
+      if (!broadcast.ok) return; // rejected — retry next tick indefinitely, same deterministic txid
+
+      await advance(job.jobId, { kind: "sweep-broadcast", txid: built.txid }, nowMs);
+    });
+  }
+}
+
+/**
+ * swept: the late watch and the reaper. Keys outlive the swept transition on
+ * purpose — a payment can still arrive at a swept job's address, and only the
+ * retained key can refund it. For LATE_WATCH_MS past the job's quote expiry the
+ * address is polled each tick; a straggler is swept straight back to its own
+ * sender with the retained key, with no state-machine event (swept stays swept
+ * — idempotency comes from the deterministic rebuild). Once that window closes,
+ * the reaper deletes the key: custody finally, fully ends.
+ */
+async function lateWatchAndReap({ listJobsInState, wrapKey, jobsDir, fetchFn, taalApiKey, feeRate, nowMs }) {
+  const swept = await listJobsInState("swept");
+  for (const job of swept) {
+    await guarded("late-watch", job.jobId, async () => {
+      if (nowMs - job.expiresAtMs >= LATE_WATCH_MS) {
+        deleteJobKey(job.jobId, jobsDir); // the window has closed — custody ends here
+        return;
+      }
+
+      const utxos = await fetchUnspentOutputs(job.address, fetchFn);
+      if (utxos.length === 0) return; // no straggler — nothing to do this tick
+
+      const rawTx = await fetchRawTxHex(utxos[0].txid, fetchFn);
+      const refundAddress = rawTx ? refundAddressOf(rawTx) : null;
+      if (!refundAddress) {
+        warnOnce(warnedLateStraggler, job.jobId, `xtext-worker: late straggler on swept job ${job.jobId} has no resolvable refund address — flagged for ops`);
+        return;
+      }
+
+      const jobKey = loadJobKey(job.jobId, wrapKey, jobsDir);
+      if (!jobKey) {
+        warnOnce(warnedLateStraggler, job.jobId, `xtext-worker: late straggler on swept job ${job.jobId} but its key was already reaped — flagged for ops`);
+        return;
+      }
+
+      const built = await buildSweepTx({ jobKey, fundings: utxos, refundAddress, feeRate });
+      if (built.ok === false) {
+        // Warn once, not every tick — a dust straggler sits on the address for
+        // the rest of the window and there is nothing broadcastable to do with it.
+        warnOnce(warnedLateStraggler, job.jobId, `xtext-worker: late straggler on swept job ${job.jobId} is dust — nothing broadcastable`);
+        return;
+      }
+
+      const broadcast = await broadcastArchive(built.hex, { fetchFn, taalApiKey });
+      if (!broadcast.ok) return; // retry next tick
+
+      console.log(`xtext-worker: late straggler swept for job ${job.jobId} -> ${built.txid}`);
+    });
+  }
+}
+
+/**
  * One worker tick. The phases run in custody order and each is wrapped so a
- * throw in one cannot stop the others; the sweep and late watch are added by
- * task 9. `deps` carries the injected store, the network fetch, the keystore
- * config, the revenue address, and the clock (`nowMs`).
+ * throw in one cannot stop the others. `deps` carries the injected store, the
+ * network fetch, the keystore config, the revenue address, and the clock
+ * (`nowMs`). The sweep and the late watch close the loop: every failure path
+ * ends with the visitor's money back, and keys outlive nothing but an unpaid
+ * refund window.
  */
 export async function runWorkerTick(deps) {
   await guarded("key-publish phase", "-", () => publishKeys(deps));
@@ -156,6 +300,8 @@ export async function runWorkerTick(deps) {
   );
   await guarded("inscribe phase", "-", () => inscribeFunded(deps));
   await guarded("register phase", "-", () => registerInscribed(deps));
+  await guarded("sweep phase", "-", () => sweepSweeping(deps));
+  await guarded("late-watch phase", "-", () => lateWatchAndReap(deps));
 }
 
 /**
