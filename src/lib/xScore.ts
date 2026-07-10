@@ -26,9 +26,6 @@ export type VoteLedgerEntry = {
   day: string;
 };
 
-/** One `x:score:<handle>` sorted-set entry, in the shape Upstash `zadd` takes. */
-export type ScoreEntry = { member: string; score: number };
-
 const MS_PER_DAY = 86_400_000;
 const WINDOW_DAYS: Record<Exclude<ScoreWindow, "all">, number> = {
   day: 1,
@@ -73,20 +70,4 @@ export function foldScores(
     table[entry.postId] = (table[entry.postId] ?? 0) + signed;
     return table;
   }, {});
-}
-
-/** The `x:score:<handle>` sorted-set cache, derived from the fold: one entry
- * per voted post. The cache is only ever this function's output — rebuilding
- * it is a replay of the ledger, never a patch. */
-export function scoreEntries(
-  ledger: readonly VoteLedgerEntry[],
-  asOfDay: string,
-  windowStart: string | null = null,
-): ScoreEntry[] {
-  return Object.entries(foldScores(ledger, asOfDay, windowStart)).map(
-    ([postId, score]) => ({
-      member: postId,
-      score,
-    }),
-  );
 }

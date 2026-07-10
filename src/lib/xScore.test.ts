@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   foldScores,
-  scoreEntries,
   windowStartDay,
   type VoteLedgerEntry,
   type ScoreWindow,
@@ -85,23 +84,6 @@ describe("foldScores", () => {
       vote({ txid: "b", postId: "post-2", sats: 500, day: "not-a-date" }),
     ];
     expect(foldScores(ledger, "2026-07-01")).toEqual({ "post-1": 700 });
-  });
-});
-
-describe("scoreEntries", () => {
-  it("derives the sorted-set cache entries from the fold, one per voted post", () => {
-    const ledger = [
-      vote({ txid: "a", postId: "p1", sats: 1000, day: "2026-07-01" }),
-      vote({ txid: "b", postId: "p2", sats: 400, day: "2026-06-01", dir: "down" }),
-    ];
-    expect(scoreEntries(ledger, "2026-07-01")).toEqual([
-      { member: "p1", score: 1000 },
-      { member: "p2", score: -400 },
-    ]);
-  });
-
-  it("derives no entries from an empty ledger", () => {
-    expect(scoreEntries([], "2026-07-01")).toEqual([]);
   });
 });
 
