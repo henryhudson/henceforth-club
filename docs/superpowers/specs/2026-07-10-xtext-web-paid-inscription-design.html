@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The pound that signs itself away — xtext spec B design</title>
+<style>
+  :root { --bg:#f4ecd8; --ink:#2a2318; --muted:#6b5d45; --rule:#c9b98f; --accent:#8b3a1a; --card:#faf4e4; --shadow:0 1px 3px rgba(60,40,10,0.15); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.68;}
+  .wrap{max-width:860px;margin:0 auto;padding:56px 32px;}
+  header.doc{margin-bottom:40px;border-bottom:3px double var(--rule);padding-bottom:26px;}
+  .eyebrow{font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:33px;line-height:1.16;margin:0 0 12px;font-weight:700;}
+  h2{font-size:24px;margin:46px 0 12px;padding-top:18px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 8px;}
+  .lede{font-size:19px;color:var(--muted);margin:0;font-style:italic;}
+  p{margin:13px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(120,90,30,0.12);padding:2px 6px;border-radius:4px;}
+  pre{background:#2a2318;color:#f0e6cf;padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;background:var(--card);}
+  th,td{text-align:left;padding:9px 12px;border:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .decision{background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 18px;margin:18px 0;box-shadow:var(--shadow);}
+  .decision strong{color:var(--accent);}
+  ul{margin:12px 0;padding-left:26px;} li{margin:6px 0;}
+  .flow{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px 20px;margin:16px 0;box-shadow:var(--shadow);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Design spec &middot; 2026-07-10 &middot; henceforth.club/x + Mac mini worker &middot; scope: B of four (the last)</div>
+<h1>The pound that signs itself away</h1>
+<p class="lede">A visitor with no app pays a QR and their X archive appears on Bitcoin. For a few minutes, one key on one machine holds their pound &mdash; and the whole design exists to make those minutes as small, as bounded, and as honest as possible.</p>
+</header>
+
+<p><strong>What exists.</strong> Specs A, C, and D shipped 2026-07-09, and every one is non-custodial by construction: the showroom reads archives from Bitcoin; the binding proves handle ownership by signature; the bounty routes rewards through addresses derived from an extended <em>public</em> key. The site holds no key and no coin anywhere. The design-panel verdict of 2026-07-02 said it plainly: money never runs through site-held funds.</p>
+
+<p><strong>The gap.</strong> A visitor lands on <code>henceforth.club/x</code>, sees the showroom, wants their own profile inscribed &mdash; and owns no iPhone, or won&rsquo;t buy the app for a one-off. Today their only path is the App Store. Spec B gives them a web path: upload your own X export, pay a QR, and a worker inscribes it for you. Someone must sign that inscription, and the visitor has no key. So for the first time, briefly, <em>we</em> do.</p>
+
+<div class="decision"><strong>The custody decision (Henry, 2026-07-10): ephemeral per-job custody.</strong> Not a hot wallet &mdash; a hot <em>job</em>. Each job gets a fresh random keypair; the visitor&rsquo;s payment lands on that job&rsquo;s address and becomes the sole funding input of the inscription transaction itself; the premium leaves for the cold revenue address in the same transaction; the key material is deleted the moment the job completes. The system never has a balance &mdash; only an unspent output with a countdown. Alternatives rejected: a funded hot wallet on the mini (exactly the pooled-funds surface the standing verdict forbids), and a fully non-custodial payment-request framing where the visitor&rsquo;s own wallet signs the inscription (purest, but it depends on third-party wallets accepting arbitrary output scripts, which is patchy &mdash; a plain address QR is the one thing every wallet on earth can pay).</div>
+
+<h2>1 &middot; Product shape</h2>
+
+<p><strong>Who.</strong> A visitor on <code>henceforth.club/x</code> without the app. They bring their own X data export &mdash; the zip X gives every account holder &mdash; which is the policy-clean source: no X API read, no third-party fetch, the user redistributing their own data at their own direction.</p>
+
+<p><strong>What they get.</strong> Their posts inscribed on Bitcoin in exactly the archive shape the app produces, byte-compatible with the showroom reader, rendering at <code>/x/&lt;handle&gt;</code> like every other archive.</p>
+
+<p><strong>What it costs.</strong> More than the app &mdash; deliberately. The premium is the nudge toward buying Henceforth, where archiving is cheaper and non-custodial.</p>
+
+<div class="decision"><strong>Pricing (Henry, 2026-07-10): fee plus a fixed satoshi premium.</strong> <code>price = estimatedInscriptionFee(bytes) + WEB_PREMIUM_SATS</code>. The fee half reads the same <code>archive-cost-fixture.json</code> that already pins the app estimator and the site estimator to identical numbers &mdash; three readers, one fixture. The premium is one exported constant, roughly a pound at the day&rsquo;s rate, re-tuned by hand when the rate drifts. Rejected: a pound-pegged premium (puts a live price feed inside the money path) and a flat all-in price (a big archive could cost more in miner fees than it collects).</div>
+
+<div class="decision"><strong>Reward (Henry, 2026-07-10): none on the web path.</strong> The web visitor archives their own profile and pays for the privilege; routing a bounty back to them is circular and eats the premium. The 50,000-satoshi archive reward stays an app-side incentive. The web price is miner fee + premium, nothing else, and spec D&rsquo;s routing is untouched.</div>
+
+<p><strong>Scope, version one: text only.</strong> The media toggles render greyed with &ldquo;get the app.&rdquo; This keeps the upload within the job pipeline&rsquo;s size budget, keeps version one&rsquo;s money path small enough to review adversarially, and sharpens the buy-the-app nudge the premium already makes. Media follows once the plumbing has survived real users. Version one archive budget: parsed archive JSON of at most 1,000,000 bytes; larger exports are told, at upload time and before any payment, to get the app.</p>
+
+<h2>2 &middot; The pipeline, in five acts</h2>
+
+<div class="flow">
+<strong>QUOTE</strong> &mdash; on the site, no money yet.<br>
+The visitor uploads their export zip. The site parses it server-side into the archive shape (text posts only), pins the result with a content hash, prices it against the shared fixture, and writes a job record: <code>{ jobId, handle, contentHash, priceSats, state: "quoted", expiresAt }</code>. The page shows the price, the permanence warning (&ldquo;Bitcoin is forever &mdash; this cannot be deleted&rdquo;), and the claimed-handle notice where it applies (&sect;5). The visitor confirms both.
+</div>
+
+<div class="flow">
+<strong>KEY</strong> &mdash; on the mini, before any payment.<br>
+The worker polls for quoted jobs, generates a <em>fresh random keypair</em> for each, persists it encrypted under a Keychain-held wrapping key, and publishes the job&rsquo;s address back to the record. Only now does the page render the QR: a plain <code>bitcoin:</code> address + exact amount. Key material never exists anywhere but the mini; Vercel and Upstash carry only the address.
+</div>
+
+<div class="flow">
+<strong>FUND</strong> &mdash; the visitor pays.<br>
+The worker watches the job address. A payment at or above the quote moves the job to <code>funded</code>. Below the quote, the worker waits &mdash; top-ups are allowed until expiry &mdash; then sweeps back whatever arrived. Payment identity is <em>the address itself</em>: there is no user-supplied transaction id to replay, which is strictly stronger than the current <code>payment=&lt;txid&gt;</code> parameter on the archive endpoint.
+</div>
+
+<div class="flow">
+<strong>INSCRIBE</strong> &mdash; one transaction, custody in and out.<br>
+The worker builds and signs a single transaction: <em>input</em> = the job UTXO (the visitor&rsquo;s own payment); <em>outputs</em> = the archive inscription, byte-identical in shape to an app archive, plus the premium to the hardcoded cold revenue address. No change returns to the job address; nothing is retained. Broadcast rides the existing ARC path with its failover. The job records the transaction id and moves to <code>inscribed</code>.
+</div>
+
+<div class="flow">
+<strong>REGISTER &amp; DONE</strong> &mdash; back on the site.<br>
+The job registers the archive through the existing <code>/api/x/register</code> gate (&sect;5), the page polls the job to <code>done</code>, and the archive renders at <code>/x/&lt;handle&gt;</code>. The worker deletes the job&rsquo;s key material. Custody is over; its entire lifetime was the gap between FUND and INSCRIBE.
+</div>
+
+<h2>3 &middot; Architecture: who holds what</h2>
+
+<table>
+<tr><th>Concern</th><th>Vercel (site)</th><th>Mac mini (worker)</th></tr>
+<tr><td>Export upload + parse + hash + quote</td><td>&#10003;</td><td>&mdash;</td></tr>
+<tr><td>Job records + status polling</td><td>&#10003; (Upstash: <code>x:job:&lt;id&gt;</code>; archive payload alongside, deleted on completion)</td><td>reads + advances state</td></tr>
+<tr><td>Key generation, storage, signing</td><td><strong>never</strong></td><td>&#10003; &mdash; per-job random key, at rest encrypted under a Keychain wrapping key, deleted on completion</td></tr>
+<tr><td>Payment watching, broadcast, sweep</td><td>&mdash;</td><td>&#10003; (WhatsOnChain watch, ARC broadcast with failover)</td></tr>
+<tr><td>Registration + index</td><td>&#10003; (existing gate, unchanged)</td><td>calls it</td></tr>
+</table>
+
+<p><strong>Why the split is load-bearing.</strong> Keys are generated where they are used and nowhere else; a compromise of the site or its environment cannot steal funds, because there are none to steal there. Keys are deliberately <em>not</em> derived from any extended private key &mdash; one compromised job key is one job&rsquo;s pound, and no master secret for this system exists on any machine. The premium forwards to cold storage inside the inscription transaction itself, so even the mini accumulates nothing.</p>
+
+<p><strong>The job state machine</strong> (persisted, every transition idempotent, resumable after a worker crash):</p>
+
+<pre><code>quoted ──key published──▶ awaiting-payment ──amount ≥ quote──▶ funded
+                              │ expiry (any sats present → sweeping)
+                              ▼
+funded ──build+broadcast ok──▶ inscribed ──register ok──▶ done (key deleted)
+   │ broadcast rejected after N retries
+   ▼
+sweeping ──refund lands──▶ swept (key deleted; job failed, reason recorded)</code></pre>
+
+<h2>4 &middot; Failure, refunds, and the sweep</h2>
+
+<div class="decision"><strong>Refunds (Henry, 2026-07-10): automatic sweep back to the payer.</strong> After bounded retries or at quote expiry, the job key signs one last transaction returning the job UTXO to the <em>first input address of the funding payment</em>, minus the sweep&rsquo;s own miner fee. That address convention is the standard wallet-refund heuristic &mdash; right for ordinary wallets, imperfect for exotic payers, and the upload page says so in one line. Rejected: burning failed payments (a visitor who paid for a size-rejected archive eats a pound &mdash; support pain), and manual refunds (keys retained indefinitely, the exact surface ephemeral custody exists to avoid).</div>
+
+<table>
+<tr><th>Failure</th><th>Behaviour</th></tr>
+<tr><td>Underpaid at expiry</td><td>Sweep whatever arrived back to the payer; job <code>swept</code>.</td></tr>
+<tr><td>Paid after expiry</td><td>Same sweep &mdash; the watcher keeps watching an expired job&rsquo;s address for <code>LATE_WATCH_DAYS</code>, refunding stragglers.</td></tr>
+<tr><td>Double payment / overpay</td><td>First sufficient payment funds the job; excess and duplicates sweep back after completion.</td></tr>
+<tr><td>Broadcast rejected (ARC, both providers, after <code>BROADCAST_RETRIES</code>)</td><td>Sweep back; job <code>swept</code> with the rejection reason recorded for the morning review.</td></tr>
+<tr><td>Worker crash mid-job</td><td>Job state + encrypted key survive on disk; the worker resumes the state machine on restart. Broadcast is idempotent by transaction id.</td></tr>
+<tr><td>The sweep itself fails</td><td>Retried on a capped backoff until it lands &mdash; the one case a key outlives its job, bounded by sweep success. A job stuck in <code>sweeping</code> past a day surfaces on the Morning Board as an ops card.</td></tr>
+<tr><td>Vercel or Upstash compromise</td><td>Cannot steal funds or keys (none present). <em>Residual risk:</em> a tampered job record could show an attacker&rsquo;s address in the QR before payment. Bounded to one job&rsquo;s payment; the worker publishes addresses only for jobs it created keys for, and the page renders only worker-published addresses.</td></tr>
+<tr><td>Mini compromise</td><td>In-flight job keys (at most <code>MAX_CONCURRENT_JOBS</code> &times; one quote each) plus future jobs until rotated. No float, no history of funds, premium already forwarded cold every job.</td></tr>
+</table>
+
+<h2>5 &middot; Registration meets the binding (spec C)</h2>
+
+<p>The register gate shipped in spec C stands unchanged: an <em>unclaimed</em> handle registers freely; a <em>claimed</em> handle registers only with the owner key&rsquo;s signature. The web visitor has no key, so:</p>
+
+<ul>
+<li><strong>Unclaimed handle</strong> (the common case for a no-app visitor): the job registers normally and the archive joins the index.</li>
+<li><strong>Claimed handle</strong>: the inscription still lands on Bitcoin &mdash; the chain is permissionless &mdash; but the site index will not list it without the owner&rsquo;s signature. The quote page detects this <em>before payment</em> and says exactly what the visitor gets: &ldquo;this handle&rsquo;s archive index is claimed; your inscription will exist on chain, and the owner can register it from the app.&rdquo; No surprise after money moves.</li>
+</ul>
+
+<h2>6 &middot; Policy and permanence</h2>
+
+<ul>
+<li><strong>Source:</strong> only the visitor&rsquo;s own X export, uploaded by them &mdash; no X API fetch anywhere in this path, no quota cost, no third-party redistribution. The upload page carries an &ldquo;this is my own account&rsquo;s export&rdquo; assertion.</li>
+<li><strong>Permanence:</strong> inscription is irreversible and the visitor confirms a plain-words warning before the QR renders. The inscribing act is theirs, at their direction; we are the pen, not the author.</li>
+<li><strong>Retention:</strong> the parsed archive payload lives in the job record only until <code>done</code> or <code>swept</code>, then is deleted &mdash; the durable copy is the one the visitor paid to put on Bitcoin.</li>
+</ul>
+
+<h2>7 &middot; Tuning constants</h2>
+
+<table>
+<tr><th>Constant</th><th>Initial value</th><th>Meaning</th></tr>
+<tr><td><code>WEB_PREMIUM_SATS</code></td><td>set at implementation against the day&rsquo;s rate (&asymp; &pound;1)</td><td>The nudge. One exported constant; re-tuned by hand.</td></tr>
+<tr><td><code>QUOTE_EXPIRY</code></td><td>15 minutes</td><td>Quote + QR lifetime; also bounds fee-rate staleness.</td></tr>
+<tr><td><code>MAX_CONCURRENT_JOBS</code></td><td>4</td><td>Hard cap on simultaneous custody exposure.</td></tr>
+<tr><td><code>MAX_ARCHIVE_BYTES</code></td><td>1,000,000</td><td>Version-one text budget; larger &rarr; get the app.</td></tr>
+<tr><td><code>BROADCAST_RETRIES</code></td><td>3, backoff</td><td>Then sweep.</td></tr>
+<tr><td><code>LATE_WATCH_DAYS</code></td><td>7</td><td>How long an expired job&rsquo;s address is watched for straggler refunds.</td></tr>
+</table>
+
+<h2>8 &middot; Testing &amp; the review gate</h2>
+
+<ul>
+<li><strong>Pure core, test-first,</strong> all deterministic with stubbed keys and a stubbed clock: the quote fold (pinned to <code>archive-cost-fixture.json</code>); the export parser (real export fixtures, including an oversize one); the job state machine (every transition in &sect;3&ndash;4, every sweep branch, crash-resume); the payment matcher (exact, under, over, late, duplicate); construction of both transactions (inscription shape byte-compared against an app-produced archive fixture; sweep fee arithmetic).</li>
+<li><strong>Adversarial review before merge</strong> &mdash; this is a money-and-key path; it gets the full treatment the wallet gets.</li>
+<li><strong>Manual end-to-end with the low-funds wallet</strong> before the QR renders for anyone else: pay a real quote, watch the inscription land, watch a deliberately-underpaid job sweep back. Real keys and real money stay out of automated tests, per the standing rule.</li>
+<li><strong>Ops:</strong> stuck jobs (<code>sweeping</code> &gt; a day, <code>awaiting-payment</code> backlog) surface as Morning Board ops cards via the daily routine.</li>
+</ul>
+
+<p style="margin-top:40px;color:var(--muted);font-style:italic">Approved in brainstorm 2026-07-10 (custody, pricing, refunds, reward — Henry). Implementation plan follows on spec sign-off; build order puts the pure core first and the QR last, so money can only arrive once everything behind it is green.</p>
+
+</div>
+</body>
+</html>
