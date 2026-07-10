@@ -85,11 +85,19 @@
 <div class="flow"><strong>FOLD</strong> &mdash; the ledger folds once per window into five sorted sets; a fold is a pure replay, so a rebuild is exact.</div>
 <div class="flow"><strong>READ</strong> &mdash; <code>/text</code> reads the selected window (week by default) and orders the feed by it.</div>
 
-<h2>5 &middot; Backfill: it works before the archive flow exists</h2>
+<h2>5 &middot; Not twice: two-level deduplication</h2>
+
+<p>Two independent guards stop a post being archived &mdash; or counted &mdash; twice, each keyed on a stable identifier and each failing closed.</p>
+
+<p><strong>Level one &mdash; never inscribe a post twice (archive side).</strong> Before archiving, the handle&rsquo;s on-chain state is read: <code>archivedState(handle)</code> returns the sets of <strong>tweet ids</strong> and media post ids already inscribed, and only the delta is inscribed. The dedup key is the tweet id &mdash; unique and immutable &mdash; and the text and media sets are independent, so a text-archived post can still gain its photos later. It <strong>fails closed</strong>: an unreadable index archives nothing rather than re-inscribing everything already paid for. This guard is the archive flow&rsquo;s (a separate sub-project); the ranking depends on it holding but does not own it.</p>
+
+<div class="decision"><strong>The founding vote is at most one per post.</strong> Transaction-id keying stops the same <em>payment</em> being counted twice, but not the same <em>post</em> acquiring two founding votes if level one ever slipped and inscribed it in two transactions. So the founding-vote write is conditional on the post having no founding vote yet &mdash; viewer votes are deliberately many-per-post (the crowd summing), founding votes exactly one. Even a level-one slip cannot inflate a post&rsquo;s stake; the ranking is robust to the archive guard failing.</div>
+
+<h2>6 &middot; Backfill: it works before the archive flow exists</h2>
 
 <p>The founding vote needs an inscription&rsquo;s cost, transaction id, and day. New archives will write it at inscription time &mdash; but that write belongs to the archive flow, which is a <strong>separate sub-project pending the user&rsquo;s own X export</strong>. So this project stands alone by reconstructing founding votes for already-archived posts from the chain: an inscription transaction&rsquo;s cost is its miner fee (sum of input values minus sum of output values), read once per post from WhatsOnChain, appended as the founding vote. The backfill is idempotent &mdash; the founding vote is keyed by the inscription transaction id, so a replay never double-counts.</p>
 
-<h2>6 &middot; Failure and edges</h2>
+<h2>7 &middot; Failure and edges</h2>
 
 <table>
 <tr><th>Case</th><th>Behaviour</th></tr>
@@ -99,7 +107,7 @@
 <tr><td>Backfill can&rsquo;t read an inscription&rsquo;s fee (chain read fails)</td><td>The post keeps its viewer-vote score with no founding vote yet; the backfill retries next run. Fail-open: a missing founding vote understates a rank, it never corrupts one.</td></tr>
 </table>
 
-<h2>7 &middot; Testing</h2>
+<h2>8 &middot; Testing</h2>
 
 <p><code>xScore</code> stays a pure fold, so it is exercised the way <code>xScore.test.ts</code> already is &mdash; example and property tests over (ledger, as-of day, window), no mocks, no clock:</p>
 <ul>
@@ -108,9 +116,10 @@
 <li>Removing the continuous decay: a vote&rsquo;s weight inside a window is its full <code>&plusmn;sats</code>, independent of age.</li>
 <li>Down-votes can drive a post negative, and the ordering respects it.</li>
 <li>Backfill idempotence: appending the same founding vote (same inscription transaction id) twice yields one contribution.</li>
+<li>Founding vote at-most-one-per-post: a second founding vote for a post that already has one &mdash; even under a different inscription transaction id &mdash; is rejected, so a level-one dedup slip cannot double-count the creator&rsquo;s stake.</li>
 </ul>
 
-<h2>8 &middot; Scope and sequencing</h2>
+<h2>9 &middot; Scope and sequencing</h2>
 
 <p><strong>In scope:</strong> the founding-vote entry, the windowed fold, the five cached sorted sets, the backfill, and the <code>/text</code> window toggle defaulting to week.</p>
 
