@@ -6,10 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**henceforth.club** — a Next.js 16 marketing site showcasing three iOS apps by Henceforth Bitcoin Limited:
+**henceforth.club** — a Next.js 16 site: the marketing front for three shipped iOS apps by Henceforth Bitcoin Limited, plus the gated operations board and the xtext on-chain archive surface.
 - **Henceforth** — FORTH interpreter + Bitcoin SV wallet (App Store: id1602896145) · accent: amber `#fbbf24`
 - **DaDeckOfCards** — multiplayer card game (App Store: id1520654142) · accent: cyan `#5eead4`
-- **Hansard** — UK Parliament browser, coming soon · accent: green `#3da87a`
+- **The Hansard** — UK Parliament browser (App Store: id6762037651, live since 2026-07-02) · accent: green `#3da87a`
 
 Dark terminal aesthetic ("Phosphor Noir") with Space Mono monospace font throughout, CRT scanline effects, and phosphor glow accents.
 
@@ -49,6 +49,13 @@ Deployment is automatic — every `git push` to `main` triggers a Vercel deploy 
 | `/sitemap.xml` | Static | Auto-generated from `sitemap.ts` |
 | `/robots.txt` | Static | Auto-generated from `robots.ts` |
 | `/*/opengraph-image` | Static | Per-route OG cards via `next/og` — shared template in `src/lib/og.tsx` |
+
+### Route families added since the table above (2026-06/07)
+
+- **`/board` world (cookie-gated, `board_session` via `/board/login`)** — the Morning Board kanban (`/board`), daily morning reports (`/board/report` → newest edition, `/board/reports` index), the week planner (`/board/week`), and the plans-and-specs library (`/board/docs`). All data is **Upstash-only, never committed** (`board:latest`, `board:report:<date>`, `board:week:<date>`, `board:docs:*`); publish tooling lives in `scripts/board/` (`publish.mjs`, `sync-docs.mjs`, `hh-plan-update.mjs`, `render-pdf.mjs` — the print editions inscribe on-chain via `BOARD_ARCHIVE_WIF`/`BOARD_ARCHIVE_KEY` in `.env.local`). The `/hh` and `/whh` routines feed all of it.
+- **`/x` — the xtext showroom** — on-chain X-profile archives (specs A/C/D shipped 2026-07-09: showroom, handle-to-key binding, bounty routing; all non-custodial). Archive read/register endpoints under `/api/x/*` demand an on-chain payment (`payAndReserve`) and enforce the binding-signature gate on claimed handles. Core pure modules: `src/lib/xScore.ts` (decayed scoring fold), `src/lib/xVotes.ts` (append-only vote ledger), `src/lib/xfetch.ts`, `src/app/x/xIndex*`.
+- **`/learn`** — Starting Henceforth, ten rendered episodes (complete 2026-07-09). Episodes and other creative artifacts are **review-gated: Henry signs off before publish**.
+- **`/articles`** — one-page A4 article PDFs (hard one-page budget) + posts.
 
 ### Server vs Client Components
 
@@ -99,6 +106,11 @@ Visitor counting uses Upstash Redis via `src/lib/redis.ts`. `PageViewTracker` cl
 - **Dark mode only** — `dark` class hardcoded on `<html>`, no light mode
 - **Domain**: henceforth.club (hosted on Vercel, DNS via GoDaddy)
 - **Static PDF**: `public/hforth.pdf` is the Henceforth LaTeX documentation — update by copying from `~/Programming/latex/hforth/hforth.pdf` after recompiling
+
+## Working rhythm
+
+- **Morning Board (kanban).** Open work for this site is tracked as cards with board key `site` on the board this repo serves at henceforth.club/board (data file: `~/Programming/Main/DaDeckOfCards/docs/superpowers/plans/morning-board-data.js`; local mirror `content/board/latest.json`, gitignored). When you finish or start tracked work, update the card — column + dated note + `rev` bump — not just chat.
+- **Auto-commit (2026-07-10, Henry's standing rule).** Completed work verified by this repo's gate (test suite + `npm run build` green) is committed and pushed without asking — and **on this repo a push IS a production deploy** (~30 seconds via Vercel). Stage only files the task touched; destructive git operations still need confirmation. Money-path changes (`/api/x` payments, vote ledger) get an adversarial review before merge.
 
 ## App Store Links
 
