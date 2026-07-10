@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>xScore ranking evolution — implementation plan</title>
+<style>
+  :root { --bg:#f4f1ea; --ink:#1c1a16; --muted:#6b6358; --rule:#d8d0c0; --accent:#a8431f; --accent-soft:#c4a572; --card:#fbf9f4; --code-bg:#1e1e1e; --code-ink:#e8e8e8; --ok:#2f6f3e; --warn:#a8431f; --shadow:0 1px 3px rgba(0,0,0,0.08); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.65;}
+  .wrap{max-width:880px;margin:0 auto;padding:56px 32px;} header.doc{margin-bottom:40px;border-bottom:2px solid var(--rule);padding-bottom:24px;}
+  .eyebrow{font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:34px;line-height:1.15;margin:0 0 12px;font-weight:700;} h2{font-size:24px;margin:48px 0 14px;padding-top:20px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 10px;} .lede{font-size:19px;color:var(--muted);margin:0;} p{margin:14px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(0,0,0,0.06);padding:2px 6px;border-radius:4px;}
+  pre{background:var(--code-bg);color:var(--code-ink);padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;} th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .task{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:8px 22px 18px;margin:22px 0;box-shadow:var(--shadow);}
+  .task .tasknum{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);}
+  .files{font-size:14px;background:#efe9dc;border-radius:6px;padding:10px 14px;margin:10px 0;}
+  .note{background:#f6efe0;border-left:4px solid var(--accent-soft);padding:10px 16px;border-radius:0 6px 6px 0;margin:14px 0;}
+  ul{margin:12px 0;padding-left:24px;} li{margin:5px 0;}
+  ul.steps{list-style:none;padding-left:4px;} ul.steps>li{margin:12px 0;padding-left:30px;position:relative;}
+  ul.steps>li input[type=checkbox]{position:absolute;left:0;top:5px;width:18px;height:18px;}
+  .badge{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:2px 8px;border-radius:999px;white-space:nowrap;background:#f3dcd2;color:var(--accent);}
+  .effort{font-size:13px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Implementation plan &middot; 2026-07-10 &middot; henceforth-club &middot; spec: 2026-07-10-xscore-ranking-evolution-design.html</div>
+<h1>xScore ranking evolution</h1>
+<p class="lede">A committed-satoshi score with time windows. The creator&rsquo;s inscription cost becomes a post&rsquo;s founding vote; viewers&rsquo; paid votes add to it; the whole thing folds over a window the reader picks, defaulting to this week.</p>
+</header>
+
+<div class="note"><strong>For agentic workers:</strong> required sub-skill &mdash; use <code>superpowers:subagent-driven-development</code> (recommended) or <code>superpowers:executing-plans</code> to implement this plan task by task. Steps use real checkboxes for tracking.</div>
+
+<p><strong>Goal.</strong> Extend the paid-vote ranking so a post&rsquo;s score is the signed sum of every satoshi committed to it &mdash; the creator&rsquo;s uncapped inscription cost plus viewers&rsquo; up/down votes &mdash; folded over a selectable window (day/week/month/year/all, default week) that replaces the continuous decay, ordering the <code>/text</code> feed.</p>
+
+<p><strong>Architecture.</strong> The pure fold in <code>src/lib/xScore.ts</code> gains an optional window bound and loses its decay term; <code>src/lib/xVotes.ts</code> gains a founding-vote append (guarded at-most-one-per-post) and a fold-on-read windowed <code>readScores</code>; a backfill reconstructs founding votes from on-chain inscription fees; and <code>/text</code> gains a client window toggle that re-sorts the posts. No new subsystem &mdash; every task is a replay of one pure fold.</p>
+
+<p><strong>Tech stack.</strong> TypeScript (strict), Next.js 16 App Router, Upstash Redis (<code>@upstash/redis</code>), vitest. WhatsOnChain for on-chain reads.</p>
+
+<h2>Global Constraints</h2>
+<ul>
+<li><code>src/lib/xScore.ts</code> stays a <strong>pure fold</strong> &mdash; no Redis, no clock, no <code>Date.now()</code> inside it. As-of day and window come in as arguments.</li>
+<li>Founding vote entry is exactly <code>{ txid: inscriptionTxid, postId, dir: "up", sats: uploadCostSats, day: inscriptionDay }</code>. <strong>Uncapped.</strong></li>
+<li>A post has <strong>at most one</strong> founding vote (per-post gate); viewer votes stay many-per-post.</li>
+<li>Windows are exactly <code>"day" | "week" | "month" | "year" | "all"</code>; the feed default is <code>"week"</code>, exported as a single constant.</li>
+<li>Backfill cost = the inscription transaction&rsquo;s miner fee = <code>&Sigma; input values &minus; &Sigma; output values</code> (satoshis); fail-open (a fee that can&rsquo;t be read is skipped and retried, never guessed).</li>
+<li>This touches the vote ledger &mdash; <strong>money-path code: adversarial review before merge</strong>. A push to <code>main</code> is a live Vercel deploy, so backfill runs against the live ledger only after that review.</li>
+<li>Null-Redis safe throughout (every I/O function returns an empty/neutral result when <code>getRedis()</code> is null), matching the existing modules.</li>
+</ul>
+
+<hr>
+
+<div class="task">
+<div class="tasknum">Task 1 &middot; Windowed pure fold, decay removed <span class="badge">xScore.ts</span> <span class="effort">&mdash; pure logic, cheapest model</span></div>
+
+<div class="files"><strong>Modify:</strong> <code>src/lib/xScore.ts</code> &middot; <strong>Test:</strong> <code>src/lib/xScore.test.ts</code></div>
+
+<p><strong>Interfaces produced</strong> (Tasks 2, 3 consume these):</p>
+<pre><code>export type ScoreWindow = "day" | "week" | "month" | "year" | "all";
+export const DEFAULT_WINDOW: ScoreWindow = "week";
+// The lower day-bound (YYYY-MM-DD) for a window as of `asOfDay`, or null for "all".
+export function windowStartDay(window: ScoreWindow, asOfDay: string): string | null;
+// Signed sum, no decay; entries with day &lt; windowStartDay contribute nothing.
+export function foldScores(ledger, asOfDay, windowStartDay?: string | null): Record&lt;string, number&gt;;
+export function scoreEntries(ledger, asOfDay, windowStartDay?: string | null): ScoreEntry[];</code></pre>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &mdash; failing tests.</strong> In <code>xScore.test.ts</code>, add:
+<pre><code>describe("windowStartDay", () =&gt; {
+  it("bounds week to seven days back", () =&gt;
+    expect(windowStartDay("week", "2026-07-10")).toBe("2026-07-03"));
+  it("bounds day to one day back", () =&gt;
+    expect(windowStartDay("day", "2026-07-10")).toBe("2026-07-09"));
+  it("bounds month to thirty days, year to 365", () =&gt; {
+    expect(windowStartDay("month", "2026-07-31")).toBe("2026-07-01");
+    expect(windowStartDay("year", "2026-07-10")).toBe("2025-07-10");
+  });
+  it("has no lower bound for all", () =&gt;
+    expect(windowStartDay("all", "2026-07-10")).toBeNull());
+});
+
+describe("foldScores windowing + no decay", () =&gt; {
+  it("counts a vote at full weight regardless of age (decay removed)", () =&gt; {
+    const ledger = [vote({ day: "2026-01-01", sats: 1000 })]; // ~190 days old
+    expect(foldScores(ledger, "2026-07-10", null)["post-1"]).toBe(1000);
+  });
+  it("excludes entries before the window start, includes those on it", () =&gt; {
+    const ledger = [
+      vote({ txid: "a", day: "2026-07-02", sats: 500 }), // before week start
+      vote({ txid: "b", day: "2026-07-03", sats: 700 }), // exactly on start
+    ];
+    const start = windowStartDay("week", "2026-07-10");
+    expect(foldScores(ledger, "2026-07-10", start)["post-1"]).toBe(700);
+  });
+  it("sums signed across up and down inside the window", () =&gt; {
+    const ledger = [
+      vote({ txid: "a", dir: "up", sats: 1000, day: "2026-07-09" }),
+      vote({ txid: "b", dir: "down", sats: 300, day: "2026-07-09" }),
+    ];
+    expect(foldScores(ledger, "2026-07-10", null)["post-1"]).toBe(700);
+  });
+});</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 2 &mdash; run, see them fail.</strong> <code>npx vitest run src/lib/xScore.test.ts</code>. Expect failures: <code>windowStartDay is not a function</code>, and the age test still shows a decayed value.</li>
+
+<li><input type="checkbox"> <strong>Step 3 &mdash; implement.</strong> In <code>xScore.ts</code>: (a) add the <code>ScoreWindow</code> type, <code>DEFAULT_WINDOW</code>, and <code>windowStartDay</code>; (b) drop the decay &mdash; delete <code>SCORE_HALF_LIFE_DAYS</code> and <code>decayWeight</code>, and make the fold a signed sum with the window bound:
+<pre><code>export type ScoreWindow = "day" | "week" | "month" | "year" | "all";
+export const DEFAULT_WINDOW: ScoreWindow = "week";
+const WINDOW_DAYS: Record&lt;Exclude&lt;ScoreWindow, "all"&gt;, number&gt; =
+  { day: 1, week: 7, month: 30, year: 365 };
+
+export function windowStartDay(window: ScoreWindow, asOfDay: string): string | null {
+  if (window === "all") return null;
+  const start = Date.parse(asOfDay) - WINDOW_DAYS[window] * MS_PER_DAY;
+  return new Date(start).toISOString().slice(0, 10);
+}
+
+export function foldScores(
+  ledger: readonly VoteLedgerEntry[],
+  asOfDay: string,
+  windowStart: string | null = null,
+): Record&lt;string, number&gt; {
+  return ledger.reduce&lt;Record&lt;string, number&gt;&gt;((table, entry) =&gt; {
+    if (Number.isNaN(daysBetween(entry.day, asOfDay))) return table;   // unreadable day
+    if (windowStart !== null &amp;&amp; entry.day &lt; windowStart) return table; // before the window
+    const signed = entry.dir === "up" ? entry.sats : -entry.sats;
+    table[entry.postId] = (table[entry.postId] ?? 0) + signed;
+    return table;
+  }, {});
+}</code></pre>
+Update <code>scoreEntries</code> to take and forward the same <code>windowStart</code> argument. Keep <code>asOfDay</code> (it anchors &ldquo;now&rdquo; for the window and preserves the unreadable-day guard).</li>
+
+<li><input type="checkbox"> <strong>Step 4 &mdash; delete the dead decay tests.</strong> Remove the <code>SCORE_HALF_LIFE_DAYS</code> and <code>decayWeight</code> <code>describe</code> blocks and the import line for those two symbols in <code>xScore.test.ts</code>.</li>
+
+<li><input type="checkbox"> <strong>Step 5 &mdash; run, all green.</strong> <code>npx vitest run src/lib/xScore.test.ts</code> &rarr; PASS. Also <code>npx tsc --noEmit</code> to catch any remaining <code>decayWeight</code> / <code>SCORE_HALF_LIFE_DAYS</code> references outside this file (fix them &mdash; only <code>xScore.ts</code> and its test should have referenced them).</li>
+
+<li><input type="checkbox"> <strong>Step 6 &mdash; commit.</strong>
+<pre><code>git add src/lib/xScore.ts src/lib/xScore.test.ts
+git commit -m "xScore: windowed signed-sum fold, continuous decay removed"</code></pre></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 2 &middot; Founding-vote append, at most one per post <span class="badge">xVotes.ts</span></div>
+
+<div class="files"><strong>Modify:</strong> <code>src/lib/xVotes.ts</code> &middot; <strong>Test:</strong> <code>src/lib/xVotes.test.ts</code></div>
+
+<p><strong>Interfaces:</strong> consumes <code>VoteLedgerEntry</code> and the existing <code>appendVote</code> pattern. Produces:</p>
+<pre><code>export type FoundingVote = { inscriptionTxid: string; postId: string; uploadCostSats: number; inscriptionDay: string };
+export async function appendFoundingVote(handle, fv: FoundingVote, asOfDay?, redis?): Promise&lt;AppendVoteResult&gt;;</code></pre>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &mdash; failing tests.</strong> In <code>xVotes.test.ts</code> (use the existing in-memory Redis fake / null-Redis pattern already in that file):
+<pre><code>it("records a founding vote once, as an up-vote of the upload cost", async () =&gt; {
+  const r = fakeRedis();
+  const res = await appendFoundingVote("alice",
+    { inscriptionTxid: "insc1", postId: "p1", uploadCostSats: 14_000_000, inscriptionDay: "2026-07-01" }, "2026-07-10", r);
+  expect(res).toBe("recorded");
+  const ledger = await readVoteLedger("alice", r);
+  expect(ledger).toEqual([{ txid: "insc1", postId: "p1", dir: "up", sats: 14_000_000, day: "2026-07-01" }]);
+});
+
+it("rejects a second founding vote for the same post, even with a new txid", async () =&gt; {
+  const r = fakeRedis();
+  await appendFoundingVote("alice", { inscriptionTxid: "insc1", postId: "p1", uploadCostSats: 100, inscriptionDay: "2026-07-01" }, "2026-07-10", r);
+  const res = await appendFoundingVote("alice", { inscriptionTxid: "insc2", postId: "p1", uploadCostSats: 999, inscriptionDay: "2026-07-02" }, "2026-07-10", r);
+  expect(res).toBe("duplicate");
+  expect((await readVoteLedger("alice", r)).length).toBe(1);
+});</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 2 &mdash; run, see fail.</strong> <code>npx vitest run src/lib/xVotes.test.ts</code> &rarr; <code>appendFoundingVote is not a function</code>.</li>
+
+<li><input type="checkbox"> <strong>Step 3 &mdash; implement.</strong> Add a per-post founding gate key and the function; claim the per-post gate <em>before</em> the txid gate so the post is dedup&rsquo;d even across two inscription txids:
+<pre><code>const foundingKey = (handle: string, postId: string) =&gt;
+  `x:vote:founding:${handle.toLowerCase()}:${postId}`;
+
+export type FoundingVote = {
+  inscriptionTxid: string; postId: string; uploadCostSats: number; inscriptionDay: string;
+};
+
+export async function appendFoundingVote(
+  handle: string, fv: FoundingVote,
+  asOfDay: string = dateKey(), redis: Redis | null = getRedis(),
+): Promise&lt;AppendVoteResult&gt; {
+  if (!redis) return "unavailable";
+  const claimedPost = await redis.set(foundingKey(handle, fv.postId), fv.inscriptionTxid, { nx: true });
+  if (claimedPost === null) return "duplicate"; // this post already has a founding vote
+  const entry: VoteLedgerEntry = {
+    txid: fv.inscriptionTxid, postId: fv.postId, dir: "up",
+    sats: fv.uploadCostSats, day: fv.inscriptionDay,
+  };
+  return appendVote(handle, entry, asOfDay, redis); // reuses the txid gate + append
+}</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 4 &mdash; run, green.</strong> <code>npx vitest run src/lib/xVotes.test.ts</code> &rarr; PASS.</li>
+
+<li><input type="checkbox"> <strong>Step 5 &mdash; commit.</strong>
+<pre><code>git add src/lib/xVotes.ts src/lib/xVotes.test.ts
+git commit -m "xVotes: founding-vote append, gated at most one per post"</code></pre></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 3 &middot; Windowed readScores (fold on read) <span class="badge">xVotes.ts</span></div>
+
+<div class="files"><strong>Modify:</strong> <code>src/lib/xVotes.ts</code> &middot; <strong>Test:</strong> <code>src/lib/xVotes.test.ts</code></div>
+
+<div class="note"><strong>Plan decision (within spec &sect;3 latitude &ldquo;or compute on demand&rdquo;):</strong> windows shift daily, so a precomputed sorted set goes stale between votes (a post voted eight days ago must leave the <code>week</code> view today, with no new vote to trigger a rebuild). So <code>readScores</code> <strong>folds the ledger on read</strong> for the requested window at today&rsquo;s date &mdash; always correct, and cheap while volume is low. The sorted-set cache (<code>x:score:&lt;handle&gt;</code>, <code>rebuildScoreCache</code>, and its call inside <code>appendVote</code>) is removed as now-redundant. A per-day cache can be reintroduced if volume demands it.</div>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &mdash; failing tests.</strong>
+<pre><code>it("folds the requested window on read, default week", async () =&gt; {
+  const r = fakeRedis();
+  await appendVote("bob", { txid: "old", postId: "p1", dir: "up", sats: 500, day: "2026-06-01" }, "2026-07-10", r);
+  await appendVote("bob", { txid: "new", postId: "p1", dir: "up", sats: 900, day: "2026-07-09" }, "2026-07-10", r);
+  expect(await readScores("bob", "week", "2026-07-10", r)).toEqual({ p1: 900 });   // old is &gt;7d out
+  expect(await readScores("bob", "all",  "2026-07-10", r)).toEqual({ p1: 1400 });  // both
+});</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 2 &mdash; run, see fail.</strong> <code>npx vitest run src/lib/xVotes.test.ts</code> (old <code>readScores(handle)</code> signature / cache read is wrong).</li>
+
+<li><input type="checkbox"> <strong>Step 3 &mdash; implement.</strong> Replace the cache-reading <code>readScores</code> with a fold-on-read, and delete <code>rebuildScoreCache</code> + <code>scoreKey</code> + the <code>rebuildScoreCache</code> call in <code>appendVote</code> + <code>scoreEntries</code> (now unused &mdash; confirm with <code>tsc</code>/grep nothing else imports it):
+<pre><code>import { foldScores, windowStartDay, DEFAULT_WINDOW, type ScoreWindow } from "./xScore";
+
+export async function readScores(
+  handle: string,
+  window: ScoreWindow = DEFAULT_WINDOW,
+  asOfDay: string = dateKey(),
+  redis: Redis | null = getRedis(),
+): Promise&lt;Record&lt;string, number&gt;&gt; {
+  if (!redis) return {};
+  const ledger = await readVoteLedger(handle, redis);
+  return foldScores(ledger, asOfDay, windowStartDay(window, asOfDay));
+}</code></pre>
+In <code>appendVote</code>, remove the <code>await rebuildScoreCache(...)</code> line (the fold is now on read; the append is just gate + <code>rpush</code>).</li>
+
+<li><input type="checkbox"> <strong>Step 4 &mdash; fix call sites.</strong> <code>npx tsc --noEmit</code>; update the three <code>readScores(handle)</code> call sites (<code>src/app/text/page.tsx</code>, <code>src/app/text/[handle]/page.tsx</code>, <code>src/app/text/[handle]/[postId]/page.tsx</code>) &mdash; Task 5 rewires the directory page&rsquo;s call; for now pass <code>DEFAULT_WINDOW</code> explicitly so they compile and behave as &ldquo;this week.&rdquo;</li>
+
+<li><input type="checkbox"> <strong>Step 5 &mdash; run + build.</strong> <code>npx vitest run src/lib/xVotes.test.ts</code> &rarr; PASS; <code>npm run build</code> green.</li>
+
+<li><input type="checkbox"> <strong>Step 6 &mdash; commit.</strong>
+<pre><code>git add src/lib/xVotes.ts src/lib/xVotes.test.ts src/app/text
+git commit -m "xVotes: readScores folds the chosen window on read; drop stale sorted-set cache"</code></pre></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 4 &middot; Backfill founding votes from on-chain fees <span class="badge">whatsonchain.ts + foundingBackfill.ts</span> <span class="effort">&mdash; standard model</span></div>
+
+<div class="files"><strong>Modify:</strong> <code>src/lib/whatsonchain.ts</code> &middot; <strong>Create:</strong> <code>src/lib/foundingBackfill.ts</code>, <code>src/lib/foundingBackfill.test.ts</code></div>
+
+<p><strong>Interfaces:</strong> consumes <code>appendFoundingVote</code> (Task 2), the per-post <code>txid</code> on <code>XPost</code>, and <code>txTimes</code> from <code>getArchivePage</code>/<code>xArchiveCache</code>. Produces a fee lookup and a backfill runner.</p>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &mdash; failing test for the fee lookup.</strong> The miner fee is <code>&Sigma; vin.value &minus; &Sigma; vout.value</code> from WhatsOnChain <code>/tx/hash/&lt;txid&gt;</code>. Test a pure helper against a fixture JSON so no network is needed:
+<pre><code>import { txFeeSatsFromJson } from "./whatsonchain";
+it("computes the miner fee as inputs minus outputs (in sats)", () =&gt; {
+  const tx = { vin: [{ value: 0.001 }, { value: 0.0005 }], vout: [{ value: 0.00149 }] };
+  // 0.0015 BSV in - 0.00149 BSV out = 0.00001 BSV = 1000 sats
+  expect(txFeeSatsFromJson(tx)).toBe(1000);
+});
+it("returns null when an input lacks a value (fail-open)", () =&gt; {
+  expect(txFeeSatsFromJson({ vin: [{}], vout: [{ value: 0.001 }] })).toBeNull();
+});</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 2 &mdash; run, see fail.</strong> <code>npx vitest run src/lib/whatsonchain.test.ts</code> &rarr; <code>txFeeSatsFromJson is not a function</code>.</li>
+
+<li><input type="checkbox"> <strong>Step 3 &mdash; implement the fee helpers.</strong> In <code>whatsonchain.ts</code>:
+<pre><code>const BSV = 100_000_000;
+type WocTx = { vin?: Array&lt;{ value?: number }&gt;; vout?: Array&lt;{ value?: number }&gt; };
+
+/** Pure: miner fee in sats, or null if any input value is missing (fail-open). */
+export function txFeeSatsFromJson(tx: WocTx): number | null {
+  const ins = tx.vin ?? [];
+  if (ins.some((i) =&gt; typeof i.value !== "number")) return null;
+  const inSats = ins.reduce((s, i) =&gt; s + Math.round((i.value as number) * BSV), 0);
+  const outSats = (tx.vout ?? []).reduce((s, o) =&gt; s + Math.round((o.value ?? 0) * BSV), 0);
+  const fee = inSats - outSats;
+  return fee &gt;= 0 ? fee : null;
+}
+
+/** Fetch a transaction's miner fee in sats; null on any read/shape failure. */
+export async function fetchTxFeeSats(txid: string, fetchFn = fetch): Promise&lt;number | null&gt; {
+  try {
+    const res = await fetchFn(`${WOC}/tx/hash/${txid}`, { next: { revalidate: 86400 } });
+    if (!res.ok) return null;
+    return txFeeSatsFromJson((await res.json()) as WocTx);
+  } catch { return null; }
+}</code></pre>
+<div class="note">If WhatsOnChain&rsquo;s <code>vin</code> omits <code>value</code> for this transaction shape, <code>txFeeSatsFromJson</code> returns null and the post is skipped this run (fail-open, per the Global Constraints) &mdash; a missing founding vote understates a rank, never corrupts one. If skips prove common in practice, a follow-up can resolve each input&rsquo;s prevout; do not add that speculatively.</div></li>
+
+<li><input type="checkbox"> <strong>Step 4 &mdash; failing test for the runner.</strong> In <code>foundingBackfill.test.ts</code>, drive it with an injected posts list, an injected fee function, and the in-memory Redis fake &mdash; asserting idempotence:
+<pre><code>it("appends one founding vote per post from its inscription fee, idempotently", async () =&gt; {
+  const r = fakeRedis();
+  const posts = [{ id: "p1", txid: "insc1" }];
+  const txTimes = { insc1: Date.parse("2026-07-01") };
+  const feeOf = async (txid: string) =&gt; (txid === "insc1" ? 1000 : null);
+  const first = await backfillFoundingVotes("alice", posts, txTimes, { feeOf, redis: r });
+  const again = await backfillFoundingVotes("alice", posts, txTimes, { feeOf, redis: r });
+  expect(first).toEqual({ recorded: 1, duplicate: 0, skipped: 0 });
+  expect(again).toEqual({ recorded: 0, duplicate: 1, skipped: 0 });   // idempotent
+  expect(await readScores("alice", "all", "2026-07-10", r)).toEqual({ p1: 1000 });
+});</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 5 &mdash; implement the runner.</strong>
+<pre><code>import { appendFoundingVote } from "./xVotes";
+import { fetchTxFeeSats } from "./whatsonchain";
+import { getRedis, dateKey } from "./redis";
+
+type BackfillPost = { id: string; txid?: string };
+type BackfillDeps = { feeOf?: (txid: string) =&gt; Promise&lt;number | null&gt;; redis?: Redis | null };
+
+export async function backfillFoundingVotes(
+  handle: string,
+  posts: readonly BackfillPost[],
+  txTimes: Record&lt;string, number&gt;,
+  deps: BackfillDeps = {},
+) {
+  const feeOf = deps.feeOf ?? fetchTxFeeSats;
+  const redis = deps.redis ?? getRedis();
+  let recorded = 0, duplicate = 0, skipped = 0;
+  for (const post of posts) {
+    if (!post.txid) { skipped++; continue; }
+    const fee = await feeOf(post.txid);
+    if (fee === null) { skipped++; continue; }            // fail-open, retry next run
+    const day = new Date(txTimes[post.txid] ?? Date.parse(dateKey())).toISOString().slice(0, 10);
+    const res = await appendFoundingVote(handle,
+      { inscriptionTxid: post.txid, postId: post.id, uploadCostSats: fee, inscriptionDay: day }, dateKey(), redis);
+    if (res === "recorded") recorded++;
+    else if (res === "duplicate") duplicate++;
+    else skipped++;
+  }
+  return { recorded, duplicate, skipped };
+}</code></pre>
+<div class="note">The runner takes <code>posts</code> + <code>txTimes</code> as arguments (from <code>getArchivePage</code>) rather than fetching the archive itself &mdash; it stays a testable pure-ish orchestration whose only I/O is injected (<code>feeOf</code>, <code>redis</code>). The caller (an admin route or a one-off script, wired in a follow-up) supplies the archive; that wiring is out of this task&rsquo;s test cycle.</div></li>
+
+<li><input type="checkbox"> <strong>Step 6 &mdash; run, green.</strong> <code>npx vitest run src/lib/whatsonchain.test.ts src/lib/foundingBackfill.test.ts</code> &rarr; PASS.</li>
+
+<li><input type="checkbox"> <strong>Step 7 &mdash; commit.</strong>
+<pre><code>git add src/lib/whatsonchain.ts src/lib/foundingBackfill.ts src/lib/foundingBackfill.test.ts
+git commit -m "backfill: reconstruct founding votes from on-chain inscription fees, fail-open + idempotent"</code></pre></li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 5 &middot; The /text window toggle + score sort <span class="badge">/text UI</span></div>
+
+<div class="files"><strong>Modify:</strong> <code>src/app/text/page.tsx</code>, <code>src/app/text/_components/ProfileView.tsx</code> &middot; <strong>Create:</strong> <code>src/app/text/_components/WindowToggle.tsx</code>, <code>src/app/text/sortPosts.ts</code>, <code>src/app/text/sortPosts.test.ts</code></div>
+
+<p><strong>Interfaces:</strong> consumes windowed <code>readScores</code> (Task 3). The server computes all five windowed score maps and passes them down; a client toggle picks one and re-sorts. Pure sort helper:</p>
+<pre><code>export function sortPostsByScore&lt;P extends { id: string }&gt;(posts: readonly P[], scores: Record&lt;string, number&gt;): P[];</code></pre>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &mdash; failing test for the pure sort.</strong>
+<pre><code>import { sortPostsByScore } from "./sortPosts";
+it("orders by score desc, missing score = 0, stable on ties", () =&gt; {
+  const posts = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }];
+  const scores = { b: 900, c: -100, a: 900 };
+  // b and a tie at 900 (keep input order a before b is false: b is listed first only if stable)
+  expect(sortPostsByScore(posts, scores).map((p) =&gt; p.id)).toEqual(["a", "b", "d", "c"]);
+  // a(900), b(900) keep original relative order; d(0) above c(-100)
+});</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 2 &mdash; run, see fail.</strong> <code>npx vitest run src/app/text/sortPosts.test.ts</code>.</li>
+
+<li><input type="checkbox"> <strong>Step 3 &mdash; implement the pure sort</strong> (stable: decorate with index, sort by score desc then index asc):
+<pre><code>export function sortPostsByScore&lt;P extends { id: string }&gt;(
+  posts: readonly P[], scores: Record&lt;string, number&gt;,
+): P[] {
+  return posts
+    .map((p, i) =&gt; ({ p, i, s: scores[p.id] ?? 0 }))
+    .sort((x, y) =&gt; (y.s - x.s) || (x.i - y.i))
+    .map((d) =&gt; d.p);
+}</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 4 &mdash; the client toggle.</strong> Create <code>WindowToggle.tsx</code> (<code>"use client"</code>): five buttons (<code>day/week/month/year/all</code>), <code>useState</code> defaulting to <code>DEFAULT_WINDOW</code> (&ldquo;week&rdquo;), rendering the labels <em>Today / This week / This month / This year / All time</em>. It receives <code>scoresByWindow: Record&lt;ScoreWindow, Record&lt;string, number&gt;&gt;</code> and the posts, applies <code>sortPostsByScore(posts, scoresByWindow[selected])</code>, and renders the existing post list markup (lift the post-row markup out of <code>ProfileView</code> into a shared render, or pass a render prop). Keyboard-focusable buttons; the selected one carries <code>aria-pressed</code>.</li>
+
+<li><input type="checkbox"> <strong>Step 5 &mdash; wire the server page.</strong> In <code>page.tsx</code>, replace the single <code>readScores(WITNESS_HANDLE)</code> with all five windows and pass them to <code>ProfileView</code> &rarr; <code>WindowToggle</code>:
+<pre><code>const windows: ScoreWindow[] = ["day", "week", "month", "year", "all"];
+const scoreMaps = await Promise.all(windows.map((w) =&gt; readScores(WITNESS_HANDLE, w)));
+const scoresByWindow = Object.fromEntries(windows.map((w, i) =&gt; [w, scoreMaps[i]])) as Record&lt;ScoreWindow, Record&lt;string, number&gt;&gt;;</code></pre>
+Pass <code>scoresByWindow</code> into <code>ProfileView</code> in place of <code>scores</code>; <code>ProfileView</code> hands it to <code>WindowToggle</code>, which owns ordering. The default render (before any interaction) is the <code>week</code> ordering, so server output and first paint agree.</li>
+
+<li><input type="checkbox"> <strong>Step 6 &mdash; run + build + eyeball.</strong> <code>npx vitest run src/app/text/sortPosts.test.ts</code> &rarr; PASS; <code>npm run build</code> green; <code>npm run dev</code> and confirm <code>/text</code> defaults to &ldquo;This week&rdquo; and reorders on toggle.</li>
+
+<li><input type="checkbox"> <strong>Step 7 &mdash; commit.</strong>
+<pre><code>git add src/app/text
+git commit -m "text: window toggle (default this week) reorders the feed by committed-sats score"</code></pre></li>
+</ul>
+</div>
+
+<h2>After all tasks</h2>
+<ul>
+<li><strong>Adversarial money-path review</strong> of the whole branch before merge (Global Constraints) &mdash; focus: the two dedup gates (per-txid and per-post) and that <code>readScores</code>&rsquo; fold-on-read can never double-count or lose an entry.</li>
+<li><strong>Run the backfill once against the live ledger</strong> only after that review &mdash; it is idempotent by inscription txid + per-post gate, so a re-run during rollout cannot double-count.</li>
+<li>Merge to <code>main</code> = live deploy; watch that <code>/text</code> renders &ldquo;This week&rdquo; and the directory pages still resolve.</li>
+</ul>
+
+</div>
+</body>
+</html>
