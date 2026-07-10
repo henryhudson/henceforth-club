@@ -28,6 +28,25 @@ describe("applyEvent — the named transition table", () => {
     expect(result.job.address).toBe("1Addr");
   });
 
+  it("quoted + expired(residueSats === 0) -> swept, failureReason expired-before-key", () => {
+    const job = makeJob({ state: "quoted" });
+    const result = applyEvent(job, { kind: "expired", residueSats: 0 }, NOW);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected ok");
+    expect(result.job.state).toBe("swept");
+    expect(result.job.failureReason).toBe("expired-before-key");
+  });
+
+  it("quoted + expired(residueSats > 0) -> sweeping", () => {
+    // A quoted job has no published address, so nonzero residue should be
+    // impossible — the machine stays total and routes by residue anyway.
+    const job = makeJob({ state: "quoted" });
+    const result = applyEvent(job, { kind: "expired", residueSats: 500 }, NOW);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected ok");
+    expect(result.job.state).toBe("sweeping");
+  });
+
   it("awaiting-payment + payment-seen(>= price) -> funded, funding fields recorded", () => {
     const job = makeJob({ state: "awaiting-payment", address: "1Addr" });
     const event: JobEvent = { kind: "payment-seen", txid: "tx1", vout: 0, sats: job.priceSats, refundAddress: "1Refund" };

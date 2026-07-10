@@ -66,6 +66,17 @@ export function applyEvent(job: TextJob, event: JobEvent, nowMs: number): Result
       switch (event.kind) {
         case "key-published":
           return ok({ ...job, state: "awaiting-payment", address: event.address });
+        case "expired":
+          // Liveness: without this exit, a job abandoned before the worker
+          // publishes a key (worker crash, store outage) would occupy one of
+          // the concurrent-capacity slots forever — four stuck quoted jobs
+          // would wedge the whole pipeline at capacity. A quoted job has no
+          // published address, so nonzero residue should be impossible; the
+          // machine stays total and defensive, routing by residue exactly
+          // as awaiting-payment does.
+          return event.residueSats > 0
+            ? ok({ ...job, state: "sweeping" })
+            : ok({ ...job, state: "swept", failureReason: "expired-before-key" });
         default:
           return refuse("invalid-transition");
       }
