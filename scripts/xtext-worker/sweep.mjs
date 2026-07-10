@@ -38,12 +38,20 @@ const DUST_LIMIT_SATS = 546;
 export async function buildSweepTx({ jobKey, fundings, refundAddress, feeRate }) {
   const tx = new Transaction();
 
+  // Deterministic input order regardless of how the unspent poll happened to
+  // return the legs — the poll's ordering is not stable across ticks, and the
+  // retry contract replays the SAME txid, so the legs are canonicalised by
+  // (txid, vout) before anything touches the transaction.
+  const orderedFundings = [...fundings].sort(
+    (a, b) => (a.txid < b.txid ? -1 : a.txid > b.txid ? 1 : a.vout - b.vout),
+  );
+
   // Every unspent leg pays the same custody address, so all share the job
   // key's P2PKH locking script and one key unlocks them. Supplying the amount
   // and locking script directly lets each input sign without fetching its
   // parent — the outpoint alone ties it to the real coin (mirroring inscribe).
   const custodyLockingScript = new P2PKH().lock(jobKey.toAddress());
-  for (const funding of fundings) {
+  for (const funding of orderedFundings) {
     tx.addInput({
       sourceTXID: funding.txid,
       sourceOutputIndex: funding.vout,

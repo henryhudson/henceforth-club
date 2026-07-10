@@ -279,6 +279,63 @@ describe("runWorkerTick — the sweep (every failure path ends with the visitor'
     }
   });
 
+  it("prefers the recorded payerRefundAddress — no raw-transaction fetch inside the refund path", async () => {
+    const jobsDir = mkdtempSync(path.join(tmpdir(), "xtext-worker-recorded-refund-"));
+    try {
+      const jobId = "recorded-refund-job";
+      const created = createJobKey(jobId, WRAP_KEY, jobsDir);
+      const jobAddress = created.address;
+      const payerRefundAddress = PrivateKey.fromRandom().toAddress();
+      const fundingTxid = "88".repeat(32);
+
+      const store = makeStore(
+        [
+          {
+            jobId,
+            handle: "x",
+            state: "sweeping",
+            address: jobAddress,
+            fundingTxid,
+            fundingVout: 0,
+            fundingSats: 1_000_000,
+            payerRefundAddress,
+            premiumSats: 10_000,
+            priceSats: 11_000,
+            expiresAtMs: 10_000,
+            failureReason: "underfunded",
+          },
+        ],
+        {},
+      );
+
+      let capturedBody = null;
+      const fetchFn = vi.fn(async (url, opts) => {
+        if (url.includes("arc.gorillapool.io") || url.includes("arc.taal.com")) {
+          capturedBody = opts.body;
+          const txid = Transaction.fromHex(opts.body).id("hex");
+          return { ok: true, status: 200, json: async () => ({ txid, txStatus: "SEEN_ON_NETWORK", status: 200 }) };
+        }
+        if (url.includes(`${jobAddress}/unspent`)) {
+          return { ok: true, json: async () => [{ tx_hash: fundingTxid, tx_pos: 0, value: 1_000_000 }] };
+        }
+        throw new Error(`unexpected fetch: ${url}`);
+      });
+
+      await runWorkerTick(sweepDeps(store, fetchFn, jobsDir, 2_000));
+
+      // The sweep went out to the RECORDED refund address, and the raw funding
+      // transaction was never fetched — the answer was already on the job.
+      expect(capturedBody).not.toBeNull();
+      const tx = Transaction.fromHex(capturedBody);
+      expect(tx.outputs).toHaveLength(1);
+      expect(tx.outputs[0].lockingScript.toHex()).toBe(new P2PKH().lock(payerRefundAddress).toHex());
+      expect(fetchFn).not.toHaveBeenCalledWith(expect.stringContaining("/hex"));
+      expect(store.jobs.get(jobId).sweepTxid).toBe(tx.id("hex"));
+    } finally {
+      rmSync(jobsDir, { recursive: true, force: true });
+    }
+  });
+
   it("stays sweeping and warns exactly once when the funding input resolves to no refund address", async () => {
     const jobsDir = mkdtempSync(path.join(tmpdir(), "xtext-worker-refundless-"));
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});

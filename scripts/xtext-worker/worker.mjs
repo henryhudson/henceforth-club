@@ -201,13 +201,20 @@ async function sweepSweeping({ listJobsInState, advance, wrapKey, jobsDir, fetch
       const utxos = await fetchUnspentOutputs(job.address, fetchFn);
       if (utxos.length === 0) return; // nothing on the address yet — retry next tick
 
-      // The refund goes to the funding transaction's first input. The recorded
-      // funding txid drives it on the broadcast-failed path; an expired-residue
-      // job never recorded one, so the actual unspent leg's own source is used
-      // — its real sender, not a guess.
-      const refundTxid = job.fundingTxid ?? utxos[0].txid;
-      const rawFundingTx = await fetchRawTxHex(refundTxid, fetchFn);
-      const refundAddress = rawFundingTx ? refundAddressOf(rawFundingTx) : null;
+      // The refund goes to the funding transaction's first input. On the
+      // broadcast-failed path that address was already resolved and recorded at
+      // payment-seen (payerRefundAddress) — recomputing what is known would put
+      // a needless network dependency inside the refund path, so the record is
+      // preferred. Only a job without one (the expired-underpaid path never
+      // recorded a funding) resolves on chain: the recorded funding txid where
+      // present, otherwise the actual unspent leg's own source — its real
+      // sender, not a guess.
+      let refundAddress = job.payerRefundAddress ?? null;
+      if (!refundAddress) {
+        const refundTxid = job.fundingTxid ?? utxos[0].txid;
+        const rawFundingTx = await fetchRawTxHex(refundTxid, fetchFn);
+        refundAddress = rawFundingTx ? refundAddressOf(rawFundingTx) : null;
+      }
       if (!refundAddress) {
         warnOnce(warnedRefundless, job.jobId, `xtext-worker: sweeping job ${job.jobId} has no resolvable refund address — flagged for ops, will retry`);
         return;

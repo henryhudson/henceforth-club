@@ -61,4 +61,18 @@ describe("buildSweepTx", () => {
     expect(second.txid).toBe(first.txid);
     expect(second.hex).toBe(first.hex);
   });
+
+  it("is deterministic across leg order too — the unspent poll's ordering is not stable, the txid must be", async () => {
+    const fundings = [
+      { txid: "cc".repeat(32), vout: 1, sats: 250_000 },
+      { txid: "aa".repeat(32), vout: 0, sats: 400_000 },
+      { txid: "cc".repeat(32), vout: 0, sats: 100_000 },
+      { txid: "bb".repeat(32), vout: 1, sats: 350_000 },
+    ];
+    const reversed = [...fundings].reverse();
+    const first = await buildSweepTx({ jobKey, fundings, refundAddress, feeRate });
+    const second = await buildSweepTx({ jobKey, fundings: reversed, refundAddress, feeRate });
+    expect(second.txid).toBe(first.txid);
+    expect(second.hex).toBe(first.hex);
+  });
 });
