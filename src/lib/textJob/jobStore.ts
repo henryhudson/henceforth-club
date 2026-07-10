@@ -80,6 +80,10 @@ export async function createJob(
   if (!redis) return { ok: false, refused: "store-unavailable" };
 
   const jobs = await allStoredJobs(redis);
+  // This check and the write below are not atomic: two simultaneous creates can
+  // both pass here and briefly overshoot MAX_CONCURRENT_JOBS. That is an
+  // accepted exposure bound (a soft ceiling on live custody), not a consistency
+  // invariant worth a lock — the worst case is one extra ephemeral job.
   const activeCount = jobs.filter((j) => ACTIVE_STATES.includes(j.state)).length;
   if (activeCount >= MAX_CONCURRENT_JOBS) {
     return { ok: false, refused: "at-capacity" };

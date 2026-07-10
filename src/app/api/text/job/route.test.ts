@@ -63,6 +63,7 @@ const JOB = {
 };
 
 beforeEach(() => {
+  vi.stubEnv("XTEXT_WEB_ARCHIVE_ENABLED", "true");
   mockParseXExport.mockReset();
   mockQuoteArchive.mockReset();
   mockGetOwner.mockReset();
@@ -74,6 +75,21 @@ beforeEach(() => {
 });
 
 describe("POST /api/text/job", () => {
+  it("refuses when the web-archive flag is not enabled — the pay pipeline stays unreachable", async () => {
+    vi.stubEnv("XTEXT_WEB_ARCHIVE_ENABLED", "false");
+    const res = await POST(multipartRequest());
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ ok: false, reason: "not-available" });
+    expect(mockParseXExport).not.toHaveBeenCalled();
+    expect(mockCreateJob).not.toHaveBeenCalled();
+  });
+
+  it("proceeds when the web-archive flag is exactly \"true\"", async () => {
+    vi.stubEnv("XTEXT_WEB_ARCHIVE_ENABLED", "true");
+    const res = await POST(multipartRequest());
+    expect(res.status).toBe(200);
+  });
+
   it("refuses a request with no zip field", async () => {
     const res = await POST(multipartRequest({}));
     expect(res.status).toBe(400);

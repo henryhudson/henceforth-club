@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { PrivateKey, Script, Transaction } from "@bsv/sdk";
-import { matchPayment, refundAddressOf, runWatchTick } from "./payments.mjs";
+import { matchPayment, readUnspentOutputs, refundAddressOf, runWatchTick } from "./payments.mjs";
 
 // A funding transaction's first input, built directly with the SDK rather
 // than a hand-typed hex blob — real opcodes, real pushdata framing, a real
@@ -116,6 +116,35 @@ describe("refundAddressOf", () => {
     const unlockingScript = new Script().writeBin(Array(71).fill(0x30)).writeBin(uncompressed);
     const hex = fundingTxHex(unlockingScript);
     expect(refundAddressOf(hex)).toBeNull();
+  });
+});
+
+describe("readUnspentOutputs (distinguishes an affirmatively empty read from a failed one)", () => {
+  it("a good 200 with an empty array is ok-and-empty", async () => {
+    const fetchFn = vi.fn(async () => ({ ok: true, json: async () => [] }));
+    expect(await readUnspentOutputs("1Addr", fetchFn)).toEqual({ ok: true, utxos: [] });
+  });
+
+  it("a good 200 with outputs maps them to the matchPayment shape", async () => {
+    const fetchFn = vi.fn(async () => ({ ok: true, json: async () => [{ tx_hash: "a", tx_pos: 1, value: 500 }] }));
+    expect(await readUnspentOutputs("1Addr", fetchFn)).toEqual({ ok: true, utxos: [{ txid: "a", vout: 1, sats: 500 }] });
+  });
+
+  it("a non-200 response is a failed read, not an empty one", async () => {
+    const fetchFn = vi.fn(async () => ({ ok: false, status: 502 }));
+    expect(await readUnspentOutputs("1Addr", fetchFn)).toEqual({ ok: false });
+  });
+
+  it("a network throw is a failed read", async () => {
+    const fetchFn = vi.fn(async () => {
+      throw new Error("network down");
+    });
+    expect(await readUnspentOutputs("1Addr", fetchFn)).toEqual({ ok: false });
+  });
+
+  it("an unexpected (non-array) body is a failed read", async () => {
+    const fetchFn = vi.fn(async () => ({ ok: true, json: async () => ({ nope: true }) }));
+    expect(await readUnspentOutputs("1Addr", fetchFn)).toEqual({ ok: false });
   });
 });
 

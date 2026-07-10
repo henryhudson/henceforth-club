@@ -18,7 +18,7 @@
 import { pathToFileURL } from "node:url";
 import { P2PKH } from "@bsv/sdk";
 import { createJobKey, deleteJobKey, loadJobKey } from "./keystore.mjs";
-import { fetchRawTxHex, fetchTxConfirmed, fetchUnspentOutputs, refundAddressOf, runWatchTick } from "./payments.mjs";
+import { fetchRawTxHex, fetchTxConfirmed, fetchUnspentOutputs, readUnspentOutputs, refundAddressOf, runWatchTick } from "./payments.mjs";
 import { broadcastArchive, buildInscriptionTx, registerHandle } from "./inscribe.mjs";
 import { buildSweepTx } from "./sweep.mjs";
 
@@ -141,11 +141,14 @@ async function inscribeFunded({ listJobsInState, advance, getPayload, wrapKey, j
   }
 }
 
-/** inscribed -> done: register the archive against its handle, then — only once
- * the machine has actually reached done — delete the key. A registration that
- * cannot complete yet (the tx not visible to WhatsOnChain, the index briefly
- * down) is left inscribed to retry next tick; registration is idempotent. */
-async function registerInscribed({ listJobsInState, advance, jobsDir, registerBaseUrl, fetchFn, nowMs }) {
+/** inscribed -> done: register the archive against its handle. A registration
+ * that cannot complete yet (the tx not visible to WhatsOnChain, the index
+ * briefly down) is left inscribed to retry next tick; registration is
+ * idempotent. The custody key is deliberately NOT deleted at done — a done
+ * job's address is late-watched for stragglers exactly as a swept job's is,
+ * and only the reaper (in the late watch) deletes the key once the window has
+ * closed. Deleting here would strand any second leg on the address forever. */
+async function registerInscribed({ listJobsInState, advance, registerBaseUrl, fetchFn, nowMs }) {
   const inscribed = await listJobsInState("inscribed");
   for (const job of inscribed) {
     await guarded("register", job.jobId, async () => {
@@ -157,10 +160,7 @@ async function registerInscribed({ listJobsInState, advance, jobsDir, registerBa
       });
       if (!registered.ok) return; // stay inscribed, retry next tick
 
-      const result = await advance(job.jobId, { kind: "registered" }, nowMs);
-      if (result.ok && result.job.state === "done") {
-        deleteJobKey(job.jobId, jobsDir); // custody ends here, matching the store's payload deletion
-      }
+      await advance(job.jobId, { kind: "registered" }, nowMs);
     });
   }
 }
@@ -243,21 +243,30 @@ async function sweepSweeping({ listJobsInState, advance, wrapKey, jobsDir, fetch
 }
 
 /**
- * swept: the late watch and the reaper. Keys outlive the swept transition on
- * purpose — a payment can still arrive at a swept job's address, and only the
- * retained key can refund it. For LATE_WATCH_MS past the job's quote expiry the
- * address is polled each tick; a straggler is swept straight back to its own
- * sender with the retained key, with no state-machine event (swept stays swept
- * — idempotency comes from the deterministic rebuild). Once that window closes,
- * the reaper deletes the key: custody finally, fully ends.
+ * swept and done: the late watch and the reaper. Keys outlive both terminal
+ * transitions on purpose — a payment can still arrive at the address of a
+ * swept job (a duplicate leg) OR a done job (a top-up before funding, a second
+ * payment after), and only the retained key can refund it. For LATE_WATCH_MS
+ * past the job's quote expiry the address is polled each tick; a straggler is
+ * swept straight back to its own sender with the retained key, with no
+ * state-machine event (the terminal state is unchanged — idempotency comes from
+ * the deterministic rebuild). Once that window closes, the reaper deletes the
+ * key, but ONLY after an affirmatively empty read: fetchUnspentOutputs answers
+ * [] for both a genuinely empty address and a failed poll, so the reaper reads
+ * through readUnspentOutputs and postpones a tick on any failed read rather
+ * than deleting a key over funds it merely could not see.
  */
 async function lateWatchAndReap({ listJobsInState, wrapKey, jobsDir, fetchFn, taalApiKey, feeRate, nowMs }) {
   const swept = await listJobsInState("swept");
-  for (const job of swept) {
+  const done = await listJobsInState("done");
+  for (const job of [...swept, ...done]) {
     await guarded("late-watch", job.jobId, async () => {
       if (nowMs - job.expiresAtMs >= LATE_WATCH_MS) {
-        deleteJobKey(job.jobId, jobsDir); // the window has closed — custody ends here
-        return;
+        const read = await readUnspentOutputs(job.address, fetchFn);
+        if (read.ok && read.utxos.length === 0) {
+          deleteJobKey(job.jobId, jobsDir); // affirmatively empty and past the window — custody ends here
+        }
+        return; // a failed read, or funds still present, postpones the reap to a later tick
       }
 
       const utxos = await fetchUnspentOutputs(job.address, fetchFn);
@@ -266,13 +275,13 @@ async function lateWatchAndReap({ listJobsInState, wrapKey, jobsDir, fetchFn, ta
       const rawTx = await fetchRawTxHex(utxos[0].txid, fetchFn);
       const refundAddress = rawTx ? refundAddressOf(rawTx) : null;
       if (!refundAddress) {
-        warnOnce(warnedLateStraggler, job.jobId, `xtext-worker: late straggler on swept job ${job.jobId} has no resolvable refund address — flagged for ops`);
+        warnOnce(warnedLateStraggler, job.jobId, `xtext-worker: late straggler on terminal job ${job.jobId} has no resolvable refund address — flagged for ops`);
         return;
       }
 
       const jobKey = loadJobKey(job.jobId, wrapKey, jobsDir);
       if (!jobKey) {
-        warnOnce(warnedLateStraggler, job.jobId, `xtext-worker: late straggler on swept job ${job.jobId} but its key was already reaped — flagged for ops`);
+        warnOnce(warnedLateStraggler, job.jobId, `xtext-worker: late straggler on terminal job ${job.jobId} but its key was already reaped — flagged for ops`);
         return;
       }
 
@@ -280,7 +289,7 @@ async function lateWatchAndReap({ listJobsInState, wrapKey, jobsDir, fetchFn, ta
       if (built.ok === false) {
         // Warn once, not every tick — a dust straggler sits on the address for
         // the rest of the window and there is nothing broadcastable to do with it.
-        warnOnce(warnedLateStraggler, job.jobId, `xtext-worker: late straggler on swept job ${job.jobId} is dust — nothing broadcastable`);
+        warnOnce(warnedLateStraggler, job.jobId, `xtext-worker: late straggler on terminal job ${job.jobId} is dust — nothing broadcastable`);
         return;
       }
 

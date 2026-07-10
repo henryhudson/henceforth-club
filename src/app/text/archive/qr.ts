@@ -1,8 +1,8 @@
 // A pure wrapper around qrcode-generator: text in, a single vector-image
 // path out. One <path> covering every dark module — the standard technique
-// for a compact, themeable scannable payment code (fill="currentColor" lets
-// it inherit whatever colour the page gives it) — rather than one <rect>
-// per module.
+// for a compact scannable payment code, filled by the caller (PaymentPanel
+// paints it fixed black on white, since a scan target needs stable contrast
+// regardless of the page theme) — rather than one <rect> per module.
 //
 // qrcode-generator is a small, dependency-free, pure-JavaScript encoder; no
 // native code, no canvas. Chosen over the heavier `qrcode` package (which

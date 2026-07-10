@@ -48,6 +48,13 @@ describe("statusCopy", () => {
     expect(view.body).toContain("broadcast rejected");
   });
 
+  it("swept after a dust residue — honest that no refund was possible, never claims one was sent", () => {
+    const view = statusCopy({ state: "swept", handle: "henry", failureReason: "dust" });
+    expect(view.body).not.toMatch(/sent back/i);
+    expect(view.body).toMatch(/below the miner fee/i);
+    expect(view.body).toMatch(/no refund transaction was possible/i);
+  });
+
   it("swept with no failure reason at all — the quote simply expired unpaid", () => {
     const view = statusCopy({ state: "swept", handle: "henry" });
     expect(view.heading).toBe("Quote expired");

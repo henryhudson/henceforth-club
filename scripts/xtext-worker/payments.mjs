@@ -69,21 +69,41 @@ export function refundAddressOf(rawFundingTx) {
   }
 }
 
+/**
+ * One unspent-outputs read that distinguishes a genuine empty answer from a
+ * failed one: { ok: true, utxos } on a good 200 (the array may be empty),
+ * { ok: false } on any network error, non-200, or unexpected body. The reaper
+ * (worker.mjs) needs this distinction before it deletes a fund-linked custody
+ * key — an empty array that was really a failed read must not be mistaken for
+ * "no funds on this address". Payment-watch call sites, which only ever want
+ * "what did I see this tick", use fetchUnspentOutputs below instead.
+ */
+export async function readUnspentOutputs(address, fetchFn) {
+  let res;
+  try {
+    res = await fetchFn(`${WOC}/address/${address}/unspent`);
+  } catch {
+    return { ok: false };
+  }
+  if (!res.ok) return { ok: false };
+  let body;
+  try {
+    body = await res.json();
+  } catch {
+    return { ok: false };
+  }
+  if (!Array.isArray(body)) return { ok: false };
+  return { ok: true, utxos: body.map((o) => ({ txid: o.tx_hash, vout: o.tx_pos, sats: o.value })) };
+}
+
 /** One unspent-outputs request, shaped for matchPayment. Any read failure
  * (network error, non-200, an unexpected body) answers "nothing seen yet"
  * rather than throwing — the next tick tries again. Exported so the sweep and
  * late watch (worker.mjs) read the address the same way, never a second poll
  * implementation. */
 export async function fetchUnspentOutputs(address, fetchFn) {
-  let res;
-  try {
-    res = await fetchFn(`${WOC}/address/${address}/unspent`);
-  } catch {
-    return [];
-  }
-  if (!res.ok) return [];
-  const body = await res.json();
-  return Array.isArray(body) ? body.map((o) => ({ txid: o.tx_hash, vout: o.tx_pos, sats: o.value })) : [];
+  const read = await readUnspentOutputs(address, fetchFn);
+  return read.ok ? read.utxos : [];
 }
 
 /** The funding transaction's raw hex, or null on any read failure. Exported

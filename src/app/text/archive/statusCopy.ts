@@ -5,11 +5,13 @@
 //
 // "sweeping" and "swept" additionally read failureReason, so a refund's
 // cause is never hidden from the visitor whose money it is. "swept" carries
-// three honest shapes: the quote expired before any address was ever issued
-// (failureReason "expired-before-key"), a payment was returned after a real
-// failure (any other failureReason), or the quote simply expired unpaid
-// (no failureReason at all — nothing was ever charged, so nothing needed
-// returning, but the job still crosses this terminal state).
+// four honest shapes: the quote expired before any address was ever issued
+// (failureReason "expired-before-key"), a residue too small to refund
+// (failureReason "dust" — no refund transaction was possible, so it must not
+// claim one was sent), a payment returned after a real failure (any other
+// failureReason), or the quote simply expired unpaid (no failureReason at all
+// — nothing was ever charged, so nothing needed returning, but the job still
+// crosses this terminal state).
 
 import type { JobState } from "@/lib/textJob/jobs";
 
@@ -57,6 +59,15 @@ export function statusCopy(job: { state: JobState; handle: string; failureReason
         return {
           heading: "Quote expired",
           body: "The quote expired before a payment address was ever issued. Nothing was charged.",
+        };
+      }
+      if (job.failureReason === "dust") {
+        // A dust residue cannot build a broadcastable refund — claiming the
+        // payment was "sent back" would be a lie, so this branch says the
+        // honest thing instead.
+        return {
+          heading: "No refund was possible",
+          body: "The remaining amount was below the miner fee, so no refund transaction was possible.",
         };
       }
       if (job.failureReason) {

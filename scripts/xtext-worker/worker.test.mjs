@@ -46,14 +46,22 @@ function makeStore(initialJobs, payloads) {
 }
 
 function stubFetch({ fundingTxid, fundingHex, utxoValue }) {
+  // Once the inscription broadcasts, the funding leg is spent, so the job
+  // address reads empty afterward. This lets one address answer "funded" to
+  // the payment watch and "empty" to the later done-job late-watch and reaper,
+  // exactly as the chain would.
+  let inscribed = false;
   return vi.fn(async (url, opts) => {
     if (url.includes("/api/x/register")) return { ok: true, status: 200, json: async () => ({ ok: true }) };
     if (url.includes("arc.gorillapool.io") || url.includes("arc.taal.com")) {
+      inscribed = true;
       // Echo the txid of the exact bytes submitted, as a real miner would.
       const txid = Transaction.fromHex(opts.body).id("hex");
       return { ok: true, status: 200, json: async () => ({ txid, txStatus: "SEEN_ON_NETWORK", status: 200 }) };
     }
-    if (url.includes("/unspent")) return { ok: true, json: async () => [{ tx_hash: fundingTxid, tx_pos: 0, value: utxoValue }] };
+    if (url.includes("/unspent")) {
+      return { ok: true, json: async () => (inscribed ? [] : [{ tx_hash: fundingTxid, tx_pos: 0, value: utxoValue }]) };
+    }
     if (url.includes(`/tx/${fundingTxid}/hex`)) return { ok: true, text: async () => fundingHex };
     throw new Error(`unexpected fetch: ${url}`);
   });
@@ -72,7 +80,7 @@ describe("revenueAddressError (hard rule 1 — refuse to start without a valid c
 });
 
 describe("runWorkerTick", () => {
-  it("walks a job from quoted to done, deleting its key, and retains a broadcast-failed job's key", async () => {
+  it("walks a job from quoted to done, retaining its key at done for the late watch, then reaps it once the window closes", async () => {
     const jobsDir = mkdtempSync(path.join(tmpdir(), "xtext-worker-loop-"));
     try {
       const revenueAddress = PrivateKey.fromRandom().toAddress();
@@ -129,10 +137,30 @@ describe("runWorkerTick", () => {
       );
       expect(store.jobs.get("fails-job").state).toBe("sweeping");
 
-      // Custody ends exactly at completion: the done job's key is gone, the
-      // sweeping job's key is retained for the refund.
-      expect(loadJobKey("happy-job", WRAP_KEY, jobsDir)).toBeNull();
+      // Custody does NOT end at done: the key is retained for the late watch (a
+      // straggler leg could still land on the address), exactly as a swept
+      // job's is. The sweeping job's key is likewise retained for the refund.
+      expect(loadJobKey("happy-job", WRAP_KEY, jobsDir)).not.toBeNull();
       expect(loadJobKey("fails-job", WRAP_KEY, jobsDir)).not.toBeNull();
+
+      // A tick past the late window (LATE_WATCH_DAYS = 7 -> 604_800_000 ms
+      // after the quote expiry), with the address now affirmatively empty,
+      // reaps the done job's key: custody finally, fully ends.
+      await runWorkerTick({
+        listJobsInState: store.listJobsInState,
+        advance: store.advance,
+        getPayload: store.getPayload,
+        fetchFn,
+        wrapKey: WRAP_KEY,
+        jobsDir,
+        revenueAddress,
+        feeRate: 100,
+        registerBaseUrl: "https://www.henceforth.club",
+        nowMs: 10_000 + 604_800_000 + 1,
+      });
+
+      expect(loadJobKey("happy-job", WRAP_KEY, jobsDir)).toBeNull();
+      expect(store.jobs.get("happy-job").state).toBe("done"); // still terminal — the reap changes no state
     } finally {
       rmSync(jobsDir, { recursive: true, force: true });
     }
@@ -435,6 +463,74 @@ describe("runWorkerTick — the late watch and the reaper (keys outlive swept, b
     }
   });
 
+  it("late-watches a done job's address too — a straggler sweeps back to its own sender with the retained key, staying done", async () => {
+    const jobsDir = mkdtempSync(path.join(tmpdir(), "xtext-worker-done-late-"));
+    try {
+      const jobId = "done-straggler-job";
+      const created = createJobKey(jobId, WRAP_KEY, jobsDir);
+      const jobAddress = created.address;
+
+      const payerKey = PrivateKey.fromRandom();
+      const stragglerTxid = "99".repeat(32);
+      const stragglerHex = fundingTxHex(standardP2pkhUnlock(payerKey));
+      const stragglerRefund = payerKey.toPublicKey().toAddress();
+
+      const store = makeStore(
+        [{ jobId, handle: "x", state: "done", address: jobAddress, expiresAtMs: 5_000, premiumSats: 1, priceSats: 1 }],
+        {},
+      );
+
+      let capturedBody = null;
+      const fetchFn = vi.fn(async (url, opts) => {
+        if (url.includes("arc.gorillapool.io") || url.includes("arc.taal.com")) {
+          capturedBody = opts.body;
+          const txid = Transaction.fromHex(opts.body).id("hex");
+          return { ok: true, status: 200, json: async () => ({ txid, txStatus: "SEEN_ON_NETWORK", status: 200 }) };
+        }
+        if (url.includes(`${jobAddress}/unspent`)) return { ok: true, json: async () => [{ tx_hash: stragglerTxid, tx_pos: 0, value: 800_000 }] };
+        if (url.includes(`/tx/${stragglerTxid}/hex`)) return { ok: true, text: async () => stragglerHex };
+        throw new Error(`unexpected fetch: ${url}`);
+      });
+
+      // nowMs is inside the late window (a little past the 5_000 expiry).
+      await runWorkerTick(sweepDeps(store, fetchFn, jobsDir, 6_000));
+
+      expect(store.jobs.get(jobId).state).toBe("done"); // no state-machine event — done stays done
+      expect(loadJobKey(jobId, WRAP_KEY, jobsDir)).not.toBeNull(); // key retained, still inside the window
+      expect(capturedBody).not.toBeNull();
+
+      const tx = Transaction.fromHex(capturedBody);
+      expect(tx.inputs[0].sourceTXID).toBe(stragglerTxid); // spends the straggler
+      expect(tx.outputs).toHaveLength(1);
+      expect(tx.outputs[0].lockingScript.toHex()).toBe(new P2PKH().lock(stragglerRefund).toHex()); // back to its own sender
+    } finally {
+      rmSync(jobsDir, { recursive: true, force: true });
+    }
+  });
+
+  it("reaps a done job's key once the late window closes, on an affirmatively empty read", async () => {
+    const jobsDir = mkdtempSync(path.join(tmpdir(), "xtext-worker-done-reap-"));
+    try {
+      const jobId = "done-reap-job";
+      const created = createJobKey(jobId, WRAP_KEY, jobsDir);
+      const store = makeStore(
+        [{ jobId, handle: "x", state: "done", address: created.address, expiresAtMs: 1_000, premiumSats: 1, priceSats: 1 }],
+        {},
+      );
+      const fetchFn = vi.fn(async (url) => {
+        if (url.includes("/unspent")) return { ok: true, json: async () => [] };
+        throw new Error(`unexpected fetch: ${url}`);
+      });
+
+      await runWorkerTick(sweepDeps(store, fetchFn, jobsDir, 604_800_000 + 2_000));
+
+      expect(loadJobKey(jobId, WRAP_KEY, jobsDir)).toBeNull(); // window closed + empty read → reaped
+      expect(store.jobs.get(jobId).state).toBe("done"); // still terminal
+    } finally {
+      rmSync(jobsDir, { recursive: true, force: true });
+    }
+  });
+
   it("the reaper deletes a swept job's key only after the late window closes, not before", async () => {
     const jobsDir = mkdtempSync(path.join(tmpdir(), "xtext-worker-reaper-"));
     try {
@@ -466,6 +562,42 @@ describe("runWorkerTick — the late watch and the reaper (keys outlive swept, b
       expect(loadJobKey(pastId, WRAP_KEY, jobsDir)).toBeNull(); // window closed — key reaped
       expect(store.jobs.get(withinId).state).toBe("swept");
       expect(store.jobs.get(pastId).state).toBe("swept");
+    } finally {
+      rmSync(jobsDir, { recursive: true, force: true });
+    }
+  });
+
+  it("the reaper deletes only after an affirmatively empty read — a failed unspent read postpones the reap and keeps the key", async () => {
+    const jobsDir = mkdtempSync(path.join(tmpdir(), "xtext-worker-reaper-read-"));
+    try {
+      const failId = "reaper-read-fails";
+      const emptyId = "reaper-read-empty";
+      const failCreated = createJobKey(failId, WRAP_KEY, jobsDir);
+      const emptyCreated = createJobKey(emptyId, WRAP_KEY, jobsDir);
+
+      const store = makeStore(
+        [
+          { jobId: failId, handle: "x", state: "swept", address: failCreated.address, expiresAtMs: 1_000, premiumSats: 1, priceSats: 1 },
+          { jobId: emptyId, handle: "x", state: "swept", address: emptyCreated.address, expiresAtMs: 1_000, premiumSats: 1, priceSats: 1 },
+        ],
+        {},
+      );
+
+      // A read returns [] for BOTH a genuine empty address and a failed poll;
+      // the reaper must never confuse the two, since deleting a key over funds
+      // it merely failed to see would strand them. Only an affirmatively empty
+      // read may delete a fund-linked key.
+      const fetchFn = vi.fn(async (url) => {
+        if (url.includes(`${failCreated.address}/unspent`)) return { ok: false, status: 502 }; // a failed read
+        if (url.includes(`${emptyCreated.address}/unspent`)) return { ok: true, json: async () => [] }; // affirmatively empty
+        throw new Error(`unexpected fetch: ${url}`);
+      });
+
+      const nowMs = 604_800_000 + 2_000; // both past the window
+      await runWorkerTick(sweepDeps(store, fetchFn, jobsDir, nowMs));
+
+      expect(loadJobKey(failId, WRAP_KEY, jobsDir)).not.toBeNull(); // failed read → key retained, retry next tick
+      expect(loadJobKey(emptyId, WRAP_KEY, jobsDir)).toBeNull(); // ok-and-empty → reaped
     } finally {
       rmSync(jobsDir, { recursive: true, force: true });
     }

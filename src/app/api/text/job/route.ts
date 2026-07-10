@@ -29,6 +29,15 @@ function refusal(reason: string, status: number) {
  * still has to be read into memory once it's here.
  */
 export async function POST(req: Request) {
+  // The same exact-string gate the page uses (src/app/text/archive/page.tsx),
+  // but read per-request: this route is dynamic, so the flag is honoured at
+  // request time rather than baked in at build. While it is off, the whole pay
+  // pipeline — quote, job creation, the address that receives real money —
+  // stays unreachable even though the page renders only its stub.
+  if (process.env.XTEXT_WEB_ARCHIVE_ENABLED !== "true") {
+    return refusal("not-available", 503);
+  }
+
   const contentLengthHeader = req.headers.get("content-length");
   const contentLength = contentLengthHeader === null ? null : Number(contentLengthHeader);
   if (contentLength !== null && Number.isFinite(contentLength) && contentLength > MAX_REQUEST_BYTES) {
