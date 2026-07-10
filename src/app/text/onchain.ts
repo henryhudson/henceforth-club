@@ -22,7 +22,17 @@ export interface SocialArchive {
     accountId?: string;
     createdAt?: string;
   };
-  posts: Array<{ id: string; at: string; text: string; replyToId?: string; mediaHashes?: string[] }>;
+  posts: Array<{
+    id: string;
+    at: string;
+    text: string;
+    replyToId?: string;
+    mediaHashes?: string[];
+    /** The tweet this post replied to, captured at archive time — author and
+     * text only. Absent on older archives and on posts that reply to nothing;
+     * the reader shows it when present and never fabricates it. */
+    parent?: { author: string; text: string };
+  }>;
 }
 
 const PUSHDATA1 = 0x4c;
@@ -119,6 +129,7 @@ export function socialArchiveToXArchive(sa: SocialArchive, txid?: string): XArch
         at: p.at,
         text: p.text,
         replyToId: p.replyToId,
+        parent: p.parent,
         txid,
         media:
           txid && p.mediaHashes?.length

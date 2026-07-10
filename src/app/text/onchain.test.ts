@@ -33,7 +33,13 @@ const archiveJSON = JSON.stringify({
   profile: { displayName: "Henry H", bio: "builder", location: " London " },
   posts: [
     { id: "1", at: "2020-01-01", text: "hello world" },
-    { id: "2", at: "2020-01-02", text: "@bob yes", replyToId: "9" },
+    {
+      id: "2",
+      at: "2020-01-02",
+      text: "@bob yes",
+      replyToId: "9",
+      parent: { author: "bob", text: "what do you think?" },
+    },
   ],
 });
 
@@ -87,6 +93,8 @@ describe("socialArchiveToXArchive", () => {
     expect(x.profile.location).toBe("London"); // trimmed
     expect(x.posts).toHaveLength(2);
     expect(x.posts[1].replyToId).toBe("9");
+    expect(x.posts[1].parent).toEqual({ author: "bob", text: "what do you think?" });
+    expect(x.posts[0].parent).toBeUndefined();
   });
 
   it("tags each post with the txid of the archive that carried it", () => {
