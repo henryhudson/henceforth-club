@@ -7,6 +7,7 @@ import { readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { weekOfFor, setDayEvents, markEventDone, rollForward } from "./week-plan.mjs";
 import { WEEKDAYS } from "./whh-aggregate.mjs";
+import { mirrorWeekToBoardViewer } from "./local-mirror.mjs";
 
 const today = process.argv[2] ?? new Date().toISOString().slice(0, 10);
 const payload = JSON.parse(process.argv[3] ?? "{}");
@@ -57,5 +58,6 @@ for (const label of done) plan = markEventDone(plan, weekday, label);
 week.retro.weekPlan = plan;
 
 await writeFile(path.join(DIR, `${date}.json`), JSON.stringify(week, null, 2) + "\n");
+await mirrorWeekToBoardViewer(week);
 if (redis) { await redis.set(`board:week:${date}`, week); await redis.sadd("board:weeks", date); }
 console.log(`updated ${weekday} on board:week:${date} — ${roll && !events.length ? "rolled forward, " : ""}${events.length} event(s) set, ${done.length} marked done`);
