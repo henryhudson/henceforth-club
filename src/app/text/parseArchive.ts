@@ -32,8 +32,10 @@ export interface XArchive {
 }
 
 // Drop the `window.YTD.<name>.partN = ` prefix (up to and including the first
-// `=`) and any trailing `;`, leaving a JSON array to parse.
-function unwrap(js: string): unknown {
+// `=`) and any trailing `;`, leaving a JSON array to parse. Exported because
+// src/lib/textJob/parseExport.ts needs the identical unwrap one step earlier —
+// straight out of a zip entry rather than an already-decoded File string.
+export function unwrap(js: string): unknown {
   const eq = js.indexOf("=");
   if (eq === -1) throw new Error("unrecognized X export (no assignment)");
   let json = js.slice(eq + 1).trim();
