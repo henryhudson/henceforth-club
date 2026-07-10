@@ -9,7 +9,7 @@ import { advanceIndex } from "./readerIndex";
  * between the archived posts on the page — scroll-loaded ones included,
  * since it queries the live document rather than any fixed list — and `o`
  * opens the focused post's own permalink. Mounted once on the profile page.
- * `handle` is only known on the paginated `/x/<handle>` route; without it
+ * `handle` is only known on the paginated `/text/<handle>` route; without it
  * `o` has nowhere to link to, so it's simply ignored.
  */
 export default function ReaderKeys({ handle }: { handle?: string }) {
@@ -52,7 +52,7 @@ export default function ReaderKeys({ handle }: { handle?: string }) {
         focusCard(advanceIndex(indexRef.current, -1, cards().length));
       } else if (e.key === "o" && handle && indexRef.current !== null) {
         const postId = cards()[indexRef.current]?.dataset.postId;
-        if (postId) router.push(`/x/${handle}/${postId}`);
+        if (postId) router.push(`/text/${handle}/${postId}`);
       }
     }
 

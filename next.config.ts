@@ -7,6 +7,12 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: resolve(__dirname),
   },
+  async redirects() {
+    return [
+      { source: "/x", destination: "/text", permanent: true },
+      { source: "/x/:path*", destination: "/text/:path*", permanent: true },
+    ];
+  },
 };
 
 // Plugins must be specified as string paths (Turbopack only accepts

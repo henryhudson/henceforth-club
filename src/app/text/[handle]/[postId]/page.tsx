@@ -40,7 +40,7 @@ export default async function PostPage(
           showParent={Boolean(post.parent)}
           txTime={post.txid ? page.txTimes[post.txid] : undefined}
         />
-        <Link href={`/x/${handle}`} className="mt-6 inline-block text-accent hover:underline">
+        <Link href={`/text/${handle}`} className="mt-6 inline-block text-accent hover:underline">
           &larr; Back to @{handle}
         </Link>
       </div>

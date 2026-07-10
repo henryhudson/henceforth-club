@@ -8,7 +8,7 @@ describe("the witness", () => {
   });
 
   it("the build-time sample is gone, along with the two claims it made", () => {
-    expect(existsSync("src/app/x/real.ts")).toBe(false);
-    expect(existsSync("src/app/x/real-data.json")).toBe(false);
+    expect(existsSync("src/app/text/real.ts")).toBe(false);
+    expect(existsSync("src/app/text/real-data.json")).toBe(false);
   });
 });

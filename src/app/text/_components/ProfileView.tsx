@@ -5,9 +5,9 @@ import { buildPermanenceLine } from "./permanenceLine";
 
 /**
  * The header card and post feed for a profile. `postCount` is the archive's
- * TRUE total post count when known (the paginated `/x/<handle>` route only
+ * TRUE total post count when known (the paginated `/text/<handle>` route only
  * ever hands this a first slice); it falls back to what's actually in
- * `archive.posts` for the untouched `/x/tx/<txid>` view, which has no
+ * `archive.posts` for the untouched `/text/tx/<txid>` view, which has no
  * separate notion of a total. `footer` renders after the feed, inside the
  * same narrowed reading column — the scroll loader mounts there. `isPreview`
  * picks the permanence line's honest "not yet inscribed" phrasing over

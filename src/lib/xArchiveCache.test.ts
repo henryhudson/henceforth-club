@@ -11,8 +11,8 @@ import {
   slicePage,
   txidSetHash,
 } from "./xArchiveCache";
-import type { XPost } from "@/app/x/parseArchive";
-import type { SocialArchive } from "@/app/x/onchain";
+import type { XPost } from "@/app/text/parseArchive";
+import type { SocialArchive } from "@/app/text/onchain";
 import { getXTxids } from "./xIndex";
 
 vi.mock("./xIndex", () => ({ getXTxids: vi.fn() }));

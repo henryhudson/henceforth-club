@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-/** Every source file under the /x route tree, recursively, tests excluded. */
+/** Every source file under the /text route tree, recursively, tests excluded. */
 function sourcesUnder(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {
     const path = join(dir, entry);
@@ -19,18 +19,18 @@ const FORBIDDEN = [
 ];
 
 describe("the showroom never reaches X", () => {
-  const files = sourcesUnder("src/app/x");
+  const files = sourcesUnder("src/app/text");
 
   it("finds source files to check, because a vacuous pass is not a pass", () => {
     expect(files.length).toBeGreaterThan(5);
   });
 
-  it.each(FORBIDDEN)("no file under src/app/x mentions %s", (needle) => {
+  it.each(FORBIDDEN)("no file under src/app/text mentions %s", (needle) => {
     const offenders = files.filter((f) => readFileSync(f, "utf8").includes(needle));
     expect(offenders).toEqual([]);
   });
 
-  it("costs nothing to run: no file under src/app/x reads an environment variable", () => {
+  it("costs nothing to run: no file under src/app/text reads an environment variable", () => {
     const offenders = files.filter((f) => readFileSync(f, "utf8").includes("process.env"));
     expect(offenders).toEqual([]);
   });

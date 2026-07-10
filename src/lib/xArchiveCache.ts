@@ -3,8 +3,8 @@ import type { Redis } from "@upstash/redis";
 import { getRedis } from "./redis";
 import { getXTxids } from "./xIndex";
 import { fetchTxArchiveWithTime as fetchTxArchiveDefault } from "./whatsonchain";
-import { stitchToXArchive, type SocialArchive } from "@/app/x/onchain";
-import { dedupePosts, type XArchive, type XPost, type XProfile } from "@/app/x/parseArchive";
+import { stitchToXArchive, type SocialArchive } from "@/app/text/onchain";
+import { dedupePosts, type XArchive, type XPost, type XProfile } from "@/app/text/parseArchive";
 
 // Reading a handle's whole archive used to mean stitching every archive
 // transaction and shipping every post in one response — fine at a few dozen

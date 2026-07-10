@@ -4,10 +4,10 @@ import PostsScrollLoader from "./PostsScrollLoader";
 import ReaderKeys from "./ReaderKeys";
 
 /**
- * Shared profile page shell used by both `/x/<handle>` and `/x/tx/<txid>`.
+ * Shared profile page shell used by both `/text/<handle>` and `/text/tx/<txid>`.
  * When `txid` is present the profile was read from Bitcoin and we link the
  * transaction; otherwise it's a pre-inscription live preview. `postCount`
- * and `handle` are only set by the paginated `/x/<handle>` route — when the
+ * and `handle` are only set by the paginated `/text/<handle>` route — when the
  * archive holds more posts than are rendered yet, a scroll loader appends
  * the rest as the visitor scrolls, and `j`/`k`/`o` become available.
  * `txCount`, `photoCount`, `firstInscribedAt`, and `txTimes` feed the header's

@@ -3,7 +3,7 @@ export default function Proof({ txid }: { txid: string }) {
     <section className="mx-auto max-w-2xl px-6 py-8 text-sm text-muted">
       <p>
         This page is a convenience, not a dependency. The same archive is{" "}
-        <a className="text-accent hover:underline" href={`/x/tx/${txid}`}>
+        <a className="text-accent hover:underline" href={`/text/tx/${txid}`}>
           readable from the transaction
         </a>{" "}
         and from{" "}

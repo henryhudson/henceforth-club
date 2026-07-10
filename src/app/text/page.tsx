@@ -35,7 +35,7 @@ export default async function XPage() {
         // <main> and header, which would nest a second landmark inside this page's
         // <main> and repeat the "Reclaimed from X" eyebrow. It also mounts the
         // infinite-scroll loader and reader-key navigation, which belong on the
-        // dedicated /x/<handle> reading route — here they would fight the spine
+        // dedicated /text/<handle> reading route — here they would fight the spine
         // that carries the visitor down to the drop zone. The block-explorer proof
         // is not lost: it is the Proof block below.
         <ProfileView
