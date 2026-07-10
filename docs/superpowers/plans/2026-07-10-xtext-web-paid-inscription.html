@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Web-paid inscription behind /text — implementation plan</title>
+<style>
+  :root { --bg:#f4f1ea; --ink:#1c1a16; --muted:#6b6358; --rule:#d8d0c0; --accent:#a8431f; --accent-soft:#c4a572; --card:#fbf9f4; --code-bg:#1e1e1e; --code-ink:#e8e8e8; --ok:#2f6f3e; --warn:#a8431f; --shadow:0 1px 3px rgba(0,0,0,0.08); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.65;}
+  .wrap{max-width:880px;margin:0 auto;padding:56px 32px;} header.doc{margin-bottom:40px;border-bottom:2px solid var(--rule);padding-bottom:24px;}
+  .eyebrow{font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:34px;line-height:1.15;margin:0 0 12px;font-weight:700;} h2{font-size:24px;margin:48px 0 14px;padding-top:20px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 10px;} .lede{font-size:19px;color:var(--muted);margin:0;} p{margin:14px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(0,0,0,0.06);padding:2px 6px;border-radius:4px;}
+  pre{background:var(--code-bg);color:var(--code-ink);padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;} th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .task{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:8px 22px 18px;margin:22px 0;box-shadow:var(--shadow);}
+  .task .tasknum{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);}
+  .files{font-size:14px;background:#efe9dc;border-radius:6px;padding:10px 14px;margin:10px 0;}
+  .note{background:#f6efe0;border-left:4px solid var(--accent-soft);padding:10px 16px;border-radius:0 6px 6px 0;margin:14px 0;}
+  ul{margin:12px 0;padding-left:24px;} li{margin:5px 0;}
+  ul.steps{list-style:none;padding-left:4px;} ul.steps>li{margin:12px 0;padding-left:30px;position:relative;}
+  ul.steps>li input[type=checkbox]{position:absolute;left:0;top:5px;width:18px;height:18px;}
+  .badge{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:2px 8px;border-radius:999px;white-space:nowrap;background:#f3dcd2;color:var(--accent);}
+  .effort{font-size:13px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Implementation plan &middot; 2026-07-10 &middot; xtext &middot; spec B &middot; site + Mac mini worker</div>
+<h1>Web-paid inscription behind /text</h1>
+<p class="lede">Ten tasks. The surface moves to its platform-neutral home, the directory answers &ldquo;who uploaded?&rdquo;, and a worker holds one key per job for minutes &mdash; pure core first, money last, the QR very last.</p>
+</header>
+
+<div class="note"><strong>For agentic workers:</strong> REQUIRED SUB-SKILL &mdash; use <code>superpowers:subagent-driven-development</code> (recommended) or <code>superpowers:executing-plans</code>. Steps are real checkboxes. Repository: <code>/Users/henryhudson/Programming/Main/henceforth-club</code> (work directly on <code>main</code>, commit per task; <strong>every push deploys production in ~30 seconds</strong> — nothing in tasks 1–9 renders a payable QR, and task 10&rsquo;s gate holds the QR until the review and the manual end-to-end pass). Tasks 6–9 build worker modules that also run under vitest; only the launchd install step (task 10) needs the Mac mini itself.</div>
+
+<p><strong>Goal:</strong> a visitor with no app uploads their own X export at <code>henceforth.club/text</code>, pays a QR, and a Mac mini worker inscribes their archive on Bitcoin with ephemeral per-job custody — while <code>/text</code> becomes the platform-neutral home listing everyone who uploaded.</p>
+
+<p><strong>Architecture:</strong> the site (Vercel) parses, quotes, and tracks jobs in Upstash but never touches a key; the worker (Mac mini, node) polls jobs, generates one random key per job, watches the job address, and spends the visitor&rsquo;s own payment as the inscription&rsquo;s sole funding input, premium out to cold in the same transaction. The state machine is a pure function; every side effect wraps it thinly.</p>
+
+<p><strong>Tech stack:</strong> Next.js 16 + TypeScript (vitest), <code>@bsv/sdk</code> 2.x (already a dependency) for keys/transactions, Upstash Redis, WhatsOnChain for the payment watch, ARC (GorillaPool → TAAL failover) for broadcast, macOS Keychain (<code>security</code> command) for the worker&rsquo;s wrapping key.</p>
+
+<h2>Global constraints</h2>
+<ul>
+<li><strong>Spec:</strong> <code>docs/superpowers/specs/2026-07-10-xtext-web-paid-inscription-design.html</code> — decisions are settled: ephemeral per-job custody; <code>price = fee + WEB_PREMIUM_SATS</code>; auto-sweep refunds to the funding transaction&rsquo;s first input address; <strong>no reward output on the web path</strong>; text-only, <code>MAX_ARCHIVE_BYTES = 1_000_000</code>.</li>
+<li><strong>No acronyms or initialisms in prose</strong> — comments, commit messages, page copy. Code identifiers exempt.</li>
+<li><strong>The wire paths do not move.</strong> <code>/api/x/*</code> is the shipped 4.46 app&rsquo;s contract. New web-only endpoints go under <code>/api/text/*</code>; existing ones stay put.</li>
+<li><strong>Keys exist only on the worker.</strong> No task may put key material, even encrypted, in Upstash, Vercel environment, or a page. Keys are per-job random (<code>PrivateKey.fromRandom()</code>), never derived from a shared extended key.</li>
+<li><strong>Errors as values</strong> in the pure core: discriminated unions, no throwing for control flow. Time is a parameter — no <code>Date.now()</code> inside pure functions.</li>
+<li><strong>Every task ends green:</strong> <code>npm test</code> (vitest, full suite — 361 tests before this plan) plus the task&rsquo;s named new tests. Commit per task, message ends <code>Co-Authored-By: Claude Fable 5 &lt;noreply@anthropic.com&gt;</code>.</li>
+<li><strong>Tuning constants</strong> (one module, task 4): <code>WEB_PREMIUM_SATS</code> (set from the day&rsquo;s rate, ≈ £1), <code>QUOTE_EXPIRY_MINUTES = 15</code>, <code>MAX_CONCURRENT_JOBS = 4</code>, <code>MAX_ARCHIVE_BYTES = 1_000_000</code>, <code>BROADCAST_RETRIES = 3</code>, <code>LATE_WATCH_DAYS = 7</code>.</li>
+</ul>
+
+<h2>File structure</h2>
+<table>
+<tr><th>file</th><th>change</th></tr>
+<tr><td><code>src/app/x/</code> → <code>src/app/text/</code></td><td>task 1: <code>git mv</code>, imports fixed, <code>/x/*</code> permanent redirects in <code>next.config.ts</code></td></tr>
+<tr><td><code>src/lib/xIndex.ts</code></td><td>task 2: <code>stampHandle</code> + <code>listHandles</code> on the new <code>x:handles</code> sorted set</td></tr>
+<tr><td><code>src/app/api/x/register/route.ts</code></td><td>task 2: one <code>stampHandle</code> call after a successful append/claim</td></tr>
+<tr><td><code>scripts/backfill-text-directory.mjs</code></td><td>task 2: one-time scan of per-handle keys into <code>x:handles</code></td></tr>
+<tr><td><code>src/app/text/page.tsx</code> + <code>_components/DirectoryRow.tsx</code></td><td>task 2: the /text home — directory + call to action</td></tr>
+<tr><td><code>src/lib/textJob/parseExport.ts</code> (+ fixtures)</td><td>task 3: X export zip → text-only archive, hash, size gate</td></tr>
+<tr><td><code>src/lib/textJob/constants.ts</code>, <code>src/lib/textJob/quote.ts</code></td><td>task 4: tuning constants + the price fold</td></tr>
+<tr><td><code>src/lib/textJob/jobs.ts</code> (pure) + <code>src/lib/textJob/jobStore.ts</code> (Upstash)</td><td>task 5: state machine + thin store</td></tr>
+<tr><td><code>src/app/api/text/job/route.ts</code>, <code>src/app/api/text/job/[id]/route.ts</code></td><td>task 5: create + status</td></tr>
+<tr><td><code>scripts/xtext-worker/keystore.mjs</code></td><td>task 6: per-job key, AES-256-GCM at rest under a Keychain wrapping key</td></tr>
+<tr><td><code>scripts/xtext-worker/payments.mjs</code></td><td>task 7: pure payment matcher + WhatsOnChain watch</td></tr>
+<tr><td><code>scripts/xtext-worker/inscribe.mjs</code>, <code>sweep.mjs</code></td><td>tasks 8–9: the two transactions</td></tr>
+<tr><td><code>scripts/xtext-worker/worker.mjs</code> + launchd plist</td><td>tasks 8–10: the loop; installed last</td></tr>
+<tr><td><code>src/app/text/archive/page.tsx</code></td><td>task 10: upload → quote → QR → status (the last user-facing piece)</td></tr>
+</table>
+
+<div class="task"><div class="tasknum">Task 1 · the move</div>
+<h3>Everything behind /text; /x redirects forever</h3>
+<div class="files"><strong>Files:</strong> <code>git mv src/app/x src/app/text</code> (pages, colocated modules, fixtures, tests move together) · modify <code>next.config.ts</code> · fix <code>@/app/x/…</code> imports (grep, including <code>src/app/api/x/*</code> routes that import colocated modules) · <strong>do not touch</strong> <code>src/app/api/x/</code> paths themselves.</div>
+<p><strong>Interfaces:</strong> produces the route family every later task links to: <code>/text</code>, <code>/text/&lt;handle&gt;</code>. Redirects: <code>/x</code> → <code>/text</code>, <code>/x/:path*</code> → <code>/text/:path*</code>, both <code>permanent: true</code>.</p>
+<pre><code>// next.config.ts
+async redirects() {
+  return [
+    { source: "/x", destination: "/text", permanent: true },
+    { source: "/x/:path*", destination: "/text/:path*", permanent: true },
+  ];
+}</code></pre>
+<ul class="steps">
+<li><input type="checkbox"> Write the failing test first: <code>src/app/text/redirects.test.ts</code> imports <code>redirects</code> from <code>next.config.ts</code> and asserts both entries exist with <code>permanent: true</code> (<code>redirects carries /x and /x/:path* to /text, permanently</code>). Run <code>npm test -- redirects</code> — fails (no such entries).</li>
+<li><input type="checkbox"> <code>git mv src/app/x src/app/text</code>; then <code>grep -rn "app/x" src/ next.config.ts</code> and fix every import (the api routes import <code>@/app/x/onchain</code> etc. — they now read <code>@/app/text/…</code>; the api URL paths themselves stay <code>/api/x/*</code>).</li>
+<li><input type="checkbox"> Add the redirects block; run <code>npm test</code> — full suite green (the moved colocated tests prove the move), redirect test green.</li>
+<li><input type="checkbox"> <code>npm run build</code> — clean; commit <code>The surface moves to /text — platform-neutral home; /x redirects permanently</code>. After deploy, spot-check <code>curl -sI https://henceforth.club/x | grep -i location</code> → <code>/text</code>.</li>
+</ul></div>
+
+<div class="task"><div class="tasknum">Task 2 · the directory</div>
+<h3>/text answers &ldquo;who uploaded?&rdquo;</h3>
+<div class="files"><strong>Files:</strong> modify <code>src/lib/xIndex.ts</code> + <code>src/lib/xIndex.test.ts</code> · modify <code>src/app/api/x/register/route.ts</code> · create <code>scripts/backfill-text-directory.mjs</code> · create <code>src/app/text/page.tsx</code> + <code>src/app/text/_components/DirectoryRow.tsx</code>.</div>
+<p><strong>Interfaces:</strong> produces <code>stampHandle(handle: string, atMs: number): Promise&lt;boolean&gt;</code> and <code>listHandles(limit?: number): Promise&lt;{ handle: string; latestMs: number }[]&gt;</code> (newest first) in <code>xIndex.ts</code>, backed by sorted set <code>x:handles</code> (member = lowercased handle, score = latest registration ms). Null-Redis safe like the module&rsquo;s siblings.</p>
+<div class="note"><strong>Backfill trap:</strong> per-handle keys are bare <code>x:&lt;handle&gt;</code>, but <code>x:job:*</code>, <code>x:score:*</code>, <code>x:vote:*</code>, <code>x:ledger:*</code>, and <code>x:handles</code> itself share the prefix. The backfill must accept only members whose suffix matches <code>^[A-Za-z0-9_]{1,15}$</code> <em>and</em> whose value parses as a txid list. Test this with a seeded fake Redis containing one of each impostor key.</div>
+<ul class="steps">
+<li><input type="checkbox"> Failing tests in <code>xIndex.test.ts</code>: <code>stampHandle records the latest registration time, idempotently upward</code> (stamp twice, older second stamp does not lower the score — use <code>zadd</code> with <code>gt: true</code>), <code>listHandles returns newest first and tolerates missing Redis</code>. Run — fail.</li>
+<li><input type="checkbox"> Implement both on the existing <code>getRedis()</code> pattern; run — green.</li>
+<li><input type="checkbox"> Wire one call: in the register route, immediately after the successful <code>appendXTxid</code>/<code>setXTxids</code> branch, <code>await stampHandle(handle, Date.now())</code>. Failing-then-green test: <code>registration stamps the directory; a refused claimed-handle registration does not</code> (drive the route handler with a fake Redis; the 403 path must leave <code>x:handles</code> untouched).</li>
+<li><input type="checkbox"> Backfill script with the impostor-key filter + its test; run once against production later (task 10 gate list).</li>
+<li><input type="checkbox"> The <code>/text</code> home: server component reading <code>listHandles(50)</code>, one <code>DirectoryRow</code> per handle (handle · latest inscription date · verified tick via <code>getOwner</code> · post count via the latest txid&rsquo;s digest when cached, omitted otherwise), row links to <code>/text/&lt;handle&gt;</code>, &ldquo;archive yours&rdquo; call to action linking <code>/text/archive</code> (a stub page until task 10). Match the Phosphor Noir styling of the existing showroom components.</li>
+<li><input type="checkbox"> <code>npm test</code> + <code>npm run build</code> green; commit <code>The /text directory — everyone who uploaded, stamped by the registration gate</code>.</li>
+</ul></div>
+
+<div class="task"><div class="tasknum">Task 3 · export parser (pure)</div>
+<h3>An X export zip becomes a text-only archive, or a reasoned refusal</h3>
+<div class="files"><strong>Files:</strong> create <code>src/lib/textJob/parseExport.ts</code>, <code>src/lib/textJob/parseExport.test.ts</code>, fixtures under <code>src/lib/textJob/fixtures/</code> (a miniature real-shape export zip: <code>data/tweets.js</code> with the <code>window.YTD.tweets.part0 = [...]</code> preamble; an oversize variant; a zip with no tweets file).</div>
+<p><strong>Interfaces:</strong> produces<br><code>type ParsedExport = { ok: true; handle: string; archive: SocialArchive; archiveBytes: number; contentHash: string } | { ok: false; reason: "bad-zip" | "no-tweets-file" | "too-large" | "no-posts" }</code><br><code>parseXExport(zip: Uint8Array, maxBytes: number): ParsedExport</code> — pure (hash via <code>crypto.subtle</code>-free sync sha256 from <code>@bsv/sdk</code>&rsquo;s <code>Hash.sha256</code>). <code>SocialArchive</code> is the existing on-chain shape the showroom reader parses (see <code>src/app/text/onchain.ts</code> after task 1) — text posts only, media arrays empty.</p>
+<ul class="steps">
+<li><input type="checkbox"> Failing tests: <code>parses a real-shape export into the archive the showroom reader accepts</code> (round-trip: parse fixture → serialize archive → the existing reader parse function yields the same posts), <code>refuses an archive over the byte budget with too-large</code>, <code>refuses a zip without a tweets file</code>, <code>hashes deterministically — same zip, same contentHash</code>.</li>
+<li><input type="checkbox"> Implement with the repo&rsquo;s existing zip dependency if one exists (<code>grep -rn "unzip\|fflate\|jszip" package.json src/</code> first — house rule: search before adding); otherwise add <code>fflate</code> (small, no native code).</li>
+<li><input type="checkbox"> Run the four tests green; full suite green; commit <code>Export parser — the visitor&rsquo;s own zip, text-only, size-gated, hash-pinned</code>.</li>
+</ul></div>
+
+<div class="task"><div class="tasknum">Task 4 · the quote (pure)</div>
+<h3>fee + premium, pinned to the shared fixture</h3>
+<div class="files"><strong>Files:</strong> create <code>src/lib/textJob/constants.ts</code>, <code>src/lib/textJob/quote.ts</code>, <code>quote.test.ts</code>. Reuse the existing site-side estimator (find it first: <code>grep -rn "archive-cost-fixture" src/</code> — the fixture pins app and site to the same numbers; do <strong>not</strong> write a second estimator).</div>
+<p><strong>Interfaces:</strong> produces <code>quoteArchive(archiveBytes: number): { feeSats: number; premiumSats: number; priceSats: number }</code> and the constants module exporting exactly the global-constraints values.</p>
+<ul class="steps">
+<li><input type="checkbox"> Failing tests: <code>the fee half equals the fixture-pinned estimator for the same bytes</code> (assert against the existing estimator function, not a copied number), <code>the price is fee plus exactly WEB_PREMIUM_SATS</code>, <code>zero bytes quotes zero fee plus the premium</code>.</li>
+<li><input type="checkbox"> Implement; set <code>WEB_PREMIUM_SATS</code> from the day&rsquo;s exchange rate (the site&rsquo;s existing price source or WhatsOnChain&rsquo;s exchange-rate endpoint, by hand): choose the satoshi value nearest £1, record the arithmetic in the constant&rsquo;s comment and the commit message.</li>
+<li><input type="checkbox"> Green; commit <code>The web quote — fixture-pinned fee plus one tuned premium constant</code>.</li>
+</ul></div>
+
+<div class="task"><div class="tasknum">Task 5 · the job</div>
+<h3>A pure state machine with a thin Upstash skin</h3>
+<div class="files"><strong>Files:</strong> create <code>src/lib/textJob/jobs.ts</code> (pure), <code>jobs.test.ts</code>, <code>jobStore.ts</code> (Upstash), <code>src/app/api/text/job/route.ts</code> (POST create), <code>src/app/api/text/job/[id]/route.ts</code> (GET status).</div>
+<p><strong>Interfaces:</strong> produces the shared types every worker task consumes:</p>
+<pre><code>export type JobState = "quoted" | "awaiting-payment" | "funded"
+  | "inscribed" | "done" | "sweeping" | "swept";
+
+export type TextJob = {
+  jobId: string; handle: string; contentHash: string;
+  feeSats: number; premiumSats: number; priceSats: number;
+  state: JobState; createdAtMs: number; expiresAtMs: number;
+  address?: string;            // written once, by the worker only
+  fundingTxid?: string; fundingVout?: number; fundingSats?: number;
+  payerRefundAddress?: string; inscriptionTxid?: string;
+  sweepTxid?: string; failureReason?: string;
+};
+
+export type JobEvent =
+  | { kind: "key-published"; address: string }
+  | { kind: "payment-seen"; txid: string; vout: number; sats: number; refundAddress: string }
+  | { kind: "expired"; residueSats: number } | { kind: "inscribed"; txid: string }
+  | { kind: "registered" } | { kind: "broadcast-failed"; reason: string }
+  | { kind: "sweep-broadcast"; txid: string } | { kind: "sweep-confirmed" };
+
+// Total: every (state, event) pair returns a job or a refusal — never throws.
+export function applyEvent(job: TextJob, event: JobEvent, nowMs: number):
+  { ok: true; job: TextJob } | { ok: false; refused: string };</code></pre>
+<ul class="steps">
+<li><input type="checkbox"> Failing tests — the whole transition table as a vitest <code>test.each</code>: quoted+key-published→awaiting-payment; awaiting-payment+payment-seen(≥ price)→funded (underpay is <em>not</em> an event refusal — the watcher only emits payment-seen at or above quote; a below-quote balance at expiry rides the expired branch); awaiting-payment+expired→sweeping when <code>residueSats &gt; 0</code> (the watcher reads the address balance at expiry and puts it in the event), →swept when zero; funded+inscribed→inscribed; inscribed+registered→done; funded+broadcast-failed→sweeping; sweeping+sweep-broadcast→sweeping (txid recorded); sweeping+sweep-confirmed→swept; <strong>idempotency</strong>: replaying inscribed onto inscribed with the same txid is ok-and-unchanged (crash-resume), with a different txid refused; done and swept accept nothing.</li>
+<li><input type="checkbox"> Implement <code>applyEvent</code> as one exhaustive switch; green.</li>
+<li><input type="checkbox"> <code>jobStore.ts</code>: <code>createJob(parsed, quote, nowMs)</code> (state quoted, expiry from constants), <code>getJob</code>, <code>advance(jobId, event)</code> = read → <code>applyEvent</code> → conditional write (Upstash <code>set</code> guarded by a version field to keep two workers honest), <code>listJobsInState(state)</code>, archive payload at <code>x:job:payload:&lt;id&gt;</code> deleted on done/swept. Tests with a fake Redis.</li>
+<li><input type="checkbox"> The two routes: POST accepts the upload (multipart, ≤ 2 MB body), runs <code>parseXExport</code> + <code>quoteArchive</code> + <code>getOwner</code> (claimed-handle notice in the response), creates the job; GET returns state + address + price + txids, never the payload. Route tests for the refusal reasons and the claimed notice.</li>
+<li><input type="checkbox"> Full suite green; commit <code>Text jobs — a total state machine, an Upstash skin, two routes and no keys</code>.</li>
+</ul></div>
+
+<div class="task"><div class="tasknum">Task 6 · the keystore (worker)</div>
+<h3>One random key per job, encrypted at rest, deletable on sight</h3>
+<div class="files"><strong>Files:</strong> create <code>scripts/xtext-worker/keystore.mjs</code>, <code>keystore.test.mjs</code> (confirm vitest&rsquo;s include covers <code>scripts/xtext-worker/*.test.mjs</code>; extend <code>vitest.config</code> if not — <code>scripts/board/*.test.mjs</code> shows the precedent).</div>
+<p><strong>Interfaces:</strong> produces <code>createJobKey(jobId, wrapKey): { address: string }</code> (generates <code>PrivateKey.fromRandom()</code>, writes <code>jobs/&lt;jobId&gt;.key</code> as AES-256-GCM of the WIF under <code>wrapKey</code>, returns the address only), <code>loadJobKey(jobId, wrapKey): PrivateKey | null</code>, <code>deleteJobKey(jobId): void</code>, and <code>wrappingKeyFromKeychain(): Buffer</code> (shells <code>security find-generic-password -s xtext-worker-wrap -w</code>; the test never calls this — tests inject a fixed 32-byte key).</p>
+<ul class="steps">
+<li><input type="checkbox"> Failing tests: <code>a created key round-trips through the encrypted file to the same address</code>, <code>a tampered ciphertext refuses to load (authentication, not garbage)</code>, <code>delete removes the file; loading after delete is null</code>, <code>two jobs never share a key</code>.</li>
+<li><input type="checkbox"> Implement (node <code>crypto</code> for AES-256-GCM, 12-byte random nonce per write, key file mode 0600); green; commit <code>Worker keystore — per-job random keys, wrapped by the Keychain, gone on completion</code>.</li>
+</ul></div>
+
+<div class="task"><div class="tasknum">Task 7 · the payment watch (worker)</div>
+<h3>Money arrives; a pure matcher decides what it means</h3>
+<div class="files"><strong>Files:</strong> create <code>scripts/xtext-worker/payments.mjs</code>, <code>payments.test.mjs</code>.</div>
+<p><strong>Interfaces:</strong> produces <code>matchPayment(utxos: {txid,vout,sats}[], priceSats: number): { kind: "funded"; funding: {txid,vout,sats} } | { kind: "short"; totalSats: number } | { kind: "none" }</code> (largest single output at or above price wins — the inscription spends <em>one</em> input; several small legs summing past the price are treated as short and ride the sweep at expiry, a documented v1 simplification) and <code>refundAddressOf(rawFundingTx): string | null</code> (first input&rsquo;s P2PKH address via <code>@bsv/sdk</code> script parse; null for exotic inputs → job fails to <code>sweeping</code> only when a refund address exists, else stays a flagged ops case). Also the watch loop: poll each awaiting-payment job&rsquo;s address (WhatsOnChain unspent endpoint, one request per job per tick, honouring the existing rate-limit pattern in <code>src/lib/whatsonchain.ts</code>), emit <code>payment-seen</code> / <code>expired</code> through <code>advance</code>.</p>
+<ul class="steps">
+<li><input type="checkbox"> Failing tests for the matcher (exact, over, one-leg-under, several-legs-summing-over → short, empty) and <code>refundAddressOf</code> (a fixture raw transaction with a standard P2PKH input → its address; a non-standard input → null).</li>
+<li><input type="checkbox"> Implement both pure functions; green.</li>
+<li><input type="checkbox"> The loop wiring (no test beyond the pure parts — the loop is four lines of poll-map-advance); commit <code>Payment watch — a pure matcher, a polite poll, refunds know where home is</code>.</li>
+</ul></div>
+
+<div class="task"><div class="tasknum">Task 8 · the inscription (worker, money path)</div>
+<h3>One transaction: the visitor&rsquo;s coin in, their archive + the premium out</h3>
+<div class="files"><strong>Files:</strong> create <code>scripts/xtext-worker/inscribe.mjs</code>, <code>inscribe.test.mjs</code>, <code>scripts/xtext-worker/worker.mjs</code> (the loop skeleton: poll quoted → key-publish; funded → inscribe → register → cleanup).</div>
+<p><strong>Interfaces:</strong> produces <code>buildInscriptionTx({ jobKey, funding, archiveJson, premiumSats, revenueAddress, feeRate }): { hex: string; txid: string }</code> — input: the job UTXO; outputs: the archive data outputs in exactly the shape the app inscribes and the showroom reader parses, plus <code>premiumSats</code> to <code>revenueAddress</code> (a constant in <code>worker.mjs</code>, Henry&rsquo;s cold address), <strong>no reward output, no change output</strong>. Broadcast via the ARC endpoints with GorillaPool → TAAL failover and <code>BROADCAST_RETRIES</code>; registration calls <code>POST /api/x/register</code> (unclaimed path — no signature fields).</p>
+<ul class="steps">
+<li><input type="checkbox"> Failing test first, the load-bearing one: <code>the built transaction parses back as the archive</code> — feed <code>buildInscriptionTx</code>&rsquo;s hex to the site&rsquo;s own on-chain reader function (the one <code>fetchTxArchive</code> uses after fetching, exported for the test) and assert the posts round-trip. Plus: <code>the premium output pays the revenue address exactly premiumSats</code>, <code>fees are covered: inputs minus outputs is at least size times feeRate</code>, <code>a funding output below fee plus premium refuses to build</code> (errors as values).</li>
+<li><input type="checkbox"> Implement with <code>@bsv/sdk</code> <code>Transaction</code>; green.</li>
+<li><input type="checkbox"> Worker loop glue: quoted→key-published (task 6), funded→build+broadcast (stubbed ARC in tests) →<code>inscribed</code>→register→<code>registered</code>→payload+key cleanup→<code>done</code>. One integration-shaped test with every network call stubbed walks a job from quoted to done.</li>
+<li><input type="checkbox"> Full suite green; commit <code>The inscription transaction — custody in and out in one signature</code>.</li>
+</ul></div>
+
+<div class="task"><div class="tasknum">Task 9 · the sweep (worker, money path)</div>
+<h3>Every failure path ends with the visitor&rsquo;s money back</h3>
+<div class="files"><strong>Files:</strong> create <code>scripts/xtext-worker/sweep.mjs</code>, <code>sweep.test.mjs</code>; extend <code>worker.mjs</code> with the expiry scan and the late watch.</div>
+<p><strong>Interfaces:</strong> produces <code>buildSweepTx({ jobKey, fundings, refundAddress, feeRate }): { hex: string; txid: string } | { ok: false; reason: "dust" }</code> — <code>fundings</code> is <em>every</em> unspent output on the job address (an underpaid job may hold several small legs; the sweep spends them all in one transaction), one output of <code>sum(sats) − fee</code>; below-dust refuses and the job records <code>failureReason: "dust"</code> — the pound-scale quote makes this an edge, not a path. Worker: expired/broadcast-failed jobs emit <code>sweep-broadcast</code> then <code>sweep-confirmed</code> on first confirmation; expired job addresses stay watched for <code>LATE_WATCH_DAYS</code>, refunding stragglers; key material is deleted only at <code>swept</code>/<code>done</code>.</p>
+<ul class="steps">
+<li><input type="checkbox"> Failing tests: <code>the sweep returns everything minus the miner fee to the refund address</code>, <code>a dust-level residue refuses rather than building an unbroadcastable transaction</code>, <code>the sweep retries on a rejected broadcast and the key survives until swept</code> (stubbed ARC rejecting twice then accepting), <code>a straggler payment on an expired job is swept within the late watch</code>.</li>
+<li><input type="checkbox"> Implement; run the full suite; commit <code>The sweep — refunds are automatic, keys outlive nothing but an unpaid refund</code>.</li>
+</ul></div>
+
+<div class="task"><div class="tasknum">Task 10 · the page and the gate</div>
+<h3>The QR renders last, and only after the gate</h3>
+<div class="files"><strong>Files:</strong> create <code>src/app/text/archive/page.tsx</code> + client components (upload drop zone — reuse the moved <code>dropZone.ts</code> —, quote card, QR + amount, status poller); create <code>scripts/xtext-worker/club.henceforth.xtext-worker.plist</code>; append the run instructions to <code>scripts/xtext-worker/README.md</code>.</div>
+<p><strong>Interfaces:</strong> consumes only task 5&rsquo;s two routes. The page states mirror <code>JobState</code> verbatim; the permanence warning and the &ldquo;this is my own account&rsquo;s export&rdquo; assertion are checkboxes that gate the POST; a claimed handle renders the spec&rsquo;s exact notice before any payment; media toggles render greyed with &ldquo;get the app&rdquo;.</p>
+<ul class="steps">
+<li><input type="checkbox"> Build the page against a stubbed job API in tests (component-level: upload → quote shown with fee/premium split → QR appears only when the job carries an address → status transitions render). <code>npm run build</code> green.</li>
+<li><input type="checkbox"> <strong>The gate, in order — the QR is not linked from /text until all five pass:</strong> (1) run the directory backfill against production; (2) adversarial money-path review of tasks 5–9 by a fresh reviewer with the brief to refute key-safety, fund-safety, and state-machine totality; (3) install the launchd plist on the Mac mini, seed the Keychain wrapping key (<code>security add-generic-password -s xtext-worker-wrap -w &lt;32 random bytes hex&gt;</code>), start the worker, watch one heartbeat cycle in the log; (4) manual end-to-end with the low-funds wallet: a real quote paid → inscription lands → renders at <code>/text/&lt;handle&gt;</code> and the directory; then a deliberately underpaid job → sweep returns it; (5) Henry signs off and the &ldquo;archive yours&rdquo; call to action goes live.</li>
+<li><input type="checkbox"> Commit <code>The /text archive page — upload, quote, QR, status; enabled behind the gate</code>; update the Morning Board card with the gate evidence.</li>
+</ul></div>
+
+<h2>Deliberately not in this plan</h2>
+<ul>
+<li>Media uploads (version two, after the plumbing survives real users) · Instagram (the URL is ready; the data model gains platform scoping when it actually arrives) · platform-neutral <code>/api/text/*</code> aliases for the app&rsquo;s endpoints (when the app migrates) · a generation counter or multi-leg payment aggregation in the matcher (documented v1 simplifications).</li>
+</ul>
+
+<p style="margin-top:40px;color:var(--muted);font-style:italic">Plan for the spec approved 2026-07-10. Build order is the custody order: nothing that can receive money exists until everything that spends or returns it is green.</p>
+
+</div>
+</body>
+</html>
