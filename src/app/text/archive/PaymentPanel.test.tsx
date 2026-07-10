@@ -12,12 +12,12 @@ describe("PaymentPanel", () => {
     expect(html).toContain("9,290,500 satoshis");
   });
 
-  it("links the QR to the exact bitcoin: uniform resource identifier, amount included", () => {
+  it("links the payment code to the exact bitcoin: uniform resource identifier, amount included", () => {
     const html = renderToStaticMarkup(<PaymentPanel address={ADDRESS} priceSats={9_290_500} />);
     expect(html).toContain(`href="bitcoin:${ADDRESS}?amount=0.092905"`);
   });
 
-  it("renders a non-empty QR path", () => {
+  it("renders a non-empty payment-code path", () => {
     const html = renderToStaticMarkup(<PaymentPanel address={ADDRESS} priceSats={9_290_500} />);
     expect(html).toMatch(/<path d="M[^"]+"/);
   });

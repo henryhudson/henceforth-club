@@ -2,10 +2,24 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import ArchiveFlow from "./ArchiveFlow";
 
-export const metadata: Metadata = {
-  title: "Archive yours",
-  description: "Archive your X profile to Bitcoin from the browser — arriving shortly.",
-};
+/**
+ * Metadata rides the same gate as the page body: while the flag is off, the
+ * description honestly says the flow is still arriving; once it is on, a
+ * link preview describes the live page rather than a stub that no longer
+ * exists. Evaluated at build time, exactly like the page itself.
+ */
+export function generateMetadata(): Metadata {
+  return process.env.XTEXT_WEB_ARCHIVE_ENABLED === "true"
+    ? {
+        title: "Archive yours",
+        description:
+          "Drop the export X sent you, pay once, and your archive lands on Bitcoin — permanent, readable from any block explorer.",
+      }
+    : {
+        title: "Archive yours",
+        description: "Archive your X profile to Bitcoin from the browser — arriving shortly.",
+      };
+}
 
 // A stub, nothing more — no form, no upload. It exists only so the "archive
 // yours" call to action on /text never points at a dead link before the web
@@ -37,8 +51,8 @@ function ArchiveStub() {
 
 /**
  * The mechanical gate. Everything the paid archive flow can do — upload,
- * quote, checkboxes, the QR that can receive real money — stays entirely
- * unreachable until XTEXT_WEB_ARCHIVE_ENABLED is exactly "true". The flag
+ * quote, checkboxes, the payment code that can receive real money — stays
+ * entirely unreachable until XTEXT_WEB_ARCHIVE_ENABLED is exactly "true". The flag
  * stays unset in production until the five-point go-live gate
  * (scripts/xtext-worker/README.md) passes and Henry signs off; until then
  * this route renders only the stub above, exactly as it always has.

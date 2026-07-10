@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import ArchivePage from "./page";
+import ArchivePage, { generateMetadata } from "./page";
 
 describe("ArchivePage — the mechanical gate", () => {
   afterEach(() => {
@@ -29,5 +29,31 @@ describe("ArchivePage — the mechanical gate", () => {
     expect(html).not.toContain("arrives shortly");
     expect(html).toContain("Drop your");
     expect(html).toContain("Pay to inscribe your export");
+  });
+});
+
+describe("generateMetadata — rides the same gate", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("describes the stub while the flag is off", () => {
+    vi.stubEnv("XTEXT_WEB_ARCHIVE_ENABLED", undefined);
+    const metadata = generateMetadata();
+    expect(metadata.title).toBe("Archive yours");
+    expect(metadata.description).toContain("arriving shortly");
+  });
+
+  it("still describes the stub for any value other than the exact string true", () => {
+    vi.stubEnv("XTEXT_WEB_ARCHIVE_ENABLED", "1");
+    expect(generateMetadata().description).toContain("arriving shortly");
+  });
+
+  it("describes the live flow once the flag is exactly \"true\"", () => {
+    vi.stubEnv("XTEXT_WEB_ARCHIVE_ENABLED", "true");
+    const metadata = generateMetadata();
+    expect(metadata.title).toBe("Archive yours");
+    expect(metadata.description).not.toContain("arriving shortly");
+    expect(metadata.description).toContain("pay once");
   });
 });

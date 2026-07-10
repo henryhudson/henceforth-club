@@ -1,17 +1,18 @@
-// A pure wrapper around qrcode-generator: text in, a single SVG path out.
-// One <path> covering every dark module — the standard technique for a
-// compact, themeable QR code (fill="currentColor" lets it inherit whatever
-// colour the page gives it) — rather than one <rect> per module.
+// A pure wrapper around qrcode-generator: text in, a single vector-image
+// path out. One <path> covering every dark module — the standard technique
+// for a compact, themeable scannable payment code (fill="currentColor" lets
+// it inherit whatever colour the page gives it) — rather than one <rect>
+// per module.
 //
 // qrcode-generator is a small, dependency-free, pure-JavaScript encoder; no
 // native code, no canvas. Chosen over the heavier `qrcode` package (which
-// pulls in a PNG encoder this page never uses) since only the module matrix
-// is needed here — this file renders the SVG itself.
+// pulls in a raster-image encoder this page never uses) since only the
+// module matrix is needed here — this file renders the vector image itself.
 
 import qrcode from "qrcode-generator";
 
 export type QrSvg = {
-  /** The SVG's viewBox width and height, in modules — includes the quiet-zone margin. */
+  /** The vector image's viewBox width and height, in modules — includes the quiet-zone margin. */
   size: number;
   /** A single <path> `d` attribute covering every dark module. */
   path: string;

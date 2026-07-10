@@ -2,12 +2,12 @@ import { bitcoinAmount, bitcoinUri } from "./bitcoinUri";
 import { qrSvg } from "./qr";
 
 /**
- * The QR, and the address and amount as selectable text underneath it —
- * renders only once the caller has confirmed both the checkbox gate and a
- * published address (ArchiveFlow's job, not this component's). The QR
- * itself stays fixed black-on-white regardless of the page's dark theme:
- * it is a scanning target, not decoration, and most camera readers expect
- * that contrast.
+ * The scannable payment code, and the address and amount as selectable text
+ * underneath it — renders only once the caller has confirmed both the
+ * checkbox gate and a published address (ArchiveFlow's job, not this
+ * component's). The code itself stays fixed black-on-white regardless of
+ * the page's dark theme: it is a scanning target, not decoration, and most
+ * camera readers expect that contrast.
  */
 export default function PaymentPanel({ address, priceSats }: { address: string; priceSats: number }) {
   const uri = bitcoinUri(address, priceSats);

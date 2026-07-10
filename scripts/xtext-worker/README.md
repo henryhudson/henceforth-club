@@ -105,3 +105,7 @@ checklist for Henry, not something a task can tick off by itself.
 - [ ] **Henry has signed off**, and only then does
       `XTEXT_WEB_ARCHIVE_ENABLED=true` go into the production environment and
       the "archive yours" call to action on `/text` start meaning something.
+      Setting the variable alone changes nothing: the page reads the flag at
+      build time and is prerendered static, so after setting it, trigger a
+      redeploy — the flow only appears once a fresh production build has run
+      with the flag in place (and the same applies to turning it back off).
