@@ -20,6 +20,16 @@ const TAG_LENGTH = 16;
 
 const DEFAULT_JOBS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "jobs");
 
+// A job identifier is a plain token — letters, digits, hyphens, nothing else.
+// Today's jobIds are server-generated random identifiers that always match,
+// but this module holds fund-linked keys and must not trust its caller: a
+// hostile jobId like "../../somewhere/x" would otherwise be joined into a
+// path that escapes the jobs directory. Every operation refuses a jobId
+// that fails this test before touching the file system.
+const JOB_ID_PATTERN = /^[A-Za-z0-9-]+$/;
+
+const validJobId = (jobId) => JOB_ID_PATTERN.test(jobId);
+
 function keyFilePath(jobId, jobsDir) {
   return path.join(jobsDir, `${jobId}.key`);
 }
@@ -46,24 +56,33 @@ function unwrapWif(payload, wrapKey) {
   }
 }
 
-/** Generates a fresh random key for jobId, encrypts its private form at rest, and returns only the address. */
+/**
+ * Generates a fresh random key for jobId, encrypts its private form at rest,
+ * and returns only the address — or null when the jobId is refused.
+ */
 export function createJobKey(jobId, wrapKey, jobsDir = DEFAULT_JOBS_DIR) {
+  if (!validJobId(jobId)) return null;
   const key = PrivateKey.fromRandom();
   mkdirSync(jobsDir, { recursive: true });
   writeFileSync(keyFilePath(jobId, jobsDir), wrapWif(key.toWif(), wrapKey), { mode: 0o600 });
   return { address: key.toAddress() };
 }
 
-/** Loads and decrypts jobId's key, or null if the file is missing or fails authentication. */
+/**
+ * Loads and decrypts jobId's key, or null if the jobId is refused, the file
+ * is missing, or the payload fails authentication.
+ */
 export function loadJobKey(jobId, wrapKey, jobsDir = DEFAULT_JOBS_DIR) {
+  if (!validJobId(jobId)) return null;
   const filePath = keyFilePath(jobId, jobsDir);
   if (!existsSync(filePath)) return null;
   const wif = unwrapWif(readFileSync(filePath), wrapKey);
   return wif === null ? null : PrivateKey.fromWif(wif);
 }
 
-/** Removes jobId's key file. A no-op if it is already gone. */
+/** Removes jobId's key file. A no-op if the jobId is refused or the file is already gone. */
 export function deleteJobKey(jobId, jobsDir = DEFAULT_JOBS_DIR) {
+  if (!validJobId(jobId)) return;
   rmSync(keyFilePath(jobId, jobsDir), { force: true });
 }
 

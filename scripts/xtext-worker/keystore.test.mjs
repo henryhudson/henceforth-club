@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { createJobKey, loadJobKey, deleteJobKey } from "./keystore.mjs";
@@ -54,5 +54,31 @@ describe("worker keystore", () => {
     const a = createJobKey("job-a", WRAP_KEY, jobsDir);
     const b = createJobKey("job-b", WRAP_KEY, jobsDir);
     expect(a.address).not.toBe(b.address);
+  });
+
+  it("a jobId containing \"../\" is refused by all three operations", () => {
+    // The attack layout: the keystore is pointed at root/jobs, and a genuine
+    // wrapped key sits one level up at root/escape.key. If any operation
+    // joined the hostile jobId into a path, "../escape" would reach it.
+    const root = jobsDir;
+    const nestedJobsDir = path.join(root, "jobs");
+    mkdirSync(nestedJobsDir);
+    createJobKey("escape", WRAP_KEY, root);
+    const outsideFile = path.join(root, "escape.key");
+    const outsideBytesBefore = readFileSync(outsideFile);
+    const rootEntriesBefore = readdirSync(root).sort();
+
+    expect(createJobKey("../escape", WRAP_KEY, nestedJobsDir)).toBeNull();
+    expect(readFileSync(outsideFile).equals(outsideBytesBefore)).toBe(true); // not overwritten
+
+    // The key at root/escape.key is valid under WRAP_KEY, so a null here can
+    // only come from the jobId being refused — not from a failed decrypt.
+    expect(loadJobKey("../escape", WRAP_KEY, nestedJobsDir)).toBeNull();
+
+    deleteJobKey("../escape", nestedJobsDir);
+    expect(existsSync(outsideFile)).toBe(true); // not deleted
+
+    expect(readdirSync(root).sort()).toEqual(rootEntriesBefore); // nothing appeared outside the jobs directory
+    expect(readdirSync(nestedJobsDir)).toEqual([]); // and nothing inside it either
   });
 });
