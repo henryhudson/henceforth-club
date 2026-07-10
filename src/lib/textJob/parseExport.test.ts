@@ -69,4 +69,45 @@ describe("parseXExport", () => {
     });
     expect(parseXExport(zip, 1_000_000)).toEqual({ ok: false, reason: "no-posts" });
   });
+
+  // The handle rides through job creation into an irreversible broadcast; the
+  // parser is the only gate before the visitor pays, so a missing or invalid
+  // handle must refuse here — never fall back silently.
+  const someTweets =
+    'window.YTD.tweets.part0 = [ { "tweet": { "id_str": "1", ' +
+    '"created_at": "Mon Jan 01 12:00:00 +0000 2024", "full_text": "hello" } } ];\n';
+
+  const accountJS = (username: string) =>
+    `window.YTD.account.part0 = [ { "account": { "username": ${JSON.stringify(username)} } } ];\n`;
+
+  it("refuses a zip with tweets but no account file with no-handle", () => {
+    const zip = zipSync({ "data/tweets.js": strToU8(someTweets) });
+    expect(parseXExport(zip, 1_000_000)).toEqual({ ok: false, reason: "no-handle" });
+  });
+
+  it("refuses a malformed account file with no-handle", () => {
+    const zip = zipSync({
+      "data/tweets.js": strToU8(someTweets),
+      "data/account.js": strToU8("window.YTD.account.part0 = not json at all"),
+    });
+    expect(parseXExport(zip, 1_000_000)).toEqual({ ok: false, reason: "no-handle" });
+  });
+
+  it("refuses a username that is not a valid handle with no-handle", () => {
+    for (const bad of ["not a handle!", "", "sixteen_chars_xx"]) {
+      const zip = zipSync({
+        "data/tweets.js": strToU8(someTweets),
+        "data/account.js": strToU8(accountJS(bad)),
+      });
+      expect(parseXExport(zip, 1_000_000)).toEqual({ ok: false, reason: "no-handle" });
+    }
+  });
+
+  it("refuses a tweets file that is not an array with bad-zip, without throwing", () => {
+    const zip = zipSync({
+      "data/tweets.js": strToU8("window.YTD.tweets.part0 = {};\n"),
+      "data/account.js": strToU8(accountJS("fixturehandle")),
+    });
+    expect(parseXExport(zip, 1_000_000)).toEqual({ ok: false, reason: "bad-zip" });
+  });
 });

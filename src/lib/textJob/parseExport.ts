@@ -9,7 +9,7 @@ import { unwrap } from "@/app/text/parseArchive";
 
 export type ParsedExport =
   | { ok: true; handle: string; archive: SocialArchive; archiveBytes: number; contentHash: string }
-  | { ok: false; reason: "bad-zip" | "no-tweets-file" | "too-large" | "no-posts" };
+  | { ok: false; reason: "bad-zip" | "no-tweets-file" | "too-large" | "no-posts" | "no-handle" };
 
 interface RawTweet {
   tweet?: { id_str?: string; created_at?: string; full_text?: string };
@@ -20,6 +20,11 @@ interface RawAccount {
 }
 
 type Post = SocialArchive["posts"][number];
+
+/** The same handle rule the api routes enforce; the parser is the last gate
+ * before the visitor pays, so anything looser here becomes an inscription
+ * that registration later refuses. */
+const HANDLE_PATTERN = /^[A-Za-z0-9_]{1,15}$/;
 
 /** A real export nests every data file under `data/`; match by suffix so the
  * path prefix doesn't matter, the same tolerance dropZone.ts's exact-name
@@ -33,9 +38,13 @@ function decodeUtf8(bytes: Uint8Array): string {
   return new TextDecoder("utf-8").decode(bytes);
 }
 
-/** Same principle as estimateArchiveBytes in src/app/text/archiveBytes.ts:
- * count encoded bytes, not characters, so an emoji costs what it actually
- * costs on chain. */
+/** Deliberately not src/app/text/archiveBytes.ts: that module is a browser
+ * preview estimate over the renderable shape, free to drift toward whatever
+ * the preview page needs. The paid path must price the exact bytes that will
+ * be inscribed — this measures the archive value itself, the very JSON the
+ * content hash pins and the worker broadcasts. Do not unify the two; they
+ * answer different questions. The shared principle is only that both count
+ * encoded bytes, not characters, so an emoji costs what it actually costs. */
 function jsonByteLength(value: unknown): number {
   return new TextEncoder().encode(JSON.stringify(value)).length;
 }
@@ -46,18 +55,21 @@ function toPost(entry: RawTweet): Post | null {
   return { id: t.id_str, at: t.created_at, text: t.full_text };
 }
 
-/** account.js carries the handle a real export needs; a fixture built from
- * tweets.js alone (this task's minimum requirement) has none. Falling back to
- * an empty string keeps parsing total rather than adding a failure mode the
- * ParsedExport union doesn't name. */
-function extractHandle(files: Record<string, Uint8Array>): string {
+/** The handle lives in data/account.js — tweet records carry no username.
+ * Downstream, the handle rides through job creation, payment, and an
+ * irreversible broadcast before registration ever checks it, so a missing,
+ * unparseable, or invalid handle must refuse here, at the only pre-payment
+ * gate. Null means refuse with no-handle; there is no silent fallback. */
+function extractHandle(files: Record<string, Uint8Array>): string | null {
   const accountEntry = findEntry(files, "account.js");
-  if (!accountEntry) return "";
+  if (!accountEntry) return null;
   try {
-    const accounts = unwrap(decodeUtf8(accountEntry)) as RawAccount[];
-    return accounts[0]?.account?.username ?? "";
+    const accounts = unwrap(decodeUtf8(accountEntry));
+    if (!Array.isArray(accounts)) return null;
+    const username = (accounts as RawAccount[])[0]?.account?.username;
+    return typeof username === "string" && HANDLE_PATTERN.test(username) ? username : null;
   } catch {
-    return "";
+    return null;
   }
 }
 
@@ -72,17 +84,21 @@ export function parseXExport(zip: Uint8Array, maxBytes: number): ParsedExport {
   const tweetsEntry = findEntry(files, "tweets.js");
   if (!tweetsEntry) return { ok: false, reason: "no-tweets-file" };
 
-  let rawTweets: RawTweet[];
+  let unwrapped: unknown;
   try {
-    rawTweets = unwrap(decodeUtf8(tweetsEntry)) as RawTweet[];
+    unwrapped = unwrap(decodeUtf8(tweetsEntry));
   } catch {
     return { ok: false, reason: "bad-zip" };
   }
+  if (!Array.isArray(unwrapped)) return { ok: false, reason: "bad-zip" };
+  const rawTweets = unwrapped as RawTweet[];
 
   const posts = rawTweets.map(toPost).filter((p): p is Post => p !== null);
   if (posts.length === 0) return { ok: false, reason: "no-posts" };
 
   const handle = extractHandle(files);
+  if (handle === null) return { ok: false, reason: "no-handle" };
+
   const archive: SocialArchive = { v: 1, source: "x", handle, profile: {}, posts };
 
   const archiveBytes = jsonByteLength(archive);
