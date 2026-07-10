@@ -55,6 +55,13 @@ export function refundAddressOf(rawFundingTx) {
   const chunks = unlockingScript.chunks;
   if (chunks.length !== 2 || !chunks[0].data || !chunks[1].data) return null;
 
+  // Compressed keys (33 bytes) only. The sdk also parses 65-byte
+  // uncompressed and hybrid keys, but toAddress() always re-encodes
+  // compressed — which is a DIFFERENT address from the one an
+  // uncompressed-key wallet watches. Refunding there would strand the
+  // money, so anything but 33 bytes is null: never a guess.
+  if (chunks[1].data.length !== 33) return null;
+
   try {
     return PublicKey.fromDER(chunks[1].data).toAddress();
   } catch {

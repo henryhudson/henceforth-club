@@ -104,6 +104,19 @@ describe("refundAddressOf", () => {
     const hex = fundingTxHex(unlockingScript);
     expect(refundAddressOf(hex)).toBeNull();
   });
+
+  it("a 65-byte uncompressed-key push returns null — never the compressed re-encoding's address", () => {
+    // The sdk parses a 65-byte 0x04-prefixed key happily, but toAddress()
+    // always re-encodes compressed — a DIFFERENT address from the one an
+    // uncompressed-key wallet watches. Refunding there would strand the
+    // money; null keeps the never-guess contract and the job becomes the
+    // flagged ops case instead.
+    const key = PrivateKey.fromRandom();
+    const uncompressed = key.toPublicKey().encode(false); // 65 bytes, 0x04 prefix
+    const unlockingScript = new Script().writeBin(Array(71).fill(0x30)).writeBin(uncompressed);
+    const hex = fundingTxHex(unlockingScript);
+    expect(refundAddressOf(hex)).toBeNull();
+  });
 });
 
 // The loop is thin glue over the pure parts above: one unspent-outputs
