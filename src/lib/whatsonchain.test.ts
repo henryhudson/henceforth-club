@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { fetchTxArchive, fetchTxArchiveWithTime } from "@/lib/whatsonchain";
+import { fetchTxArchive, fetchTxArchiveWithTime, txFeeSatsFromJson } from "@/lib/whatsonchain";
 
 function opReturnScript(...datas: string[]): string {
   let s = "006a";
@@ -186,5 +186,16 @@ describe("fetchTxArchiveWithTime", () => {
     const result = await fetchTxArchiveWithTime("3".repeat(64), fetchFn);
     expect(result?.archive.handle).toBe("henry");
     expect(result?.time).toBeUndefined();
+  });
+});
+
+describe("txFeeSatsFromJson", () => {
+  it("computes the miner fee as inputs minus outputs (in sats)", () => {
+    const tx = { vin: [{ value: 0.001 }, { value: 0.0005 }], vout: [{ value: 0.00149 }] };
+    expect(txFeeSatsFromJson(tx)).toBe(1000); // 0.0015 - 0.00149 BSV = 1000 sats
+  });
+
+  it("returns null when an input lacks a value (fail-open)", () => {
+    expect(txFeeSatsFromJson({ vin: [{}], vout: [{ value: 0.001 }] })).toBeNull();
   });
 });

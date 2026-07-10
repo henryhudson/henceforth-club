@@ -2,6 +2,28 @@ import { socialArchiveFromScripts, type SocialArchive } from "@/app/text/onchain
 import { voutScriptsFromRawTx } from "./rawTx";
 
 const WOC = "https://api.whatsonchain.com/v1/bsv/main";
+const BSV = 100_000_000;
+
+type WocTx = { vin?: Array<{ value?: number }>; vout?: Array<{ value?: number }> };
+
+/** Pure: miner fee in sats, or null if any input value is missing / result negative (fail-open). */
+export function txFeeSatsFromJson(tx: WocTx): number | null {
+  const ins = tx.vin ?? [];
+  if (ins.some((i) => typeof i.value !== "number")) return null;
+  const inSats = ins.reduce((s, i) => s + Math.round((i.value as number) * BSV), 0);
+  const outSats = (tx.vout ?? []).reduce((s, o) => s + Math.round((o.value ?? 0) * BSV), 0);
+  const fee = inSats - outSats;
+  return fee >= 0 ? fee : null;
+}
+
+/** Fetch a transaction's miner fee in sats; null on any read/shape failure. */
+export async function fetchTxFeeSats(txid: string, fetchFn: typeof fetch = fetch): Promise<number | null> {
+  try {
+    const res = await fetchFn(`${WOC}/tx/hash/${txid}`, { next: { revalidate: 86400 } });
+    if (!res.ok) return null;
+    return txFeeSatsFromJson((await res.json()) as WocTx);
+  } catch { return null; }
+}
 
 /**
  * Fetch a transaction by id from WhatsOnChain and extract the SocialArchive from
