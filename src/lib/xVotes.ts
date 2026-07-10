@@ -16,8 +16,14 @@ import { scoreEntries, type VoteLedgerEntry } from "./xScore";
 const ledgerKey = (handle: string) => `x:ledger:${handle.toLowerCase()}`;
 const scoreKey = (handle: string) => `x:score:${handle.toLowerCase()}`;
 const voteTxKey = (txid: string) => `x:vote:tx:${txid}`;
+const foundingKey = (handle: string, postId: string) =>
+  `x:vote:founding:${handle.toLowerCase()}:${postId}`;
 
 export type AppendVoteResult = "recorded" | "duplicate" | "unavailable";
+
+export type FoundingVote = {
+  inscriptionTxid: string; postId: string; uploadCostSats: number; inscriptionDay: string;
+};
 
 /** The whole vote ledger for a handle, oldest first. Empty when nobody has
  * voted — or when Redis isn't configured. */
@@ -49,6 +55,25 @@ export async function appendVote(
   await redis.rpush(ledgerKey(handle), entry);
   await rebuildScoreCache(handle, asOfDay, redis);
   return "recorded";
+}
+
+/**
+ * Append a founding vote to the handle's ledger, gated so a post has at most one.
+ * Claims the per-post gate first, so the post is dedup'd even across two different
+ * inscription txids. The founding vote is recorded as an up-vote of the upload cost.
+ */
+export async function appendFoundingVote(
+  handle: string, fv: FoundingVote,
+  asOfDay: string = dateKey(), redis: Redis | null = getRedis(),
+): Promise<AppendVoteResult> {
+  if (!redis) return "unavailable";
+  const claimedPost = await redis.set(foundingKey(handle, fv.postId), fv.inscriptionTxid, { nx: true });
+  if (claimedPost === null) return "duplicate"; // this post already has a founding vote
+  const entry: VoteLedgerEntry = {
+    txid: fv.inscriptionTxid, postId: fv.postId, dir: "up",
+    sats: fv.uploadCostSats, day: fv.inscriptionDay,
+  };
+  return appendVote(handle, entry, asOfDay, redis); // reuses the txid gate + append
 }
 
 /** The earned-sats score for every voted post of a handle, read from the

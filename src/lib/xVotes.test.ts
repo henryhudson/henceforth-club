@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Redis } from "@upstash/redis";
-import { appendVote, readVoteLedger, rebuildScoreCache } from "./xVotes";
+import { appendVote, appendFoundingVote, readVoteLedger, rebuildScoreCache } from "./xVotes";
 import { foldScores, type VoteLedgerEntry } from "./xScore";
 
 function vote(overrides: Partial<VoteLedgerEntry> = {}): VoteLedgerEntry {
@@ -114,6 +114,25 @@ describe("appendVote", () => {
 
   it("reports unavailable (recording nothing) when Redis is not configured", async () => {
     expect(await appendVote("henry", vote(), "2026-07-01", null)).toBe("unavailable");
+  });
+});
+
+describe("appendFoundingVote", () => {
+  it("records a founding vote once, as an up-vote of the upload cost", async () => {
+    const { redis } = fakeRedis();
+    const res = await appendFoundingVote("alice",
+      { inscriptionTxid: "insc1", postId: "p1", uploadCostSats: 14_000_000, inscriptionDay: "2026-07-01" }, "2026-07-10", redis);
+    expect(res).toBe("recorded");
+    const ledger = await readVoteLedger("alice", redis);
+    expect(ledger).toEqual([{ txid: "insc1", postId: "p1", dir: "up", sats: 14_000_000, day: "2026-07-01" }]);
+  });
+
+  it("rejects a second founding vote for the same post, even with a new txid", async () => {
+    const { redis } = fakeRedis();
+    await appendFoundingVote("alice", { inscriptionTxid: "insc1", postId: "p1", uploadCostSats: 100, inscriptionDay: "2026-07-01" }, "2026-07-10", redis);
+    const res = await appendFoundingVote("alice", { inscriptionTxid: "insc2", postId: "p1", uploadCostSats: 999, inscriptionDay: "2026-07-02" }, "2026-07-10", redis);
+    expect(res).toBe("duplicate");
+    expect((await readVoteLedger("alice", redis)).length).toBe(1);
   });
 });
 
