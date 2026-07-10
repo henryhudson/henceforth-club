@@ -9,10 +9,6 @@
 export type ScoreWindow = "day" | "week" | "month" | "year" | "all";
 export const DEFAULT_WINDOW: ScoreWindow = "week";
 
-/** The one ranking-decay tuning constant: a vote's ranking weight halves
- * every thirty days. Lives only here. */
-export const SCORE_HALF_LIFE_DAYS = 30;
-
 export type VoteDirection = "up" | "down";
 
 /** One verified vote, exactly as it sits in the `x:ledger:<handle>` list.
@@ -26,7 +22,7 @@ export type VoteLedgerEntry = {
   /** Satoshis paid: the vote's full, undecayed weight. */
   sats: number;
   /** The UTC day the vote was verified, as YYYY-MM-DD (`dateKey` format) —
-   * the day-bucket granularity the decay is computed at. */
+   * the date used for windowing the score fold. */
   day: string;
 };
 
@@ -40,14 +36,6 @@ const WINDOW_DAYS: Record<Exclude<ScoreWindow, "all">, number> = {
   month: 30,
   year: 365,
 };
-
-/** Ranking weight of a vote `daysAgo` days old: `2^(−daysAgo / halfLife)`.
- * Clamped so a vote never counts more than fully — a day in the future of
- * the fold (clock skew between writers, or a replay as of an earlier day)
- * weighs 1, not above it. */
-export function decayWeight(daysAgo: number): number {
-  return 2 ** (-Math.max(daysAgo, 0) / SCORE_HALF_LIFE_DAYS);
-}
 
 /** Whole days between a ledger day and the as-of day; NaN when either day
  * string is unreadable. Date-only strings parse as UTC midnight, so valid
