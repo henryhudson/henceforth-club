@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
 import {
-  SCORE_HALF_LIFE_DAYS,
-  decayWeight,
   foldScores,
   scoreEntries,
+  windowStartDay,
   type VoteLedgerEntry,
+  type ScoreWindow,
 } from "./xScore";
 
 function vote(overrides: Partial<VoteLedgerEntry> = {}): VoteLedgerEntry {
@@ -18,30 +18,6 @@ function vote(overrides: Partial<VoteLedgerEntry> = {}): VoteLedgerEntry {
   };
 }
 
-describe("SCORE_HALF_LIFE_DAYS", () => {
-  it("is the one tuning constant: thirty days", () => {
-    expect(SCORE_HALF_LIFE_DAYS).toBe(30);
-  });
-});
-
-describe("decayWeight", () => {
-  it("weighs a fresh vote fully", () => {
-    expect(decayWeight(0)).toBe(1);
-  });
-
-  it("weighs a half-life-old vote at exactly half", () => {
-    expect(decayWeight(SCORE_HALF_LIFE_DAYS)).toBe(0.5);
-  });
-
-  it("weighs a two-half-lives-old vote at a quarter", () => {
-    expect(decayWeight(2 * SCORE_HALF_LIFE_DAYS)).toBe(0.25);
-  });
-
-  it("never weighs a vote more than fully, even for a day in the future of the fold", () => {
-    expect(decayWeight(-5)).toBe(1);
-  });
-});
-
 describe("foldScores", () => {
   it("folds an empty ledger to an empty table — every unseen post scores zero", () => {
     expect(foldScores([], "2026-07-01")).toEqual({});
@@ -52,12 +28,7 @@ describe("foldScores", () => {
     expect(foldScores(ledger, "2026-07-01")).toEqual({ "post-1": 700 });
   });
 
-  it("counts a thirty-day-old vote at half weight", () => {
-    const ledger = [vote({ sats: 1000, day: "2026-06-01" })];
-    expect(foldScores(ledger, "2026-07-01")).toEqual({ "post-1": 500 });
-  });
-
-  it("subtracts a down vote's decayed satoshis", () => {
+  it("subtracts a down vote's satoshis", () => {
     const ledger = [
       vote({ txid: "a", sats: 700, dir: "up", day: "2026-07-01" }),
       vote({ txid: "b", sats: 200, dir: "down", day: "2026-07-01" }),
@@ -68,30 +39,6 @@ describe("foldScores", () => {
   it("lets a lone down vote drive a score negative", () => {
     const ledger = [vote({ dir: "down", sats: 300, day: "2026-07-01" })];
     expect(foldScores(ledger, "2026-07-01")).toEqual({ "post-1": -300 });
-  });
-
-  it("accumulates votes on one post, each at its own decay", () => {
-    const ledger = [
-      vote({ txid: "a", sats: 1000, day: "2026-05-02" }), // 60 days ago -> 250
-      vote({ txid: "b", sats: 1000, day: "2026-06-01" }), // 30 days ago -> 500
-      vote({ txid: "c", sats: 1000, day: "2026-07-01" }), // fresh -> 1000
-    ];
-    expect(foldScores(ledger, "2026-07-01")).toEqual({ "post-1": 1750 });
-  });
-
-  it("flips the ordering as decay progresses: a newer, smaller vote overtakes a faded old one", () => {
-    const oldGlory = vote({ txid: "a", postId: "old", sats: 1000, day: "2026-06-01" });
-    const newcomer = vote({ txid: "b", postId: "new", sats: 600, day: "2026-07-11" });
-
-    // While the old vote is fresh (and the newcomer's vote hasn't happened),
-    // the old post leads.
-    const before = foldScores([oldGlory], "2026-06-01");
-    expect(before["old"]).toBeGreaterThan(before["new"] ?? 0);
-
-    // Forty days on, the old vote has decayed below the newcomer's 600.
-    const after = foldScores([oldGlory, newcomer], "2026-07-11");
-    expect(after["new"]).toBeGreaterThan(after["old"]);
-    expect(after["old"]).toBeCloseTo(1000 * 2 ** (-40 / 30), 6);
   });
 
   it("counts a future-dated vote fully, never more than fully", () => {
@@ -149,11 +96,46 @@ describe("scoreEntries", () => {
     ];
     expect(scoreEntries(ledger, "2026-07-01")).toEqual([
       { member: "p1", score: 1000 },
-      { member: "p2", score: -200 },
+      { member: "p2", score: -400 },
     ]);
   });
 
   it("derives no entries from an empty ledger", () => {
     expect(scoreEntries([], "2026-07-01")).toEqual([]);
+  });
+});
+
+describe("windowStartDay", () => {
+  it("bounds week to seven days back", () =>
+    expect(windowStartDay("week", "2026-07-10")).toBe("2026-07-03"));
+  it("bounds day to one day back", () =>
+    expect(windowStartDay("day", "2026-07-10")).toBe("2026-07-09"));
+  it("bounds month to thirty days, year to 365", () => {
+    expect(windowStartDay("month", "2026-07-31")).toBe("2026-07-01");
+    expect(windowStartDay("year", "2026-07-10")).toBe("2025-07-10");
+  });
+  it("has no lower bound for all", () =>
+    expect(windowStartDay("all", "2026-07-10")).toBeNull());
+});
+
+describe("foldScores windowing + no decay", () => {
+  it("counts a vote at full weight regardless of age (decay removed)", () => {
+    const ledger = [vote({ day: "2026-01-01", sats: 1000 })]; // ~190 days old
+    expect(foldScores(ledger, "2026-07-10", null)["post-1"]).toBe(1000);
+  });
+  it("excludes entries before the window start, includes those on it", () => {
+    const ledger = [
+      vote({ txid: "a", day: "2026-07-02", sats: 500 }), // before week start
+      vote({ txid: "b", day: "2026-07-03", sats: 700 }), // exactly on start
+    ];
+    const start = windowStartDay("week", "2026-07-10");
+    expect(foldScores(ledger, "2026-07-10", start)["post-1"]).toBe(700);
+  });
+  it("sums signed across up and down inside the window", () => {
+    const ledger = [
+      vote({ txid: "a", dir: "up", sats: 1000, day: "2026-07-09" }),
+      vote({ txid: "b", dir: "down", sats: 300, day: "2026-07-09" }),
+    ];
+    expect(foldScores(ledger, "2026-07-10", null)["post-1"]).toBe(700);
   });
 });
