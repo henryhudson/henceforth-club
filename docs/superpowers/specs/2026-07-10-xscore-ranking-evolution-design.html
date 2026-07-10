@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Every satoshi is a vote — xScore ranking evolution design</title>
+<style>
+  :root { --bg:#f4ecd8; --ink:#2a2318; --muted:#6b5d45; --rule:#c9b98f; --accent:#8b3a1a; --card:#faf4e4; --shadow:0 1px 3px rgba(60,40,10,0.15); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.68;}
+  .wrap{max-width:860px;margin:0 auto;padding:56px 32px;}
+  header.doc{margin-bottom:40px;border-bottom:3px double var(--rule);padding-bottom:26px;}
+  .eyebrow{font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:33px;line-height:1.16;margin:0 0 12px;font-weight:700;}
+  h2{font-size:24px;margin:46px 0 12px;padding-top:18px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 8px;}
+  .lede{font-size:19px;color:var(--muted);margin:0;font-style:italic;}
+  p{margin:13px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(120,90,30,0.12);padding:2px 6px;border-radius:4px;}
+  pre{background:#2a2318;color:#f0e6cf;padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;background:var(--card);}
+  th,td{text-align:left;padding:9px 12px;border:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .decision{background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 18px;margin:18px 0;box-shadow:var(--shadow);}
+  .decision strong{color:var(--accent);}
+  ul{margin:12px 0;padding-left:26px;} li{margin:6px 0;}
+  .flow{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px 20px;margin:16px 0;box-shadow:var(--shadow);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Design spec &middot; 2026-07-10 &middot; henceforth.club/text ranking &middot; extends xScore (henceforth-club)</div>
+<h1>Every satoshi is a vote</h1>
+<p class="lede">The site already ranks posts by the money paid to them. Make the creator&rsquo;s own inscription cost the <em>first</em> vote, and a post&rsquo;s rank becomes something simple and honest: the sum of every satoshi ever committed to it &mdash; inside a window the reader can turn.</p>
+</header>
+
+<p><strong>What exists.</strong> <code>src/lib/xScore.ts</code> is a pure, replayable fold over an append-only ledger (<code>src/lib/xVotes.ts</code>, <code>x:ledger:&lt;handle&gt;</code>): <code>score(post) = &Sigma; votes (&plusmn;sats) &times; 2^(&minus;daysAgo / 30)</code>. A paid vote &mdash; the funding transaction <em>is</em> the vote &mdash; carries direction and satoshis; its ranking influence halves every thirty days, though the satoshis themselves never decay (&ldquo;money paid is money kept&rdquo;). Nothing in the module touches Redis or the clock: ledger and as-of day in, score table out. That purity is the whole reason this evolution stays small.</p>
+
+<p><strong>The gap.</strong> The ranking counts what <em>viewers</em> spend and ignores what the <em>creator</em> spent to put the post on chain at all. It also has one time treatment &mdash; a fuzzy thirty-day half-life &mdash; that a reader can neither see nor steer. This spec closes both gaps without adding a second concept.</p>
+
+<h2>1 &middot; The idea: cost is the founding vote</h2>
+
+<p>Inscribing a post costs satoshis, and the cost is credible <em>because</em> it is spent &mdash; a creator does not pay to put junk permanently on Bitcoin. That is costly signalling: the payment is the creator&rsquo;s own stake in the post&rsquo;s worth. So the upload cost is not a number to subtract from earnings or divide into them; it is earnings of the same kind &mdash; the creator up-voting their own post with the price they paid.</p>
+
+<div class="decision"><strong>Cost as a founding vote, uncapped (Henry, 2026-07-10).</strong> The creator&rsquo;s inscription cost enters the ledger as one up-vote, at its <em>full</em> value, dated the inscription day. A 14,000,000-satoshi video legitimately starts near the top because its creator committed a great deal to preserve it; viewers push it up or down from there. Rejected: earnings &divide; cost (efficiency), which would punish expensive media; earnings &minus; cost (profit), which makes cost a subtraction; and capping the founding vote, which would blunt exactly the signal we want to reward. The one visible consequence &mdash; upload cost scales with byte size, so larger media starts higher on stake alone &mdash; is intended, not a side effect.</div>
+
+<p><strong>Why this is the load-bearing move.</strong> Once the creator&rsquo;s payment and the viewers&rsquo; payments are the <em>same type</em> of ledger entry, there is no &ldquo;cost model&rdquo; and &ldquo;earnings model&rdquo; to reconcile. There is one ledger of committed satoshis and one pure fold, and every feature below &mdash; windows, backfill, corrections &mdash; is a replay of that fold with different bounds. The system stays small because cost never becomes a second idea.</p>
+
+<h2>2 &middot; The model</h2>
+
+<p>For a chosen time window, a post&rsquo;s score is the signed sum of every satoshi committed to it inside that window:</p>
+
+<pre><code>score(post, window) = &Sigma; (dir === "up" ? +sats : &minus;sats)
+                      over ledger entries whose day &ge; windowStart</code></pre>
+
+<ul>
+<li><strong>Founding vote</strong> &mdash; <code>{ txid: inscriptionTxid, postId, dir: "up", sats: uploadCost, day: inscriptionDay }</code>. Uncapped.</li>
+<li><strong>Viewer up-votes</strong> (<code>+</code>) and <strong>down-votes</strong> (<code>&minus;</code>) &mdash; exactly as today.</li>
+</ul>
+
+<p>This is not literal chess Elo &mdash; there are no pairwise matches. &ldquo;Elo&rdquo; was shorthand for a live, dynamic score, and the committed-satoshi sum is that score. The money never decays; the <strong>window is the time control</strong>.</p>
+
+<div class="decision"><strong>Windows replace the decay; default is top this week (Henry, 2026-07-10).</strong> Five windows &mdash; <code>day</code>, <code>week</code>, <code>month</code>, <code>year</code>, <code>all</code> &mdash; each a pure replay of the ledger over a start bound. Inside a window every entry counts at full weight; the thirty-day continuous half-life is removed, because the window is a freshness mechanism the reader can see and steer, and two overlapping time treatments are one too many. <code>all</code> is the undecayed lifetime sum. <strong>The feed defaults to <code>week</code></strong> &mdash; right while activity is sparse, since a <code>day</code> window would usually be empty. It is a single exported constant; when volume grows enough that a day of committed satoshis is a lively list, the default shortens to <code>day</code> (or finer) with a one-line change &mdash; the five windows already exist, so it is config, never rework.</div>
+
+<div class="decision"><strong>Global only &mdash; no personalization (Henry, 2026-07-10).</strong> The score is one global table, the same for every viewer. The tempting fourth factor &mdash; demote posts &ldquo;a viewer has seen before&rdquo; &mdash; is deliberately <em>deleted</em>, not deferred: tracking who-saw-what needs identity the site does not have (most visitors are anonymous; a Bitcoin address would cover a sliver and leak privacy to read), and storing it anywhere is exactly the weight worth avoiding. Freshness instead comes free from the window &mdash; open &ldquo;this week&rdquo; on a return visit and it has rotated with the new week&rsquo;s votes, without the site remembering anything about you. The identity problem is not solved; it is removed.</div>
+
+<h2>3 &middot; Architecture: extends three units, adds no subsystem</h2>
+
+<table>
+<tr><th>Unit</th><th>Kind</th><th>Change</th></tr>
+<tr><td><code>src/lib/xScore.ts</code></td><td>pure fold</td><td><code>foldScores(ledger, asOfDay, windowStartDay?)</code> &mdash; the same fold with an optional lower time bound; an entry whose day is before <code>windowStartDay</code> contributes nothing. <code>scoreEntries</code> takes the same bound. Still clock-free and database-free.</td></tr>
+<tr><td><code>src/lib/xVotes.ts</code></td><td>input/output</td><td>Append the founding vote to <code>x:ledger:&lt;handle&gt;</code> when a post is archived; <code>readScores(handle, window)</code> returns the windowed ranking. Money-path code.</td></tr>
+<tr><td>Upstash cache</td><td>derived</td><td>Five sorted sets per handle, <code>x:score:&lt;handle&gt;:{day,week,month,year,all}</code>, each the fold&rsquo;s output over its window &mdash; only ever a ledger replay, never a patched number.</td></tr>
+<tr><td><code>/text</code> page + <code>PostEntry</code></td><td>UI</td><td>A small client toggle (day/week/month/year/all, defaulting to week) that selects which windowed ranking orders the feed.</td></tr>
+</table>
+
+<p><strong>Why the fold stays the seam.</strong> Because <code>foldScores</code> is a pure function of (ledger, as-of day, window), a window is just another argument and the founding vote is just another entry &mdash; so the entire feature is expressible as replays, each independently testable, with no cached number ever hand-edited. A correction (a double-spent funding transaction, a re-tuned window) is a replay, exactly as it is today.</p>
+
+<h2>4 &middot; Data flow, in five acts</h2>
+
+<div class="flow"><strong>ARCHIVE</strong> &mdash; a post lands on chain (its inscription transaction id, cost, and day are known).</div>
+<div class="flow"><strong>FOUND</strong> &mdash; one ledger entry is appended: the creator up-votes the post with the upload cost. No new scoring path runs; the existing fold will consume it.</div>
+<div class="flow"><strong>VOTE</strong> &mdash; viewers pay to up- or down-vote; each payment appends one ledger entry, as today.</div>
+<div class="flow"><strong>FOLD</strong> &mdash; the ledger folds once per window into five sorted sets; a fold is a pure replay, so a rebuild is exact.</div>
+<div class="flow"><strong>READ</strong> &mdash; <code>/text</code> reads the selected window (week by default) and orders the feed by it.</div>
+
+<h2>5 &middot; Backfill: it works before the archive flow exists</h2>
+
+<p>The founding vote needs an inscription&rsquo;s cost, transaction id, and day. New archives will write it at inscription time &mdash; but that write belongs to the archive flow, which is a <strong>separate sub-project pending the user&rsquo;s own X export</strong>. So this project stands alone by reconstructing founding votes for already-archived posts from the chain: an inscription transaction&rsquo;s cost is its miner fee (sum of input values minus sum of output values), read once per post from WhatsOnChain, appended as the founding vote. The backfill is idempotent &mdash; the founding vote is keyed by the inscription transaction id, so a replay never double-counts.</p>
+
+<h2>6 &middot; Failure and edges</h2>
+
+<table>
+<tr><th>Case</th><th>Behaviour</th></tr>
+<tr><td>Unreadable ledger day</td><td>Contributes nothing to the table, rather than turning it to <code>NaN</code> &mdash; existing behaviour, preserved.</td></tr>
+<tr><td>A post net-negative (down-votes exceed up-votes and the founding vote)</td><td><strong>Allowed to go negative.</strong> A post the crowd paid to bury below the creator&rsquo;s own stake is honest signal; clamping to zero would hide it. It simply sorts to the bottom.</td></tr>
+<tr><td>Chosen window is empty (no committed satoshis inside it)</td><td>The feed falls back to reverse-chronological, so an empty &ldquo;today&rdquo; is never a blank page.</td></tr>
+<tr><td>Backfill can&rsquo;t read an inscription&rsquo;s fee (chain read fails)</td><td>The post keeps its viewer-vote score with no founding vote yet; the backfill retries next run. Fail-open: a missing founding vote understates a rank, it never corrupts one.</td></tr>
+</table>
+
+<h2>7 &middot; Testing</h2>
+
+<p><code>xScore</code> stays a pure fold, so it is exercised the way <code>xScore.test.ts</code> already is &mdash; example and property tests over (ledger, as-of day, window), no mocks, no clock:</p>
+<ul>
+<li>A founding vote raises its post&rsquo;s score by exactly the upload cost inside every window that contains its day.</li>
+<li>An entry dated exactly on <code>windowStart</code> is included; one day earlier is excluded (boundary).</li>
+<li>Removing the continuous decay: a vote&rsquo;s weight inside a window is its full <code>&plusmn;sats</code>, independent of age.</li>
+<li>Down-votes can drive a post negative, and the ordering respects it.</li>
+<li>Backfill idempotence: appending the same founding vote (same inscription transaction id) twice yields one contribution.</li>
+</ul>
+
+<h2>8 &middot; Scope and sequencing</h2>
+
+<p><strong>In scope:</strong> the founding-vote entry, the windowed fold, the five cached sorted sets, the backfill, and the <code>/text</code> window toggle defaulting to week.</p>
+
+<p><strong>Out of scope, by decision:</strong> per-viewer personalization (deleted, &sect;2); and the <strong>X-export archive flow</strong> that produces new inscription costs &mdash; a separate sub-project blocked on the user&rsquo;s X data export, which this design integrates with later by writing the founding vote at inscription time instead of by backfill.</p>
+
+<div class="decision"><strong>Merge discipline.</strong> This touches the vote ledger, which is money-path code, so it gets an adversarial review before merge (this repo&rsquo;s standing rule). And a push to <code>main</code> here <em>is</em> a production deploy &mdash; so the backfill runs against the live ledger only after that review, and the founding-vote write is idempotent by inscription transaction id precisely so a re-run during rollout cannot double-count.</div>
+
+</div>
+</body>
+</html>
