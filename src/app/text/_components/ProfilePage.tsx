@@ -22,6 +22,7 @@ export default function ProfilePage({
   photoCount,
   firstInscribedAt,
   txTimes = {},
+  scores = {},
   verified,
 }: {
   archive: XArchive;
@@ -32,6 +33,7 @@ export default function ProfilePage({
   photoCount?: number;
   firstInscribedAt?: number;
   txTimes?: Record<string, number>;
+  scores?: Record<string, number>;
   verified?: { bindingPostId: string };
 }) {
   const scrollLoader =
@@ -41,15 +43,14 @@ export default function ProfilePage({
         initialCount={archive.posts.length}
         postCount={postCount}
         initialTxTimes={txTimes}
+        initialScores={scores}
       />
     ) : undefined;
 
   return (
     <main className="min-h-screen bg-background pt-16">
       <header className="mx-auto max-w-2xl px-6 py-8 text-center">
-        <p className="font-sans text-xs font-semibold uppercase tracking-[0.22em] text-muted">
-          Reclaimed from X · {txid ? "on Bitcoin" : "preview"}
-        </p>
+        <p className="ledger-label">Reclaimed from X · {txid ? "on Bitcoin" : "preview"}</p>
         {txid ? (
           <a
             href={`https://whatsonchain.com/tx/${txid}`}
@@ -60,7 +61,7 @@ export default function ProfilePage({
             {txid.slice(0, 16)}&hellip;{txid.slice(-8)} &#8599;
           </a>
         ) : (
-          <p className="mt-2 text-[11px] text-muted">
+          <p className="mt-2 font-mono text-[11px] text-muted">
             Not yet inscribed &mdash; live preview from X
           </p>
         )}
@@ -74,6 +75,7 @@ export default function ProfilePage({
         txCount={txCount}
         firstInscribedAt={firstInscribedAt}
         txTimes={txTimes}
+        scores={scores}
         verified={verified}
       />
       <ReaderKeys handle={handle} />

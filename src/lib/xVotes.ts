@@ -51,6 +51,25 @@ export async function appendVote(
   return "recorded";
 }
 
+/** The earned-sats score for every voted post of a handle, read from the
+ * cache: a map of post id → sats. Sats can be negative when down-votes outweigh
+ * up-votes — the fold is a signed sum. Empty when nobody has voted, or when
+ * Redis isn't configured. Null-Redis safe like the rest of this module. */
+export async function readScores(
+  handle: string,
+  redis: Redis | null = getRedis(),
+): Promise<Record<string, number>> {
+  if (!redis) return {};
+  const flat = await redis.zrange<Array<string | number>>(scoreKey(handle), 0, -1, {
+    withScores: true,
+  });
+  const out: Record<string, number> = {};
+  for (let i = 0; i + 1 < flat.length; i += 2) {
+    out[String(flat[i])] = Number(flat[i + 1]);
+  }
+  return out;
+}
+
 /** Rebuild `x:score:<handle>` from the full ledger — the correction path is
  * replay, never patch: the old set is dropped and the fold's entries written
  * in its place, so a struck ledger entry's influence vanishes entirely.

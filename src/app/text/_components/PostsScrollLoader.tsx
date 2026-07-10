@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { XPost } from "../parseArchive";
-import PostCard, { computeShowParent } from "./PostCard";
+import { computeShowParent } from "./PostCard";
+import PostEntry from "./PostEntry";
+import { buildThreadContext } from "./threadContext";
 
 type PostsResponse = {
   posts: XPost[];
@@ -25,11 +27,13 @@ export default function PostsScrollLoader({
   initialCount,
   postCount,
   initialTxTimes,
+  initialScores = {},
 }: {
   handle: string;
   initialCount: number;
   postCount: number;
   initialTxTimes: Record<string, number>;
+  initialScores?: Record<string, number>;
 }) {
   const [posts, setPosts] = useState<XPost[]>([]);
   const [txTimes, setTxTimes] = useState<Record<string, number>>(initialTxTimes);
@@ -82,16 +86,20 @@ export default function PostsScrollLoader({
   }, [handle]);
 
   const showParent = computeShowParent(posts);
+  const threads = buildThreadContext(posts);
 
   return (
     <>
-      <div className="mt-3 space-y-3">
+      <div className="divide-y divide-card-border border-t border-card-border">
         {posts.map((post, i) => (
-          <PostCard
+          <PostEntry
             key={post.id}
             post={post}
             showParent={showParent[i]}
             txTime={post.txid ? txTimes[post.txid] : undefined}
+            thread={threads[i]}
+            handle={handle}
+            sats={initialScores[post.id]}
           />
         ))}
       </div>

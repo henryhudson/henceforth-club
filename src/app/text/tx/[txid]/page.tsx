@@ -4,6 +4,7 @@ import { socialArchiveToXArchive } from "../../onchain";
 import { fetchTxArchiveWithTime } from "@/lib/whatsonchain";
 import { countPhotos } from "@/lib/xArchiveCache";
 import { getOwner } from "@/lib/xOwner";
+import { readScores } from "@/lib/xVotes";
 import { dedupePosts } from "../../parseArchive";
 import ProfilePage from "../../_components/ProfilePage";
 
@@ -29,7 +30,10 @@ export default async function TxPage(
   // posts (and photos riding along with them) would report a higher photo
   // count than the reader ever sees, same as the cache path already does.
   const photoCount = countPhotos(dedupePosts(archive.posts));
-  const owner = await getOwner(archive.profile.handle);
+  const [owner, scores] = await Promise.all([
+    getOwner(archive.profile.handle),
+    readScores(archive.profile.handle),
+  ]);
   return (
     <ProfilePage
       archive={archive}
@@ -38,6 +42,7 @@ export default async function TxPage(
       photoCount={photoCount}
       firstInscribedAt={result.time}
       txTimes={result.time !== undefined ? { [txid]: result.time } : {}}
+      scores={scores}
       verified={owner && owner.bindingTxid === txid ? { bindingPostId: owner.bindingPostId } : undefined}
     />
   );

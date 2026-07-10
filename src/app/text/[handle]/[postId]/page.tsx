@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getArchivePage, getArchivePost } from "@/lib/xArchiveCache";
-import PostCard from "../../_components/PostCard";
+import { getArchivePage, getArchivePost, PAGE_SIZE } from "@/lib/xArchiveCache";
+import { readScores } from "@/lib/xVotes";
+import PostEntry from "../../_components/PostEntry";
+import { buildThreadContext } from "../../_components/threadContext";
 
 // A single archived post, addressable on its own so it can be linked, shared,
 // and picked up by a search engine or a social-card preview — instead of
-// only being reachable by scrolling through the whole profile. Thread
-// context (what this post replies to, and what replies to it) is Task 7's
-// job; today this renders just the post itself.
+// only being reachable by scrolling through the whole profile. It renders
+// open, its on-chain record and any in-archive thread context shown.
 
 export async function generateMetadata(
   { params }: { params: Promise<{ handle: string; postId: string }> },
@@ -26,20 +27,39 @@ export default async function PostPage(
   { params }: { params: Promise<{ handle: string; postId: string }> },
 ) {
   const { handle, postId } = await params;
-  const [post, page] = await Promise.all([
+  const [post, page, feed, scores] = await Promise.all([
     getArchivePost(handle, postId),
     getArchivePage(handle, 0, 0),
+    getArchivePage(handle, 0, PAGE_SIZE),
+    readScores(handle),
   ]);
   if (!post || !page) notFound();
+
+  // Thread context from the archive's first page — the neighbouring posts this
+  // one replies to or that reply to it, when they are on chain too.
+  const threadIndex = feed?.posts.findIndex((p) => p.id === post.id) ?? -1;
+  const thread = feed && threadIndex >= 0 ? buildThreadContext(feed.posts)[threadIndex] : undefined;
 
   return (
     <main className="min-h-screen bg-background pt-16">
       <div className="mx-auto max-w-[68ch] px-6 py-8">
-        <PostCard
-          post={post}
-          showParent={Boolean(post.parent)}
-          txTime={post.txid ? page.txTimes[post.txid] : undefined}
-        />
+        <p className="ledger-label mb-3">
+          <Link href={`/text/${handle}`} className="hover:text-accent">
+            @{handle}
+          </Link>{" "}
+          · one entry
+        </p>
+        <div className="border-t border-card-border">
+          <PostEntry
+            post={post}
+            showParent={Boolean(post.parent)}
+            txTime={post.txid ? page.txTimes[post.txid] : undefined}
+            thread={thread}
+            handle={handle}
+            sats={scores[post.id]}
+            defaultOpen
+          />
+        </div>
         <Link href={`/text/${handle}`} className="mt-6 inline-block text-accent hover:underline">
           &larr; Back to @{handle}
         </Link>

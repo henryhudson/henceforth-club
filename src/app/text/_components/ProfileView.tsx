@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { dedupePosts, type XArchive } from "../parseArchive";
-import PostCard, { Avatar, computeShowParent, formatDate, formatUnixSeconds } from "./PostCard";
+import { Avatar, computeShowParent, formatDate, formatUnixSeconds } from "./PostCard";
+import PostEntry from "./PostEntry";
+import { buildThreadContext } from "./threadContext";
 import { buildPermanenceLine } from "./permanenceLine";
 
 /**
@@ -22,6 +24,7 @@ export default function ProfileView({
   txCount,
   firstInscribedAt,
   txTimes = {},
+  scores = {},
   verified,
 }: {
   archive: XArchive;
@@ -32,11 +35,13 @@ export default function ProfileView({
   txCount?: number;
   firstInscribedAt?: number;
   txTimes?: Record<string, number>;
+  scores?: Record<string, number>;
   verified?: { bindingPostId: string };
 }) {
   const { profile } = archive;
   const posts = dedupePosts(archive.posts);
   const showParent = computeShowParent(posts);
+  const threads = buildThreadContext(posts);
   const initial = (profile.displayName || profile.handle || "?").charAt(0).toUpperCase();
   const permanenceLine = buildPermanenceLine({
     postCount: postCount ?? posts.length,
@@ -48,13 +53,15 @@ export default function ProfileView({
 
   return (
     <div className="pb-24">
-      {/* Header */}
+      {/* Header — the identity, said once, over a faint ledger grid */}
       <div className="mx-auto max-w-2xl px-6">
-        <div className="rounded-2xl border border-card-border bg-card-bg p-6 sm:p-8">
+        <div className="ledger-grid relative overflow-hidden rounded-2xl border border-card-border bg-card-bg p-6 sm:p-8">
           <div className="flex items-center gap-4">
             <Avatar size={64} avatarUrl={profile.avatarUrl} initial={initial} />
-            <div>
-              <h2 className="text-xl font-bold text-foreground">{profile.displayName ?? profile.handle}</h2>
+            <div className="min-w-0">
+              <h2 className="truncate text-xl font-bold text-foreground">
+                {profile.displayName ?? profile.handle}
+              </h2>
               <p className="text-accent">
                 @{profile.handle}
                 {verified && (
@@ -71,7 +78,7 @@ export default function ProfileView({
               </p>
             </div>
           </div>
-          {profile.bio && <p className="mt-4 text-foreground/90">{profile.bio}</p>}
+          {profile.bio && <p className="mt-4 whitespace-pre-wrap text-foreground/90">{profile.bio}</p>}
           <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted">
             {profile.location && <span>{profile.location.trim()}</span>}
             {profile.website && (
@@ -81,20 +88,27 @@ export default function ProfileView({
             )}
             {profile.createdAt && <span>Joined {formatDate(profile.createdAt)}</span>}
           </div>
-          <p className="mt-4 text-xs text-muted">{permanenceLine}</p>
+          <p className="mt-5 border-t border-card-border pt-4 font-mono text-xs text-muted">
+            {permanenceLine}
+          </p>
           <ReadingTabs />
         </div>
       </div>
 
-      {/* Feed — newest first, linear, narrowed to a comfortable reading width */}
-      <div className="mx-auto mt-6 max-w-[68ch] px-6">
-        <div className="space-y-3">
+      {/* Feed — a ledger: newest first, hairline rules between entries, each
+          opening in place to reveal its thread and on-chain record. */}
+      <div className="mx-auto mt-8 max-w-[68ch] px-6">
+        <p className="ledger-label mb-1">The ledger · newest first · tap a post to open it</p>
+        <div className="divide-y divide-card-border border-t border-card-border">
           {posts.map((post, i) => (
-            <PostCard
+            <PostEntry
               key={post.id}
               post={post}
               showParent={showParent[i]}
               txTime={post.txid ? txTimes[post.txid] : undefined}
+              thread={threads[i]}
+              handle={profile.handle}
+              sats={scores[post.id]}
             />
           ))}
         </div>
