@@ -79,7 +79,7 @@ The worker builds and signs a single transaction: <em>input</em> = the job UTXO 
 
 <div class="flow">
 <strong>REGISTER &amp; DONE</strong> &mdash; back on the site.<br>
-The job registers the archive through the existing <code>/api/x/register</code> gate (&sect;5), the page polls the job to <code>done</code>, and the archive renders at <code>/x/&lt;handle&gt;</code>. The worker deletes the job&rsquo;s key material. Custody is over; its entire lifetime was the gap between FUND and INSCRIBE.
+The job registers the archive through the existing <code>/api/x/register</code> gate (&sect;5) &mdash; which also stamps the handle into the <code>/text</code> directory (&sect;6) &mdash; the page polls the job to <code>done</code>, and the archive renders at <code>/x/&lt;handle&gt;</code>. The worker deletes the job&rsquo;s key material. Custody is over; its entire lifetime was the gap between FUND and INSCRIBE.
 </div>
 
 <h2>3 &middot; Architecture: who holds what</h2>
@@ -130,7 +130,13 @@ sweeping ──refund lands──▶ swept (key deleted; job failed, reason reco
 <li><strong>Claimed handle</strong>: the inscription still lands on Bitcoin &mdash; the chain is permissionless &mdash; but the site index will not list it without the owner&rsquo;s signature. The quote page detects this <em>before payment</em> and says exactly what the visitor gets: &ldquo;this handle&rsquo;s archive index is claimed; your inscription will exist on chain, and the owner can register it from the app.&rdquo; No surprise after money moves.</li>
 </ul>
 
-<h2>6 &middot; Policy and permanence</h2>
+<h2>6 &middot; The directory &mdash; henceforth.club/text</h2>
+
+<p><strong>Everyone who uploaded, in one place.</strong> <code>/text</code> is the public directory of every archived profile: one row per handle, newest activity first &mdash; handle, post count, latest inscription date, the verified tick where the handle is claimed (spec C), each row linking to the archive at <code>/x/&lt;handle&gt;</code>. It is also the web path&rsquo;s front door: the &ldquo;archive yours&rdquo; call to action at the top starts the upload flow of &sect;2.</p>
+
+<p><strong>The missing primitive is one key.</strong> Today the index is per-handle only (<code>x:&lt;handle&gt;</code> &rarr; ordered txids); nothing can answer &ldquo;who has uploaded?&rdquo;. The directory adds a single global sorted set, <code>x:handles</code> (member = handle, score = latest registration time), written in the same breath as <code>appendXTxid</code> / <code>setXTxids</code> by the existing registration path &mdash; so the directory inherits the register gate exactly: <em>what appears is what registered</em>. A claimed handle&rsquo;s unregistered web inscription (&sect;5) exists on chain but does not appear until the owner registers it, which is the same honesty the archive pages already have. One-time backfill: scan the existing <code>x:*</code> keys. Null-Redis safe like every sibling module; rebuildable by scanning, like the index it extends.</p>
+
+<h2>7 &middot; Policy and permanence</h2>
 
 <ul>
 <li><strong>Source:</strong> only the visitor&rsquo;s own X export, uploaded by them &mdash; no X API fetch anywhere in this path, no quota cost, no third-party redistribution. The upload page carries an &ldquo;this is my own account&rsquo;s export&rdquo; assertion.</li>
@@ -138,7 +144,7 @@ sweeping ──refund lands──▶ swept (key deleted; job failed, reason reco
 <li><strong>Retention:</strong> the parsed archive payload lives in the job record only until <code>done</code> or <code>swept</code>, then is deleted &mdash; the durable copy is the one the visitor paid to put on Bitcoin.</li>
 </ul>
 
-<h2>7 &middot; Tuning constants</h2>
+<h2>8 &middot; Tuning constants</h2>
 
 <table>
 <tr><th>Constant</th><th>Initial value</th><th>Meaning</th></tr>
@@ -150,10 +156,10 @@ sweeping ──refund lands──▶ swept (key deleted; job failed, reason reco
 <tr><td><code>LATE_WATCH_DAYS</code></td><td>7</td><td>How long an expired job&rsquo;s address is watched for straggler refunds.</td></tr>
 </table>
 
-<h2>8 &middot; Testing &amp; the review gate</h2>
+<h2>9 &middot; Testing &amp; the review gate</h2>
 
 <ul>
-<li><strong>Pure core, test-first,</strong> all deterministic with stubbed keys and a stubbed clock: the quote fold (pinned to <code>archive-cost-fixture.json</code>); the export parser (real export fixtures, including an oversize one); the job state machine (every transition in &sect;3&ndash;4, every sweep branch, crash-resume); the payment matcher (exact, under, over, late, duplicate); construction of both transactions (inscription shape byte-compared against an app-produced archive fixture; sweep fee arithmetic).</li>
+<li><strong>Pure core, test-first,</strong> all deterministic with stubbed keys and a stubbed clock: the quote fold (pinned to <code>archive-cost-fixture.json</code>); the export parser (real export fixtures, including an oversize one); the job state machine (every transition in &sect;3&ndash;4, every sweep branch, crash-resume); the payment matcher (exact, under, over, late, duplicate); construction of both transactions (inscription shape byte-compared against an app-produced archive fixture; sweep fee arithmetic); the directory index (registration stamps <code>x:handles</code>, the claimed-unregistered case stays absent, backfill is idempotent).</li>
 <li><strong>Adversarial review before merge</strong> &mdash; this is a money-and-key path; it gets the full treatment the wallet gets.</li>
 <li><strong>Manual end-to-end with the low-funds wallet</strong> before the QR renders for anyone else: pay a real quote, watch the inscription land, watch a deliberately-underpaid job sweep back. Real keys and real money stay out of automated tests, per the standing rule.</li>
 <li><strong>Ops:</strong> stuck jobs (<code>sweeping</code> &gt; a day, <code>awaiting-payment</code> backlog) surface as Morning Board ops cards via the daily routine.</li>
