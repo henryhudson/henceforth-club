@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ParsedExport } from "./parseExport";
 import type { Quote } from "./quote";
 import { MAX_CONCURRENT_JOBS, QUOTE_EXPIRY_MINUTES } from "./constants";
-import { createJob, getJob, advance, listJobsInState } from "./jobStore";
+import { createJob, getJob, getPayload, advance, listJobsInState } from "./jobStore";
 
 // A fake Redis good enough to exercise jobStore's real logic: get/set/del,
 // a keys() scan (jobStore never uses a secondary index — the job count is
@@ -118,6 +118,36 @@ describe("createJob", () => {
 describe("getJob", () => {
   it("returns null for a job that does not exist", async () => {
     expect(await getJob("no-such-job")).toBeNull();
+  });
+});
+
+describe("getPayload", () => {
+  it("returns the archive stored at createJob", async () => {
+    const created = await createJob(parsedFixture(), quoteFixture, NOW);
+    if (!created.ok) throw new Error("expected ok");
+    expect(await getPayload(created.job.jobId)).toEqual(parsedFixture().archive);
+  });
+
+  it("returns null for a job that does not exist", async () => {
+    expect(await getPayload("no-such-job")).toBeNull();
+  });
+
+  it("returns null once the job's payload has been deleted (reaches done)", async () => {
+    const created = await createJob(parsedFixture(), quoteFixture, NOW);
+    if (!created.ok) throw new Error("expected ok");
+    const id = created.job.jobId;
+
+    await advance(id, { kind: "key-published", address: "1Addr" }, NOW);
+    await advance(id, { kind: "payment-seen", txid: "tx1", vout: 0, sats: 9_290_500, refundAddress: "1R" }, NOW);
+    await advance(id, { kind: "inscribed", txid: "inscribetx" }, NOW);
+    await advance(id, { kind: "registered" }, NOW);
+
+    expect(await getPayload(id)).toBeNull();
+  });
+
+  it("returns null when Redis isn't configured", async () => {
+    fakeRedis = null;
+    expect(await getPayload("any")).toBeNull();
   });
 });
 

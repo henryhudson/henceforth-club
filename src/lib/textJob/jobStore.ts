@@ -12,6 +12,7 @@ import { MAX_CONCURRENT_JOBS, QUOTE_EXPIRY_MINUTES } from "./constants";
 type Redis = NonNullable<ReturnType<typeof getRedis>>;
 type Ok = { ok: true; job: TextJob };
 type Refused = { ok: false; refused: string };
+type Archive = Extract<ParsedExport, { ok: true }>["archive"];
 
 const JOB_PREFIX = "x:job:";
 const PAYLOAD_PREFIX = "x:job:payload:";
@@ -130,6 +131,20 @@ export async function advance(jobId: string, event: JobEvent, nowMs: number): Pr
   }
 
   return { ok: true, job: result.job };
+}
+
+/**
+ * The archive payload stashed alongside a job at createJob — the exact bytes
+ * the worker will inscribe. Never routed through the api routes (those never
+ * return the archive itself); this is the worker's own read, so a `.mjs`
+ * runner needs the same null-Redis convention as every other read here: an
+ * unconfigured store, an unknown job, and an already-deleted payload (a job
+ * that reached done or swept) are all just null, never a throw.
+ */
+export async function getPayload(jobId: string): Promise<Archive | null> {
+  const redis = getRedis();
+  if (!redis) return null;
+  return redis.get<Archive>(payloadKey(jobId));
 }
 
 export async function listJobsInState(state: JobState): Promise<TextJob[]> {

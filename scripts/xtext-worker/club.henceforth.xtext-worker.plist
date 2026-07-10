@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>club.henceforth.xtext-worker</string>
+
+	<key>ProgramArguments</key>
+	<array>
+		<!-- PLACEHOLDER: the absolute path to node on the Mac mini. Find it
+		     with `which node` in the account launchd will run this as — do
+		     not assume it matches this development machine's path. -->
+		<string>/opt/homebrew/bin/node</string>
+		<!-- PLACEHOLDER: the absolute path to run.mjs in the checkout that
+		     is live on the Mac mini, e.g.
+		     /Users/henry/Programming/Main/henceforth-club/scripts/xtext-worker/run.mjs -->
+		<string>/PLACEHOLDER/henceforth-club/scripts/xtext-worker/run.mjs</string>
+	</array>
+
+	<!-- PLACEHOLDER: the repository checkout root on the Mac mini, e.g.
+	     /Users/henry/Programming/Main/henceforth-club -->
+	<key>WorkingDirectory</key>
+	<string>/PLACEHOLDER/henceforth-club</string>
+
+	<key>KeepAlive</key>
+	<true/>
+
+	<key>RunAtLoad</key>
+	<true/>
+
+	<key>StandardOutPath</key>
+	<string>/tmp/xtext-worker.log</string>
+
+	<key>StandardErrorPath</key>
+	<string>/tmp/xtext-worker.err.log</string>
+</dict>
+</plist>

@@ -30,8 +30,15 @@ describe("the showroom never reaches X", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("costs nothing to run: no file under src/app/text reads an environment variable", () => {
-    const offenders = files.filter((f) => readFileSync(f, "utf8").includes("process.env"));
+  it("costs nothing to run: no file under src/app/text reads an environment variable, other than the web archive's own mechanical gate", () => {
+    // XTEXT_WEB_ARCHIVE_ENABLED (task 10, src/app/text/archive/page.tsx) is an
+    // in-house feature flag, never a credential and never a path to X's
+    // costed application programming interface — the one allowed exception
+    // to this invariant.
+    const offenders = files.filter((f) => {
+      const content = readFileSync(f, "utf8").replaceAll("process.env.XTEXT_WEB_ARCHIVE_ENABLED", "");
+      return content.includes("process.env");
+    });
     expect(offenders).toEqual([]);
   });
 });

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import ArchiveFlow from "./ArchiveFlow";
 
 export const metadata: Metadata = {
   title: "Archive yours",
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
 // A stub, nothing more — no form, no upload. It exists only so the "archive
 // yours" call to action on /text never points at a dead link before the web
 // archive flow itself is built.
-export default function ArchivePage() {
+function ArchiveStub() {
   return (
     <div className="min-h-screen bg-background pt-28">
       <div className="mx-auto max-w-2xl px-6 text-center">
@@ -30,6 +31,40 @@ export default function ArchivePage() {
           </Link>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * The mechanical gate. Everything the paid archive flow can do — upload,
+ * quote, checkboxes, the QR that can receive real money — stays entirely
+ * unreachable until XTEXT_WEB_ARCHIVE_ENABLED is exactly "true". The flag
+ * stays unset in production until the five-point go-live gate
+ * (scripts/xtext-worker/README.md) passes and Henry signs off; until then
+ * this route renders only the stub above, exactly as it always has.
+ */
+export default function ArchivePage() {
+  if (process.env.XTEXT_WEB_ARCHIVE_ENABLED !== "true") {
+    return <ArchiveStub />;
+  }
+
+  return (
+    <div className="min-h-screen bg-background pt-20">
+      <header className="mx-auto max-w-2xl px-6 py-10 text-center">
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Archive yours</p>
+        <h1 className="mt-3 text-3xl font-bold text-foreground">Pay to inscribe your export</h1>
+        <p className="mt-2 text-sm text-muted">
+          Drop the export X sent you. We quote the fee, you pay once, the archive lands on Bitcoin.
+        </p>
+      </header>
+
+      <ArchiveFlow />
+
+      <p className="mx-auto max-w-2xl px-6 pb-10 text-center text-sm text-muted">
+        <Link href="/text" className="text-accent hover:underline">
+          &larr; Back to the archive
+        </Link>
+      </p>
     </div>
   );
 }
