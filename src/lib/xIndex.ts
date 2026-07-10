@@ -46,3 +46,37 @@ export async function setXTxids(handle: string, txids: string[]): Promise<boolea
   await redis.set(key(handle), txids);
   return true;
 }
+
+// The public directory (/text): who has registered, newest first. A single
+// sorted set rather than one row per handle — the score is the last time the
+// handle registered, so the whole directory reads back pre-sorted with one
+// call. Holds no keys and no money, same as the rest of this module.
+
+const HANDLES_KEY = "x:handles";
+
+/** Record `handle`'s latest registration time in the public directory,
+ * idempotently upward — `gt: true` means an out-of-order or replayed stamp
+ * with an older time never lowers the handle's position. False when Redis
+ * isn't configured. */
+export async function stampHandle(handle: string, atMs: number): Promise<boolean> {
+  const redis = getRedis();
+  if (!redis) return false;
+  await redis.zadd(HANDLES_KEY, { gt: true }, { score: atMs, member: handle.toLowerCase() });
+  return true;
+}
+
+/** Registered handles, newest-stamped first. Empty when nobody has
+ * registered yet, or when Redis isn't configured. */
+export async function listHandles(limit = 50): Promise<{ handle: string; latestMs: number }[]> {
+  const redis = getRedis();
+  if (!redis) return [];
+  const rows = await redis.zrange<(string | number)[]>(HANDLES_KEY, 0, limit - 1, {
+    rev: true,
+    withScores: true,
+  });
+  const out: { handle: string; latestMs: number }[] = [];
+  for (let i = 0; i < rows.length; i += 2) {
+    out.push({ handle: String(rows[i]), latestMs: Number(rows[i + 1]) });
+  }
+  return out;
+}

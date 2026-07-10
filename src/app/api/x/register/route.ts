@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchTxArchive } from "@/lib/whatsonchain";
-import { appendXTxid, setXTxids } from "@/lib/xIndex";
+import { appendXTxid, setXTxids, stampHandle } from "@/lib/xIndex";
 import { archiveDigest, setTxDigest } from "@/lib/xDigest";
 import { getOwner, setOwner, claimOutcome, type XOwner } from "@/lib/xOwner";
 import { parseBindingAddress, registrationMessage, verifyClaim } from "@/lib/xBinding";
@@ -86,6 +86,7 @@ export async function POST(req: Request) {
       if (!(await setXTxids(handle, [txid]))) {
         return NextResponse.json({ ok: false, reason: "index-unavailable" }, { status: 503 });
       }
+      await stampHandle(handle, Date.now()); // a claim that resets the feed is also a registration
       if (!(await setOwner(handle, record))) {
         return NextResponse.json({ ok: false, reason: "index-unavailable" }, { status: 503 });
       }
@@ -98,6 +99,7 @@ export async function POST(req: Request) {
   if (!stored) {
     return NextResponse.json({ ok: false, reason: "index-unavailable" }, { status: 503 });
   }
+  await stampHandle(handle, Date.now());
   return NextResponse.json({ ok: true, handle, txid, verified: Boolean(owner || hasClaim), posts: archive.posts.length, url: `/x/${handle}` });
 }
 

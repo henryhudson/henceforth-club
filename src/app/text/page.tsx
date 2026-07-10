@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { getArchivePage, PAGE_SIZE } from "@/lib/xArchiveCache";
+import { listHandles } from "@/lib/xIndex";
 import ProfileView from "./_components/ProfileView";
 import ArchiveDropZone from "./_components/ArchiveDropZone";
+import DirectoryRow from "./_components/DirectoryRow";
 import Proof from "./_components/Proof";
 import { WITNESS_HANDLE } from "./witness";
 
@@ -15,6 +18,7 @@ export const metadata: Metadata = {
 
 export default async function XPage() {
   const witness = await getArchivePage(WITNESS_HANDLE, 0, PAGE_SIZE);
+  const handles = await listHandles(50);
 
   return (
     // A <div>, not a <main>: the root layout already provides the single <main>
@@ -79,6 +83,42 @@ export default async function XPage() {
           Henceforth, &pound;9.99
         </a>
       </p>
+
+      {/* The gateway — the app pointer above archives today; this is the web
+          path arriving in a later task */}
+      <header className="mx-auto max-w-2xl px-6 pb-10 text-center">
+        <p className="text-sm text-muted">
+          <a
+            className="text-accent hover:underline"
+            href="https://apps.apple.com/app/henceforth/id1602896145"
+          >
+            Archive with the app
+          </a>
+          {" · "}
+          <Link className="text-accent hover:underline" href="/text/archive">
+            Archive yours &rarr;
+          </Link>
+        </p>
+        <p className="mt-2 text-xs text-muted">
+          Everything below is read from Bitcoin; this page holds pointers, never the text.
+        </p>
+      </header>
+
+      {/* The directory — who has uploaded, stamped by the registration gate */}
+      <section className="mx-auto max-w-2xl px-6 pb-20">
+        <h2 className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
+          Who has archived
+        </h2>
+        {handles.length > 0 ? (
+          <div className="mt-4 divide-y divide-card-border rounded-2xl border border-card-border bg-card-bg">
+            {handles.map(({ handle, latestMs }) => (
+              <DirectoryRow key={handle} handle={handle} latestMs={latestMs} />
+            ))}
+          </div>
+        ) : (
+          <p className="mt-4 text-sm text-muted">Nobody has registered yet. Be first.</p>
+        )}
+      </section>
     </div>
   );
 }

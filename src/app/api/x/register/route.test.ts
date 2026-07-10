@@ -3,7 +3,7 @@ import { BSM, PrivateKey, Utils } from "@bsv/sdk";
 import { registrationMessage } from "@/lib/xBinding";
 
 // In-memory fakes for the input/output boundaries.
-const store = { archives: new Map(), owners: new Map(), lists: new Map() };
+const store = { archives: new Map(), owners: new Map(), lists: new Map(), handles: new Map() };
 
 vi.mock("@/lib/whatsonchain", () => ({
   fetchTxArchive: async (txid: string) => store.archives.get(txid) ?? null,
@@ -13,6 +13,7 @@ vi.mock("@/lib/xIndex", () => ({
   getXTxids: async (h: string) => store.lists.get(h.toLowerCase()) ?? [],
   appendXTxid: async (h: string, t: string) => { const k = h.toLowerCase(); store.lists.set(k, [...(store.lists.get(k) ?? []), t]); return true; },
   setXTxids: async (h: string, t: string[]) => { store.lists.set(h.toLowerCase(), t); return true; },
+  stampHandle: async (h: string, atMs: number) => { store.handles.set(h.toLowerCase(), atMs); return true; },
 }));
 vi.mock("@/lib/xOwner", async (orig) => ({
   ...(await orig()),
@@ -40,7 +41,7 @@ function claimFor(handle: string, txid: string) {
 }
 const post = (body: unknown) => POST(new Request("http://x/api/x/register", { method: "POST", body: JSON.stringify(body) }));
 
-beforeEach(() => { store.archives.clear(); store.owners.clear(); store.lists.clear(); });
+beforeEach(() => { store.archives.clear(); store.owners.clear(); store.lists.clear(); store.handles.clear(); });
 
 describe("POST /api/x/register", () => {
   it("still accepts an unsigned registration for an unclaimed handle (backward compatible)", async () => {
@@ -49,6 +50,7 @@ describe("POST /api/x/register", () => {
     expect(res.status).toBe(200);
     expect(store.lists.get(HANDLE)).toEqual([TXID]);
     expect(store.owners.get(HANDLE)).toBeUndefined(); // no owner, no tick
+    expect(store.handles.has(HANDLE)).toBe(true); // stamped into the public directory
   });
 
   it("establishes ownership and RESETS the feed when a valid claim arrives", async () => {
@@ -59,13 +61,15 @@ describe("POST /api/x/register", () => {
     expect(res.status).toBe(200);
     expect(store.lists.get(HANDLE)).toEqual([TXID]); // reset — stranger-txid dropped
     expect((store.owners.get(HANDLE) as { address: string }).address).toBe(c.address);
+    expect(store.handles.has(HANDLE)).toBe(true); // a claim that resets the feed is also a registration
   });
 
-  it("rejects an unsigned registration once the handle is claimed", async () => {
+  it("rejects an unsigned registration once the handle is claimed, leaving the directory untouched", async () => {
     store.owners.set(HANDLE, { address: "1OWNER", pubkey: "x", boundAt: 1, bindingTxid: TXID, bindingPostId: "1" });
     store.archives.set(TXID, archive(HANDLE));
     const res = await post({ handle: HANDLE, txid: TXID });
     expect(res.status).toBe(403);
+    expect(store.handles.has(HANDLE)).toBe(false);
   });
 
   it("rejects a claim whose signature is not by the committed address", async () => {
