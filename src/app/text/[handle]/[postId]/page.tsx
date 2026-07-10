@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getArchivePage, getArchivePost, PAGE_SIZE } from "@/lib/xArchiveCache";
 import { readScores } from "@/lib/xVotes";
+import { DEFAULT_WINDOW } from "@/lib/xScore";
 import PostEntry from "../../_components/PostEntry";
 import { buildThreadContext } from "../../_components/threadContext";
 
@@ -31,7 +32,7 @@ export default async function PostPage(
     getArchivePost(handle, postId),
     getArchivePage(handle, 0, 0),
     getArchivePage(handle, 0, PAGE_SIZE),
-    readScores(handle),
+    readScores(handle, DEFAULT_WINDOW),
   ]);
   if (!post || !page) notFound();
 

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getArchivePage, PAGE_SIZE } from "@/lib/xArchiveCache";
 import { getOwner } from "@/lib/xOwner";
 import { readScores } from "@/lib/xVotes";
+import { DEFAULT_WINDOW } from "@/lib/xScore";
 import ProfilePage from "../_components/ProfilePage";
 
 export async function generateMetadata(
@@ -38,7 +39,7 @@ export default async function HandlePage(
     );
   }
 
-  const [owner, scores] = await Promise.all([getOwner(handle), readScores(handle)]);
+  const [owner, scores] = await Promise.all([getOwner(handle), readScores(handle, DEFAULT_WINDOW)]);
 
   return (
     <ProfilePage

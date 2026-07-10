@@ -5,6 +5,7 @@ import { fetchTxArchiveWithTime } from "@/lib/whatsonchain";
 import { countPhotos } from "@/lib/xArchiveCache";
 import { getOwner } from "@/lib/xOwner";
 import { readScores } from "@/lib/xVotes";
+import { DEFAULT_WINDOW } from "@/lib/xScore";
 import { dedupePosts } from "../../parseArchive";
 import ProfilePage from "../../_components/ProfilePage";
 
@@ -32,7 +33,7 @@ export default async function TxPage(
   const photoCount = countPhotos(dedupePosts(archive.posts));
   const [owner, scores] = await Promise.all([
     getOwner(archive.profile.handle),
-    readScores(archive.profile.handle),
+    readScores(archive.profile.handle, DEFAULT_WINDOW),
   ]);
   return (
     <ProfilePage

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getArchivePage, PAGE_SIZE } from "@/lib/xArchiveCache";
 import { listHandles } from "@/lib/xIndex";
 import { readScores } from "@/lib/xVotes";
+import { DEFAULT_WINDOW } from "@/lib/xScore";
 import ProfileView from "./_components/ProfileView";
 import ArchiveDropZone from "./_components/ArchiveDropZone";
 import DirectoryRow from "./_components/DirectoryRow";
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
 export default async function XPage() {
   const witness = await getArchivePage(WITNESS_HANDLE, 0, PAGE_SIZE);
   const handles = await listHandles(50);
-  const witnessScores = await readScores(WITNESS_HANDLE);
+  const witnessScores = await readScores(WITNESS_HANDLE, DEFAULT_WINDOW);
 
   return (
     // A <div>, not a <main>: the root layout already provides the single <main>

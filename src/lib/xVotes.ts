@@ -1,20 +1,20 @@
 import type { Redis } from "@upstash/redis";
 import { dateKey, getRedis } from "./redis";
-import { scoreEntries, type VoteLedgerEntry } from "./xScore";
+import { foldScores, windowStartDay, DEFAULT_WINDOW, type ScoreWindow, type VoteLedgerEntry } from "./xScore";
 
 // The Redis edge of the paid-vote model — thin on purpose; all scoring logic
-// lives in xScore.ts. Three keys per the design:
+// lives in xScore.ts. Two keys per the design:
 //
 //   x:ledger:<handle>   append-only vote ledger, oldest first
 //   x:vote:tx:<txid>    set-if-absent gate: a funding transaction counts once
-//   x:score:<handle>    sorted set, only ever a CACHE of the ledger fold
 //
-// The cache is rebuilt from the full ledger — a correction (a double-spent
-// funding transaction struck from the ledger, a tuning change) is a replay,
-// never a patch to a cached score. Null-Redis safe like xIndex.ts.
+// Windows shift daily, so a precomputed score cache would go stale between
+// votes. readScores folds the ledger on read instead — always correct, cheap
+// at current volume — so a correction (a double-spent funding transaction
+// struck from the ledger) is a replay, never a patch. Null-Redis safe like
+// xIndex.ts.
 
 const ledgerKey = (handle: string) => `x:ledger:${handle.toLowerCase()}`;
-const scoreKey = (handle: string) => `x:score:${handle.toLowerCase()}`;
 const voteTxKey = (txid: string) => `x:vote:tx:${txid}`;
 const foundingKey = (handle: string, postId: string) =>
   `x:vote:founding:${handle.toLowerCase()}:${postId}`;
@@ -36,12 +36,12 @@ export async function readVoteLedger(
 }
 
 /**
- * Append a verified vote to the handle's ledger and bring the score cache up
- * to date with the fold. The `x:vote:tx:<txid>` set-if-absent gate makes a
- * funding transaction count exactly once, globally — a replayed txid is a
- * duplicate, not a second vote. The gate is claimed before the append: if the
- * append then fails the vote is missed (and healed by the daily reconcile),
- * which on a money path beats the reverse order's risk of counting twice.
+ * Append a verified vote to the handle's ledger. The `x:vote:tx:<txid>`
+ * set-if-absent gate makes a funding transaction count exactly once,
+ * globally — a replayed txid is a duplicate, not a second vote. The gate is
+ * claimed before the append: if the append then fails the vote is missed
+ * (and healed by the daily reconcile), which on a money path beats the
+ * reverse order's risk of counting twice.
  */
 export async function appendVote(
   handle: string,
@@ -53,7 +53,6 @@ export async function appendVote(
   const claimed = await redis.set(voteTxKey(entry.txid), "1", { nx: true });
   if (claimed === null) return "duplicate";
   await redis.rpush(ledgerKey(handle), entry);
-  await rebuildScoreCache(handle, asOfDay, redis);
   return "recorded";
 }
 
@@ -76,41 +75,18 @@ export async function appendFoundingVote(
   return appendVote(handle, entry, asOfDay, redis); // reuses the txid gate + append
 }
 
-/** The earned-sats score for every voted post of a handle, read from the
- * cache: a map of post id → sats. Sats can be negative when down-votes outweigh
- * up-votes — the fold is a signed sum. Empty when nobody has voted, or when
- * Redis isn't configured. Null-Redis safe like the rest of this module. */
+/** The earned-sats score for every voted post of a handle within the chosen
+ * window, folded from the ledger as of `asOfDay`: a map of post id → sats.
+ * Sats can be negative when down-votes outweigh up-votes — the fold is a
+ * signed sum. Empty when nobody has voted, or when Redis isn't configured.
+ * Null-Redis safe like the rest of this module. */
 export async function readScores(
   handle: string,
+  window: ScoreWindow = DEFAULT_WINDOW,
+  asOfDay: string = dateKey(),
   redis: Redis | null = getRedis(),
 ): Promise<Record<string, number>> {
   if (!redis) return {};
-  const flat = await redis.zrange<Array<string | number>>(scoreKey(handle), 0, -1, {
-    withScores: true,
-  });
-  const out: Record<string, number> = {};
-  for (let i = 0; i + 1 < flat.length; i += 2) {
-    out[String(flat[i])] = Number(flat[i + 1]);
-  }
-  return out;
-}
-
-/** Rebuild `x:score:<handle>` from the full ledger — the correction path is
- * replay, never patch: the old set is dropped and the fold's entries written
- * in its place, so a struck ledger entry's influence vanishes entirely.
- * False when Redis isn't configured. */
-export async function rebuildScoreCache(
-  handle: string,
-  asOfDay: string = dateKey(),
-  redis: Redis | null = getRedis(),
-): Promise<boolean> {
-  if (!redis) return false;
   const ledger = await readVoteLedger(handle, redis);
-  const entries = scoreEntries(ledger, asOfDay);
-  await redis.del(scoreKey(handle));
-  if (entries.length > 0) {
-    const [first, ...rest] = entries;
-    await redis.zadd(scoreKey(handle), first, ...rest);
-  }
-  return true;
+  return foldScores(ledger, asOfDay, windowStartDay(window, asOfDay));
 }
