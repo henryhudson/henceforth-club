@@ -159,7 +159,12 @@ export default function ArchiveFlow() {
     );
   }
 
-  const view = statusCopy({ state: status.state, handle: handle ?? "", failureReason: status.failureReason });
+  const view = statusCopy({
+    state: status.state,
+    handle: handle ?? "",
+    failureReason: status.failureReason,
+    sweepTxid: status.sweepTxid,
+  });
   const readyToPay = canRequestPayment(permanenceChecked, ownAccountChecked);
 
   return (

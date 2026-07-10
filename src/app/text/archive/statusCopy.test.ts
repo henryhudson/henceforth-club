@@ -42,17 +42,25 @@ describe("statusCopy", () => {
     expect(view.body).toMatch(/before a payment address/i);
   });
 
-  it("swept with a real failure reason — a refund happened, states why", () => {
-    const view = statusCopy({ state: "swept", handle: "henry", failureReason: "broadcast rejected" });
+  it("swept with a sweepTxid — a refund transaction actually broadcast, states why", () => {
+    const view = statusCopy({ state: "swept", handle: "henry", failureReason: "broadcast rejected", sweepTxid: "abc123" });
     expect(view.heading).toBe("Payment returned");
+    expect(view.body).toMatch(/sent back/i);
     expect(view.body).toContain("broadcast rejected");
   });
 
-  it("swept after a dust residue — honest that no refund was possible, never claims one was sent", () => {
-    const view = statusCopy({ state: "swept", handle: "henry", failureReason: "dust" });
+  it("swept with a sweepTxid and no failure reason — still honest, no reason to invent", () => {
+    const view = statusCopy({ state: "swept", handle: "henry", sweepTxid: "abc123" });
+    expect(view.heading).toBe("Payment returned");
+    expect(view.body).toMatch(/sent back/i);
+    expect(view.body).not.toContain("undefined");
+  });
+
+  it("swept after a dust residue — real shape is failureReason \"underfunded\" with NO sweepTxid (the worker resolves dust straight to swept, skipping sweep-broadcast); honest that no refund was possible, never claims one was sent", () => {
+    const view = statusCopy({ state: "swept", handle: "henry", failureReason: "underfunded" });
     expect(view.body).not.toMatch(/sent back/i);
-    expect(view.body).toMatch(/below the miner fee/i);
-    expect(view.body).toMatch(/no refund transaction was possible/i);
+    expect(view.body).toMatch(/no refund transaction was made/i);
+    expect(view.body).toMatch(/nothing refundable remained/i);
   });
 
   it("swept with no failure reason at all — the quote simply expired unpaid", () => {

@@ -4,14 +4,18 @@
 // (the switch below is exhaustive over every JobState).
 //
 // "sweeping" and "swept" additionally read failureReason, so a refund's
-// cause is never hidden from the visitor whose money it is. "swept" carries
-// four honest shapes: the quote expired before any address was ever issued
-// (failureReason "expired-before-key"), a residue too small to refund
-// (failureReason "dust" — no refund transaction was possible, so it must not
-// claim one was sent), a payment returned after a real failure (any other
-// failureReason), or the quote simply expired unpaid (no failureReason at all
-// — nothing was ever charged, so nothing needed returning, but the job still
-// crosses this terminal state).
+// cause is never hidden from the visitor whose money it is. "swept" branches
+// on sweepTxid, not on failureReason — failureReason only says why a job
+// entered sweeping, never whether money actually moved. sweepTxid is written
+// once, by the sweep-broadcast transition alone (see jobs.ts); sweep-confirmed
+// never sets it. A swept job WITHOUT a sweepTxid never had a refund
+// transaction broadcast: either the quote expired before any payment address
+// was ever issued (failureReason "expired-before-key"), the quote expired
+// unpaid after an address was issued (no failureReason at all), or the
+// residue left after a failure was too small to build a broadcastable refund
+// — the worker resolves that dust case straight to swept via sweep-confirmed,
+// skipping sweep-broadcast entirely (scripts/xtext-worker/worker.mjs,
+// sweep.mjs). A swept job WITH a sweepTxid genuinely sent the payment back.
 
 import type { JobState } from "@/lib/textJob/jobs";
 
@@ -20,7 +24,12 @@ export type StatusView = {
   body: string;
 };
 
-export function statusCopy(job: { state: JobState; handle: string; failureReason?: string }): StatusView {
+export function statusCopy(job: {
+  state: JobState;
+  handle: string;
+  failureReason?: string;
+  sweepTxid?: string;
+}): StatusView {
   switch (job.state) {
     case "quoted":
       return {
@@ -55,25 +64,28 @@ export function statusCopy(job: { state: JobState; handle: string; failureReason
           : "Your payment is being sent back automatically.",
       };
     case "swept":
+      if (job.sweepTxid) {
+        return {
+          heading: "Payment returned",
+          body: job.failureReason
+            ? `Your payment has been sent back. Reason: ${job.failureReason}.`
+            : "Your payment has been sent back.",
+        };
+      }
       if (job.failureReason === "expired-before-key") {
         return {
           heading: "Quote expired",
           body: "The quote expired before a payment address was ever issued. Nothing was charged.",
         };
       }
-      if (job.failureReason === "dust") {
-        // A dust residue cannot build a broadcastable refund — claiming the
-        // payment was "sent back" would be a lie, so this branch says the
-        // honest thing instead.
+      if (job.failureReason) {
+        // No sweepTxid means no refund transaction ever broadcast — the dust
+        // path (a residue too small to build a broadcastable output) resolves
+        // straight to swept without one. Say so honestly rather than quoting
+        // a failure reason that implies a refund which never happened.
         return {
           heading: "No refund was possible",
-          body: "The remaining amount was below the miner fee, so no refund transaction was possible.",
-        };
-      }
-      if (job.failureReason) {
-        return {
-          heading: "Payment returned",
-          body: `Your payment has been sent back. Reason: ${job.failureReason}.`,
+          body: "No refund transaction was made because nothing refundable remained.",
         };
       }
       return {
