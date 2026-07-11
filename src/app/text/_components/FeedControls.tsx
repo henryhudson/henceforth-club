@@ -27,12 +27,12 @@ const WINDOWS: ReadonlyArray<{ value: ScoreWindow; label: string }> = [
  * each row through the same `PostEntry` the plain feed used to call
  * directly, so the row markup is never duplicated.
  *
- * `scoresByWindow` is the full per-window table (only the live witness page
- * has it yet); `scores` is the single flat table older callers already pass.
- * Best mode ranks by `scoresByWindow[selectedWindow]` when available, else
- * falls back to `scores` — so a caller not yet wired to the full window
- * fetch still gets a working (if window-invariant) Best tab rather than a
- * disabled one.
+ * `scoresByWindow` is the full per-window table (only the live witness feed
+ * computes it); `scores` is the single flat table other callers pass. Best
+ * mode ranks by `scoresByWindow[selectedWindow]` when present, else falls back
+ * to `scores`. The window buttons only render when `scoresByWindow` is present
+ * — a caller with a single score table gets a working Best tab but NOT five
+ * buttons that would all show the same order (a no-op that misleads).
  *
  * `showParent`/`threads` stay index-aligned to `posts`' given (unsorted)
  * order — the same shape `ProfileView` already computes — and are looked up
@@ -94,7 +94,7 @@ export default function FeedControls({
           Best
         </button>
       </div>
-      {mode === "best" && (
+      {mode === "best" && scoresByWindow && (
         <div role="group" aria-label="Ranking window" className="mb-4 flex flex-wrap gap-2 font-mono text-xs">
           {WINDOWS.map(({ value, label }) => {
             const active = value === selectedWindow;
