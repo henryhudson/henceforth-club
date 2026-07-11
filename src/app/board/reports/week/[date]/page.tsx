@@ -96,11 +96,11 @@ export default async function WeeklyEdition({ params }: { params: Promise<{ date
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               <div>
                 <h3 className="text-lg font-bold text-accent-green">Wins</h3>
-                <ul className="mt-2 list-disc pl-5 text-sm text-muted">{w.retro.wins.map((s, i) => <li key={i}>{s}</li>)}</ul>
+                <ul className="mt-2 list-disc pl-5 text-sm text-muted">{w.retro.wins.map((s, i) => <li key={i}>{typeof s === "string" ? s : <><span className="font-semibold text-foreground">{s.title}</span> — {s.detail}</>}</li>)}</ul>
               </div>
               <div>
                 <h3 className="text-lg font-bold text-accent-orange">Misses</h3>
-                <ul className="mt-2 list-disc pl-5 text-sm text-muted">{w.retro.misses.map((s, i) => <li key={i}>{s}</li>)}</ul>
+                <ul className="mt-2 list-disc pl-5 text-sm text-muted">{w.retro.misses.map((s, i) => <li key={i}>{typeof s === "string" ? s : <><span className="font-semibold text-foreground">{s.title}</span> — {s.detail}</>}</li>)}</ul>
               </div>
             </div>
           )}

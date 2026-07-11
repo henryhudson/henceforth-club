@@ -117,7 +117,7 @@ export type WeekReport = {
     weekPlan: PlanDay[];
     appState: AppState[];
     stateOfUnion: string;
-    wins: string[]; misses: string[]; nextWeek: NextItem[];
+    wins: (string | NextItem)[]; misses: (string | NextItem)[]; nextWeek: NextItem[];
   };
   sales: { perApp: AppSales[]; drivers: { app: string; lever: string; rationale: string; action: string }[]; note?: string; source?: string };
 };
