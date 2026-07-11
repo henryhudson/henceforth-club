@@ -20,7 +20,7 @@ const MAIN = path.join(HOME, "Programming/Main");
 // repo docs dir -> board key (the per-app accent the index uses) + display name
 const SOURCES = [
   { dir: path.join(MAIN, "henceforth-club/docs/superpowers"), repo: "site", name: "henceforth.club" },
-  { dir: path.join(MAIN, "FORTHapp/docs/superpowers"), repo: "henceforth", name: "Henceforth" },
+  { dir: path.join(MAIN, "Henceforth/docs/superpowers"), repo: "henceforth", name: "Henceforth" },
   { dir: path.join(MAIN, "Hansard/docs/superpowers"), repo: "hansard", name: "Hansard" },
   { dir: path.join(MAIN, "DaDeckOfCards/docs/superpowers"), repo: "deck", name: "DaDeckOfCards" },
 ];

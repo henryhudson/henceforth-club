@@ -16,7 +16,7 @@ import { LockingScript, OP, P2PKH, SatoshisPerKilobyte, Transaction, Utils } fro
 const BROADCAST_RETRIES = 3;
 
 // ARC submit endpoints and the failover order, mirroring
-// FORTHapp .../Bitcoin/ARC/ARCService.swift: GorillaPool needs no key, TAAL
+// Henceforth .../Bitcoin/ARC/ARCService.swift: GorillaPool needs no key, TAAL
 // needs a Bearer token. Both take the raw hex as a text/plain body and answer
 // the same wire shape (txid, txStatus, status).
 const GORILLAPOOL_ARC = "https://arc.gorillapool.io/v1";
