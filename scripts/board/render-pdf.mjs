@@ -17,6 +17,9 @@
 import puppeteer from "puppeteer-core";
 import { createCipheriv, createHmac, randomBytes } from "node:crypto";
 import { writeFile } from "node:fs/promises";
+import { exec } from "node:child_process";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { PDFDocument } from "pdf-lib";
 import { Redis } from "@upstash/redis";
 import { LockingScript, OP, P2PKH, PrivateKey, SatoshisPerKilobyte, Transaction, Utils } from "@bsv/sdk";
@@ -210,11 +213,18 @@ async function render(browser, kind, date, outPath, prevTx, dryRun) {
     throw new Error(`${kind} ${date}: ${pages} pages exceeds the budget of ${BUDGET[kind]} — tighten the print stylesheet, do not skip`);
   }
 
+  // Always write a local copy and open it in the default viewer, so the edition
+  // is seen as a PDF the moment it's rendered — before any inscription/upload
+  // (Henry's standing preference). `open` is fire-and-forget; it never blocks
+  // or fails the render.
+  const localPath = outPath ?? join(tmpdir(), `board-${kind}-${date}.pdf`);
+  await writeFile(localPath, pdf);
+  exec(`open ${JSON.stringify(localPath)}`);
   if (outPath) {
-    await writeFile(outPath, pdf);
-    console.log(`wrote ${outPath} (${pages} page${pages === 1 ? "" : "s"}, ${pdf.length} bytes) — inscription skipped`);
+    console.log(`wrote ${outPath} (${pages} page${pages === 1 ? "" : "s"}, ${pdf.length} bytes) — opened; inscription skipped`);
     return null;
   }
+  console.log(`wrote + opened ${localPath} (${pages} page${pages === 1 ? "" : "s"}) — inscribing…`);
   return inscribe(kind, date, pdf, prevTx, dryRun);
 }
 
