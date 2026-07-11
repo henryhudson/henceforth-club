@@ -16,13 +16,32 @@ export function txFeeSatsFromJson(tx: WocTx): number | null {
   return fee >= 0 ? fee : null;
 }
 
-/** Fetch a transaction's miner fee in sats; null on any read/shape failure. */
+type WocVin = { txid?: string; vout?: number; coinbase?: string };
+type WocTxFull = { vin?: WocVin[]; vout?: Array<{ value?: number }> };
+
+/** A transaction's miner fee in sats. WhatsOnChain's tx endpoint omits input
+ * values, so each input's value is resolved from its prevout (the referenced
+ * output of `vin.txid`). Fail-open (null) on any unresolvable input or read
+ * error — a fee is never guessed. */
 export async function fetchTxFeeSats(txid: string, fetchFn: typeof fetch = fetch): Promise<number | null> {
   try {
     const res = await fetchFn(`${WOC}/tx/hash/${txid}`, { next: { revalidate: 86400 } });
     if (!res.ok) return null;
-    return txFeeSatsFromJson((await res.json()) as WocTx);
-  } catch { return null; }
+    const tx = (await res.json()) as WocTxFull;
+    const inputs: Array<{ value?: number }> = [];
+    for (const vin of tx.vin ?? []) {
+      if (vin.txid == null || vin.vout == null) return null;          // coinbase / unresolvable
+      const pres = await fetchFn(`${WOC}/tx/hash/${vin.txid}`, { next: { revalidate: 86400 } });
+      if (!pres.ok) return null;
+      const ptx = (await pres.json()) as WocTxFull;
+      const prevout = ptx.vout?.[vin.vout];
+      if (!prevout || typeof prevout.value !== "number") return null;
+      inputs.push({ value: prevout.value });
+    }
+    return txFeeSatsFromJson({ vin: inputs, vout: tx.vout });         // unchanged pure fee math
+  } catch {
+    return null;
+  }
 }
 
 /**

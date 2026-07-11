@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { fetchTxArchive, fetchTxArchiveWithTime, txFeeSatsFromJson } from "@/lib/whatsonchain";
+import {
+  fetchTxArchive,
+  fetchTxArchiveWithTime,
+  fetchTxFeeSats,
+  txFeeSatsFromJson,
+} from "@/lib/whatsonchain";
 
 function opReturnScript(...datas: string[]): string {
   let s = "006a";
@@ -197,5 +202,50 @@ describe("txFeeSatsFromJson", () => {
 
   it("returns null when an input lacks a value (fail-open)", () => {
     expect(txFeeSatsFromJson({ vin: [{}], vout: [{ value: 0.001 }] })).toBeNull();
+  });
+});
+
+const ok = (body: unknown) => ({ ok: true, json: async () => body }) as unknown as Response;
+const notOk = () => ({ ok: false, json: async () => ({}) }) as unknown as Response;
+
+describe("fetchTxFeeSats", () => {
+  it("resolves each input's prevout value and computes the miner fee", async () => {
+    const fake = (async (url: string) => {
+      if (String(url).endsWith("/tx/hash/T")) return ok({ vin: [{ txid: "P", vout: 0 }], vout: [{ value: 0.0009 }] });
+      if (String(url).endsWith("/tx/hash/P")) return ok({ vout: [{ value: 0.001 }] }); // input worth 0.001 BSV
+      return notOk();
+    }) as unknown as typeof fetch;
+    // 0.001 in - 0.0009 out = 0.0001 BSV = 10_000 sats
+    expect(await fetchTxFeeSats("T", fake)).toBe(10_000);
+  });
+
+  it("sums multiple inputs' prevout values", async () => {
+    const fake = (async (url: string) => {
+      if (String(url).endsWith("/tx/hash/T")) return ok({ vin: [{ txid: "A", vout: 1 }, { txid: "B", vout: 0 }], vout: [{ value: 0.0015 }] });
+      if (String(url).endsWith("/tx/hash/A")) return ok({ vout: [{ value: 0.0005 }, { value: 0.001 }] }); // uses vout[1] = 0.001
+      if (String(url).endsWith("/tx/hash/B")) return ok({ vout: [{ value: 0.0006 }] });                  // uses vout[0] = 0.0006
+      return notOk();
+    }) as unknown as typeof fetch;
+    // (0.001 + 0.0006) in - 0.0015 out = 0.0001 BSV = 10_000 sats
+    expect(await fetchTxFeeSats("T", fake)).toBe(10_000);
+  });
+
+  it("fails open (null) when a prevout can't be resolved", async () => {
+    const coinbase = (async (url: string) =>
+      String(url).endsWith("/tx/hash/T") ? ok({ vin: [{ coinbase: "ab", vout: 0 }], vout: [{ value: 1 }] }) : notOk()
+    ) as unknown as typeof fetch;
+    expect(await fetchTxFeeSats("T", coinbase)).toBeNull();       // no vin.txid
+
+    const badPrevout = (async (url: string) => {
+      if (String(url).endsWith("/tx/hash/T")) return ok({ vin: [{ txid: "P", vout: 5 }], vout: [{ value: 1 }] });
+      if (String(url).endsWith("/tx/hash/P")) return ok({ vout: [{ value: 0.001 }] });                    // no vout[5]
+      return notOk();
+    }) as unknown as typeof fetch;
+    expect(await fetchTxFeeSats("T", badPrevout)).toBeNull();     // referenced vout missing
+
+    const prevoutFetchFails = (async (url: string) =>
+      String(url).endsWith("/tx/hash/T") ? ok({ vin: [{ txid: "P", vout: 0 }], vout: [{ value: 1 }] }) : notOk()
+    ) as unknown as typeof fetch;
+    expect(await fetchTxFeeSats("T", prevoutFetchFails)).toBeNull(); // prevout fetch non-ok
   });
 });
