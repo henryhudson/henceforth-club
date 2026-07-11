@@ -4,7 +4,7 @@
 
 import { readFile, readdir, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
-import { windowDates, buildRetro, weekStripDates, buildWeekStrip, weekPlanSkeleton } from "./whh-aggregate.mjs";
+import { windowDates, buildRetro, weekStripDates, buildWeekStrip, weekPlanSkeleton, currentWeekDates, addDays } from "./whh-aggregate.mjs";
 import { mirrorWeekToBoardViewer } from "./local-mirror.mjs";
 import { pullSales } from "./asc-client.mjs";
 import { pullAnalyticsDownloads } from "./asc-analytics.mjs";
@@ -20,12 +20,19 @@ const APP_IDS = { henceforth: "1602896145", deck: "1520654142", hansard: "676203
 /** Pure: assemble a WeekReport from already-loaded inputs. */
 export function assemble({ endDate, days = 7, reports, board, sales, generatedAt, weekStrip, appState }) {
   const dates = windowDates(endDate, days);
+  // The retro reviews the trailing `days` window ending `endDate`. The plan is
+  // the upcoming Sun..Sat week: anchoring on `endDate + 1` rolls a Saturday run
+  // (the last day of the review week) into next week, while Sunday/mid-week runs
+  // plan the week they fall in. weekOf/weekEnd label THIS plan week — not the
+  // backward review window — so the board's week section and its header agree.
+  const planAnchor = addDays(endDate, 1);
+  const planWeek = currentWeekDates(planAnchor);
   const retro = buildRetro({ reports, board, windowStart: dates[0] });
   retro.weekStrip = weekStrip ?? [];
-  retro.weekPlan = weekPlanSkeleton(endDate);
+  retro.weekPlan = weekPlanSkeleton(planAnchor);
   retro.appState = appState ?? [];
   return {
-    weekOf: dates[0], weekEnd: endDate, generatedAt,
+    weekOf: planWeek[0], weekEnd: planWeek[6], generatedAt,
     daysCovered: reports.map((r) => r.date),
     retro,
     sales: sales ?? { window: null, perApp: [], drivers: [], note: "App Store Connect not configured — sales half skipped." },
@@ -83,7 +90,9 @@ export async function run({ endDate, days = 7 }) {
   const appState = await pullAppState({ apps, sales });
   const week = assemble({ endDate, days, reports, board, sales, weekStrip, appState, generatedAt: new Date().toISOString() });
   await mkdir(WEEKS_DIR, { recursive: true });
-  await writeFile(path.join(WEEKS_DIR, `${endDate}.json`), JSON.stringify(week, null, 2) + "\n");
+  // Keyed by the plan week's Sunday (weekOf), so the filename, the Upstash key,
+  // and the week the plan covers all agree regardless of which day /whh ran.
+  await writeFile(path.join(WEEKS_DIR, `${week.weekOf}.json`), JSON.stringify(week, null, 2) + "\n");
   await mirrorWeekToBoardViewer(week);
   return week;
 }
@@ -91,6 +100,6 @@ export async function run({ endDate, days = 7 }) {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const endDate = process.argv[2] ?? new Date().toISOString().slice(0, 10);
   run({ endDate })
-    .then((w) => console.log(`wrote content/board/weeks/${w.weekEnd}.json — ${w.daysCovered.length} review days${w.sales.note ? " (sales skipped)" : ""}`))
+    .then((w) => console.log(`wrote content/board/weeks/${w.weekOf}.json (week of ${w.weekOf} → ${w.weekEnd}) — ${w.daysCovered.length} review days${w.sales.note ? " (sales skipped)" : ""}`))
     .catch((e) => { console.error(e); process.exit(1); });
 }

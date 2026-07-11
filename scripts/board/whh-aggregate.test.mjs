@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   windowDates, parseSurvived, aggregateTotals, perApp, ratios,
   reflagSignature, reflagKey, recurringReflags, earliestDateIn, throughput, buildRetro,
-  weekStripDates, buildWeekStrip, currentWeekDates, weekPlanSkeleton,
+  weekStripDates, buildWeekStrip, currentWeekDates, weekPlanSkeleton, addDays,
 } from "./whh-aggregate.mjs";
 
 describe("windowDates", () => {
@@ -11,6 +11,14 @@ describe("windowDates", () => {
       "2026-06-23", "2026-06-24", "2026-06-25",
       "2026-06-26", "2026-06-27", "2026-06-28", "2026-06-29",
     ]);
+  });
+});
+
+describe("addDays", () => {
+  it("advances a date, rolling across month boundaries", () => {
+    expect(addDays("2026-07-11", 1)).toBe("2026-07-12");
+    expect(addDays("2026-06-30", 1)).toBe("2026-07-01");
+    expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
   });
 });
 

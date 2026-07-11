@@ -13,6 +13,13 @@ export function windowDates(endDate, days = 7) {
   return out;
 }
 
+/** `date` (YYYY-MM-DD) advanced by `n` days (UTC). */
+export function addDays(date, n) {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
 /** Parse a "n/m" survival string; tolerant of numbers and junk. */
 export function parseSurvived(value) {
   if (typeof value === "number") return { survived: value, total: value };
