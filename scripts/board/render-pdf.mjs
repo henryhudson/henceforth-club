@@ -17,7 +17,7 @@
 import puppeteer from "puppeteer-core";
 import { createCipheriv, createHmac, randomBytes } from "node:crypto";
 import { writeFile } from "node:fs/promises";
-import { exec } from "node:child_process";
+import { execSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PDFDocument } from "pdf-lib";
@@ -219,7 +219,10 @@ async function render(browser, kind, date, outPath, prevTx, dryRun) {
   // or fails the render.
   const localPath = outPath ?? join(tmpdir(), `board-${kind}-${date}.pdf`);
   await writeFile(localPath, pdf);
-  exec(`open ${JSON.stringify(localPath)}`);
+  // Blocking open so it launches before the process exits (a fire-and-forget
+  // child gets orphaned on exit and never surfaces the window); best-effort so
+  // a headless environment can't fail the render.
+  try { execSync(`open ${JSON.stringify(localPath)}`); } catch { /* open is best-effort */ }
   if (outPath) {
     console.log(`wrote ${outPath} (${pages} page${pages === 1 ? "" : "s"}, ${pdf.length} bytes) — opened; inscription skipped`);
     return null;
