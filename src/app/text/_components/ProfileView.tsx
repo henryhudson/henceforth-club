@@ -2,10 +2,9 @@ import type { ReactNode } from "react";
 import type { ScoreWindow } from "@/lib/xScore";
 import { dedupePosts, type XArchive } from "../parseArchive";
 import { Avatar, computeShowParent, formatDate, formatUnixSeconds } from "./PostCard";
-import PostEntry from "./PostEntry";
 import { buildThreadContext } from "./threadContext";
 import { buildPermanenceLine } from "./permanenceLine";
-import WindowToggle from "./WindowToggle";
+import FeedControls from "./FeedControls";
 
 /**
  * The header card and post feed for a profile. `postCount` is the archive's
@@ -38,11 +37,13 @@ export default function ProfileView({
   txCount?: number;
   firstInscribedAt?: number;
   txTimes?: Record<string, number>;
+  /** Single flat score table (one window) — what callers not yet wired to
+   * the full per-window fetch pass; `FeedControls`' Best mode falls back to
+   * this when `scoresByWindow` is absent. */
   scores?: Record<string, number>;
-  /** All five windows' score tables — when present, the feed renders the
-   * window toggle and orders by the selected window instead of archive
-   * order. Absent for callers not yet wired to Task 5 (still order by
-   * archive order using `scores` alone). */
+  /** All five windows' score tables. When present, Best mode ranks by
+   * whichever window is selected; when absent, Best falls back to `scores`
+   * (window-invariant but still real, rather than disabled). */
   scoresByWindow?: Record<ScoreWindow, Record<string, number>>;
   verified?: { bindingPostId: string };
 }) {
@@ -99,70 +100,25 @@ export default function ProfileView({
           <p className="mt-5 border-t border-card-border pt-4 font-mono text-xs text-muted">
             {permanenceLine}
           </p>
-          <ReadingTabs />
         </div>
       </div>
 
-      {/* Feed — a ledger: newest first, hairline rules between entries, each
+      {/* Feed — a ledger: ranked by committed sats by default (Latest/Best
+          tabs switch the order), hairline rules between entries, each
           opening in place to reveal its thread and on-chain record. */}
       <div className="mx-auto mt-8 max-w-[68ch] px-6">
-        <p className="ledger-label mb-1">
-          {scoresByWindow
-            ? "The ledger · ranked by committed sats · tap a post to open it"
-            : "The ledger · newest first · tap a post to open it"}
-        </p>
-        {scoresByWindow ? (
-          <WindowToggle
-            posts={posts}
-            showParent={showParent}
-            threads={threads}
-            txTimes={txTimes}
-            handle={profile.handle}
-            scoresByWindow={scoresByWindow}
-          />
-        ) : (
-          <div className="divide-y divide-card-border border-t border-card-border">
-            {posts.map((post, i) => (
-              <PostEntry
-                key={post.id}
-                post={post}
-                showParent={showParent[i]}
-                txTime={post.txid ? txTimes[post.txid] : undefined}
-                thread={threads[i]}
-                handle={profile.handle}
-                sats={scores[post.id]}
-              />
-            ))}
-          </div>
-        )}
+        <p className="ledger-label mb-1">The ledger · ranked by committed sats · tap a post to open it</p>
+        <FeedControls
+          posts={posts}
+          showParent={showParent}
+          threads={threads}
+          txTimes={txTimes}
+          handle={profile.handle}
+          scores={scores}
+          scoresByWindow={scoresByWindow}
+        />
         {footer}
       </div>
-    </div>
-  );
-}
-
-/** Latest / Best as a terminal-style tab strip. Best doesn't exist yet — it
- * arrives with paid votes in a later task — so it renders disabled rather
- * than wired to anything. */
-function ReadingTabs() {
-  return (
-    <div role="tablist" aria-label="Reading order" className="mt-5 flex gap-2 font-mono text-xs">
-      <span
-        role="tab"
-        aria-selected="true"
-        className="rounded-md border border-accent px-3 py-1.5 text-foreground"
-      >
-        Latest
-      </span>
-      <span
-        role="tab"
-        aria-selected="false"
-        aria-disabled="true"
-        title="arrives with paid votes"
-        className="cursor-not-allowed rounded-md border border-card-border px-3 py-1.5 text-muted/60"
-      >
-        Best
-      </span>
     </div>
   );
 }
