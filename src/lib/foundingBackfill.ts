@@ -19,7 +19,8 @@ export async function backfillFoundingVotes(
     if (!post.txid) { skipped++; continue; }
     const fee = await feeOf(post.txid);
     if (fee === null) { skipped++; continue; }            // fail-open, retry next run
-    const day = new Date(txTimes[post.txid] ?? Date.parse(dateKey())).toISOString().slice(0, 10);
+    const t = txTimes[post.txid];
+    const day = new Date(t != null ? t * 1000 : Date.now()).toISOString().slice(0, 10);
     const res = await appendFoundingVote(handle,
       { inscriptionTxid: post.txid, postId: post.id, uploadCostSats: fee, inscriptionDay: day }, dateKey(), redis);
     if (res === "recorded") recorded++;

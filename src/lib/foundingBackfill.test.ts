@@ -37,12 +37,12 @@ describe("backfillFoundingVotes", () => {
   it("appends one founding vote per post from its inscription fee, idempotently", async () => {
     const r = fakeRedis();
     const posts = [{ id: "p1", txid: "insc1" }];
-    const txTimes = { insc1: Date.parse("2026-07-01") };
+    const txTimes = { insc1: Math.floor(Date.parse("2026-07-08T00:00:00Z") / 1000) };
     const feeOf = async (txid: string) => (txid === "insc1" ? 1000 : null);
     const first = await backfillFoundingVotes("alice", posts, txTimes, { feeOf, redis: r.redis });
     const again = await backfillFoundingVotes("alice", posts, txTimes, { feeOf, redis: r.redis });
     expect(first).toEqual({ recorded: 1, duplicate: 0, skipped: 0 });
     expect(again).toEqual({ recorded: 0, duplicate: 1, skipped: 0 }); // idempotent
-    expect(await readScores("alice", "all", "2026-07-10", r.redis)).toEqual({ p1: 1000 });
+    expect(await readScores("alice", "week", "2026-07-10", r.redis)).toEqual({ p1: 1000 });
   });
 });
