@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getArchivePage, PAGE_SIZE } from "@/lib/xArchiveCache";
 import { listHandles } from "@/lib/xIndex";
 import { readScores } from "@/lib/xVotes";
-import { DEFAULT_WINDOW } from "@/lib/xScore";
+import { type ScoreWindow } from "@/lib/xScore";
 import ProfileView from "./_components/ProfileView";
 import ArchiveDropZone from "./_components/ArchiveDropZone";
 import DirectoryRow from "./_components/DirectoryRow";
@@ -21,7 +21,12 @@ export const metadata: Metadata = {
 export default async function XPage() {
   const witness = await getArchivePage(WITNESS_HANDLE, 0, PAGE_SIZE);
   const handles = await listHandles(50);
-  const witnessScores = await readScores(WITNESS_HANDLE, DEFAULT_WINDOW);
+  const windows: ScoreWindow[] = ["day", "week", "month", "year", "all"];
+  const scoreMaps = await Promise.all(windows.map((w) => readScores(WITNESS_HANDLE, w)));
+  const scoresByWindow = Object.fromEntries(windows.map((w, i) => [w, scoreMaps[i]])) as Record<
+    ScoreWindow,
+    Record<string, number>
+  >;
 
   return (
     // A <div>, not a <main>: the root layout already provides the single <main>
@@ -59,7 +64,7 @@ export default async function XPage() {
           photoCount={witness.photoCount}
           firstInscribedAt={witness.firstInscribedAt}
           txTimes={witness.txTimes}
-          scores={witnessScores}
+          scoresByWindow={scoresByWindow}
         />
       ) : (
         <p className="mx-auto max-w-2xl px-6 text-center text-muted">
