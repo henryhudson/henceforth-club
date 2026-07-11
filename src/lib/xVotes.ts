@@ -69,7 +69,8 @@ export async function appendFoundingVote(
   const claimedPost = await redis.set(foundingKey(handle, fv.postId), fv.inscriptionTxid, { nx: true });
   if (claimedPost === null) return "duplicate"; // this post already has a founding vote
   const entry: VoteLedgerEntry = {
-    txid: fv.inscriptionTxid, postId: fv.postId, dir: "up",
+    txid: `${fv.inscriptionTxid}:${fv.postId}`, // per-post unique: a shared inscription txid can't collide across posts
+    postId: fv.postId, dir: "up",
     sats: fv.uploadCostSats, day: fv.inscriptionDay,
   };
   return appendVote(handle, entry, asOfDay, redis); // reuses the txid gate + append

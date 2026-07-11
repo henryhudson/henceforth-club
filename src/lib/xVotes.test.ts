@@ -99,7 +99,7 @@ describe("appendFoundingVote", () => {
       { inscriptionTxid: "insc1", postId: "p1", uploadCostSats: 14_000_000, inscriptionDay: "2026-07-01" }, "2026-07-10", redis);
     expect(res).toBe("recorded");
     const ledger = await readVoteLedger("alice", redis);
-    expect(ledger).toEqual([{ txid: "insc1", postId: "p1", dir: "up", sats: 14_000_000, day: "2026-07-01" }]);
+    expect(ledger).toEqual([{ txid: "insc1:p1", postId: "p1", dir: "up", sats: 14_000_000, day: "2026-07-01" }]);
   });
 
   it("rejects a second founding vote for the same post, even with a new txid", async () => {
@@ -108,6 +108,15 @@ describe("appendFoundingVote", () => {
     const res = await appendFoundingVote("alice", { inscriptionTxid: "insc2", postId: "p1", uploadCostSats: 999, inscriptionDay: "2026-07-02" }, "2026-07-10", redis);
     expect(res).toBe("duplicate");
     expect((await readVoteLedger("alice", redis)).length).toBe(1);
+  });
+
+  it("records founding votes for two posts sharing one inscription txid (no txid-gate collision)", async () => {
+    const r = fakeRedis();
+    const a = await appendFoundingVote("alice", { inscriptionTxid: "T", postId: "p1", uploadCostSats: 100, inscriptionDay: "2026-07-08" }, "2026-07-10", r.redis);
+    const b = await appendFoundingVote("alice", { inscriptionTxid: "T", postId: "p2", uploadCostSats: 100, inscriptionDay: "2026-07-08" }, "2026-07-10", r.redis);
+    expect(a).toBe("recorded");
+    expect(b).toBe("recorded");                         // was "duplicate" before the fix
+    expect((await readVoteLedger("alice", r.redis)).length).toBe(2);
   });
 });
 

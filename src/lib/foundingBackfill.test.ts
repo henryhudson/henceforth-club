@@ -45,4 +45,16 @@ describe("backfillFoundingVotes", () => {
     expect(again).toEqual({ recorded: 0, duplicate: 1, skipped: 0 }); // idempotent
     expect(await readScores("alice", "week", "2026-07-10", r.redis)).toEqual({ p1: 1000 });
   });
+
+  it("splits a shared transaction's fee across its posts, one fee fetch per txid", async () => {
+    const r = fakeRedis();
+    const posts = [{ id: "p1", txid: "T" }, { id: "p2", txid: "T" }, { id: "p3", txid: "T" }];
+    const txTimes = { T: Math.floor(Date.parse("2026-07-08T00:00:00Z") / 1000) };
+    let calls = 0;
+    const feeOf = async (txid: string) => { calls++; return txid === "T" ? 900 : null; };
+    const res = await backfillFoundingVotes("alice", posts, txTimes, { feeOf, redis: r.redis });
+    expect(res).toEqual({ recorded: 3, duplicate: 0, skipped: 0 });
+    expect(calls).toBe(1);                              // one fetch per txid, not per post
+    expect(await readScores("alice", "week", "2026-07-10", r.redis)).toEqual({ p1: 300, p2: 300, p3: 300 }); // 900/3
+  });
 });
