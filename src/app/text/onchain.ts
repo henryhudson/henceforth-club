@@ -109,6 +109,45 @@ export function ordfsUrl(txid: string, vout: string): string {
   return `https://ordfs.network/${txid}_${vout}`;
 }
 
+/** Pure. The media kind a Content-Type denotes. The archive JSON records only
+ * vouts, so the inscription itself is the only source of truth for what a
+ * media reference IS — and ORDFS serves it with the right Content-Type. An
+ * unreadable or unknown type stays a photo: the previous behaviour, and an
+ * <img> that fails to load is a smaller wrong than a <video> that can't play. */
+export function mediaKind(contentType: string | null | undefined): "photo" | "video" {
+  return (contentType ?? "").toLowerCase().startsWith("video/") ? "video" : "photo";
+}
+
+/** Ask ORDFS what each media reference actually is, once, at cache-build time.
+ * A profile's media count is small and an archive's transaction set is
+ * immutable, so this runs only when the cache is rebuilt — never per reader.
+ * A failed HEAD falls back to photo rather than dropping the media. */
+export async function resolveMediaKinds(
+  archive: XArchive,
+  fetchFn: typeof fetch = fetch,
+): Promise<XArchive> {
+  const urls = [...new Set(archive.posts.flatMap((p) => (p.media ?? []).map((m) => m.url)))];
+  const kinds = new Map<string, "photo" | "video">();
+  await Promise.all(
+    urls.map(async (url) => {
+      try {
+        const res = await fetchFn(url, { method: "HEAD" });
+        kinds.set(url, mediaKind(res.headers.get("content-type")));
+      } catch {
+        kinds.set(url, "photo");
+      }
+    }),
+  );
+  return {
+    ...archive,
+    posts: archive.posts.map((p) =>
+      p.media
+        ? { ...p, media: p.media.map((m) => ({ ...m, type: kinds.get(m.url) ?? m.type })) }
+        : p,
+    ),
+  };
+}
+
 /** Map the lean on-chain archive to the shape the profile page renders. When a
  * `txid` is given, each post's media references (the ordinal vouts the app
  * recorded) resolve to ORDFS-backed photo items against that archive transaction. */

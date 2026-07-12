@@ -3,7 +3,7 @@ import type { Redis } from "@upstash/redis";
 import { getRedis } from "./redis";
 import { getXTxids } from "./xIndex";
 import { fetchTxArchiveWithTime as fetchTxArchiveDefault } from "./whatsonchain";
-import { stitchToXArchive, type SocialArchive } from "@/app/text/onchain";
+import { stitchToXArchive, resolveMediaKinds, type SocialArchive } from "@/app/text/onchain";
 import { dedupePosts, type XArchive, type XPost, type XProfile } from "@/app/text/parseArchive";
 
 // Reading a handle's whole archive used to mean stitching every archive
@@ -24,7 +24,8 @@ export const PAGE_SIZE = 30;
 // carry — a v1 (or version-less) cache is treated as stale even when its
 // txid set hash still matches, so it rebuilds instead of serving posts that
 // are missing `txid`.
-const META_VERSION = 2;
+// 3: media entries carry their real kind (photo|video), resolved from ORDFS.
+const META_VERSION = 3;
 
 type ArchiveMeta = {
   v: typeof META_VERSION;
@@ -178,8 +179,11 @@ async function stitchFresh(
   }
   if (pairs.length === 0) return null;
   const stitched = stitchToXArchive(pairs);
+  // The archive JSON records vouts, not media types — ORDFS is the only source
+  // of truth for what an inscription IS. Asked once, here, on rebuild only.
+  const typed = await resolveMediaKinds({ ...stitched, posts: dedupePosts(stitched.posts) });
   return {
-    archive: { profile: stitched.profile, posts: dedupePosts(stitched.posts) },
+    archive: { profile: typed.profile, posts: typed.posts },
     latestTxid: pairs[pairs.length - 1].txid,
     txCount: pairs.length,
     txTimes,

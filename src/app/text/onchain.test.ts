@@ -5,6 +5,8 @@ import {
   socialArchiveToXArchive,
   ordfsUrl,
   stitchToXArchive,
+  mediaKind,
+  resolveMediaKinds,
 } from "./onchain";
 
 // Build an OP_RETURN script hex (OP_FALSE OP_RETURN <push>...) from string data,
@@ -222,3 +224,48 @@ describe("stitchToXArchive", () => {
   });
 });
 
+
+describe("mediaKind", () => {
+  it("reads a video from its Content-Type, and treats everything else as a photo", () => {
+    expect(mediaKind("video/mp4")).toBe("video");
+    expect(mediaKind("VIDEO/QUICKTIME")).toBe("video");
+    expect(mediaKind("image/jpeg")).toBe("photo");
+    // Unknown or unreadable: a broken <img> beats a <video> that can't play.
+    expect(mediaKind(null)).toBe("photo");
+    expect(mediaKind(undefined)).toBe("photo");
+    expect(mediaKind("application/octet-stream")).toBe("photo");
+  });
+});
+
+describe("resolveMediaKinds", () => {
+  const archive = {
+    profile: { handle: "h" },
+    posts: [
+      { id: "1", at: "t", text: "", media: [{ type: "photo", url: "https://ordfs.network/tx_0" }] },
+      { id: "2", at: "t", text: "", media: [{ type: "photo", url: "https://ordfs.network/tx_1" }] },
+      { id: "3", at: "t", text: "" },
+    ],
+  } as never as import("./parseArchive").XArchive;
+
+  it("promotes a video inscription to type video, leaving photos alone", async () => {
+    const fake = (async (url: string | URL | Request) =>
+      new Response(null, {
+        headers: {
+          "content-type": String(url).endsWith("_1") ? "video/mp4" : "image/jpeg",
+        },
+      })) as unknown as typeof fetch;
+    const out = await resolveMediaKinds(archive, fake);
+    expect(out.posts[0].media?.[0].type).toBe("photo");
+    expect(out.posts[1].media?.[0].type).toBe("video");
+    expect(out.posts[2].media).toBeUndefined();
+  });
+
+  it("keeps the media when ORDFS can't be reached — photo, never dropped", async () => {
+    const failing = (async () => {
+      throw new Error("network down");
+    }) as unknown as typeof fetch;
+    const out = await resolveMediaKinds(archive, failing);
+    expect(out.posts[1].media?.[0].type).toBe("photo");
+    expect(out.posts[1].media?.[0].url).toBe("https://ordfs.network/tx_1");
+  });
+});
