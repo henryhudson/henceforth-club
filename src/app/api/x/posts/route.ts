@@ -38,6 +38,11 @@ export async function GET(req: Request) {
   }
 
   return NextResponse.json({
+    // The archived profile, so a client writing a NEW archive transaction can
+    // carry the existing bio/avatar forward unchanged — the app's `xmedia`
+    // word does exactly this. A transaction that shipped an empty profile
+    // would blank what the reader takes from the newest one.
+    profile: page.profile,
     posts: page.posts,
     offset,
     postCount: page.postCount,
