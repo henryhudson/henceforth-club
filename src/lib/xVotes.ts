@@ -1,6 +1,6 @@
 import type { Redis } from "@upstash/redis";
 import { dateKey, getRedis } from "./redis";
-import { foldScores, windowStartDay, DEFAULT_WINDOW, type ScoreWindow, type VoteLedgerEntry } from "./xScore";
+import { foldScores, totalFoundingSats, windowStartDay, DEFAULT_WINDOW, type ScoreWindow, type VoteLedgerEntry } from "./xScore";
 
 // The Redis edge of the paid-vote model — thin on purpose; all scoring logic
 // lives in xScore.ts. Two keys per the design:
@@ -113,4 +113,14 @@ export async function readScoresByWindow(
   return Object.fromEntries(
     SCORE_WINDOWS.map((w) => [w, foldScores(ledger, asOfDay, windowStartDay(w, asOfDay))]),
   ) as Record<ScoreWindow, Record<string, number>>;
+}
+
+/** Total satoshis this handle has paid to archive — the founding costs
+ * summed. Null-Redis safe: zero. */
+export async function readFoundingTotal(
+  handle: string,
+  redis: Redis | null = getRedis(),
+): Promise<number> {
+  if (!redis) return 0;
+  return totalFoundingSats(await readVoteLedger(handle, redis));
 }

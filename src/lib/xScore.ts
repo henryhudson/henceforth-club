@@ -88,3 +88,10 @@ export function foldScores(
     return table;
   }, {});
 }
+
+/** Total satoshis paid to archive — the sum of every founding entry's
+ * upload cost. Votes don't count: this is what it cost to put the words on
+ * the chain, not what they earned afterwards. Pure. */
+export function totalFoundingSats(ledger: readonly VoteLedgerEntry[]): number {
+  return ledger.reduce((sum, entry) => (isFoundingEntry(entry) ? sum + entry.sats : sum), 0);
+}

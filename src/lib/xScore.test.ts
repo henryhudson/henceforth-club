@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   foldScores,
+  totalFoundingSats,
   windowStartDay,
   type VoteLedgerEntry,
   type ScoreWindow,
@@ -16,6 +17,21 @@ function vote(overrides: Partial<VoteLedgerEntry> = {}): VoteLedgerEntry {
     ...overrides,
   };
 }
+
+describe("totalFoundingSats", () => {
+  it("sums only founding entries — votes are earnings, not archive spend", () => {
+    const ledger = [
+      vote({ txid: "insc:p1", postId: "p1", sats: 31942, day: "2026-07-12" }),
+      { ...vote({ postId: "p2", sats: 18, day: "2026-07-01" }), founding: true },
+      vote({ txid: "c".repeat(64), postId: "p1", sats: 5000, day: "2026-07-12" }), // a received vote
+    ];
+    expect(totalFoundingSats(ledger)).toBe(31942 + 18);
+  });
+
+  it("an empty ledger has cost nothing", () => {
+    expect(totalFoundingSats([])).toBe(0);
+  });
+});
 
 describe("foldScores", () => {
   it("a founding entry is the permanent floor: it never ages out of any window", () => {

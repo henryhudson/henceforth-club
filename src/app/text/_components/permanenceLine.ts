@@ -11,12 +11,17 @@ export function buildPermanenceLine({
   postCount,
   photoCount,
   txCount,
+  archiveSats,
   firstInscribedLabel,
   isPreview,
 }: {
   postCount: number;
   photoCount?: number;
   txCount?: number;
+  /** Total satoshis paid to archive this profile — the founding costs
+   * summed. Zero is left out: a profile with no recorded costs shouldn't
+   * claim "0 sats paid" as if that were a measurement. */
+  archiveSats?: number;
   firstInscribedLabel?: string;
   isPreview: boolean;
 }): string {
@@ -31,6 +36,9 @@ export function buildPermanenceLine({
     segments.push(
       `archived across ${txCount.toLocaleString("en-GB")} ${pluralize(txCount, "transaction")}`,
     );
+  }
+  if (archiveSats !== undefined && archiveSats > 0) {
+    segments.push(`${archiveSats.toLocaleString("en-GB")} sats paid`);
   }
   if (firstInscribedLabel !== undefined) {
     segments.push(`first inscribed ${firstInscribedLabel}`);

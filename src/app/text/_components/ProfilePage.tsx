@@ -21,6 +21,7 @@ export default function ProfilePage({
   handle,
   txCount,
   photoCount,
+  archiveSats,
   firstInscribedAt,
   txTimes = {},
   scores = {},
@@ -33,6 +34,7 @@ export default function ProfilePage({
   handle?: string;
   txCount?: number;
   photoCount?: number;
+  archiveSats?: number;
   firstInscribedAt?: number;
   txTimes?: Record<string, number>;
   scores?: Record<string, number>;
@@ -76,6 +78,7 @@ export default function ProfilePage({
         isPreview={!txid}
         photoCount={photoCount}
         txCount={txCount}
+        archiveSats={archiveSats}
         firstInscribedAt={firstInscribedAt}
         txTimes={txTimes}
         scores={scores}

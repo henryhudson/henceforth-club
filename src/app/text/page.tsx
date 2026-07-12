@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getArchivePage, PAGE_SIZE } from "@/lib/xArchiveCache";
 import { listHandles } from "@/lib/xIndex";
-import { readScoresByWindow } from "@/lib/xVotes";
+import { readFoundingTotal, readScoresByWindow } from "@/lib/xVotes";
 import ProfileView from "./_components/ProfileView";
 import ArchiveDropZone from "./_components/ArchiveDropZone";
 import DirectoryRow from "./_components/DirectoryRow";
@@ -23,6 +23,11 @@ export default async function XPage() {
   // One ledger read, five folds — readScores per window re-read the ledger
   // each time. Shared with /text/<handle>, which now carries the same toggle.
   const scoresByWindow = await readScoresByWindow(WITNESS_HANDLE);
+  // The fun stat, and the honest one: every satoshi anyone has paid to put
+  // words on the chain through this page, summed across all archives.
+  const perHandleSats = await Promise.all(handles.map((h) => readFoundingTotal(h.handle)));
+  const totalArchiveSats = perHandleSats.reduce((sum, n) => sum + n, 0);
+  const witnessSats = perHandleSats[handles.findIndex((h) => h.handle === WITNESS_HANDLE)] ?? 0;
 
   return (
     // A <div>, not a <main>: the root layout already provides the single <main>
@@ -31,7 +36,7 @@ export default async function XPage() {
       {/* Hero — the thesis, over a faint ledger grid */}
       <header className="ledger-grid relative">
         <div className="mx-auto max-w-2xl px-6 pb-10 pt-14 text-center">
-          <p className="ledger-label">Text · permanent on Bitcoin</p>
+          <p className="ledger-label">Text · content secured</p>
           <h1 className="mt-4 text-4xl font-bold leading-tight text-foreground sm:text-5xl">
             An archive X <span className="text-accent">can&rsquo;t revoke</span>.
           </h1>
@@ -41,8 +46,14 @@ export default async function XPage() {
           </p>
           <p className="mt-6 font-mono text-xs text-muted">
             <span className="text-accent">{handles.length}</span>{" "}
-            {handles.length === 1 ? "profile" : "profiles"} archived · read from the chain, never from a
-            server
+            {handles.length === 1 ? "profile" : "profiles"} archived
+            {totalArchiveSats > 0 && (
+              <>
+                {" "}· <span className="text-accent">{totalArchiveSats.toLocaleString("en-GB")}</span>{" "}
+                sats paid to secure it
+              </>
+            )}{" "}
+            · read from the chain, never from a server
           </p>
         </div>
       </header>
@@ -58,6 +69,7 @@ export default async function XPage() {
           isPreview={false}
           txCount={witness.txCount}
           photoCount={witness.photoCount}
+          archiveSats={witnessSats}
           firstInscribedAt={witness.firstInscribedAt}
           txTimes={witness.txTimes}
           scoresByWindow={scoresByWindow}

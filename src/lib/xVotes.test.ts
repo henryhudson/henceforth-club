@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Redis } from "@upstash/redis";
-import { appendVote, appendFoundingVote, readVoteLedger, readScores, readScoresByWindow, SCORE_WINDOWS } from "./xVotes";
+import { appendVote, appendFoundingVote, readVoteLedger, readScores, readScoresByWindow, readFoundingTotal, SCORE_WINDOWS } from "./xVotes";
 import type { VoteLedgerEntry } from "./xScore";
 
 function vote(overrides: Partial<VoteLedgerEntry> = {}): VoteLedgerEntry {
@@ -160,5 +160,19 @@ describe("readScoresByWindow", () => {
   it("is null-Redis safe: every window present and empty", async () => {
     const byWindow = await readScoresByWindow("bob", "2026-07-10", null);
     for (const w of SCORE_WINDOWS) expect(byWindow[w]).toEqual({});
+  });
+});
+
+describe("readFoundingTotal", () => {
+  it("totals a handle's founding costs and ignores received votes", async () => {
+    const { redis } = fakeRedis();
+    await appendFoundingVote("alice",
+      { inscriptionTxid: "insc1", postId: "p1", uploadCostSats: 31942, inscriptionDay: "2026-07-12" }, "2026-07-12", redis);
+    await appendVote("alice", { txid: "f".repeat(64), postId: "p1", dir: "up", sats: 500, day: "2026-07-12" }, "2026-07-12", redis);
+    expect(await readFoundingTotal("alice", redis)).toBe(31942);
+  });
+
+  it("is null-Redis safe: zero", async () => {
+    expect(await readFoundingTotal("alice", null)).toBe(0);
   });
 });

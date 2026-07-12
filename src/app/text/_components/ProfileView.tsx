@@ -23,6 +23,7 @@ export default function ProfileView({
   isPreview,
   photoCount,
   txCount,
+  archiveSats,
   firstInscribedAt,
   txTimes = {},
   scores = {},
@@ -35,6 +36,8 @@ export default function ProfileView({
   isPreview: boolean;
   photoCount?: number;
   txCount?: number;
+  /** Total satoshis paid to archive this profile — what permanence cost. */
+  archiveSats?: number;
   firstInscribedAt?: number;
   txTimes?: Record<string, number>;
   /** Single flat score table (one window) — what callers not yet wired to
@@ -56,6 +59,7 @@ export default function ProfileView({
     postCount: postCount ?? posts.length,
     photoCount,
     txCount,
+    archiveSats,
     firstInscribedLabel: firstInscribedAt !== undefined ? formatUnixSeconds(firstInscribedAt) : undefined,
     isPreview,
   });
