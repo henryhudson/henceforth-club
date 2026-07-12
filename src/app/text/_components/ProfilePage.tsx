@@ -1,4 +1,5 @@
 import type { XArchive } from "../parseArchive";
+import type { ScoreWindow } from "@/lib/xScore";
 import ProfileView from "./ProfileView";
 import PostsScrollLoader from "./PostsScrollLoader";
 import ReaderKeys from "./ReaderKeys";
@@ -23,6 +24,7 @@ export default function ProfilePage({
   firstInscribedAt,
   txTimes = {},
   scores = {},
+  scoresByWindow,
   verified,
 }: {
   archive: XArchive;
@@ -34,6 +36,7 @@ export default function ProfilePage({
   firstInscribedAt?: number;
   txTimes?: Record<string, number>;
   scores?: Record<string, number>;
+  scoresByWindow?: Record<ScoreWindow, Record<string, number>>;
   verified?: { bindingPostId: string };
 }) {
   const scrollLoader =
@@ -76,6 +79,7 @@ export default function ProfilePage({
         firstInscribedAt={firstInscribedAt}
         txTimes={txTimes}
         scores={scores}
+        scoresByWindow={scoresByWindow}
         verified={verified}
       />
       <ReaderKeys handle={handle} />

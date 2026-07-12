@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Redis } from "@upstash/redis";
-import { appendVote, appendFoundingVote, readVoteLedger, readScores } from "./xVotes";
+import { appendVote, appendFoundingVote, readVoteLedger, readScores, readScoresByWindow, SCORE_WINDOWS } from "./xVotes";
 import type { VoteLedgerEntry } from "./xScore";
 
 function vote(overrides: Partial<VoteLedgerEntry> = {}): VoteLedgerEntry {
@@ -138,5 +138,27 @@ describe("readScores", () => {
     await appendVote("bob", { txid: "new", postId: "p1", dir: "up", sats: 900, day: "2026-07-09" }, "2026-07-10", r);
     expect(await readScores("bob", "week", "2026-07-10", r)).toEqual({ p1: 900 });   // old is >7d out
     expect(await readScores("bob", "all",  "2026-07-10", r)).toEqual({ p1: 1400 });  // both
+  });
+});
+
+describe("readScoresByWindow", () => {
+  it("returns every window from one ledger read, matching per-window readScores", async () => {
+    const { redis: r } = fakeRedis();
+    await appendVote("bob", { txid: "old", postId: "p1", dir: "up", sats: 500, day: "2026-06-01" }, "2026-07-10", r);
+    await appendVote("bob", { txid: "new", postId: "p1", dir: "up", sats: 900, day: "2026-07-09" }, "2026-07-10", r);
+    const byWindow = await readScoresByWindow("bob", "2026-07-10", r);
+    expect(Object.keys(byWindow).sort()).toEqual([...SCORE_WINDOWS].sort());
+    // The 2026-07-12 profile bug in miniature: votes aged out of `week` are
+    // NOT gone — they must remain reachable through the wider windows.
+    expect(byWindow.week).toEqual({ p1: 900 });
+    expect(byWindow.all).toEqual({ p1: 1400 });
+    for (const w of SCORE_WINDOWS) {
+      expect(byWindow[w]).toEqual(await readScores("bob", w, "2026-07-10", r));
+    }
+  });
+
+  it("is null-Redis safe: every window present and empty", async () => {
+    const byWindow = await readScoresByWindow("bob", "2026-07-10", null);
+    for (const w of SCORE_WINDOWS) expect(byWindow[w]).toEqual({});
   });
 });

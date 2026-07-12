@@ -91,3 +91,25 @@ export async function readScores(
   const ledger = await readVoteLedger(handle, redis);
   return foldScores(ledger, asOfDay, windowStartDay(window, asOfDay));
 }
+
+export const SCORE_WINDOWS: readonly ScoreWindow[] = ["day", "week", "month", "year", "all"];
+
+/** Every window's score table in one call — ONE ledger read, five folds
+ * (readScores per window would re-read the ledger each time). Feeds the
+ * Latest/Best strip's window toggle: a caller passing a single window's
+ * table gets a Best tab whose default window may legitimately be empty —
+ * votes age out of `week` — with no way to widen it. That is exactly how
+ * henryhudson6's profile "lost" its 1,397 founding votes on 2026-07-12. */
+export async function readScoresByWindow(
+  handle: string,
+  asOfDay: string = dateKey(),
+  redis: Redis | null = getRedis(),
+): Promise<Record<ScoreWindow, Record<string, number>>> {
+  const empty = () =>
+    Object.fromEntries(SCORE_WINDOWS.map((w) => [w, {}])) as Record<ScoreWindow, Record<string, number>>;
+  if (!redis) return empty();
+  const ledger = await readVoteLedger(handle, redis);
+  return Object.fromEntries(
+    SCORE_WINDOWS.map((w) => [w, foldScores(ledger, asOfDay, windowStartDay(w, asOfDay))]),
+  ) as Record<ScoreWindow, Record<string, number>>;
+}

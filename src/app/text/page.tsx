@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getArchivePage, PAGE_SIZE } from "@/lib/xArchiveCache";
 import { listHandles } from "@/lib/xIndex";
-import { readScores } from "@/lib/xVotes";
-import { type ScoreWindow } from "@/lib/xScore";
+import { readScoresByWindow } from "@/lib/xVotes";
 import ProfileView from "./_components/ProfileView";
 import ArchiveDropZone from "./_components/ArchiveDropZone";
 import DirectoryRow from "./_components/DirectoryRow";
@@ -21,12 +20,9 @@ export const metadata: Metadata = {
 export default async function XPage() {
   const witness = await getArchivePage(WITNESS_HANDLE, 0, PAGE_SIZE);
   const handles = await listHandles(50);
-  const windows: ScoreWindow[] = ["day", "week", "month", "year", "all"];
-  const scoreMaps = await Promise.all(windows.map((w) => readScores(WITNESS_HANDLE, w)));
-  const scoresByWindow = Object.fromEntries(windows.map((w, i) => [w, scoreMaps[i]])) as Record<
-    ScoreWindow,
-    Record<string, number>
-  >;
+  // One ledger read, five folds — readScores per window re-read the ledger
+  // each time. Shared with /text/<handle>, which now carries the same toggle.
+  const scoresByWindow = await readScoresByWindow(WITNESS_HANDLE);
 
   return (
     // A <div>, not a <main>: the root layout already provides the single <main>
