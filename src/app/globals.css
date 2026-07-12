@@ -166,14 +166,35 @@ body:has(.textroom) {
 
 /* A faint orange grid behind the profile/directory header only — the
    "stuff going on" the brief asked for, kept to one surface and masked to
-   fade at the edges so it never competes with the type. */
+   fade at the edges so it never competes with the type.
+
+   The grid AND its mask live on a ::before layer, never on the element
+   itself: a mask-image applies to an element's ENTIRE subtree, so masking
+   the element faded the hero copy and the profile card's own text away with
+   the grid (reported 2026-07-12 as "it is very dark"). Decoration gets
+   masked; content never does. */
 .textroom .ledger-grid {
+  position: relative;
+}
+
+.textroom .ledger-grid::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
   background-image:
     linear-gradient(rgba(232, 115, 30, 0.05) 1px, transparent 1px),
     linear-gradient(90deg, rgba(232, 115, 30, 0.05) 1px, transparent 1px);
   background-size: 34px 34px;
   -webkit-mask-image: radial-gradient(ellipse 70% 80% at 50% 0%, black 20%, transparent 78%);
   mask-image: radial-gradient(ellipse 70% 80% at 50% 0%, black 20%, transparent 78%);
+}
+
+/* Content rides above the decoration layer. */
+.textroom .ledger-grid > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* An entry the reader has opened: a hairline orange marker on the leading
