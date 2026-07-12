@@ -93,6 +93,9 @@ describe("GET /api/x/posts", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toEqual({
+      // The profile rides along so a client writing a new archive transaction
+      // can carry it forward unchanged (the app's xmedia word).
+      profile: { handle: "henry" },
       posts: [{ id: "1", at: "t", text: "hi", txid: "abc" }],
       offset: 30,
       postCount: 100,
