@@ -70,5 +70,26 @@ export async function payAndReserve(
 /** One user object plus one page of posts. */
 export const RESOURCES_TEXT_ONLY = 101;
 
-/** As above, plus the media pass, which pages the timeline a second time. */
+/**
+ * @deprecated The second media pass is gone (2026-07-12). Media expansions ride
+ * the text read for free — X bills per resource RETURNED, not per field — so a
+ * read with media now costs exactly what the text read costs. Kept only so an
+ * older app build, which still asks for this price, keeps working.
+ */
 export const RESOURCES_WITH_MEDIA = 201;
+
+/**
+ * Pure. What a read of `postCount` posts actually costs us, in X resources: one
+ * user object plus the posts themselves.
+ *
+ * This is the number the fee must be priced from. Until 2026-07-12 every archive
+ * read was billed at a FLAT 201 resources, which was true only while the read was
+ * capped at one page — the cap that is precisely why a whole profile's media
+ * could never be archived. Now that a caller can buy the whole timeline, a flat
+ * price would sell a 1,500-post read for the price of a 100-post one and lose
+ * money on every large profile. Henry's rule is the constraint: we must make a
+ * profit AT THE TIME OF SALE.
+ */
+export function resourcesForPosts(postCount: number): number {
+  return 1 + Math.max(0, Math.floor(postCount));
+}

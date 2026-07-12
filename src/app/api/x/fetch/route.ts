@@ -36,10 +36,13 @@ export async function GET(req: Request) {
   const gate = await payAndReserve(params.get("payment"), RESOURCES_TEXT_ONLY);
   if (!gate.ok) return gate.response;
 
-  const archive = await fetchXArchive(handle, token);
-  if (!archive) {
+  const result = await fetchXArchive(handle, token);
+  if (!result) {
     return NextResponse.json({ ok: false, reason: "no-user" }, { status: 404 });
   }
-  // Return the SocialArchive JSON directly — the app decodes it as-is.
-  return NextResponse.json(archive);
+  // Return the SocialArchive JSON directly — the app decodes it as-is. This is
+  // the wire contract the SHIPPED 4.46 app depends on, so it keeps its shape
+  // even though fetchXArchive now also returns media refs: unwrap, do not leak
+  // the envelope.
+  return NextResponse.json(result.archive);
 }

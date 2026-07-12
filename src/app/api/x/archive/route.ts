@@ -1,22 +1,29 @@
 import { NextResponse } from "next/server";
-import { fetchXArchive } from "@/lib/xfetch";
-import { fetchTweetsWithMedia, selectRefs, downloadItems } from "@/lib/xArchive";
-import { extractMediaRefs } from "@/lib/xMedia";
-import { payAndReserve, RESOURCES_WITH_MEDIA } from "@/lib/xGate";
+import { fetchXArchive, fetchProfileHead, pagesForPostCount, X_TIMELINE_CEILING } from "@/lib/xfetch";
+import { selectRefs } from "@/lib/xArchive";
+import { payAndReserve, resourcesForPosts } from "@/lib/xGate";
 
 /**
- * GET /api/x/archive?handle=<h>&payment=<txid>&images=1&videos=0
+ * GET /api/x/archive?handle=<h>&payment=<txid>&images=1&videos=1&full=1
  *
- * Like /api/x/fetch, but also returns downloaded media bytes so the app can
- * inscribe photos and videos alongside the text archive. The shared X bearer
- * token lives only here (env var X_BEARER_TOKEN) and is never returned or logged.
+ * A profile's posts and the REFERENCES to their media, bought with an on-chain
+ * payment. Two things changed on 2026-07-12, and together they are what makes a
+ * whole-profile media archive possible at all:
  *
- * This is the expensive endpoint: it pages the timeline twice — once for text and
- * again for media — so before the page cap it could cost $32 in a single
- * unauthenticated request. It now demands a `payment` transaction id, verified on
- * chain against the archive reward address and burned so one payment buys one
- * read, and it reserves its worst-case cost against a hard daily budget before it
- * touches X. See lib/xGate.
+ * 1. ONE read, not two. The media expansions ride the text request — X bills per
+ *    resource RETURNED, not per field, so they are free. The old second pass
+ *    doubled the bill to fetch what the first read could have returned for
+ *    nothing, and (capped at a single page to contain that cost) it is the reason
+ *    only the newest ~100 posts ever had their photos and videos archived.
+ *
+ * 2. References, not bytes. The client fetches media from X's public CDN itself,
+ *    free and without a credential. Base64-ing every photo and video through this
+ *    route is what made a whole-profile media response impossible to serve.
+ *
+ * `full=1` buys the whole reachable timeline. The fee is priced from the posts
+ * actually read (lib/xGate `resourcesForPosts`), so a large profile pays for a
+ * large read — a flat price would sell a 1,500-post archive for the price of a
+ * 100-post one. Ask /api/x/quote first; it is free.
  */
 
 function flag(value: string | null, defaultValue: boolean): boolean {
@@ -35,21 +42,43 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, reason: "bad-handle" }, { status: 400 });
   }
   const includeImages = flag(url.searchParams.get("images"), true);
-  const includeVideos = flag(url.searchParams.get("videos"), false);
+  const includeVideos = flag(url.searchParams.get("videos"), true);
+  const full = flag(url.searchParams.get("full"), false);
 
-  const gate = await payAndReserve(url.searchParams.get("payment"), RESOURCES_WITH_MEDIA);
+  // How big is this read? A full archive is priced from the profile's real post
+  // count, so the gate demands a fee that covers what X will actually charge us.
+  // The head costs ONE resource and is not gated — the same half-cent /api/x/quote
+  // spends, and the price of knowing the price.
+  let maxPages = 1;
+  let billedPosts = 100;
+  if (full) {
+    const head = await fetchProfileHead(handle, token);
+    if (!head) {
+      return NextResponse.json({ ok: false, reason: "no-user" }, { status: 404 });
+    }
+    maxPages = pagesForPostCount(head.postCount);
+    billedPosts = Math.min(head.postCount, X_TIMELINE_CEILING);
+  }
+
+  const gate = await payAndReserve(
+    url.searchParams.get("payment"),
+    resourcesForPosts(billedPosts),
+  );
   if (!gate.ok) return gate.response;
 
-  const archive = await fetchXArchive(handle, token);
-  const userId = archive?.profile.accountId;
-  if (!archive || !userId) {
+  const result = await fetchXArchive(handle, token, maxPages);
+  if (!result) {
     return NextResponse.json({ ok: false, reason: "no-user" }, { status: 404 });
   }
 
-  const tweetsWithMedia = await fetchTweetsWithMedia(userId, token);
-  const refs = extractMediaRefs(tweetsWithMedia);
-  const selected = selectRefs(refs, includeImages, includeVideos);
-  const media = await downloadItems(selected);
+  const media = selectRefs(result.mediaRefs, includeImages, includeVideos);
 
-  return Response.json({ archive, media });
+  return Response.json({
+    archive: result.archive,
+    // References, not bytes: { postId, contentType, url }. The client downloads
+    // them from X's public CDN — no credential, no cost, no ceiling.
+    media,
+    pagesRead: maxPages,
+    postsRead: result.archive.posts.length,
+  });
 }
