@@ -72,6 +72,7 @@ export async function appendFoundingVote(
     txid: `${fv.inscriptionTxid}:${fv.postId}`, // per-post unique: a shared inscription txid can't collide across posts
     postId: fv.postId, dir: "up",
     sats: fv.uploadCostSats, day: fv.inscriptionDay,
+    founding: true, // upload cost = the permanent score floor; never windowed
   };
   return appendVote(handle, entry, asOfDay, redis); // reuses the txid gate + append
 }

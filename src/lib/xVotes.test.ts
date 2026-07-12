@@ -99,7 +99,7 @@ describe("appendFoundingVote", () => {
       { inscriptionTxid: "insc1", postId: "p1", uploadCostSats: 14_000_000, inscriptionDay: "2026-07-01" }, "2026-07-10", redis);
     expect(res).toBe("recorded");
     const ledger = await readVoteLedger("alice", redis);
-    expect(ledger).toEqual([{ txid: "insc1:p1", postId: "p1", dir: "up", sats: 14_000_000, day: "2026-07-01" }]);
+    expect(ledger).toEqual([{ txid: "insc1:p1", postId: "p1", dir: "up", sats: 14_000_000, day: "2026-07-01", founding: true }]);
   });
 
   it("rejects a second founding vote for the same post, even with a new txid", async () => {

@@ -18,6 +18,22 @@ function vote(overrides: Partial<VoteLedgerEntry> = {}): VoteLedgerEntry {
 }
 
 describe("foldScores", () => {
+  it("a founding entry is the permanent floor: it never ages out of any window", () => {
+    // The 2026-07-12 rule: upload cost is the initial score; votes add to it.
+    const founding = vote({ txid: "insc-tx:p1", postId: "p1", sats: 31942, day: "2026-07-01" });
+    // Eleven days later, the week window starts 2026-07-05 — the founding
+    // cost must still be there, and only the windowed vote adds.
+    const oldVote = vote({ txid: "a".repeat(64), postId: "p1", sats: 500, day: "2026-06-01" });
+    const newVote = vote({ txid: "b".repeat(64), postId: "p1", sats: 900, day: "2026-07-11" });
+    const table = foldScores([founding, oldVote, newVote], "2026-07-12", "2026-07-05");
+    expect(table).toEqual({ p1: 31942 + 900 });
+  });
+
+  it("the explicit founding flag marks the floor even without the composite txid", () => {
+    const flagged = { ...vote({ postId: "p2", sats: 100, day: "2020-01-01" }), founding: true };
+    expect(foldScores([flagged], "2026-07-12", "2026-07-05")).toEqual({ p2: 100 });
+  });
+
   it("folds an empty ledger to an empty table — every unseen post scores zero", () => {
     expect(foldScores([], "2026-07-01")).toEqual({});
   });

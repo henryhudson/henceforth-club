@@ -15,7 +15,8 @@ export type VoteDirection = "up" | "down";
  * Append-only: entries are only ever added (or, on a correction such as a
  * double-spent funding transaction, removed and the fold replayed). */
 export type VoteLedgerEntry = {
-  /** The funding transaction id — the payment IS the vote, and counts once. */
+  /** The funding transaction id — the payment IS the vote, and counts once.
+   * Founding entries use the composite `inscriptionTxid:postId` form. */
   txid: string;
   postId: string;
   dir: VoteDirection;
@@ -24,7 +25,18 @@ export type VoteLedgerEntry = {
   /** The UTC day the vote was verified, as YYYY-MM-DD (`dateKey` format) —
    * the date used for windowing the score fold. */
   day: string;
+  /** Marks a founding entry — the post's upload cost. Optional because
+   * entries written before 2026-07-12 carry only the composite-txid marker;
+   * `isFoundingEntry` accepts either. */
+  founding?: boolean;
 };
+
+/** A founding entry is the post's upload cost — the ranking's permanent
+ * floor. Detected by the explicit flag or the composite `txid:postId` form
+ * (a real funding txid is bare hex and never contains a colon). */
+export function isFoundingEntry(entry: VoteLedgerEntry): boolean {
+  return entry.founding === true || entry.txid.includes(":");
+}
 
 const MS_PER_DAY = 86_400_000;
 const WINDOW_DAYS: Record<Exclude<ScoreWindow, "all">, number> = {
@@ -53,9 +65,12 @@ export function windowStartDay(
 
 /**
  * The pure fold: an append-only ledger in, a score table out —
- * `score(post) = Σ votes (±sats)` as of `asOfDay` within an optional window.
- * Entries with day < windowStart contribute nothing. An entry whose day can't
- * be read contributes nothing, rather than turning the whole table to NaN.
+ * `score(post) = founding cost (always) + Σ votes (±sats) within the window`
+ * as of `asOfDay`. The founding entry is the post's upload cost and is the
+ * ranking's permanent floor — it never ages out of a window (the rule set
+ * 2026-07-12: the cost of uploading is the initial score; received sats add
+ * to it); only received votes are time-windowed. A vote whose day can't be
+ * read contributes nothing, rather than turning the whole table to NaN.
  * Total: any ledger and any as-of day fold to a table.
  */
 export function foldScores(
@@ -64,8 +79,10 @@ export function foldScores(
   windowStart: string | null = null,
 ): Record<string, number> {
   return ledger.reduce<Record<string, number>>((table, entry) => {
-    if (Number.isNaN(daysBetween(entry.day, asOfDay))) return table; // unreadable day
-    if (windowStart !== null && entry.day < windowStart) return table; // before the window
+    if (!isFoundingEntry(entry)) {
+      if (Number.isNaN(daysBetween(entry.day, asOfDay))) return table; // unreadable day
+      if (windowStart !== null && entry.day < windowStart) return table; // before the window
+    }
     const signed = entry.dir === "up" ? entry.sats : -entry.sats;
     table[entry.postId] = (table[entry.postId] ?? 0) + signed;
     return table;
