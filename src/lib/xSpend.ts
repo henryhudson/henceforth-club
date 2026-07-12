@@ -89,3 +89,21 @@ export async function reserveXApiSpend(
   }
   return { ok: true, reservedUsd: usd };
 }
+
+/**
+ * Hand a reservation back — for a read that was reserved but never happened.
+ *
+ * The gate reserves BEFORE it burns the payment (a budget refusal must never
+ * consume a user's money), so a burn that then fails leaves budget held for a
+ * read nobody will take. Releasing it keeps the day's ceiling honest. Failing
+ * to release would only ever make us serve FEWER reads than we are entitled to,
+ * which is why this is safe to let fail quietly.
+ */
+export async function releaseXApiSpend(
+  worstCaseResources: number,
+  now: Date = new Date(),
+): Promise<void> {
+  const redis = getRedis();
+  if (!redis) return;
+  await redis.decrby(spendKey(now), usdToMils(resourcesToUsd(worstCaseResources)));
+}

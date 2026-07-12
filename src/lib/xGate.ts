@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { consumePayment, isTxid, verifyPayment } from "./xPayment";
 import { bsvUsd, satsForUsd } from "./xPrice";
-import { reserveXApiSpend, resourcesToUsd } from "./xSpend";
+import { releaseXApiSpend, reserveXApiSpend, resourcesToUsd } from "./xSpend";
 
 /**
  * The one gate every X-API-spending route passes through.
@@ -12,8 +12,8 @@ import { reserveXApiSpend, resourcesToUsd } from "./xSpend";
  *   1. a payment id is present and well formed        (free)
  *   2. the BSV price right now, so the floor is real  (free, fails closed)
  *   3. the transaction really paid enough             (free — reads the chain)
- *   4. the payment is burned, so it buys one read     (fails closed)
- *   5. the call's worst-case cost fits today's budget (fails closed)
+ *   4. the call's worst-case cost fits today's budget (fails closed)
+ *   5. the payment is burned, so it buys one read     (fails closed)
  *   6. only now may the caller touch X
  *
  * Step 2 is Henry's rule made literal: "we must make a profit at the time of sale
@@ -23,8 +23,13 @@ import { reserveXApiSpend, resourcesToUsd } from "./xSpend";
  * about whether we make money.
  *
  * Verification precedes burning so a caller who mistypes a handle does not
- * forfeit their payment. Burning precedes the reservation so one transaction can
- * never buy two reads, even if the budget has room for both.
+ * forfeit their payment. And the RESERVATION precedes the burn (reordered
+ * 2026-07-12) so a budget refusal cannot destroy one either: the day's ceiling is
+ * our accounting, their money is theirs, and settling them the other way round
+ * consumed a fee for a read the caller never received. One transaction still
+ * cannot buy two reads — `consumePayment` remains a set-if-absent gate, so two
+ * concurrent reads race on the burn and exactly one wins; the loser simply hands
+ * its reservation back.
  */
 
 export type Gate =
@@ -34,10 +39,32 @@ export type Gate =
 const deny = (status: number, reason: string) =>
   ({ ok: false as const, response: NextResponse.json({ ok: false, reason }, { status }) });
 
+/** Test seams. The ORDER of these calls is the thing under test, so it must be
+ * observable without a network, a chain, or a Redis. */
+export type GateDeps = {
+  price: typeof bsvUsd;
+  verify: typeof verifyPayment;
+  reserve: typeof reserveXApiSpend;
+  release: typeof releaseXApiSpend;
+  consume: typeof consumePayment;
+};
+
+const liveDeps: GateDeps = {
+  price: bsvUsd,
+  verify: verifyPayment,
+  reserve: reserveXApiSpend,
+  release: releaseXApiSpend,
+  consume: consumePayment,
+};
+
 export async function payAndReserve(
   payment: string | null,
   worstCaseResources: number,
+  deps: GateDeps = liveDeps,
 ): Promise<Gate> {
+  const { price: bsvUsd, verify: verifyPayment, reserve: reserveXApiSpend,
+          release: releaseXApiSpend, consume: consumePayment } = deps;
+
   if (!isTxid(payment)) return deny(402, "payment-required");
 
   const price = await bsvUsd();
@@ -54,14 +81,27 @@ export async function payAndReserve(
     return deny(verdict.reason === "not-found" ? 404 : 402, verdict.reason);
   }
 
-  const burned = await consumePayment(payment);
-  if (!burned.ok) {
-    return deny(burned.reason === "replayed" ? 409 : 503, burned.reason);
-  }
-
+  // RESERVE BEFORE BURNING (reordered 2026-07-12). It used to burn first, on the
+  // reasoning that one transaction must never buy two reads even if the budget
+  // has room for both. True — but it meant a budget refusal answered AFTER the
+  // payment was consumed, DESTROYING a user's fee for a read they never got. The
+  // day's ceiling is our accounting; their money is their money, and the two must
+  // not be settled in that order.
+  //
+  // The double-spend guarantee survives intact, because `consumePayment` is still
+  // the set-if-absent gate: two concurrent reads of the same payment race on the
+  // burn below, and exactly one wins. Reserving first only means the loser also
+  // hands its reservation back.
   const reserved = await reserveXApiSpend(worstCaseResources);
   if (!reserved.ok) {
     return deny(reserved.reason === "budget-exhausted" ? 429 : 503, reserved.reason);
+  }
+
+  const burned = await consumePayment(payment);
+  if (!burned.ok) {
+    // The read will not happen — do not hold budget for it.
+    await releaseXApiSpend(worstCaseResources);
+    return deny(burned.reason === "replayed" ? 409 : 503, burned.reason);
   }
 
   return { ok: true, sats: verdict.sats, reservedUsd: reserved.reservedUsd };
