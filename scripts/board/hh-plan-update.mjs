@@ -54,6 +54,19 @@ if (planWeekOf !== weekOfFor(today)) {
 let plan = week.retro.weekPlan;
 if (events.length) plan = setDayEvents(plan, weekday, events);
 else if (roll) plan = rollForward(plan, weekday); // carry undone past work onto today
+// markEventDone matches the EXACT label — a fragment marks nothing, and the
+// old summary line still claimed "N marked done" (it cost a whole pass of
+// done-marks on 2026-07-14). Refuse the run when any label matches no task;
+// an already-done exact label still counts as matched (idempotent re-marks).
+const dayLabels = new Set(
+  plan.filter((d) => d.weekday === weekday)
+      .flatMap((d) => d.tasks.map((t) => (typeof t === "string" ? t : t.label))),
+);
+const missed = done.filter((label) => !dayLabels.has(label));
+if (missed.length) {
+  console.error(`no task matched ${missed.length} done label(s) on ${weekday} — labels must be EXACT:\n  ${missed.join("\n  ")}`);
+  process.exit(1);
+}
 for (const label of done) plan = markEventDone(plan, weekday, label);
 week.retro.weekPlan = plan;
 
