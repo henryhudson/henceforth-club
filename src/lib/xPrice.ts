@@ -58,7 +58,61 @@ export async function bsvUsd(
   }
 }
 
-/** Test seam: forget the cached rate. */
+const FRANKFURTER_RATE = "https://api.frankfurter.app/latest?from=USD&to=GBP";
+/** Currency pairs drift slowly; an hour is honest for a display figure. */
+const POUND_CACHE_MS = 60 * 60 * 1000;
+
+let poundCache: { gbpPerUsd: number; at: number } | null = null;
+
+export type PoundRate = { ok: true; gbpPerUsd: number } | { ok: false; reason: "rate-unavailable" };
+
+/**
+ * The European Central Bank's USD→GBP rate (via frankfurter.app — free, no
+ * key), cached for an hour. Display-only money: this softens satoshi figures
+ * into pounds on the quote surfaces; the payment floor is NEVER derived from
+ * it, so a failure means the pound figure is simply omitted, not a wrong
+ * price. It replaced a hardcoded `GBP_PER_USD = 0.79` that silently drifted
+ * with every currency move.
+ */
+export async function gbpPerUsd(
+  fetchFn: typeof fetch = fetch,
+  now: number = Date.now(),
+): Promise<PoundRate> {
+  if (poundCache && now - poundCache.at < POUND_CACHE_MS) {
+    return { ok: true, gbpPerUsd: poundCache.gbpPerUsd };
+  }
+  try {
+    const res = await fetchFn(FRANKFURTER_RATE, { cache: "no-store" });
+    if (!res.ok) return { ok: false, reason: "rate-unavailable" };
+    const rate = (await res.json())?.rates?.GBP;
+    if (!isUsableRate(rate)) return { ok: false, reason: "rate-unavailable" };
+    poundCache = { gbpPerUsd: rate, at: now };
+    return { ok: true, gbpPerUsd: rate };
+  } catch {
+    return { ok: false, reason: "rate-unavailable" };
+  }
+}
+
+/** Pure. What `sats` is worth in pounds at the given rates. */
+export function satsToPounds(sats: number, bsvUsdRate: number, gbpPerUsdRate: number): number {
+  return (sats / SATS_PER_BSV) * bsvUsdRate * gbpPerUsdRate;
+}
+
+/**
+ * Pounds per whole coin, or undefined when either rate is unavailable —
+ * callers render the fiat softener only when it is real. The one number a
+ * page needs to thread through its quote components.
+ */
+export async function gbpPerBsv(
+  fetchFn: typeof fetch = fetch,
+  now: number = Date.now(),
+): Promise<number | undefined> {
+  const [usd, gbp] = await Promise.all([bsvUsd(fetchFn, now), gbpPerUsd(fetchFn, now)]);
+  return usd.ok && gbp.ok ? usd.bsvUsd * gbp.gbpPerUsd : undefined;
+}
+
+/** Test seam: forget the cached rates. */
 export function resetPriceCache(): void {
   cache = null;
+  poundCache = null;
 }

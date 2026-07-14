@@ -10,13 +10,18 @@ export default function QuoteCard({
   premiumSats,
   priceSats,
   claimedNotice,
+  gbpPerBsv,
 }: {
   feeSats: number;
   premiumSats: number;
   priceSats: number;
   claimedNotice?: string;
+  /** Live pounds-per-coin from the server page; the fiat figure is omitted
+   * when the rate is unavailable rather than computed from a stale anchor. */
+  gbpPerBsv?: number;
 }) {
   const n = (v: number) => v.toLocaleString("en-GB");
+  const pounds = gbpPerBsv === undefined ? undefined : (priceSats / 1e8) * gbpPerBsv;
 
   return (
     <div className="rounded-2xl border border-card-border bg-card-bg p-6">
@@ -31,7 +36,10 @@ export default function QuoteCard({
         </div>
         <div className="flex justify-between border-t border-card-border pt-2 text-sm font-bold">
           <span className="text-muted">Total</span>
-          <span className="text-foreground">{n(priceSats)} satoshis</span>
+          <span className="text-foreground">
+            {pounds !== undefined && `about £${pounds.toFixed(2)} — `}
+            {n(priceSats)} satoshis
+          </span>
         </div>
       </div>
 

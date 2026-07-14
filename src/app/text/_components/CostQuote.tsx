@@ -2,13 +2,18 @@ import { estimateSingleOpReturn } from "@/lib/archiveCost";
 import { estimateArchiveBytes } from "../archiveBytes";
 import type { Portable } from "../source";
 
-/** Pounds per dollar. Only ever used to soften a figure, never to compute one. */
-const GBP_PER_USD = 0.79;
-
-export default function CostQuote({ source, bsvUsd }: { source: Portable; bsvUsd?: number }) {
+/**
+ * The recognition-and-price card under the drop zone. `gbpPerBsv` comes from
+ * the server page (live rates, hourly cache) — when it is absent the pound
+ * figure is omitted rather than computed from a stale anchor: the previous
+ * version multiplied by a hardcoded `GBP_PER_USD = 0.79`, which was silently
+ * wrong whenever the currency moved. Fiat leads; satoshis follow — a stranger
+ * knows what £0.42 is and does not know what 52,000 satoshis is.
+ */
+export default function CostQuote({ source, gbpPerBsv }: { source: Portable; gbpPerBsv?: number }) {
   const bytes = estimateArchiveBytes(source.archive);
   const cost = estimateSingleOpReturn(bytes);
-  const pounds = bsvUsd === undefined ? undefined : (cost.totalSats / 1e8) * bsvUsd * GBP_PER_USD;
+  const pounds = gbpPerBsv === undefined ? undefined : (cost.totalSats / 1e8) * gbpPerBsv;
   const n = (v: number) => v.toLocaleString("en-GB");
 
   return (
@@ -31,13 +36,15 @@ export default function CostQuote({ source, bsvUsd }: { source: Portable; bsvUsd
         <div className="flex justify-between border-t border-card-border pt-2 text-sm font-bold">
           <span className="text-muted">Total</span>
           <span className="text-foreground">
-            {n(cost.totalSats)} satoshis{pounds !== undefined && ` — about £${pounds.toFixed(3)}`}
+            {pounds !== undefined && `about £${pounds.toFixed(2)} — `}
+            {n(cost.totalSats)} satoshis
           </span>
         </div>
       </div>
 
       <p className="text-xs text-muted/75">
-        You cannot delete this later. You can only say, permanently, that you took it back.
+        Pay once, readable forever. You cannot delete this later — you can only say, permanently,
+        that you took it back.
       </p>
     </div>
   );

@@ -6,8 +6,9 @@ import { portable, type Portable } from "../source";
 import { dropFailureMessage, selectArchiveFiles } from "../dropZone";
 import ProfileView from "./ProfileView";
 import CostQuote from "./CostQuote";
+import FileDropLabel from "./FileDropLabel";
 
-export default function ArchiveDropZone() {
+export default function ArchiveDropZone({ gbpPerBsv }: { gbpPerBsv?: number }) {
   const [source, setSource] = useState<Portable | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,18 +30,12 @@ export default function ArchiveDropZone() {
   return (
     <div>
       <div className="mx-auto max-w-2xl px-6 pb-6">
-        <label className="block cursor-pointer rounded-xl border border-dashed border-card-border bg-card-bg/50 p-5 text-center text-sm text-muted transition hover:border-accent">
-          <input
-            type="file"
-            multiple
-            accept=".js,.json"
-            className="hidden"
-            onChange={(e) => onFiles(e.target.files)}
-          />
-          Drop your{" "}
-          <span className="text-foreground">tweets.js · profile.js · account.js</span>
+        <FileDropLabel onFiles={onFiles}>
+          Choose or drop{" "}
+          <span className="text-foreground">tweets.js · profile.js · account.js</span>{" "}
+          from the export X emailed you
           <span className="mt-1 block text-xs">Parsed in your browser. Nothing is uploaded.</span>
-        </label>
+        </FileDropLabel>
         {error && <p className="mt-3 text-sm text-accent-orange">{error}</p>}
       </div>
 
@@ -48,7 +43,7 @@ export default function ArchiveDropZone() {
         <>
           <ProfileView archive={source.archive} isPreview />
           <div className="mx-auto max-w-2xl px-6 pb-10">
-            <CostQuote source={source} />
+            <CostQuote source={source} gbpPerBsv={gbpPerBsv} />
           </div>
         </>
       )}

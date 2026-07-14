@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import ArchiveFlow from "./ArchiveFlow";
+import { gbpPerBsv } from "@/lib/xPrice";
 
 /**
  * Metadata rides the same gate as the page body: while the flag is off, the
@@ -57,7 +58,7 @@ function ArchiveStub() {
  * (scripts/xtext-worker/README.md) passes and Henry signs off; until then
  * this route renders only the stub above, exactly as it always has.
  */
-export default function ArchivePage() {
+export default async function ArchivePage() {
   if (process.env.XTEXT_WEB_ARCHIVE_ENABLED !== "true") {
     return <ArchiveStub />;
   }
@@ -72,7 +73,7 @@ export default function ArchivePage() {
         </p>
       </header>
 
-      <ArchiveFlow />
+      <ArchiveFlow gbpPerBsv={await gbpPerBsv()} />
 
       <p className="mx-auto max-w-2xl px-6 pb-10 text-center text-sm text-muted">
         <Link href="/text" className="text-accent hover:underline">

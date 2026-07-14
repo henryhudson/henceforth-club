@@ -1,5 +1,14 @@
-import { beforeEach, describe, expect, it } from "vitest";
-import { MARGIN, bsvUsd, isUsableRate, resetPriceCache, satsForUsd } from "./xPrice";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  MARGIN,
+  bsvUsd,
+  gbpPerBsv,
+  gbpPerUsd,
+  isUsableRate,
+  resetPriceCache,
+  satsForUsd,
+  satsToPounds,
+} from "./xPrice";
 import { RESOURCES_TEXT_ONLY, RESOURCES_WITH_MEDIA } from "./xGate";
 import { resourcesToUsd } from "./xSpend";
 
@@ -103,5 +112,49 @@ describe("bsvUsd", () => {
     await expect(bsvUsd(rate(0))).resolves.toEqual({ ok: false, reason: "price-unavailable" });
     await expect(bsvUsd(rate(-1))).resolves.toEqual({ ok: false, reason: "price-unavailable" });
     await expect(bsvUsd(rate("lots"))).resolves.toEqual({ ok: false, reason: "price-unavailable" });
+  });
+});
+
+describe("gbpPerUsd + satsToPounds + gbpPerBsv (the display rate that replaced the hardcoded 0.79)", () => {
+  beforeEach(() => resetPriceCache());
+
+  const ok = (body: unknown) =>
+    ({ ok: true, json: async () => body }) as Response;
+
+  it("reads the European Central Bank pound rate and caches it for an hour", async () => {
+    const fetchFn = vi.fn(async () => ok({ rates: { GBP: 0.74 } }));
+    const first = await gbpPerUsd(fetchFn as unknown as typeof fetch, 0);
+    expect(first).toEqual({ ok: true, gbpPerUsd: 0.74 });
+    const cached = await gbpPerUsd(fetchFn as unknown as typeof fetch, 59 * 60 * 1000);
+    expect(cached).toEqual({ ok: true, gbpPerUsd: 0.74 });
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    await gbpPerUsd(fetchFn as unknown as typeof fetch, 61 * 60 * 1000);
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+  });
+
+  it("fails closed on a bad response or an unusable rate — the pound figure is omitted, never wrong", async () => {
+    const bad = vi.fn(async () => ({ ok: false }) as Response);
+    expect(await gbpPerUsd(bad as unknown as typeof fetch, 0)).toEqual({ ok: false, reason: "rate-unavailable" });
+    const junk = vi.fn(async () => ok({ rates: { GBP: -1 } }));
+    expect(await gbpPerUsd(junk as unknown as typeof fetch, 0)).toEqual({ ok: false, reason: "rate-unavailable" });
+  });
+
+  it("satsToPounds converts through both rates", () => {
+    // 1,000,000 sats at $40 per coin and £0.75 per dollar = 0.01 × 40 × 0.75 = £0.30
+    expect(satsToPounds(1_000_000, 40, 0.75)).toBeCloseTo(0.3);
+    expect(satsToPounds(0, 40, 0.75)).toBe(0);
+  });
+
+  it("gbpPerBsv combines the two live rates, and is undefined when either is down", async () => {
+    const both = vi.fn(async (url: RequestInfo | URL) =>
+      String(url).includes("frankfurter")
+        ? ok({ rates: { GBP: 0.75 } })
+        : ok({ rate: 40 }));
+    expect(await gbpPerBsv(both as unknown as typeof fetch, 0)).toBeCloseTo(30);
+
+    resetPriceCache();
+    const gbpDown = vi.fn(async (url: RequestInfo | URL) =>
+      String(url).includes("frankfurter") ? (({ ok: false }) as Response) : ok({ rate: 40 }));
+    expect(await gbpPerBsv(gbpDown as unknown as typeof fetch, 0)).toBeUndefined();
   });
 });

@@ -11,6 +11,7 @@ import { jobRefusalMessage } from "./jobRefusalMessage";
 import { statusCopy } from "./statusCopy";
 import QuoteCard from "./QuoteCard";
 import PaymentPanel from "./PaymentPanel";
+import FileDropLabel from "../_components/FileDropLabel";
 
 /** A few seconds' interval — frequent enough to feel live, not so frequent
  * it hammers the route while a visitor watches a payment confirm. */
@@ -36,7 +37,7 @@ type JobStatus = {
   failureReason?: string;
 };
 
-export default function ArchiveFlow() {
+export default function ArchiveFlow({ gbpPerBsv }: { gbpPerBsv?: number }) {
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [handle, setHandle] = useState<string | null>(null);
@@ -133,27 +134,20 @@ export default function ArchiveFlow() {
   if (!quote || !status) {
     return (
       <div className="mx-auto max-w-2xl px-6 pb-10">
-        <label className="block cursor-pointer rounded-xl border border-dashed border-card-border bg-card-bg/50 p-5 text-center text-sm text-muted transition hover:border-accent">
-          <input
-            type="file"
-            multiple
-            accept=".js,.json"
-            className="hidden"
-            disabled={uploading}
-            onChange={(e) => onFiles(e.target.files)}
-          />
+        <FileDropLabel onFiles={onFiles} disabled={uploading}>
           {uploading ? (
             "Uploading…"
           ) : (
             <>
-              Drop your{" "}
-              <span className="text-foreground">tweets.js · profile.js · account.js</span>
+              Choose or drop{" "}
+              <span className="text-foreground">tweets.js · profile.js · account.js</span>{" "}
+              from the export X emailed you
               <span className="mt-1 block text-xs">
                 Sent to us once, to price and inscribe. Nothing else leaves your browser.
               </span>
             </>
           )}
-        </label>
+        </FileDropLabel>
         {error && <p className="mt-3 text-sm text-accent-orange">{error}</p>}
       </div>
     );
@@ -174,6 +168,7 @@ export default function ArchiveFlow() {
         premiumSats={quote.premiumSats}
         priceSats={quote.priceSats}
         claimedNotice={quote.notice}
+        gbpPerBsv={gbpPerBsv}
       />
 
       <div className="space-y-3 rounded-2xl border border-card-border bg-card-bg p-6 text-sm">
@@ -197,7 +192,7 @@ export default function ArchiveFlow() {
         </label>
       </div>
 
-      {readyToPay && status.address && <PaymentPanel address={status.address} priceSats={status.priceSats} />}
+      {readyToPay && status.address && <PaymentPanel address={status.address} priceSats={status.priceSats} gbpPerBsv={gbpPerBsv} />}
       {!readyToPay && status.address && (
         <p className="text-center text-sm text-muted">
           Confirm both boxes above to reveal your payment address.

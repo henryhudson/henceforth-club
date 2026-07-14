@@ -9,10 +9,20 @@ import { qrSvg } from "./qr";
  * the page's dark theme: it is a scanning target, not decoration, and most
  * camera readers expect that contrast.
  */
-export default function PaymentPanel({ address, priceSats }: { address: string; priceSats: number }) {
+export default function PaymentPanel({
+  address,
+  priceSats,
+  gbpPerBsv,
+}: {
+  address: string;
+  priceSats: number;
+  /** Live pounds-per-coin from the server page — display softener only. */
+  gbpPerBsv?: number;
+}) {
   const uri = bitcoinUri(address, priceSats);
   const { size, path } = qrSvg(uri);
   const amount = bitcoinAmount(priceSats);
+  const pounds = gbpPerBsv === undefined ? undefined : (priceSats / 1e8) * gbpPerBsv;
 
   return (
     <div className="rounded-2xl border border-card-border bg-card-bg p-6 text-center">
@@ -27,7 +37,19 @@ export default function PaymentPanel({ address, priceSats }: { address: string; 
       </a>
       <p className="mt-4 select-all break-all font-mono text-sm text-foreground">{address}</p>
       <p className="mt-1 select-all font-mono text-sm text-muted">
+        {pounds !== undefined && <>about &pound;{pounds.toFixed(2)} &middot; </>}
         {amount} bitcoin SV &middot; {priceSats.toLocaleString("en-GB")} satoshis
+      </p>
+      <p className="mt-3 text-xs text-muted">
+        Pay with any Bitcoin SV wallet —{" "}
+        <a href="https://handcash.io" target="_blank" rel="noreferrer" className="text-accent hover:underline">
+          HandCash
+        </a>{" "}
+        or the{" "}
+        <a href="https://apps.apple.com/app/henceforth/id1602896145" className="text-accent hover:underline">
+          Henceforth app
+        </a>{" "}
+        can pay this code. On a phone, tap the code to open your wallet directly.
       </p>
     </div>
   );
