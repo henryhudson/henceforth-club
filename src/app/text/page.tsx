@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getArchivePage, PAGE_SIZE } from "@/lib/xArchiveCache";
+import { getArchivePage } from "@/lib/xArchiveCache";
 import { listHandles } from "@/lib/xIndex";
+import { gbpPerBsv } from "@/lib/xPrice";
 import { readFoundingTotal, readScoresByWindow } from "@/lib/xVotes";
 import ProfileView from "./_components/ProfileView";
 import ArchiveDropZone from "./_components/ArchiveDropZone";
@@ -17,8 +18,18 @@ export const metadata: Metadata = {
     "Your X profile, written to Bitcoin. Readable from any block explorer, forever, without us.",
 };
 
+/** How much of the witness archive the index shows. The index sells; the
+ * full-feed experience lives at /text/<handle>. Thirty posts buried the
+ * conversion section under roughly four thousand words of one man's tweets. */
+const WITNESS_TEASER_POSTS = 6;
+
 export default async function XPage() {
-  const witness = await getArchivePage(WITNESS_HANDLE, 0, PAGE_SIZE);
+  // The web archive flow hides behind its go-live flag; until it is on, the
+  // primary action must not lead to a stub that tells a warmed-up visitor to
+  // leave (the accent button did exactly that — the top finding of the
+  // 2026-07-14 smoothness research).
+  const webArchiveOpen = process.env.XTEXT_WEB_ARCHIVE_ENABLED === "true";
+  const witness = await getArchivePage(WITNESS_HANDLE, 0, WITNESS_TEASER_POSTS);
   const handles = await listHandles(50);
   // One ledger read, five folds — readScores per window re-read the ledger
   // each time. Shared with /text/<handle>, which now carries the same toggle.
@@ -55,6 +66,34 @@ export default async function XPage() {
             )}{" "}
             · read from the chain, never from a server
           </p>
+          {/* The action lives in the hero — a ten-second visitor gets the
+              thesis AND the next step without scrolling. */}
+          <div className="mt-7 inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-2 font-mono text-sm">
+            {webArchiveOpen ? (
+              <>
+                <Link
+                  className="rounded-md border border-accent px-4 py-2 text-accent transition-colors hover:bg-accent hover:text-background"
+                  href="/text/archive"
+                >
+                  Archive yours &rarr;
+                </Link>
+                <span className="text-muted">or</span>
+                <a
+                  className="rounded-md border border-card-border px-4 py-2 text-foreground transition-colors hover:border-card-border-hover"
+                  href="https://apps.apple.com/app/henceforth/id1602896145"
+                >
+                  Archive with the app &middot; &pound;9.99
+                </a>
+              </>
+            ) : (
+              <a
+                className="rounded-md border border-accent px-4 py-2 text-accent transition-colors hover:bg-accent hover:text-background"
+                href="https://apps.apple.com/app/henceforth/id1602896145"
+              >
+                Archive yours with the app &middot; &pound;9.99 &rarr;
+              </a>
+            )}
+          </div>
         </div>
       </header>
 
@@ -80,6 +119,14 @@ export default async function XPage() {
         </p>
       )}
 
+      {witness && (
+        <p className="mx-auto -mt-16 max-w-2xl px-6 pb-10 text-center font-mono text-sm">
+          <Link className="text-accent hover:underline" href={`/text/${WITNESS_HANDLE}`}>
+            read the full {witness.postCount.toLocaleString("en-GB")}-post archive &rarr;
+          </Link>
+        </p>
+      )}
+
       {witness?.latestTxid && <Proof txid={witness.latestTxid} />}
 
       {/* The stakes — one line, no theatrics */}
@@ -91,25 +138,38 @@ export default async function XPage() {
       </p>
 
       {/* Recognition and price — the drop zone renders the quote once a file is parsed */}
-      <ArchiveDropZone />
+      <ArchiveDropZone gbpPerBsv={await gbpPerBsv()} />
 
-      {/* The gateway — two ways in, said once */}
+      {/* The gateway — the ways in, said once, honestly */}
       <section className="mx-auto max-w-2xl px-6 pb-14 text-center">
         <div className="inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-2 font-mono text-sm">
-          <Link
-            className="rounded-md border border-accent px-4 py-2 text-accent transition-colors hover:bg-accent hover:text-background"
-            href="/text/archive"
-          >
-            Archive yours &rarr;
-          </Link>
-          <span className="text-muted">or</span>
+          {webArchiveOpen && (
+            <>
+              <Link
+                className="rounded-md border border-accent px-4 py-2 text-accent transition-colors hover:bg-accent hover:text-background"
+                href="/text/archive"
+              >
+                Archive yours &rarr;
+              </Link>
+              <span className="text-muted">or</span>
+            </>
+          )}
           <a
-            className="rounded-md border border-card-border px-4 py-2 text-foreground transition-colors hover:border-card-border-hover"
+            className={
+              webArchiveOpen
+                ? "rounded-md border border-card-border px-4 py-2 text-foreground transition-colors hover:border-card-border-hover"
+                : "rounded-md border border-accent px-4 py-2 text-accent transition-colors hover:bg-accent hover:text-background"
+            }
             href="https://apps.apple.com/app/henceforth/id1602896145"
           >
-            Archive with the app · &pound;9.99
+            Archive with the app &middot; &pound;9.99
           </a>
         </div>
+        <p className="mt-3 text-xs text-muted">
+          {webArchiveOpen
+            ? "Web: pay per archive, text only. App: £9.99 once, includes photos and videos, keys stay yours."
+            : "The web flow — upload your X export, pay by code — arrives shortly. The app archives today: photos and videos included, keys stay yours."}
+        </p>
         <p className="mt-4 text-xs text-muted">
           Everything on this page is read from Bitcoin; the site holds pointers, never the text.
         </p>
