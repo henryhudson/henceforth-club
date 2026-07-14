@@ -57,47 +57,47 @@
 <h3>The primary button must not lead to a stub</h3>
 <div class="files"><code>src/app/text/page.tsx:99-116</code></div>
 <ul class="steps">
-<li><input type="checkbox"> While <code>XTEXT_WEB_ARCHIVE_ENABLED</code> is off, make &ldquo;Archive with the app&rdquo; the accent button and demote the web path to a plain &ldquo;web flow coming&rdquo; line. One comparative sentence replaces the stub&rsquo;s &ldquo;cheaper&rdquo; claim: web = pay per archive, app = &pound;9.99 once with photos and videos, keys stay yours.</li>
+<li><input type="checkbox" checked> While <code>XTEXT_WEB_ARCHIVE_ENABLED</code> is off, make &ldquo;Archive with the app&rdquo; the accent button and demote the web path to a plain &ldquo;web flow coming&rdquo; line. One comparative sentence replaces the stub&rsquo;s &ldquo;cheaper&rdquo; claim: web = pay per archive, app = &pound;9.99 once with photos and videos, keys stay yours.</li>
 </ul></div>
 
 <div class="task"><span class="tasknum">Task 2 &middot; site</span> <span class="effort">small</span>
 <h3>Sell above the fold; witness below it</h3>
 <div class="files"><code>src/app/text/page.tsx:37-81</code></div>
 <ul class="steps">
-<li><input type="checkbox"> Call-to-action pair (or anchor) in the hero.</li>
-<li><input type="checkbox"> Cap the inline witness feed at 5&ndash;8 posts with &ldquo;read the full archive &rarr;&rdquo; to <code>/text/henryhudson6</code>.</li>
+<li><input type="checkbox" checked> Call-to-action pair (or anchor) in the hero.</li>
+<li><input type="checkbox" checked> Cap the inline witness feed at 5&ndash;8 posts with &ldquo;read the full archive &rarr;&rdquo; to <code>/text/henryhudson6</code>.</li>
 </ul></div>
 
 <div class="task"><span class="tasknum">Task 3 &middot; site</span> <span class="effort">small</span>
 <h3>Drag-and-drop that actually accepts a drop</h3>
 <div class="files"><code>ArchiveDropZone.tsx:32-43</code> &middot; <code>ArchiveFlow.tsx:136-156</code></div>
 <ul class="steps">
-<li><input type="checkbox"> <code>onDragOver</code>/<code>onDrop</code> on both zones feeding the same <code>onFiles</code>; window-level guard so a stray drop cannot navigate the page away (today it destroys in-progress state).</li>
-<li><input type="checkbox"> Mobile-first copy: &ldquo;Choose the zip X emailed you&rdquo; &mdash; drag-and-drop does not exist on iOS.</li>
+<li><input type="checkbox" checked> <code>onDragOver</code>/<code>onDrop</code> on both zones feeding the same <code>onFiles</code>; window-level guard so a stray drop cannot navigate the page away (today it destroys in-progress state).</li>
+<li><input type="checkbox" checked> Mobile-first copy: &ldquo;Choose the zip X emailed you&rdquo; &mdash; drag-and-drop does not exist on iOS.</li>
 </ul></div>
 
 <div class="task"><span class="tasknum">Task 4 &middot; site</span> <span class="effort">small</span>
 <h3>Honest money: a live exchange rate, everywhere a price renders</h3>
 <div class="files"><code>CostQuote.tsx:6</code> (delete <code>GBP_PER_USD = 0.79</code>) &middot; <code>QuoteCard.tsx</code> &middot; <code>PaymentPanel.tsx</code></div>
 <ul class="steps">
-<li><input type="checkbox"> Fetch the pound rate server-side beside the existing BSV/USD rate, same one-hour cache; thread it through index quote, QuoteCard, PaymentPanel. Fiat first, satoshis second (&ldquo;&asymp; &pound;0.42 &middot; 52,000 sats&rdquo;).</li>
-<li><input type="checkbox"> Under the payment QR: one line naming wallets that can pay the URI (HandCash, the Henceforth app), linked.</li>
+<li><input type="checkbox" checked> Fetch the pound rate server-side beside the existing BSV/USD rate, same one-hour cache; thread it through index quote, QuoteCard, PaymentPanel. Fiat first, satoshis second (&ldquo;&asymp; &pound;0.42 &middot; 52,000 sats&rdquo;).</li>
+<li><input type="checkbox" checked> Under the payment QR: one line naming wallets that can pay the URI (HandCash, the Henceforth app), linked.</li>
 </ul></div>
 
 <div class="task"><span class="tasknum">Task 5 &middot; site</span> <span class="effort">small</span>
 <h3>The ledger stops saying &ldquo;&#9672; 0 sats&rdquo; on everything</h3>
 <div class="files"><code>PostEntry.tsx:128-136</code> &middot; <code>ProfileView.tsx:114</code></div>
 <ul class="steps">
-<li><input type="checkbox"> Hide the sats chip at zero (the permanence line already applies &ldquo;zero is not a measurement&rdquo;).</li>
-<li><input type="checkbox"> One explainer line under the ledger label: &ldquo;posts earn sats through paid votes from the Henceforth app&rdquo;.</li>
-<li><input type="checkbox"> Scope the scroll loader to Latest mode (Best honestly labelled &ldquo;top 30&rdquo;) until the ranked-pages endpoint exists.</li>
+<li><input type="checkbox" checked> Hide the sats chip at zero (the permanence line already applies &ldquo;zero is not a measurement&rdquo;).</li>
+<li><input type="checkbox" checked> One explainer line under the ledger label: &ldquo;posts earn sats through paid votes from the Henceforth app&rdquo;.</li>
+<li><input type="checkbox" checked> Scope the scroll loader to Latest mode (Best honestly labelled &ldquo;top 30&rdquo;) until the ranked-pages endpoint exists.</li>
 </ul></div>
 
 <div class="task"><span class="tasknum">Task 6 &middot; ops</span> <span class="effort">small</span>
 <h3>A monitor, so the next /text outage is a page not a coincidence</h3>
 <div class="files">Mac mini launchd (the board-autosync pattern)</div>
 <ul class="steps">
-<li><input type="checkbox"> Synthetic check every few minutes: <code>/text</code> and <code>/text/henryhudson6</code> assert 200, sub-2s, a known post id; alert on failure. Log-and-alert on register-route non-200. The July 13 outage ran a full day and was found because Henry asked to open the site.</li>
+<li><input type="checkbox" checked> Synthetic check every few minutes: <code>/text</code> and <code>/text/henryhudson6</code> assert 200, sub-2s, a known post id; alert on failure. Log-and-alert on register-route non-200. The July 13 outage ran a full day and was found because Henry asked to open the site.</li>
 </ul></div>
 
 <div class="task"><span class="tasknum">Task 7 &middot; app</span> <span class="effort">trivial + small</span>
