@@ -112,6 +112,10 @@ export default function ProfileView({
           opening in place to reveal its thread and on-chain record. */}
       <div className="mx-auto mt-8 max-w-[68ch] px-6">
         <p className="ledger-label mb-1">The ledger · ranked by committed sats · tap a post to open it</p>
+        <p className="mb-3 text-xs text-muted">
+          Posts earn sats through paid votes from the Henceforth app — a post&rsquo;s worth here is
+          what people committed to it, not applause it can&rsquo;t keep.
+        </p>
         <FeedControls
           posts={posts}
           showParent={showParent}
@@ -120,8 +124,8 @@ export default function ProfileView({
           handle={profile.handle}
           scores={scores}
           scoresByWindow={scoresByWindow}
+          footer={footer}
         />
-        {footer}
       </div>
     </div>
   );

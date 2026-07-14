@@ -127,13 +127,17 @@ export default function PostEntry({
           post's worth is the sats it has earned, not applause it can't keep. */}
       <p className="mt-3 flex flex-wrap items-center gap-x-2 text-xs text-muted">
         <span>{formatDate(post.at)}</span>
-        <span aria-hidden>·</span>
-        <span
-          className={`font-mono ${(sats ?? 0) > 0 ? "text-accent" : "text-muted"}`}
-          title="Sats earned through paid votes"
-        >
-          ◈ {formatSats(sats ?? 0)} sats
-        </span>
+        {/* Zero is not a measurement (the permanence line's own rule): a
+            "◈ 0 sats" stamp on nearly every row dressed an empty ledger as
+            the page's core concept. The chip appears once a post has earned. */}
+        {(sats ?? 0) > 0 && (
+          <>
+            <span aria-hidden>·</span>
+            <span className="font-mono text-accent" title="Sats earned through paid votes">
+              ◈ {formatSats(sats ?? 0)} sats
+            </span>
+          </>
+        )}
         {!open && post.txid && (
           <>
             <span aria-hidden>·</span>

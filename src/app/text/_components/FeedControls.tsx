@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { DEFAULT_WINDOW, type ScoreWindow } from "@/lib/xScore";
 import type { XPost } from "../parseArchive";
 import type { ThreadContext } from "./threadContext";
@@ -48,6 +48,7 @@ export default function FeedControls({
   handle,
   scores = {},
   scoresByWindow,
+  footer,
 }: {
   posts: readonly XPost[];
   showParent: readonly boolean[];
@@ -56,6 +57,12 @@ export default function FeedControls({
   handle?: string;
   scores?: Record<string, number>;
   scoresByWindow?: Record<ScoreWindow, Record<string, number>>;
+  /** The scroll loader, when the caller has one. Rendered ONLY in Latest
+   * mode: the loader always appends chronological pages, so under Best it
+   * quietly degraded the ranking at post 31 — sat-ranked rows, then an
+   * unmarked chronological tail the mode toggles never re-ordered. Best now
+   * says honestly that it ranks the loaded page. */
+  footer?: ReactNode;
 }) {
   const [mode, setMode] = useState<Mode>("best");
   const [selectedWindow, setSelectedWindow] = useState<ScoreWindow>(DEFAULT_WINDOW);
@@ -129,6 +136,14 @@ export default function FeedControls({
           />
         ))}
       </div>
+      {footer !== undefined &&
+        (mode === "latest" ? (
+          footer
+        ) : (
+          <p className="mt-4 text-center font-mono text-xs text-muted">
+            Best ranks the {posts.length} loaded posts — switch to Latest to read the whole archive.
+          </p>
+        ))}
     </div>
   );
 }
