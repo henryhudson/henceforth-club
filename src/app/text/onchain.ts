@@ -6,7 +6,7 @@
 //
 // Pure — no network. The WhatsOnChain fetch lives in `src/lib/whatsonchain.ts`.
 
-import type { XArchive, XPost } from "./parseArchive";
+import { dedupePosts, type XArchive, type XPost } from "./parseArchive";
 
 /** The lean shape the app writes on-chain (mirror of the app's SocialArchive). */
 export interface SocialArchive {
@@ -203,6 +203,26 @@ export function stitchToXArchive(
     }
   }
   return { profile: latest.profile, posts: [...merged.values()].sort(byNewestId) };
+}
+
+/**
+ * Merge already-rendered CACHED posts with the posts of a freshly-stitched
+ * DELTA (new archive transactions appended to an immutable prefix), under the
+ * exact rules a full `stitchToXArchive` + `dedupePosts` pass would apply: the
+ * delta's copy of a post wins on fields, media is the union (newest first),
+ * order is newest-first by id, and an older post whose text duplicates a
+ * newer one is dropped. This is what lets the cache grow by fetching ONLY
+ * the new transactions — never re-downloading the (potentially enormous)
+ * archive transactions the cached posts already came from.
+ */
+export function mergeDeltaPosts(cachedPosts: XPost[], deltaPosts: XPost[]): XPost[] {
+  const merged = new Map<string, XPost>();
+  for (const post of deltaPosts) merged.set(post.id, post);
+  for (const older of cachedPosts) {
+    const newer = merged.get(older.id);
+    merged.set(older.id, newer ? withMediaFromOlderCopy(newer, older) : older);
+  }
+  return dedupePosts([...merged.values()].sort(byNewestId));
 }
 
 /** The newer copy's fields, with any media the older copy carries that the newer

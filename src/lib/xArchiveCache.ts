@@ -3,7 +3,7 @@ import type { Redis } from "@upstash/redis";
 import { getRedis } from "./redis";
 import { getXTxids } from "./xIndex";
 import { fetchTxArchiveWithTime as fetchTxArchiveDefault } from "./whatsonchain";
-import { stitchToXArchive, resolveMediaKinds, type SocialArchive } from "@/app/text/onchain";
+import { mergeDeltaPosts, stitchToXArchive, resolveMediaKinds, type SocialArchive } from "@/app/text/onchain";
 import { dedupePosts, type XArchive, type XPost, type XProfile } from "@/app/text/parseArchive";
 
 // Reading a handle's whole archive used to mean stitching every archive
@@ -13,6 +13,16 @@ import { dedupePosts, type XArchive, type XPost, type XProfile } from "@/app/tex
 // costs the chunks it actually needs. An archive transaction set is
 // immutable, so a chunk is cached forever until a new delta transaction
 // changes the set — detected by hashing the ordered txid list.
+//
+// The txid list is APPEND-ONLY (a registration appends; only an owner claim
+// resets it), and that is load-bearing: when the current list has the cached
+// list as a strict prefix, the cache is EXTENDED by fetching only the new
+// transactions and merging their posts into the cached ones. Rebuilding from
+// genesis instead means re-downloading every archive transaction's raw hex —
+// tens of megabytes each once media batches exist — inside one request, which
+// no serverless function survives; that is exactly the poison-pill loop that
+// took /text down on 2026-07-13 (every request retried the doomed rebuild,
+// so meta was never written and the next request retried again).
 
 /** Posts per cached chunk. Chunk `n` holds stitched posts `[n*CHUNK_SIZE, (n+1)*CHUNK_SIZE)`. */
 export const CHUNK_SIZE = 100;
@@ -237,6 +247,72 @@ async function attemptRebuild(
   }
 }
 
+/**
+ * The number of leading txids whose hash matches the cached one — i.e. proof
+ * the cached archive is an exact prefix of the current one and the cache can
+ * be EXTENDED rather than rebuilt. Null when no proper prefix matches (an
+ * owner claim reset the feed, or the index was rewritten). The full list is
+ * never a "prefix": an equal hash is a plain cache hit, handled before this.
+ * Longest-first so the one true prefix wins even in the (astronomically
+ * unlikely) event of an FNV collision on a shorter one.
+ */
+export function prefixLength(txids: string[], cachedHash: string): number | null {
+  for (let k = txids.length - 1; k >= 1; k--) {
+    if (txidSetHash(txids.slice(0, k)) === cachedHash) return k;
+  }
+  return null;
+}
+
+/**
+ * Extend a valid-prefix cache by fetching ONLY the transactions appended
+ * since it was written, merging their posts into the cached ones under the
+ * same rules a full stitch applies (see `mergeDeltaPosts`), and committing
+ * the result. Three outcomes:
+ *  - `{ archive, meta }` — extended and (best-effort) committed;
+ *  - `"stale"` — one or more NEW transactions is not fetchable yet (a
+ *    registration usually lands seconds after broadcast, before the chain
+ *    indexer has seen the transaction). Nothing is written — committing a
+ *    partial delta would wedge the missing transaction out of the archive
+ *    until the NEXT registration changed the hash — so the caller serves the
+ *    stale cache and the next read retries only the missing fetches;
+ *  - `null` — the cached chunks have a hole; there is nothing safe to extend
+ *    from and the caller must fall back to a full rebuild.
+ */
+async function extendCache(
+  handle: string,
+  txids: string[],
+  hash: string,
+  cachedLen: number,
+  meta: ArchiveMeta,
+  fetchTxArchive: typeof fetchTxArchiveDefault,
+  redis: Redis,
+): Promise<{ archive: XArchive; meta: ArchiveMeta } | "stale" | null> {
+  const cachedPosts = await readChunkRange(handle, 0, meta.postCount, redis);
+  if (cachedPosts === null) return null;
+
+  const newTxids = txids.slice(cachedLen);
+  const fresh = await stitchFresh(newTxids, fetchTxArchive, true);
+  if (!fresh || fresh.txCount < newTxids.length) return "stale";
+
+  const archive: XArchive = {
+    // The delta carries the newest transaction, and the newest archive's
+    // profile wins — same rule as stitchToXArchive.
+    profile: fresh.archive.profile,
+    posts: mergeDeltaPosts(cachedPosts, fresh.archive.posts),
+  };
+  const txTimes = { ...meta.txTimes, ...fresh.txTimes };
+  const newMeta = await attemptRebuild(
+    handle,
+    archive,
+    hash,
+    fresh.latestTxid,
+    meta.txCount + fresh.txCount,
+    txTimes,
+    redis,
+  );
+  return { archive, meta: newMeta };
+}
+
 /** Stitch a fresh archive from the chain and, when Redis is available,
  * rewrite the cache (a write failure never surfaces here — see
  * `attemptRebuild`). Null when every transaction fetch failed. */
@@ -277,8 +353,27 @@ const resolveHandle = cache(async function resolveHandle(
   const hash = txidSetHash(txids);
   if (redis) {
     const cachedMeta = await redis.get<ArchiveMeta>(metaKey(handle));
-    if (cachedMeta && cachedMeta.v === META_VERSION && cachedMeta.txidSetHash === hash) {
-      return { kind: "cached", meta: cachedMeta, redis, txids, hash };
+    if (cachedMeta && cachedMeta.v === META_VERSION) {
+      if (cachedMeta.txidSetHash === hash) {
+        return { kind: "cached", meta: cachedMeta, redis, txids, hash };
+      }
+      // The index grew past the cache (a registration appended): extend by
+      // the delta alone instead of re-stitching the world — see the module
+      // header for why the full rebuild is not survivable once media batches
+      // exist. A non-prefix mismatch (owner claim reset the feed) falls
+      // through to the full rebuild, which such a feed is small enough for.
+      const cachedLen = prefixLength(txids, cachedMeta.txidSetHash);
+      if (cachedLen !== null) {
+        const extended = await extendCache(handle, txids, hash, cachedLen, cachedMeta, fetchTxArchive, redis);
+        if (extended === "stale") {
+          // The new transaction isn't fetchable yet: yesterday's posts beat
+          // a failed page. Meta stays untouched, so the next read retries
+          // only the missing delta fetches.
+          return { kind: "cached", meta: cachedMeta, redis, txids, hash };
+        }
+        if (extended) return { kind: "fresh", archive: extended.archive, meta: extended.meta };
+        // null: a chunk hole — nothing safe to extend from; rebuild fully.
+      }
     }
   }
 
@@ -286,6 +381,25 @@ const resolveHandle = cache(async function resolveHandle(
   if (!stitched) return null; // every per-transaction fetch failed
   return { kind: "fresh", archive: stitched.archive, meta: stitched.meta };
 });
+
+/**
+ * Build (or delta-extend) a handle's cache without serving a page — called
+ * from `/api/x/register` the moment a new transaction is indexed, so the
+ * rebuild happens where the registration already proved the transaction is
+ * fetchable, and no page view ever pays for the stitch. Never throws: a
+ * failed warm just leaves the next page view to extend by the same delta.
+ */
+export async function warmArchiveCache(
+  handle: string,
+  fetchTxArchive: typeof fetchTxArchiveDefault = fetchTxArchiveDefault,
+  redis: Redis | null = getRedis(),
+): Promise<void> {
+  try {
+    await getArchivePage(handle, 0, 1, fetchTxArchive, redis);
+  } catch {
+    // Page views self-heal; a warm failure must never surface anywhere.
+  }
+}
 
 /** Read only the chunks a `[start, end)` post window touches, and slice out
  * exactly that window — never the whole cached archive. Null means at least

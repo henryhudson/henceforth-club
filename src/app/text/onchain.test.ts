@@ -5,9 +5,11 @@ import {
   socialArchiveToXArchive,
   ordfsUrl,
   stitchToXArchive,
+  mergeDeltaPosts,
   mediaKind,
   resolveMediaKinds,
 } from "./onchain";
+import type { XPost } from "./parseArchive";
 
 // Build an OP_RETURN script hex (OP_FALSE OP_RETURN <push>...) from string data,
 // using the real minimal-pushdata encoding so we exercise the parser for real.
@@ -267,5 +269,38 @@ describe("resolveMediaKinds", () => {
     const out = await resolveMediaKinds(archive, failing);
     expect(out.posts[1].media?.[0].type).toBe("photo");
     expect(out.posts[1].media?.[0].url).toBe("https://ordfs.network/tx_1");
+  });
+});
+
+describe("mergeDeltaPosts", () => {
+  const p = (id: string, overrides: Partial<XPost> = {}): XPost => ({
+    id,
+    at: "2020-01-01",
+    text: `post ${id}`,
+    ...overrides,
+  });
+
+  it("interleaves delta posts with cached ones, newest-first by id — a batch splits by media size, not by time", () => {
+    const merged = mergeDeltaPosts([p("30"), p("10")], [p("40"), p("20")]);
+    expect(merged.map((x) => x.id)).toEqual(["40", "30", "20", "10"]);
+  });
+
+  it("lets a delta copy of an existing post win on fields while keeping media only the cached copy carries", () => {
+    const cached = p("1", { media: [{ type: "photo", url: "ordfs://old/0" }] });
+    const delta = p("1", { text: "edited", media: [{ type: "photo", url: "ordfs://new/0" }] });
+    const merged = mergeDeltaPosts([cached], [delta]);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].text).toBe("edited");
+    expect(merged[0].media?.map((m) => m.url)).toEqual(["ordfs://new/0", "ordfs://old/0"]);
+  });
+
+  it("drops an older cached post whose text duplicates a newer delta post's — same rule as a full stitch", () => {
+    const merged = mergeDeltaPosts([p("1", { text: "same words" })], [p("2", { text: "same words" })]);
+    expect(merged.map((x) => x.id)).toEqual(["2"]);
+  });
+
+  it("returns the cached posts unchanged for an empty delta", () => {
+    const merged = mergeDeltaPosts([p("2"), p("1")], []);
+    expect(merged.map((x) => x.id)).toEqual(["2", "1"]);
   });
 });

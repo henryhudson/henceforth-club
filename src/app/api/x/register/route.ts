@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { fetchTxArchive } from "@/lib/whatsonchain";
+import { warmArchiveCache } from "@/lib/xArchiveCache";
 import { appendXTxid, setXTxids, stampHandle } from "@/lib/xIndex";
 import { archiveDigest, setTxDigest } from "@/lib/xDigest";
 import { getOwner, setOwner, claimOutcome, type XOwner } from "@/lib/xOwner";
@@ -90,6 +91,10 @@ export async function POST(req: Request) {
       if (!(await setOwner(handle, record))) {
         return NextResponse.json({ ok: false, reason: "index-unavailable" }, { status: 503 });
       }
+      // Rebuild the page cache now, after the response, while this route has
+      // just proved the transaction is fetchable — a page view must never be
+      // the request that pays for the stitch.
+      after(() => warmArchiveCache(handle));
       return NextResponse.json({ ok: true, handle, txid, verified: true, reset: true, url: `/x/${handle}` });
     }
     // outcome === "append": the established owner adds another of their archives.
@@ -100,6 +105,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, reason: "index-unavailable" }, { status: 503 });
   }
   await stampHandle(handle, Date.now());
+  // Extend the page cache by this one new transaction now, after the response
+  // — the registration just proved the transaction is fetchable, and a page
+  // view must never be the request that pays for the stitch.
+  after(() => warmArchiveCache(handle));
   return NextResponse.json({ ok: true, handle, txid, verified: Boolean(owner || hasClaim), posts: archive.posts.length, url: `/x/${handle}` });
 }
 

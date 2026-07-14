@@ -8,8 +8,10 @@ import {
   earliestKnownTime,
   getArchivePage,
   getArchivePost,
+  prefixLength,
   slicePage,
   txidSetHash,
+  warmArchiveCache,
 } from "./xArchiveCache";
 import type { XPost } from "@/app/text/parseArchive";
 import type { SocialArchive } from "@/app/text/onchain";
@@ -266,7 +268,7 @@ describe("getArchivePage", () => {
     expect(fetchTxArchive).toHaveBeenCalledTimes(1);
   });
 
-  it("re-stitches and rewrites the cache when a delta transaction extends the archive", async () => {
+  it("extends the cache by fetching ONLY the new transaction when a delta appends", async () => {
     const redis = fakeRedis();
     const fetchTxArchive = vi.fn(
       fetchTxArchiveFrom({
@@ -283,7 +285,144 @@ describe("getArchivePage", () => {
     const second = await getArchivePage("h", 0, 30, fetchTxArchive, redis);
     expect(second?.postCount).toBe(3);
     expect(second?.posts.map((p) => p.id)).toEqual(["3", "2", "1"]);
-    expect(fetchTxArchive).toHaveBeenCalledTimes(3); // 1 txid the first read, 2 the second (no partial re-fetch)
+    expect(second?.latestTxid).toBe("txB");
+    // The point of the delta path: txA's (potentially enormous) archive
+    // transaction is never re-downloaded — the second read fetched txB alone.
+    expect(fetchTxArchive).toHaveBeenCalledTimes(2);
+    expect(fetchTxArchive.mock.calls.map((c) => c[0])).toEqual(["txA", "txB"]);
+
+    // And the extension was committed: a third read is pure cache.
+    mockGetXTxids.mockResolvedValueOnce(["txA", "txB"]);
+    const third = await getArchivePage("h", 0, 30, fetchTxArchive, redis);
+    expect(third?.postCount).toBe(3);
+    expect(fetchTxArchive).toHaveBeenCalledTimes(2);
+  });
+
+  it("serves the stale cache untouched when the delta transaction is not yet fetchable, then heals", async () => {
+    const redis = fakeRedis();
+    const archives: Record<string, SocialArchive | null> = {
+      txA: socialArchive("h", chainOf("1", "2")),
+      txB: null, // just broadcast — WhatsOnChain has not seen it yet
+    };
+    const fetchTxArchive = vi.fn(fetchTxArchiveFrom(archives));
+
+    mockGetXTxids.mockResolvedValueOnce(["txA"]);
+    await getArchivePage("h", 0, 30, fetchTxArchive, redis);
+
+    mockGetXTxids.mockResolvedValueOnce(["txA", "txB"]);
+    const stale = await getArchivePage("h", 0, 30, fetchTxArchive, redis);
+    expect(stale?.postCount).toBe(2); // yesterday's posts beat a failed page
+    expect(stale?.posts.map((p) => p.id)).toEqual(["2", "1"]);
+
+    archives.txB = socialArchive("h", chainOf("3"));
+    mockGetXTxids.mockResolvedValueOnce(["txA", "txB"]);
+    const healed = await getArchivePage("h", 0, 30, fetchTxArchive, redis);
+    expect(healed?.postCount).toBe(3);
+    // txA fetched once ever; txB tried while unfetchable, then again on the heal.
+    expect(fetchTxArchive.mock.calls.map((c) => c[0])).toEqual(["txA", "txB", "txB"]);
+  });
+
+  it("commits nothing on a partial delta — two new transactions, one unreadable, the cache stays whole", async () => {
+    const redis = fakeRedis();
+    const archives: Record<string, SocialArchive | null> = {
+      txA: socialArchive("h", chainOf("1", "2")),
+      txB: socialArchive("h", chainOf("3")),
+      txC: null,
+    };
+    const fetchTxArchive = vi.fn(fetchTxArchiveFrom(archives));
+
+    mockGetXTxids.mockResolvedValueOnce(["txA"]);
+    await getArchivePage("h", 0, 30, fetchTxArchive, redis);
+
+    mockGetXTxids.mockResolvedValueOnce(["txA", "txB", "txC"]);
+    const stale = await getArchivePage("h", 0, 30, fetchTxArchive, redis);
+    expect(stale?.postCount).toBe(2); // not 3: a half-committed delta would wedge txC out until the NEXT registration
+
+    archives.txC = socialArchive("h", chainOf("4"));
+    mockGetXTxids.mockResolvedValueOnce(["txA", "txB", "txC"]);
+    const healed = await getArchivePage("h", 0, 30, fetchTxArchive, redis);
+    expect(healed?.postCount).toBe(4);
+    expect(healed?.posts.map((p) => p.id)).toEqual(["4", "3", "2", "1"]);
+  });
+
+  it("merges a delta copy of an existing post instead of duplicating it", async () => {
+    const redis = fakeRedis();
+    const fetchTxArchive = vi.fn(
+      fetchTxArchiveFrom({
+        txA: socialArchive("h", chainOf("1", "2")),
+        txB: socialArchive("h", [{ id: "2", at: "2020-01-01", text: "chain post 2 (newer copy)" }]),
+      }),
+    );
+
+    mockGetXTxids.mockResolvedValueOnce(["txA"]);
+    await getArchivePage("h", 0, 30, fetchTxArchive, redis);
+
+    mockGetXTxids.mockResolvedValueOnce(["txA", "txB"]);
+    const page = await getArchivePage("h", 0, 30, fetchTxArchive, redis);
+    expect(page?.postCount).toBe(2);
+    expect(page?.posts.find((p) => p.id === "2")?.text).toBe("chain post 2 (newer copy)");
+  });
+
+  it("accumulates transaction count and times across a delta extension", async () => {
+    const redis = fakeRedis();
+    const fetchTxArchive = fetchTxArchiveFrom(
+      {
+        txA: socialArchive("h", chainOf("1", "2")),
+        txB: socialArchive("h", chainOf("3")),
+      },
+      { txA: 1000, txB: 2000 },
+    );
+
+    mockGetXTxids.mockResolvedValueOnce(["txA"]);
+    await getArchivePage("h", 0, 30, fetchTxArchive, redis);
+
+    mockGetXTxids.mockResolvedValueOnce(["txA", "txB"]);
+    const page = await getArchivePage("h", 0, 30, fetchTxArchive, redis);
+    expect(page?.txCount).toBe(2);
+    expect(page?.txTimes).toEqual({ txA: 1000, txB: 2000 });
+    expect(page?.firstInscribedAt).toBe(1000);
+  });
+
+  it("rebuilds from scratch when the txid list is not an extension (an owner claim reset the feed)", async () => {
+    const redis = fakeRedis();
+    const fetchTxArchive = vi.fn(
+      fetchTxArchiveFrom({
+        txA: socialArchive("h", chainOf("1", "2")),
+        txB: socialArchive("h", chainOf("3")),
+        txC: socialArchive("h", chainOf("9")),
+      }),
+    );
+
+    mockGetXTxids.mockResolvedValueOnce(["txA", "txB"]);
+    const before = await getArchivePage("h", 0, 30, fetchTxArchive, redis);
+    expect(before?.postCount).toBe(3);
+
+    mockGetXTxids.mockResolvedValueOnce(["txC"]);
+    const after = await getArchivePage("h", 0, 30, fetchTxArchive, redis);
+    expect(after?.postCount).toBe(1);
+    expect(after?.posts.map((p) => p.id)).toEqual(["9"]);
+    expect(after?.latestTxid).toBe("txC");
+  });
+
+  it("falls back to a full rebuild when the cached chunks have a hole at delta time", async () => {
+    const { redis, deleteKey } = fakeRedisWithBackdoor();
+    const fetchTxArchive = vi.fn(
+      fetchTxArchiveFrom({
+        txA: socialArchive("h", chainOf("1", "2")),
+        txB: socialArchive("h", chainOf("3")),
+      }),
+    );
+
+    mockGetXTxids.mockResolvedValueOnce(["txA"]);
+    await getArchivePage("h", 0, 30, fetchTxArchive, redis);
+    deleteKey("x:posts:h:0"); // evicted between reads
+
+    mockGetXTxids.mockResolvedValueOnce(["txA", "txB"]);
+    const page = await getArchivePage("h", 0, 30, fetchTxArchive, redis);
+    expect(page?.postCount).toBe(3);
+    expect(page?.posts.map((p) => p.id)).toEqual(["3", "2", "1"]);
+    // No cached posts to extend from, so the full stitch ran: txA again + txB.
+    expect(fetchTxArchive.mock.calls.map((c) => c[0])).toEqual(["txA", "txA", "txB"]);
   });
 
   it("reads only the chunks a slice spans, across a chunk boundary", async () => {
@@ -550,5 +689,62 @@ describe("getArchivePost", () => {
     mockGetXTxids.mockResolvedValue([]);
     const found = await getArchivePost("totally-unknown", "1", fetchTxArchiveFrom({}), fakeRedis());
     expect(found).toBeNull();
+  });
+});
+
+describe("prefixLength", () => {
+  it("finds the length of the cached prefix inside a grown txid list", () => {
+    expect(prefixLength(["a", "b", "c"], txidSetHash(["a", "b"]))).toBe(2);
+    expect(prefixLength(["a", "b", "c"], txidSetHash(["a"]))).toBe(1);
+  });
+
+  it("returns null when the cached hash matches no proper prefix (a reset or rewritten feed)", () => {
+    expect(prefixLength(["c"], txidSetHash(["a", "b"]))).toBeNull();
+    expect(prefixLength(["b", "a"], txidSetHash(["a"]))).toBeNull();
+  });
+
+  it("never returns the full length — an equal list is a cache hit, not a delta", () => {
+    expect(prefixLength(["a", "b"], txidSetHash(["a", "b"]))).toBeNull();
+  });
+
+  it("returns null for an empty list", () => {
+    expect(prefixLength([], txidSetHash(["a"]))).toBeNull();
+  });
+});
+
+describe("warmArchiveCache", () => {
+  it("builds the cache for a handle so the page view that follows never pays for the stitch", async () => {
+    mockGetXTxids.mockResolvedValue(["txA"]);
+    const redis = fakeRedis();
+    const fetchTxArchive = vi.fn(fetchTxArchiveFrom({ txA: socialArchive("h", chainOf("1", "2")) }));
+
+    await warmArchiveCache("h", fetchTxArchive, redis);
+    expect(await redis.get("x:posts:h:meta")).not.toBeNull();
+
+    const page = await getArchivePage("h", 0, 30, fetchTxArchive, redis);
+    expect(page?.postCount).toBe(2);
+    expect(fetchTxArchive).toHaveBeenCalledTimes(1); // the warm paid; the view did not
+  });
+
+  it("extends an existing cache by the delta alone, same as a page view would", async () => {
+    const redis = fakeRedis();
+    const fetchTxArchive = vi.fn(
+      fetchTxArchiveFrom({
+        txA: socialArchive("h", chainOf("1", "2")),
+        txB: socialArchive("h", chainOf("3")),
+      }),
+    );
+
+    mockGetXTxids.mockResolvedValueOnce(["txA"]);
+    await warmArchiveCache("h", fetchTxArchive, redis);
+
+    mockGetXTxids.mockResolvedValueOnce(["txA", "txB"]);
+    await warmArchiveCache("h", fetchTxArchive, redis);
+    expect(fetchTxArchive.mock.calls.map((c) => c[0])).toEqual(["txA", "txB"]);
+  });
+
+  it("never throws — a failed warm leaves page views to self-heal", async () => {
+    mockGetXTxids.mockRejectedValue(new Error("index unavailable"));
+    await expect(warmArchiveCache("h", fetchTxArchiveFrom({}), fakeRedis())).resolves.toBeUndefined();
   });
 });

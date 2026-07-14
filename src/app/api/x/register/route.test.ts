@@ -3,10 +3,25 @@ import { BSM, PrivateKey, Utils } from "@bsv/sdk";
 import { registrationMessage } from "@/lib/xBinding";
 
 // In-memory fakes for the input/output boundaries.
-const store = { archives: new Map(), owners: new Map(), lists: new Map(), handles: new Map() };
+const store = {
+  archives: new Map(),
+  owners: new Map(),
+  lists: new Map(),
+  handles: new Map(),
+  warms: [] as string[],
+};
 
 vi.mock("@/lib/whatsonchain", () => ({
   fetchTxArchive: async (txid: string) => store.archives.get(txid) ?? null,
+}));
+vi.mock("@/lib/xArchiveCache", () => ({
+  warmArchiveCache: async (handle: string) => { store.warms.push(handle); },
+}));
+// `after` demands a live request scope, which a unit test doesn't have — run
+// the task inline instead, so the tests can observe what was scheduled.
+vi.mock("next/server", async (orig) => ({
+  ...(await orig() as object),
+  after: (task: () => unknown) => { void task(); },
 }));
 vi.mock("@/lib/xDigest", () => ({ archiveDigest: () => ({}), setTxDigest: async () => {} }));
 vi.mock("@/lib/xIndex", () => ({
@@ -41,7 +56,7 @@ function claimFor(handle: string, txid: string) {
 }
 const post = (body: unknown) => POST(new Request("http://x/api/x/register", { method: "POST", body: JSON.stringify(body) }));
 
-beforeEach(() => { store.archives.clear(); store.owners.clear(); store.lists.clear(); store.handles.clear(); });
+beforeEach(() => { store.archives.clear(); store.owners.clear(); store.lists.clear(); store.handles.clear(); store.warms.length = 0; });
 
 describe("POST /api/x/register", () => {
   it("still accepts an unsigned registration for an unclaimed handle (backward compatible)", async () => {
@@ -51,6 +66,7 @@ describe("POST /api/x/register", () => {
     expect(store.lists.get(HANDLE)).toEqual([TXID]);
     expect(store.owners.get(HANDLE)).toBeUndefined(); // no owner, no tick
     expect(store.handles.has(HANDLE)).toBe(true); // stamped into the public directory
+    expect(store.warms).toEqual([HANDLE]); // the cache stitch is paid here, never by a page view
   });
 
   it("establishes ownership and RESETS the feed when a valid claim arrives", async () => {
@@ -62,6 +78,7 @@ describe("POST /api/x/register", () => {
     expect(store.lists.get(HANDLE)).toEqual([TXID]); // reset — stranger-txid dropped
     expect((store.owners.get(HANDLE) as { address: string }).address).toBe(c.address);
     expect(store.handles.has(HANDLE)).toBe(true); // a claim that resets the feed is also a registration
+    expect(store.warms).toEqual([HANDLE]); // the reset feed's cache rebuilds here too
   });
 
   it("rejects an unsigned registration once the handle is claimed, leaving the directory untouched", async () => {
@@ -70,6 +87,7 @@ describe("POST /api/x/register", () => {
     const res = await post({ handle: HANDLE, txid: TXID });
     expect(res.status).toBe(403);
     expect(store.handles.has(HANDLE)).toBe(false);
+    expect(store.warms).toEqual([]); // nothing registered, nothing warmed
   });
 
   it("rejects a claim whose signature is not by the committed address", async () => {
@@ -97,5 +115,6 @@ describe("POST /api/x/register", () => {
     const res = await post({ handle: HANDLE, txid: DELTA, address, pubkey: pub.toString(), signature });
     expect(res.status).toBe(200);
     expect(store.lists.get(HANDLE)).toEqual([TXID, DELTA]); // appended, not reset
+    expect(store.warms).toEqual([HANDLE]); // the delta extension is paid here, never by a page view
   });
 });
