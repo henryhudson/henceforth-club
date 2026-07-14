@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { fetchXArchive, fetchProfileHead, pagesForPostCount, X_TIMELINE_CEILING } from "@/lib/xfetch";
 import { selectRefs } from "@/lib/xArchive";
 import { payAndReserve, resourcesForPosts } from "@/lib/xGate";
+import { releaseXApiSpend } from "@/lib/xSpend";
 
 /**
  * GET /api/x/archive?handle=<h>&payment=<txid>&images=1&videos=1&full=1
@@ -68,6 +69,13 @@ export async function GET(req: Request) {
 
   const result = await fetchXArchive(handle, token, maxPages);
   if (!result) {
+    // The gate reserved budget and burned the payment for a read X then
+    // failed to serve. The payment's fate is the client's to settle (the app
+    // holds it; a truly burned fee answers "replayed" next run and is
+    // released loudly there). The RESERVATION is ours, and keeping it would
+    // shrink the day's budget by a read that never happened — hand it back,
+    // the same settlement the gate's own replayed arm makes (lib/xGate).
+    await releaseXApiSpend(resourcesForPosts(billedPosts));
     return NextResponse.json({ ok: false, reason: "no-user" }, { status: 404 });
   }
 
