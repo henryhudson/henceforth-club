@@ -22,11 +22,12 @@ import { fetchRawTxHex, fetchTxConfirmed, fetchUnspentOutputs, readUnspentOutput
 import { broadcastArchive, buildInscriptionTx, registerHandle } from "./inscribe.mjs";
 import { buildSweepTx } from "./sweep.mjs";
 
-// HARD RULE 1 — the premium's destination is Henry's cold revenue address, and
-// it is NOT known here. This placeholder stays empty until Henry sets it as a
-// task-10 gate item; the worker refuses to start (see revenueAddressError)
-// while it is unset or invalid, so no run can ever pay the premium to nowhere.
-export const REVENUE_ADDRESS = "";
+// HARD RULE 1 — the premium's destination is Henry's cold revenue address.
+// Set 2026-07-15 on Henry's direction ("use the Hudson wallet"): the canonical
+// cold wallet, verified on-chain before committing (101.7211 BSV confirmed at
+// the time of setting). The worker refuses to start (see revenueAddressError)
+// while this is unset or invalid, so no run can ever pay the premium to nowhere.
+export const REVENUE_ADDRESS = "1GsP511T8e4VjxYdAGnMYdDd6sWxWybcMP";
 
 // Keep in sync with src/lib/archiveCost.ts DEFAULT_FEE_PER_KB — this .mjs worker
 // cannot import the TypeScript module at runtime. The quote priced the archive
