@@ -61,3 +61,6 @@ content/board/
 
 # private worker key files (fund-linked, live only on the worker's disk, never committed)
 scripts/xtext-worker/jobs/
+
+# This Week draft review PDFs (scripts/this-week/render-draft.mjs) — local only
+scripts/this-week/preview/

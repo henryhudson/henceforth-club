@@ -1,0 +1,97 @@
+// Render a "This Week in Parliament" DRAFT to a one-page A4 review PDF, then open
+// it. Draft issues 404 on the public route by design, so this points at the
+// dev-only preview route (src/app/hansard/this-week/[week]/preview) served by a
+// LOCAL dev server — never the live site.
+//
+// Usage (from henceforth-club, with `npm run dev` already running):
+//   node scripts/this-week/render-draft.mjs 2026-07-15
+//   node scripts/this-week/render-draft.mjs 2026-07-15 --base http://localhost:3000
+//   node scripts/this-week/render-draft.mjs 2026-07-15 --out /tmp/hansard.pdf
+//
+// Mirrors the puppeteer-core + local-Chrome pattern of scripts/board/render-pdf.mjs.
+import puppeteer from 'puppeteer-core'
+import { PDFDocument } from 'pdf-lib'
+import { execSync } from 'node:child_process'
+import { mkdir, writeFile } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const HERE = dirname(fileURLToPath(import.meta.url))
+
+function parseArgs(argv) {
+  const out = { week: null, base: 'http://localhost:3000', out: null }
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i]
+    if (a === '--base') out.base = argv[++i]
+    else if (a === '--out') out.out = argv[++i]
+    else if (!out.week) out.week = a
+  }
+  return out
+}
+
+const { week, base, out } = parseArgs(process.argv.slice(2))
+if (!week || !/^\d{4}-\d{2}-\d{2}$/.test(week)) {
+  console.error('usage: node scripts/this-week/render-draft.mjs <YYYY-MM-DD> [--base URL] [--out PATH]')
+  process.exit(1)
+}
+
+// Confirm the draft exists on disk before spinning up Chrome.
+const digestPath = join(HERE, '..', '..', 'content', 'this-week', `${week}.json`)
+if (!existsSync(digestPath)) {
+  console.error(`no digest at content/this-week/${week}.json — write the draft first (see scripts/this-week/PROMPT.md)`)
+  process.exit(1)
+}
+
+const url = `${base.replace(/\/$/, '')}/hansard/this-week/${week}/preview`
+
+// Preflight: a clear message beats a puppeteer timeout when the dev server is down.
+try {
+  const res = await fetch(url, { redirect: 'manual' })
+  if (res.status >= 400) throw new Error(`preview route answered ${res.status}`)
+} catch (err) {
+  console.error(`cannot reach ${url}\n  Is the dev server running? Start it with: npm run dev\n  (${err.message})`)
+  process.exit(1)
+}
+
+const browser = await puppeteer.launch({ channel: 'chrome', headless: true })
+try {
+  const page = await browser.newPage()
+  // deviceScaleFactor 3 → a crisp ~2380×3370 PNG of the A4 sheet (fit is measured
+  // in CSS px, so the scale factor doesn't affect layout).
+  await page.setViewport({ width: 900, height: 1400, deviceScaleFactor: 3 })
+  const resp = await page.goto(url, { waitUntil: 'networkidle0', timeout: 45_000 })
+  if (!resp || !resp.ok()) throw new Error(`${url} answered ${resp ? resp.status() : 'nothing'} — not rendering`)
+  // A4Sheet fits the type to the sheet in a useEffect after the web font loads;
+  // wait for fonts and give the fit loop a beat before capturing.
+  await page.evaluate(() => document.fonts.ready)
+  await new Promise(r => setTimeout(r, 400))
+
+  // Zero margins to match A4Sheet's own `@page { margin: 0 }` — the sheet fits its
+  // type to the FULL A4 height, so Chrome's default ~1cm margin (and the 12mm
+  // globals.css @page rule) would push the last inch onto a second page.
+  const pdf = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '0', right: '0', bottom: '0', left: '0' } })
+  // The shareable image: a hi-res PNG of the sheet itself (the `.a4-print-root`
+  // element, so no surrounding page chrome or the on-screen Print button).
+  const sheet = await page.$('.a4-print-root')
+  const png = sheet ? await sheet.screenshot({ type: 'png' }) : null
+  await page.close()
+
+  const pages = (await PDFDocument.load(pdf)).getPageCount()
+  if (pages > 1) {
+    console.warn(`warning: ${pages} pages — a one-page edition overran; the draft still renders, but the print stylesheet may need tightening`)
+  }
+
+  const pdfPath = out ?? join(HERE, 'preview', `${week}.pdf`)
+  const pngPath = pdfPath.replace(/\.pdf$/i, '.png')
+  await mkdir(dirname(pdfPath), { recursive: true })
+  await writeFile(pdfPath, pdf)
+  if (png) await writeFile(pngPath, png)
+  // Blocking open so the viewer launches before the process exits; best-effort so
+  // a headless environment never fails the render (matches render-pdf.mjs). Open
+  // the PNG — the artifact meant for sharing — falling back to the PDF.
+  try { execSync(`open ${JSON.stringify(png ? pngPath : pdfPath)}`) } catch { /* open is best-effort */ }
+  console.log(`wrote ${pdfPath} (${pages} page${pages === 1 ? '' : 's'})` + (png ? ` and ${pngPath} (${(png.length / 1024).toFixed(0)} KB image) — opened the image` : ' — opened for review'))
+} finally {
+  await browser.close()
+}
