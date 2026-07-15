@@ -62,9 +62,21 @@ function unwrapWif(payload, wrapKey) {
  */
 export function createJobKey(jobId, wrapKey, jobsDir = DEFAULT_JOBS_DIR) {
   if (!validJobId(jobId)) return null;
-  const key = PrivateKey.fromRandom();
   mkdirSync(jobsDir, { recursive: true });
-  writeFileSync(keyFilePath(jobId, jobsDir), wrapWif(key.toWif(), wrapKey), { mode: 0o600 });
+  const key = PrivateKey.fromRandom();
+  try {
+    // Exclusive create ("wx"): if a key already exists for this jobId the write
+    // fails rather than clobbering it. A published custody key is fund-linked —
+    // a concurrent or replayed mint that overwrote it would strand the coin the
+    // visitor sent to the first key's address (money-path review, 2026-07-15).
+    writeFileSync(keyFilePath(jobId, jobsDir), wrapWif(key.toWif(), wrapKey), { mode: 0o600, flag: "wx" });
+  } catch (err) {
+    if (err?.code !== "EEXIST") throw err;
+    // The job already has a key — return its address so publish is idempotent,
+    // never a fresh one that would orphan an already-advertised address.
+    const existing = loadJobKey(jobId, wrapKey, jobsDir);
+    return existing === null ? null : { address: existing.toAddress() };
+  }
   return { address: key.toAddress() };
 }
 

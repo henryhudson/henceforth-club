@@ -56,6 +56,23 @@ describe("worker keystore", () => {
     expect(a.address).not.toBe(b.address);
   });
 
+  it("re-creating an existing job never overwrites its published key", () => {
+    // The CRITICAL race (money-path review, 2026-07-15): a second key-publish
+    // for a jobId that already has a key — a concurrent worker process, or a
+    // replayed publish after a stale state read — must NOT mint a fresh key
+    // over the one whose address a visitor may already be paying. It returns
+    // the existing key's address instead, so publish is idempotent.
+    const first = createJobKey("job-republish", WRAP_KEY, jobsDir);
+    const filePath = path.join(jobsDir, "job-republish.key");
+    const bytesAfterFirst = readFileSync(filePath);
+
+    const second = createJobKey("job-republish", WRAP_KEY, jobsDir);
+
+    expect(readFileSync(filePath).equals(bytesAfterFirst)).toBe(true); // file untouched
+    expect(second.address).toBe(first.address); // same published address, not a new key
+    expect(loadJobKey("job-republish", WRAP_KEY, jobsDir).toAddress()).toBe(first.address);
+  });
+
   it("a jobId containing \"../\" is refused by all three operations", () => {
     // The attack layout: the keystore is pointed at root/jobs, and a genuine
     // wrapped key sits one level up at root/escape.key. If any operation
