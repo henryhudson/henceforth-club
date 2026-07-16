@@ -1,0 +1,7 @@
+This update sharpens the wallet and steadies the interpreter.
+
+• More dependable payments. The wallet now correctly accounts for coins already spent elsewhere, so transactions build and broadcast cleanly the first time.
+• Paymail payments notify the recipient's wallet automatically.
+• Files saved on another device now download promptly — the app asks iCloud for them instead of waiting.
+• A steadier interpreter — several edge cases that could interrupt a session are now handled gracefully, and large transactions are faster.
+• Refreshed Settings, and a smoother wallet loading animation.
