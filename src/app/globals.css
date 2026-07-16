@@ -20,6 +20,10 @@
   --code-text: #00ff41;
   --code-comment: #7a8a7a;
   --scanline: rgba(255, 255, 255, 0.02);
+  /* Inert; exists to rotate this file's content hash (see the note at the end
+     of this file) — comments are stripped by minification, declarations are
+     not. Bump the date to force every client onto a fresh URL. */
+  --stylesheet-rev: "2026-07-16";
 }
 
 @theme inline {
