@@ -27,6 +27,7 @@ export default function PostEntry({
   sats,
   avatarUrl,
   displayName,
+  foundingSats,
   defaultOpen = false,
 }: {
   post: XPost;
@@ -43,6 +44,10 @@ export default function PostEntry({
   avatarUrl?: string;
   /** The author's display name, shown with the handle above the text. */
   displayName?: string;
+  /** This post's upload cost — its founding entry's sats. With `sats` (the
+   * windowed fold: founding + votes) beside it, earned = sats − founding.
+   * The ranking IS their sum, so the chip shows both components. */
+  foundingSats?: number;
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -171,17 +176,30 @@ export default function PostEntry({
           post's worth is the sats it has earned, not applause it can't keep. */}
       <p className="mt-3 flex flex-wrap items-center gap-x-2 text-xs text-muted">
         <span>{formatDate(post.at)}</span>
-        {/* Zero is not a measurement (the permanence line's own rule): a
-            "◈ 0 sats" stamp on nearly every row dressed an empty ledger as
-            the page's core concept. The chip appears once a post has earned. */}
-        {(sats ?? 0) > 0 && (
+        {/* The ranking, shown as its two components: what the post cost to
+            inscribe (its founding entry) plus what it has earned in paid
+            votes since — Best sorts by their sum. Earned renders from zero
+            up (and honestly negative) once a cost anchors the row; a row
+            with no founding record keeps the old earned-only chip. */}
+        {(foundingSats ?? 0) > 0 ? (
+          <>
+            <span aria-hidden>·</span>
+            <span
+              className="font-mono"
+              title="Ranked by upload cost + sats earned through paid votes"
+            >
+              ◈ cost <span className="text-accent">{formatSats(foundingSats ?? 0)}</span> · earned{" "}
+              <span className="text-accent">{formatSats((sats ?? 0) - (foundingSats ?? 0))}</span> sats
+            </span>
+          </>
+        ) : (sats ?? 0) > 0 ? (
           <>
             <span aria-hidden>·</span>
             <span className="font-mono text-accent" title="Sats earned through paid votes">
               ◈ {formatSats(sats ?? 0)} sats
             </span>
           </>
-        )}
+        ) : null}
         {!open && post.txid && (
           <>
             <span aria-hidden>·</span>

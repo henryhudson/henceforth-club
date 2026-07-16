@@ -49,6 +49,22 @@ describe("ProfileView", () => {
     expect(html.match(/@someone/g)?.length).toBe(rows + 1); // rows + the header card
   });
 
+  it("shows each post's whole economics: cost to inscribe plus sats earned", () => {
+    const html = renderToStaticMarkup(
+      <ProfileView
+        archive={archive}
+        isPreview={false}
+        scores={{ "1": 4312 }}
+        foundingByPost={{ "1": 3412 }}
+      />,
+    );
+    // Post 1: cost 3,412, earned = 4,312 − 3,412 = 900. Ranked by the sum.
+    expect(html).toContain("cost");
+    expect(html).toContain("3,412");
+    expect(html).toContain("earned");
+    expect(html).toContain(">900<");
+  });
+
   it('hides the identity card in "ledger" mode — the landing, where rows are signed instead', () => {
     const html = renderToStaticMarkup(
       <ProfileView archive={archive} isPreview={false} header="ledger" />,

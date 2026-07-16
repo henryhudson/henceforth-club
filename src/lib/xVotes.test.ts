@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Redis } from "@upstash/redis";
-import { appendVote, appendFoundingVote, readVoteLedger, readScores, readScoresByWindow, readFoundingTotal, SCORE_WINDOWS } from "./xVotes";
+import { appendVote, appendFoundingVote, readVoteLedger, readLedgerRollup, readScores, readScoresByWindow, readFoundingTotal, SCORE_WINDOWS } from "./xVotes";
 import type { VoteLedgerEntry } from "./xScore";
 
 function vote(overrides: Partial<VoteLedgerEntry> = {}): VoteLedgerEntry {
@@ -174,5 +174,35 @@ describe("readFoundingTotal", () => {
 
   it("is null-Redis safe: zero", async () => {
     expect(await readFoundingTotal("alice", null)).toBe(0);
+  });
+});
+
+describe("readLedgerRollup", () => {
+  it("returns every window's scores AND per-post founding costs from ONE ledger read", async () => {
+    const { redis } = fakeRedis();
+    let reads = 0;
+    const counting = new Proxy(redis, {
+      get(target, prop, receiver) {
+        if (prop === "lrange") reads++;
+        return Reflect.get(target, prop, receiver);
+      },
+    });
+    await appendFoundingVote("bob",
+      { inscriptionTxid: "insc1", postId: "p1", uploadCostSats: 3412, inscriptionDay: "2026-06-01" }, redis);
+    await appendVote("bob", { txid: "v1", postId: "p1", dir: "up", sats: 900, day: "2026-07-09" }, redis);
+
+    const { scoresByWindow, foundingByPost } = await readLedgerRollup("bob", "2026-07-10", counting);
+
+    expect(foundingByPost).toEqual({ p1: 3412 });
+    expect(scoresByWindow.week).toEqual({ p1: 3412 + 900 }); // founding never ages out
+    expect(scoresByWindow.all).toEqual({ p1: 3412 + 900 });
+    expect(Object.keys(scoresByWindow).sort()).toEqual([...SCORE_WINDOWS].sort());
+    expect(reads).toBe(1);
+  });
+
+  it("is null-Redis safe: empty windows, empty founding", async () => {
+    const { scoresByWindow, foundingByPost } = await readLedgerRollup("bob", "2026-07-10", null);
+    expect(foundingByPost).toEqual({});
+    for (const w of SCORE_WINDOWS) expect(scoresByWindow[w]).toEqual({});
   });
 });

@@ -30,6 +30,7 @@ export default function PostsScrollLoader({
   initialScores = {},
   avatarUrl,
   displayName,
+  foundingByPost = {},
 }: {
   handle: string;
   initialCount: number;
@@ -38,6 +39,7 @@ export default function PostsScrollLoader({
   initialScores?: Record<string, number>;
   avatarUrl?: string;
   displayName?: string;
+  foundingByPost?: Record<string, number>;
 }) {
   const [posts, setPosts] = useState<XPost[]>([]);
   const [txTimes, setTxTimes] = useState<Record<string, number>>(initialTxTimes);
@@ -106,6 +108,7 @@ export default function PostsScrollLoader({
             sats={initialScores[post.id]}
             avatarUrl={avatarUrl}
             displayName={displayName}
+            foundingSats={foundingByPost[post.id]}
           />
         ))}
       </div>

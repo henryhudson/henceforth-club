@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getArchivePage, PAGE_SIZE } from "@/lib/xArchiveCache";
 import { getOwner } from "@/lib/xOwner";
-import { readFoundingTotal, readScoresByWindow } from "@/lib/xVotes";
+import { readFoundingTotal, readLedgerRollup } from "@/lib/xVotes";
 import { DEFAULT_WINDOW } from "@/lib/xScore";
 import ProfilePage from "../_components/ProfilePage";
 
@@ -43,9 +43,9 @@ export default async function HandlePage(
   // profile shipped with one window has a Best tab that can go silently
   // inert (2026-07-12). With scoresByWindow present, FeedControls renders
   // the day/week/month/year/all toggle here too.
-  const [owner, scoresByWindow, archiveSats] = await Promise.all([
+  const [owner, { scoresByWindow, foundingByPost }, archiveSats] = await Promise.all([
     getOwner(handle),
-    readScoresByWindow(handle),
+    readLedgerRollup(handle),
     readFoundingTotal(handle),
   ]);
 
@@ -62,6 +62,7 @@ export default async function HandlePage(
       txTimes={page.txTimes}
       scores={scoresByWindow[DEFAULT_WINDOW]}
       scoresByWindow={scoresByWindow}
+      foundingByPost={foundingByPost}
       verified={owner ? { bindingPostId: owner.bindingPostId } : undefined}
     />
   );

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  foldFoundingByPost,
   foldScores,
   totalFoundingSats,
   windowStartDay,
@@ -150,5 +151,28 @@ describe("foldScores windowing + no decay", () => {
       vote({ txid: "b", dir: "down", sats: 300, day: "2026-07-09" }),
     ];
     expect(foldScores(ledger, "2026-07-10", null)["post-1"]).toBe(700);
+  });
+});
+
+describe("foldFoundingByPost", () => {
+  it("maps each post to its upload cost and ignores received votes", () => {
+    const ledger: VoteLedgerEntry[] = [
+      { txid: "insc1:p1", postId: "p1", dir: "up", sats: 3412, day: "2026-07-01", founding: true },
+      { txid: "insc1:p2", postId: "p2", dir: "up", sats: 810, day: "2026-07-01", founding: true },
+      { txid: "vote1", postId: "p1", dir: "up", sats: 900, day: "2026-07-10" },
+      { txid: "vote2", postId: "p2", dir: "down", sats: 50, day: "2026-07-11" },
+    ];
+    expect(foldFoundingByPost(ledger)).toEqual({ p1: 3412, p2: 810 });
+  });
+
+  it("detects pre-flag founding entries by their composite txid", () => {
+    const ledger: VoteLedgerEntry[] = [
+      { txid: "insc9:p7", postId: "p7", dir: "up", sats: 120, day: "2026-06-01" },
+    ];
+    expect(foldFoundingByPost(ledger)).toEqual({ p7: 120 });
+  });
+
+  it("folds an empty ledger to an empty table", () => {
+    expect(foldFoundingByPost([])).toEqual({});
   });
 });

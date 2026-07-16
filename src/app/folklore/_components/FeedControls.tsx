@@ -48,6 +48,7 @@ export default function FeedControls({
   handle,
   avatarUrl,
   displayName,
+  foundingByPost = {},
   scores = {},
   scoresByWindow,
   footer,
@@ -59,6 +60,7 @@ export default function FeedControls({
   handle?: string;
   avatarUrl?: string;
   displayName?: string;
+  foundingByPost?: Record<string, number>;
   scores?: Record<string, number>;
   scoresByWindow?: Record<ScoreWindow, Record<string, number>>;
   /** The scroll loader, when the caller has one. Rendered ONLY in Latest
@@ -139,6 +141,7 @@ export default function FeedControls({
             sats={windowScores[post.id]}
             avatarUrl={avatarUrl}
             displayName={displayName}
+            foundingSats={foundingByPost[post.id]}
           />
         ))}
       </div>

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getArchivePage } from "@/lib/xArchiveCache";
 import { listHandles } from "@/lib/xIndex";
 import { gbpPerBsv } from "@/lib/xPrice";
-import { readFoundingTotal, readScoresByWindow } from "@/lib/xVotes";
+import { readFoundingTotal, readLedgerRollup } from "@/lib/xVotes";
 import FolkloreWordmark from "./_components/FolkloreWordmark";
 import ProfileView from "./_components/ProfileView";
 import ArchiveDropZone from "./_components/ArchiveDropZone";
@@ -34,7 +34,7 @@ export default async function FolklorePage() {
   const handles = await listHandles(50);
   // One ledger read, five folds — readScores per window re-read the ledger
   // each time. Shared with /folklore/<handle>, which now carries the same toggle.
-  const scoresByWindow = await readScoresByWindow(WITNESS_HANDLE);
+  const { scoresByWindow, foundingByPost } = await readLedgerRollup(WITNESS_HANDLE);
   // One ledger read, not one per handle. This used to fan readFoundingTotal
   // across every handle in the directory to sum a site-wide total for the
   // hero's stats line; with that line gone, the witness is the only total the
@@ -84,6 +84,7 @@ export default async function FolklorePage() {
           firstInscribedAt={witness.firstInscribedAt}
           txTimes={witness.txTimes}
           scoresByWindow={scoresByWindow}
+          foundingByPost={foundingByPost}
           header="ledger"
         />
       ) : (

@@ -26,6 +26,7 @@ export default function ProfilePage({
   txTimes = {},
   scores = {},
   scoresByWindow,
+  foundingByPost,
   verified,
 }: {
   archive: XArchive;
@@ -39,6 +40,7 @@ export default function ProfilePage({
   txTimes?: Record<string, number>;
   scores?: Record<string, number>;
   scoresByWindow?: Record<ScoreWindow, Record<string, number>>;
+  foundingByPost?: Record<string, number>;
   verified?: { bindingPostId: string };
 }) {
   const scrollLoader =
@@ -51,6 +53,7 @@ export default function ProfilePage({
         initialScores={scores}
         avatarUrl={archive.profile.avatarUrl}
         displayName={archive.profile.displayName}
+        foundingByPost={foundingByPost}
       />
     ) : undefined;
 
@@ -85,6 +88,7 @@ export default function ProfilePage({
         txTimes={txTimes}
         scores={scores}
         scoresByWindow={scoresByWindow}
+        foundingByPost={foundingByPost}
         verified={verified}
       />
       <ReaderKeys handle={handle} />

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getArchivePage, getArchivePost, PAGE_SIZE } from "@/lib/xArchiveCache";
-import { readScores } from "@/lib/xVotes";
+import { readLedgerRollup } from "@/lib/xVotes";
 import { DEFAULT_WINDOW } from "@/lib/xScore";
 import PostEntry from "../../_components/PostEntry";
 import { buildThreadContext } from "../../_components/threadContext";
@@ -28,12 +28,13 @@ export default async function PostPage(
   { params }: { params: Promise<{ handle: string; postId: string }> },
 ) {
   const { handle, postId } = await params;
-  const [post, page, feed, scores] = await Promise.all([
+  const [post, page, feed, { scoresByWindow, foundingByPost }] = await Promise.all([
     getArchivePost(handle, postId),
     getArchivePage(handle, 0, 0),
     getArchivePage(handle, 0, PAGE_SIZE),
-    readScores(handle, DEFAULT_WINDOW),
+    readLedgerRollup(handle),
   ]);
+  const scores = scoresByWindow[DEFAULT_WINDOW];
   if (!post || !page) notFound();
 
   // Thread context from the archive's first page — the neighbouring posts this
@@ -60,6 +61,7 @@ export default async function PostPage(
             sats={scores[post.id]}
             avatarUrl={page.profile.avatarUrl}
             displayName={page.profile.displayName}
+            foundingSats={foundingByPost[post.id]}
             defaultOpen
           />
         </div>

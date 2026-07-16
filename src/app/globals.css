@@ -205,8 +205,20 @@ body:has(.folkloreroom) {
 /* An entry the reader has opened: a hairline orange marker on the leading
    edge. Encodes which ledger row is open — state, not decoration. */
 .folkloreroom .entry-open {
-  box-shadow: inset 2px 0 0 var(--accent);
+  position: relative;
   border-color: var(--card-border-hover);
+}
+/* The marker is its own layer, not a box-shadow: an inset shadow follows the
+   card's rounded corners, so the line bowed at both ends. A rectangle drawn
+   over the edge stays straight for its full height. */
+.folkloreroom .entry-open::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent);
 }
 
 @keyframes ledgerReveal {

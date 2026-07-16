@@ -95,3 +95,15 @@ export function foldScores(
 export function totalFoundingSats(ledger: readonly VoteLedgerEntry[]): number {
   return ledger.reduce((sum, entry) => (isFoundingEntry(entry) ? sum + entry.sats : sum), 0);
 }
+
+/** Each post's upload cost — the founding entries alone, keyed by post. With
+ * a score table beside it, a post's earned sats are `score − founding`: the
+ * fold already counts founding at full weight in every window. */
+export function foldFoundingByPost(
+  ledger: readonly VoteLedgerEntry[],
+): Record<string, number> {
+  return ledger.reduce<Record<string, number>>((table, entry) => {
+    if (isFoundingEntry(entry)) table[entry.postId] = (table[entry.postId] ?? 0) + entry.sats;
+    return table;
+  }, {});
+}

@@ -1,6 +1,6 @@
 import type { Redis } from "@upstash/redis";
 import { dateKey, getRedis } from "./redis";
-import { foldScores, totalFoundingSats, windowStartDay, DEFAULT_WINDOW, type ScoreWindow, type VoteLedgerEntry } from "./xScore";
+import { foldFoundingByPost, foldScores, totalFoundingSats, windowStartDay, DEFAULT_WINDOW, type ScoreWindow, type VoteLedgerEntry } from "./xScore";
 
 // The Redis edge of the paid-vote model — thin on purpose; all scoring logic
 // lives in xScore.ts. Two keys per the design:
@@ -99,6 +99,31 @@ export async function readScores(
 }
 
 export const SCORE_WINDOWS: readonly ScoreWindow[] = ["day", "week", "month", "year", "all"];
+
+/** Both per-post views of a handle's ledger — every window's score table AND
+ * each post's upload cost — from ONE ledger read. The feed shows an entry's
+ * whole economics (cost to inscribe, sats earned since; the ranking is their
+ * sum), and reading the ledger once per view was exactly the smell the
+ * 2026-07-12 "5x ledger read" follow-up flagged. */
+export async function readLedgerRollup(
+  handle: string,
+  asOfDay: string = dateKey(),
+  redis: Redis | null = getRedis(),
+): Promise<{
+  scoresByWindow: Record<ScoreWindow, Record<string, number>>;
+  foundingByPost: Record<string, number>;
+}> {
+  const empty = () =>
+    Object.fromEntries(SCORE_WINDOWS.map((w) => [w, {}])) as Record<ScoreWindow, Record<string, number>>;
+  if (!redis) return { scoresByWindow: empty(), foundingByPost: {} };
+  const ledger = await readVoteLedger(handle, redis);
+  return {
+    scoresByWindow: Object.fromEntries(
+      SCORE_WINDOWS.map((w) => [w, foldScores(ledger, asOfDay, windowStartDay(w, asOfDay))]),
+    ) as Record<ScoreWindow, Record<string, number>>,
+    foundingByPost: foldFoundingByPost(ledger),
+  };
+}
 
 /** Every window's score table in one call — ONE ledger read, five folds
  * (readScores per window would re-read the ledger each time). Feeds the

@@ -28,6 +28,7 @@ export default function ProfileView({
   txTimes = {},
   scores = {},
   scoresByWindow,
+  foundingByPost,
   verified,
   header = "profile",
 }: {
@@ -49,6 +50,9 @@ export default function ProfileView({
    * whichever window is selected; when absent, Best falls back to `scores`
    * (window-invariant but still real, rather than disabled). */
   scoresByWindow?: Record<ScoreWindow, Record<string, number>>;
+  /** Per-post upload costs (the founding entries) — the other half of the
+   * chip PostEntry renders; the ranking is founding + earned. */
+  foundingByPost?: Record<string, number>;
   verified?: { bindingPostId: string };
   /** "profile" (default) opens with the identity card — the profile page's
    * whole point. "ledger" skips it: on the landing every entry is signed by
@@ -132,6 +136,7 @@ export default function ProfileView({
           handle={profile.handle}
           avatarUrl={profile.avatarUrl}
           displayName={profile.displayName}
+          foundingByPost={foundingByPost}
           scores={scores}
           scoresByWindow={scoresByWindow}
           footer={footer}
