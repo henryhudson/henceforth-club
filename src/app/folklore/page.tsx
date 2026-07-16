@@ -5,6 +5,7 @@ import { listHandles } from "@/lib/xIndex";
 import { gbpPerBsv } from "@/lib/xPrice";
 import { readFoundingTotal, readLedgerRollup } from "@/lib/xVotes";
 import FolkloreWordmark from "./_components/FolkloreWordmark";
+import FolkloreForest from "./_components/FolkloreForest";
 import ProfileView from "./_components/ProfileView";
 import ArchiveDropZone from "./_components/ArchiveDropZone";
 import DirectoryRow from "./_components/DirectoryRow";
@@ -51,8 +52,9 @@ export default async function FolklorePage() {
           before they meet a pitch, which is the whole finding of the
           2026-07-14 research. The ways in are said once, in the gateway
           below, rather than sold twice. */}
-      <header className="ledger-grid relative">
-        <div className="mx-auto max-w-2xl px-6 pb-8 pt-14 text-center">
+      <header className="relative overflow-hidden">
+        <FolkloreForest />
+        <div className="relative z-10 mx-auto max-w-2xl px-6 pb-16 pt-16 text-center">
           {/* The wordmark IS the heading — the thesis <h1> that used to carry
               that job left with the banner, and a page with no <h1> strands
               anyone navigating by headings. The mark's aria-label supplies the

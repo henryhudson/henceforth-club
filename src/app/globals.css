@@ -159,6 +159,61 @@ body:has(.folkloreroom) {
   color: #ffffff;
 }
 
+/* ── The forest behind the wordmark (FolkloreForest.tsx) ─────────────
+   Three treeline silhouettes against a low orange horizon glow, under a
+   cloud bank. One custom property drives the whole reveal: --reveal is 0 at
+   the top of the page and 1 a few hundred pixels down (written by the
+   component's scroll listener). Opacity and transform only — the entire
+   animation stays on the compositor. */
+.folklore-forest { --reveal: 0; }
+
+.folklore-forest .forest-glow {
+  background: radial-gradient(ellipse 90% 75% at 50% 100%, rgba(232, 115, 30, 0.12), transparent 72%);
+  opacity: calc(0.2 + var(--reveal) * 0.8);
+  transition: opacity 0.15s linear;
+}
+
+.folklore-forest .treeline {
+  transition: opacity 0.15s linear, transform 0.15s ease-out;
+}
+.folklore-forest .treeline-back {
+  fill: #17171c;
+  opacity: calc(var(--reveal) * 0.6);
+  transform: translateY(calc((1 - var(--reveal)) * 26px));
+}
+.folklore-forest .treeline-mid {
+  fill: #101015;
+  opacity: calc(var(--reveal) * 0.8);
+  transform: translateY(calc((1 - var(--reveal)) * 15px));
+}
+.folklore-forest .treeline-near {
+  fill: #0a0a0e;
+  stroke: rgba(232, 115, 30, 0.22); /* the orange-lit rim of the near pines */
+  stroke-width: 1.5;
+  opacity: calc(0.15 + var(--reveal) * 0.85);
+  transform: translateY(calc((1 - var(--reveal)) * 7px));
+}
+
+/* The cloud bank thins as the forest reveals; each layer drifts on its own
+   slow keyframe. Fills are the room's muted grey, kept faint. */
+.folklore-forest .clouds {
+  opacity: calc(0.95 - var(--reveal) * 0.85);
+  transition: opacity 0.15s linear;
+}
+.folklore-forest .cloud-drift-slow { fill: rgba(124, 124, 133, 0.2); animation: folkloreCloudDrift 95s ease-in-out infinite alternate; }
+.folklore-forest .cloud-drift-fast { fill: rgba(124, 124, 133, 0.13); animation: folkloreCloudDrift 60s ease-in-out infinite alternate-reverse; }
+@keyframes folkloreCloudDrift {
+  from { transform: translateX(-55px); }
+  to { transform: translateX(55px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .folklore-forest .cloud-drift-slow,
+  .folklore-forest .cloud-drift-fast { animation: none; }
+  .folklore-forest .forest-glow,
+  .folklore-forest .treeline,
+  .folklore-forest .clouds { transition: none; }
+}
+
 /* The machine layer's micro-label: wide-tracked uppercase mono. Still the
    room's only typographic move — the carved FOLKLORE above it is SVG artwork
    (FolkloreWordmark.tsx), not a second typeface. */
