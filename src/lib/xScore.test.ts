@@ -4,7 +4,6 @@ import {
   totalFoundingSats,
   windowStartDay,
   type VoteLedgerEntry,
-  type ScoreWindow,
 } from "./xScore";
 
 function vote(overrides: Partial<VoteLedgerEntry> = {}): VoteLedgerEntry {

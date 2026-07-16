@@ -49,7 +49,7 @@ describe("appendVote", () => {
     const { redis } = fakeRedis();
     const entry = vote({ txid: "a", postId: "p1", sats: 700, day: "2026-07-01" });
 
-    const result = await appendVote("Henry", entry, "2026-07-01", redis);
+    const result = await appendVote("Henry", entry, redis);
 
     expect(result).toBe("recorded");
     expect(await readVoteLedger("henry", redis)).toEqual([entry]);
@@ -59,8 +59,8 @@ describe("appendVote", () => {
     const { redis } = fakeRedis();
     const entry = vote({ txid: "a", sats: 700 });
 
-    await appendVote("henry", entry, "2026-07-01", redis);
-    const second = await appendVote("henry", vote({ txid: "a", sats: 9999 }), "2026-07-01", redis);
+    await appendVote("henry", entry, redis);
+    const second = await appendVote("henry", vote({ txid: "a", sats: 9999 }), redis);
 
     expect(second).toBe("duplicate");
     expect(await readVoteLedger("henry", redis)).toEqual([entry]);
@@ -69,8 +69,8 @@ describe("appendVote", () => {
   it("gates a txid globally: the same funding transaction cannot vote on a second handle either", async () => {
     const { redis } = fakeRedis();
 
-    await appendVote("henry", vote({ txid: "a" }), "2026-07-01", redis);
-    const elsewhere = await appendVote("other", vote({ txid: "a" }), "2026-07-01", redis);
+    await appendVote("henry", vote({ txid: "a" }), redis);
+    const elsewhere = await appendVote("other", vote({ txid: "a" }), redis);
 
     expect(elsewhere).toBe("duplicate");
     expect(await readVoteLedger("other", redis)).toEqual([]);
@@ -81,14 +81,14 @@ describe("appendVote", () => {
     const first = vote({ txid: "a", day: "2026-06-01" });
     const second = vote({ txid: "b", day: "2026-07-01" });
 
-    await appendVote("henry", first, "2026-07-01", redis);
-    await appendVote("henry", second, "2026-07-01", redis);
+    await appendVote("henry", first, redis);
+    await appendVote("henry", second, redis);
 
     expect(await readVoteLedger("henry", redis)).toEqual([first, second]);
   });
 
   it("reports unavailable (recording nothing) when Redis is not configured", async () => {
-    expect(await appendVote("henry", vote(), "2026-07-01", null)).toBe("unavailable");
+    expect(await appendVote("henry", vote(), null)).toBe("unavailable");
   });
 });
 
@@ -96,7 +96,7 @@ describe("appendFoundingVote", () => {
   it("records a founding vote once, as an up-vote of the upload cost", async () => {
     const { redis } = fakeRedis();
     const res = await appendFoundingVote("alice",
-      { inscriptionTxid: "insc1", postId: "p1", uploadCostSats: 14_000_000, inscriptionDay: "2026-07-01" }, "2026-07-10", redis);
+      { inscriptionTxid: "insc1", postId: "p1", uploadCostSats: 14_000_000, inscriptionDay: "2026-07-01" }, redis);
     expect(res).toBe("recorded");
     const ledger = await readVoteLedger("alice", redis);
     expect(ledger).toEqual([{ txid: "insc1:p1", postId: "p1", dir: "up", sats: 14_000_000, day: "2026-07-01", founding: true }]);
@@ -104,16 +104,16 @@ describe("appendFoundingVote", () => {
 
   it("rejects a second founding vote for the same post, even with a new txid", async () => {
     const { redis } = fakeRedis();
-    await appendFoundingVote("alice", { inscriptionTxid: "insc1", postId: "p1", uploadCostSats: 100, inscriptionDay: "2026-07-01" }, "2026-07-10", redis);
-    const res = await appendFoundingVote("alice", { inscriptionTxid: "insc2", postId: "p1", uploadCostSats: 999, inscriptionDay: "2026-07-02" }, "2026-07-10", redis);
+    await appendFoundingVote("alice", { inscriptionTxid: "insc1", postId: "p1", uploadCostSats: 100, inscriptionDay: "2026-07-01" }, redis);
+    const res = await appendFoundingVote("alice", { inscriptionTxid: "insc2", postId: "p1", uploadCostSats: 999, inscriptionDay: "2026-07-02" }, redis);
     expect(res).toBe("duplicate");
     expect((await readVoteLedger("alice", redis)).length).toBe(1);
   });
 
   it("records founding votes for two posts sharing one inscription txid (no txid-gate collision)", async () => {
     const r = fakeRedis();
-    const a = await appendFoundingVote("alice", { inscriptionTxid: "T", postId: "p1", uploadCostSats: 100, inscriptionDay: "2026-07-08" }, "2026-07-10", r.redis);
-    const b = await appendFoundingVote("alice", { inscriptionTxid: "T", postId: "p2", uploadCostSats: 100, inscriptionDay: "2026-07-08" }, "2026-07-10", r.redis);
+    const a = await appendFoundingVote("alice", { inscriptionTxid: "T", postId: "p1", uploadCostSats: 100, inscriptionDay: "2026-07-08" }, r.redis);
+    const b = await appendFoundingVote("alice", { inscriptionTxid: "T", postId: "p2", uploadCostSats: 100, inscriptionDay: "2026-07-08" }, r.redis);
     expect(a).toBe("recorded");
     expect(b).toBe("recorded");                         // was "duplicate" before the fix
     expect((await readVoteLedger("alice", r.redis)).length).toBe(2);
@@ -134,8 +134,8 @@ describe("readVoteLedger", () => {
 describe("readScores", () => {
   it("folds the requested window on read, default week", async () => {
     const { redis: r } = fakeRedis();
-    await appendVote("bob", { txid: "old", postId: "p1", dir: "up", sats: 500, day: "2026-06-01" }, "2026-07-10", r);
-    await appendVote("bob", { txid: "new", postId: "p1", dir: "up", sats: 900, day: "2026-07-09" }, "2026-07-10", r);
+    await appendVote("bob", { txid: "old", postId: "p1", dir: "up", sats: 500, day: "2026-06-01" }, r);
+    await appendVote("bob", { txid: "new", postId: "p1", dir: "up", sats: 900, day: "2026-07-09" }, r);
     expect(await readScores("bob", "week", "2026-07-10", r)).toEqual({ p1: 900 });   // old is >7d out
     expect(await readScores("bob", "all",  "2026-07-10", r)).toEqual({ p1: 1400 });  // both
   });
@@ -144,8 +144,8 @@ describe("readScores", () => {
 describe("readScoresByWindow", () => {
   it("returns every window from one ledger read, matching per-window readScores", async () => {
     const { redis: r } = fakeRedis();
-    await appendVote("bob", { txid: "old", postId: "p1", dir: "up", sats: 500, day: "2026-06-01" }, "2026-07-10", r);
-    await appendVote("bob", { txid: "new", postId: "p1", dir: "up", sats: 900, day: "2026-07-09" }, "2026-07-10", r);
+    await appendVote("bob", { txid: "old", postId: "p1", dir: "up", sats: 500, day: "2026-06-01" }, r);
+    await appendVote("bob", { txid: "new", postId: "p1", dir: "up", sats: 900, day: "2026-07-09" }, r);
     const byWindow = await readScoresByWindow("bob", "2026-07-10", r);
     expect(Object.keys(byWindow).sort()).toEqual([...SCORE_WINDOWS].sort());
     // The 2026-07-12 profile bug in miniature: votes aged out of `week` are
@@ -167,8 +167,8 @@ describe("readFoundingTotal", () => {
   it("totals a handle's founding costs and ignores received votes", async () => {
     const { redis } = fakeRedis();
     await appendFoundingVote("alice",
-      { inscriptionTxid: "insc1", postId: "p1", uploadCostSats: 31942, inscriptionDay: "2026-07-12" }, "2026-07-12", redis);
-    await appendVote("alice", { txid: "f".repeat(64), postId: "p1", dir: "up", sats: 500, day: "2026-07-12" }, "2026-07-12", redis);
+      { inscriptionTxid: "insc1", postId: "p1", uploadCostSats: 31942, inscriptionDay: "2026-07-12" }, redis);
+    await appendVote("alice", { txid: "f".repeat(64), postId: "p1", dir: "up", sats: 500, day: "2026-07-12" }, redis);
     expect(await readFoundingTotal("alice", redis)).toBe(31942);
   });
 

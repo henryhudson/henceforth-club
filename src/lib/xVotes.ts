@@ -46,7 +46,6 @@ export async function readVoteLedger(
 export async function appendVote(
   handle: string,
   entry: VoteLedgerEntry,
-  asOfDay: string = dateKey(),
   redis: Redis | null = getRedis(),
 ): Promise<AppendVoteResult> {
   if (!redis) return "unavailable";
@@ -61,9 +60,13 @@ export async function appendVote(
  * Claims the per-post gate first, so the post is dedup'd even across two different
  * inscription txids. The founding vote is recorded as an up-vote of the upload cost.
  */
+// Deliberately takes no as-of day: a founding vote's day is fv.inscriptionDay,
+// the day the posts were actually inscribed. The backfill runs today over
+// historical inscriptions, so anything "as of today" threaded in here would
+// rewrite those votes into the current scoring window.
 export async function appendFoundingVote(
   handle: string, fv: FoundingVote,
-  asOfDay: string = dateKey(), redis: Redis | null = getRedis(),
+  redis: Redis | null = getRedis(),
 ): Promise<AppendVoteResult> {
   if (!redis) return "unavailable";
   const claimedPost = await redis.set(foundingKey(handle, fv.postId), fv.inscriptionTxid, { nx: true });
@@ -74,7 +77,7 @@ export async function appendFoundingVote(
     sats: fv.uploadCostSats, day: fv.inscriptionDay,
     founding: true, // upload cost = the permanent score floor; never windowed
   };
-  return appendVote(handle, entry, asOfDay, redis); // reuses the txid gate + append
+  return appendVote(handle, entry, redis); // reuses the txid gate + append
 }
 
 /** The earned-sats score for every voted post of a handle within the chosen

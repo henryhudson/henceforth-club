@@ -1,7 +1,7 @@
 import type { Redis } from "@upstash/redis";
 import { appendFoundingVote } from "./xVotes";
 import { fetchTxFeeSats } from "./whatsonchain";
-import { getRedis, dateKey } from "./redis";
+import { getRedis } from "./redis";
 
 type BackfillPost = {
   id: string;
@@ -72,7 +72,7 @@ export async function backfillFoundingVotes(
     for (let i = 0; i < txPosts.length; i++) {
       const res = await appendFoundingVote(handle,
         { inscriptionTxid: txid, postId: txPosts[i].id, uploadCostSats: shares[i], inscriptionDay: day },
-        dateKey(), redis);
+        redis);
       if (res === "recorded") recorded++;
       else if (res === "duplicate") duplicate++;
       else skipped++;
