@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import FolkloreWordmark from "@/app/folklore/_components/FolkloreWordmark";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useSyncExternalStore } from "react";
 
@@ -84,11 +85,21 @@ export default function Navbar() {
             <Link
               key={link.href}
               href={link.href}
-              className={`transition-colors ${link.hoverColor} ${
-                pathname === link.href ? "text-foreground" : "text-muted"
-              }`}
+              className={
+                link.href === "/folklore"
+                  ? "text-accent-orange transition-opacity hover:opacity-75"
+                  : `transition-colors ${link.hoverColor} ${
+                      pathname === link.href ? "text-foreground" : "text-muted"
+                    }`
+              }
             >
-              {link.label}
+              {/* Folklore is the one nav item that is a mark, not a word — the
+                  carved wordmark at text height, in its brand orange. */}
+              {link.href === "/folklore" ? (
+                <FolkloreWordmark className="h-3.5 w-auto" />
+              ) : (
+                link.label
+              )}
             </Link>
           ))}
           {authButton()}
@@ -130,11 +141,19 @@ export default function Navbar() {
               key={link.href}
               href={link.href}
               onClick={() => setOpen(false)}
-              className={`text-sm transition-colors ${link.hoverColor} ${
-                pathname === link.href ? "text-foreground" : "text-muted"
-              }`}
+              className={
+                link.href === "/folklore"
+                  ? "text-accent-orange transition-opacity hover:opacity-75"
+                  : `text-sm transition-colors ${link.hoverColor} ${
+                      pathname === link.href ? "text-foreground" : "text-muted"
+                    }`
+              }
             >
-              {link.label}
+              {link.href === "/folklore" ? (
+                <FolkloreWordmark className="h-3.5 w-auto" />
+              ) : (
+                link.label
+              )}
             </Link>
           ))}
           {authButton("self-start")}
