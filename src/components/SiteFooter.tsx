@@ -40,6 +40,12 @@ export default function SiteFooter() {
               Hansard
             </Link>
             <Link
+              href="/folklore"
+              className="text-muted/60 transition-colors hover:text-foreground"
+            >
+              Folklore
+            </Link>
+            <Link
               href="/contact"
               className="text-muted/60 transition-colors hover:text-foreground"
             >

@@ -35,6 +35,7 @@ export default function Navbar() {
     { href: "/henceforth", label: "Henceforth", hoverColor: "hover:text-accent-warm" },
     { href: "/dadeckofcards", label: "Deck of Cards", hoverColor: "hover:text-accent" },
     { href: "/hansard", label: "Hansard", hoverColor: "hover:text-accent-green" },
+    { href: "/folklore", label: "Folklore", hoverColor: "hover:text-accent-orange" },
     { href: "/contact", label: "Contact", hoverColor: "hover:text-foreground" },
   ];
 

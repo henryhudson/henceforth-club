@@ -58,9 +58,14 @@ export default async function FolklorePage() {
               anyone navigating by headings. The mark's aria-label supplies the
               accessible name, so this reads as "Folklore, heading level 1". */}
           <h1>
-            <FolkloreWordmark className="mx-auto h-auto w-full max-w-[220px] text-foreground sm:max-w-[280px]" />
+            <FolkloreWordmark className="mx-auto h-auto w-full max-w-[220px] text-accent sm:max-w-[280px]" />
           </h1>
           <p className="ledger-label mt-5">content secured</p>
+          {/* Henry's line, verbatim — the product in one sentence, and the
+              only human copy the hero carries. */}
+          <p className="mx-auto mt-4 max-w-md text-muted">
+            Talk to descendants about information your ancestors desired to pass on.
+          </p>
         </div>
       </header>
 

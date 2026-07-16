@@ -15,12 +15,20 @@ function AppleIcon() {
   );
 }
 
+/** Where the product stands with the App Store — a sum, because null did
+ * double duty: "not released yet" (Apple chip saying coming soon) and "not a
+ * store product at all" (a web product renders no chip). */
+export type StoreStatus =
+  | { kind: "download"; url: string }
+  | { kind: "comingSoon" }
+  | { kind: "web" };
+
 export default function AppCard({
   title,
   tagline,
   description,
   href,
-  appStoreUrl,
+  store,
   accentClass,
   glowClass,
   badge,
@@ -29,7 +37,7 @@ export default function AppCard({
   tagline: string;
   description: string;
   href: string;
-  appStoreUrl: string | null;
+  store: StoreStatus;
   accentClass: string;
   glowClass: string;
   badge: string;
@@ -74,9 +82,9 @@ export default function AppCard({
             <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
           </svg>
         </span>
-        {appStoreUrl ? (
+        {store.kind === "download" ? (
           <a
-            href={appStoreUrl}
+            href={store.url}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 rounded-full border border-card-border bg-background/50 px-3 py-1.5 text-xs text-muted hover:border-foreground/40 hover:text-foreground transition-all"
@@ -85,7 +93,7 @@ export default function AppCard({
             <AppleIcon />
             Download
           </a>
-        ) : (
+        ) : store.kind === "comingSoon" ? (
           <span
             className="inline-flex items-center gap-1.5 rounded-full border border-card-border bg-background/30 px-3 py-1.5 text-xs text-muted/40 cursor-default"
             aria-label={`${title} coming soon`}
@@ -93,7 +101,7 @@ export default function AppCard({
             <AppleIcon />
             Coming soon
           </span>
-        )}
+        ) : null}
       </div>
     </div>
   );
