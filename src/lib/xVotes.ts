@@ -61,9 +61,11 @@ export async function appendVote(
  * inscription txids. The founding vote is recorded as an up-vote of the upload cost.
  */
 // Deliberately takes no as-of day: a founding vote's day is fv.inscriptionDay,
-// the day the posts were actually inscribed. The backfill runs today over
-// historical inscriptions, so anything "as of today" threaded in here would
-// rewrite those votes into the current scoring window.
+// because that is the historical truth of the ledger record — the day the
+// posts were actually inscribed, not the day the backfill happened to run.
+// (Scoring would not notice either way: xScore.ts:82 exempts founding entries
+// from the window bound, so their day is inert. The reason is honesty of the
+// record, not a windowing consequence.)
 export async function appendFoundingVote(
   handle: string, fv: FoundingVote,
   redis: Redis | null = getRedis(),
