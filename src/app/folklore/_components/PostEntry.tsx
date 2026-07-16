@@ -26,6 +26,7 @@ export default function PostEntry({
   handle,
   sats,
   avatarUrl,
+  displayName,
   defaultOpen = false,
 }: {
   post: XPost;
@@ -40,6 +41,8 @@ export default function PostEntry({
    * in an archive share one author, so this is the profile's avatar threaded
    * down rather than anything per-post. Absent → the row renders as before. */
   avatarUrl?: string;
+  /** The author's display name, shown with the handle above the text. */
+  displayName?: string;
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -78,33 +81,59 @@ export default function PostEntry({
         </p>
       ) : null}
 
-      {/* The author's picture sits OUTSIDE the toggle, so the button stays
-          text-only (no nested interactive, and the avatar doesn't become a
-          click target that surprises by opening the entry). */}
+      {/* The author signs the entry — picture and name, both OUTSIDE the
+          toggle so the button stays text-only, and both pointing at the
+          author's archive (/folklore/<handle>): the picture is where a reader
+          expects "take me to all their posts" to live. The avatar link is
+          hidden from the accessibility tree — it duplicates the name link,
+          and one accessible link per destination beats two identical stops. */}
       <div className="flex items-start gap-3">
-        {avatarUrl && (
-          <span className="mt-1 shrink-0">
-            <Avatar size={24} avatarUrl={avatarUrl} initial="" />
-          </span>
-        )}
-        {/* The post text — the toggle. Text only, so no nested interactive. */}
-        <button
-          type="button"
-          aria-expanded={open}
-          aria-controls={panelId}
-          onClick={() => setOpen((v) => !v)}
-          className="group flex w-full min-w-0 items-start gap-3 text-left"
-        >
-          <p className="min-w-0 flex-1 whitespace-pre-wrap text-base leading-loose text-foreground transition-colors group-hover:text-accent">
-            {post.text}
-          </p>
-          <span
-            aria-hidden
-            className="mt-1 shrink-0 select-none font-mono text-sm text-muted transition-colors group-hover:text-accent"
+        {avatarUrl &&
+          (handle ? (
+            <Link href={`/folklore/${handle}`} tabIndex={-1} aria-hidden className="mt-1 shrink-0">
+              <Avatar size={24} avatarUrl={avatarUrl} initial="" />
+            </Link>
+          ) : (
+            <span className="mt-1 shrink-0">
+              <Avatar size={24} avatarUrl={avatarUrl} initial="" />
+            </span>
+          ))}
+        <div className="min-w-0 flex-1">
+          {(displayName || handle) && (
+            <p className="mb-1 text-sm leading-tight">
+              {handle ? (
+                <Link href={`/folklore/${handle}`} className="group/name">
+                  {displayName && (
+                    <span className="font-bold text-foreground transition-colors group-hover/name:text-accent">
+                      {displayName}
+                    </span>
+                  )}{" "}
+                  <span className="text-muted">@{handle}</span>
+                </Link>
+              ) : (
+                <span className="font-bold text-foreground">{displayName}</span>
+              )}
+            </p>
+          )}
+          {/* The post text — the toggle. Text only, so no nested interactive. */}
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-controls={panelId}
+            onClick={() => setOpen((v) => !v)}
+            className="group flex w-full min-w-0 items-start gap-3 text-left"
           >
-            {open ? "–" : "+"}
-          </span>
-        </button>
+            <p className="min-w-0 flex-1 whitespace-pre-wrap text-base leading-loose text-foreground transition-colors group-hover:text-accent">
+              {post.text}
+            </p>
+            <span
+              aria-hidden
+              className="mt-1 shrink-0 select-none font-mono text-sm text-muted transition-colors group-hover:text-accent"
+            >
+              {open ? "–" : "+"}
+            </span>
+          </button>
+        </div>
       </div>
 
       {/* Media, each in a fixed-ratio frame so nothing shifts while it loads */}

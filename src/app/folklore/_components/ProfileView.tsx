@@ -29,6 +29,7 @@ export default function ProfileView({
   scores = {},
   scoresByWindow,
   verified,
+  header = "profile",
 }: {
   archive: XArchive;
   postCount?: number;
@@ -49,6 +50,11 @@ export default function ProfileView({
    * (window-invariant but still real, rather than disabled). */
   scoresByWindow?: Record<ScoreWindow, Record<string, number>>;
   verified?: { bindingPostId: string };
+  /** "profile" (default) opens with the identity card — the profile page's
+   * whole point. "ledger" skips it: on the landing every entry is signed by
+   * its author (picture + name linking to the profile), so a card up top
+   * would say the same thing twice. */
+  header?: "profile" | "ledger";
 }) {
   const { profile } = archive;
   const posts = dedupePosts(archive.posts);
@@ -67,6 +73,7 @@ export default function ProfileView({
   return (
     <div className="pb-24">
       {/* Header — the identity, said once, over a faint ledger grid */}
+      {header === "profile" && (
       <div className="mx-auto max-w-2xl px-6">
         <div className="ledger-grid relative overflow-hidden rounded-2xl border border-card-border bg-card-bg p-6 sm:p-8">
           <div className="flex items-center gap-4">
@@ -106,6 +113,7 @@ export default function ProfileView({
           </p>
         </div>
       </div>
+      )}
 
       {/* Feed — a ledger: ranked by committed sats by default (Latest/Best
           tabs switch the order), hairline rules between entries, each
@@ -123,6 +131,7 @@ export default function ProfileView({
           txTimes={txTimes}
           handle={profile.handle}
           avatarUrl={profile.avatarUrl}
+          displayName={profile.displayName}
           scores={scores}
           scoresByWindow={scoresByWindow}
           footer={footer}

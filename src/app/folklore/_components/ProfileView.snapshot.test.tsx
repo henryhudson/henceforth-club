@@ -37,4 +37,25 @@ describe("ProfileView", () => {
     const html = renderToStaticMarkup(<ProfileView archive={archive} isPreview={false} />);
     expect(html).not.toContain("profile_images");
   });
+
+  it("signs every post row with the author's name, linking to their archive", () => {
+    const html = renderToStaticMarkup(<ProfileView archive={archive} isPreview={false} />);
+    const rows = html.match(/<article/g)?.length ?? 0;
+    const nameLinks = html.match(/href="\/folklore\/someone"/g)?.length ?? 0;
+    expect(rows).toBeGreaterThan(0);
+    // One accessible name link per row — the avatar link is aria-hidden and
+    // only exists when an avatar renders, which this fixture has none of.
+    expect(nameLinks).toBe(rows);
+    expect(html.match(/@someone/g)?.length).toBe(rows + 1); // rows + the header card
+  });
+
+  it('hides the identity card in "ledger" mode — the landing, where rows are signed instead', () => {
+    const html = renderToStaticMarkup(
+      <ProfileView archive={archive} isPreview={false} header="ledger" />,
+    );
+    expect(html).not.toContain("Joined"); // the card's join date is gone
+    expect(html.match(/@someone/g)?.length).toBe(
+      html.match(/<article/g)?.length ?? 0, // rows only, no header card
+    );
+  });
 });

@@ -59,6 +59,7 @@ export default async function PostPage(
             handle={handle}
             sats={scores[post.id]}
             avatarUrl={page.profile.avatarUrl}
+            displayName={page.profile.displayName}
             defaultOpen
           />
         </div>

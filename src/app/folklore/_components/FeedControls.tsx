@@ -47,6 +47,7 @@ export default function FeedControls({
   txTimes,
   handle,
   avatarUrl,
+  displayName,
   scores = {},
   scoresByWindow,
   footer,
@@ -57,6 +58,7 @@ export default function FeedControls({
   txTimes: Record<string, number>;
   handle?: string;
   avatarUrl?: string;
+  displayName?: string;
   scores?: Record<string, number>;
   scoresByWindow?: Record<ScoreWindow, Record<string, number>>;
   /** The scroll loader, when the caller has one. Rendered ONLY in Latest
@@ -136,6 +138,7 @@ export default function FeedControls({
             handle={handle}
             sats={windowScores[post.id]}
             avatarUrl={avatarUrl}
+            displayName={displayName}
           />
         ))}
       </div>

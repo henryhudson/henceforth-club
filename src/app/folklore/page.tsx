@@ -84,6 +84,7 @@ export default async function FolklorePage() {
           firstInscribedAt={witness.firstInscribedAt}
           txTimes={witness.txTimes}
           scoresByWindow={scoresByWindow}
+          header="ledger"
         />
       ) : (
         <p className="mx-auto max-w-2xl px-6 text-center text-muted">

@@ -50,6 +50,7 @@ export default function ProfilePage({
         initialTxTimes={txTimes}
         initialScores={scores}
         avatarUrl={archive.profile.avatarUrl}
+        displayName={archive.profile.displayName}
       />
     ) : undefined;
 
