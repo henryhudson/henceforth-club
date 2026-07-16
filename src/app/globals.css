@@ -125,15 +125,15 @@ body:has(.paper) {
   color: #1c1813;
 }
 
-/* ── Text room (scoped to /text/*) ─────────────── */
+/* ── Text room (scoped to /folklore/*) ─────────────── */
 /* The Henceforth three-colour identity, scoped exactly like .paper above:
-   true black surface, white type, one orange accent. Every /text component
+   true black surface, white type, one orange accent. Every /folklore component
    already reads --background / --foreground / --accent / --muted / --card-*
    through Tailwind theme classes, so overriding the tokens here re-skins the
    directory, the profile header, and the post feed with no per-component
    edit. The accent is the site's existing --accent-orange, so selection and
    the block-explorer chips stay on-brand. */
-.textroom {
+.folkloreroom {
   --background: #000000;
   --foreground: #ffffff;
   --accent: #e8731e;
@@ -145,19 +145,19 @@ body:has(.paper) {
 }
 
 /* Carry true black to the body so overscroll, the navbar backdrop, and any
-   out-of-flow element see the same surface (body sits outside .textroom). */
-body:has(.textroom) {
+   out-of-flow element see the same surface (body sits outside .folkloreroom). */
+body:has(.folkloreroom) {
   background: #000000;
 }
 
-.textroom ::selection {
+.folkloreroom ::selection {
   background: rgba(232, 115, 30, 0.25);
   color: #ffffff;
 }
 
 /* The machine layer's micro-label: wide-tracked uppercase mono, the one
    typographic move that says "ledger" without a second typeface. */
-.textroom .ledger-label {
+.folkloreroom .ledger-label {
   font-size: 0.625rem;
   letter-spacing: 0.24em;
   text-transform: uppercase;
@@ -173,11 +173,11 @@ body:has(.textroom) {
    the element faded the hero copy and the profile card's own text away with
    the grid (reported 2026-07-12 as "it is very dark"). Decoration gets
    masked; content never does. */
-.textroom .ledger-grid {
+.folkloreroom .ledger-grid {
   position: relative;
 }
 
-.textroom .ledger-grid::before {
+.folkloreroom .ledger-grid::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -192,14 +192,14 @@ body:has(.textroom) {
 }
 
 /* Content rides above the decoration layer. */
-.textroom .ledger-grid > * {
+.folkloreroom .ledger-grid > * {
   position: relative;
   z-index: 1;
 }
 
 /* An entry the reader has opened: a hairline orange marker on the leading
    edge. Encodes which ledger row is open — state, not decoration. */
-.textroom .entry-open {
+.folkloreroom .entry-open {
   box-shadow: inset 2px 0 0 var(--accent);
   border-color: var(--card-border-hover);
 }
@@ -208,11 +208,11 @@ body:has(.textroom) {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.textroom .animate-ledger {
+.folkloreroom .animate-ledger {
   animation: ledgerReveal 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 @media (prefers-reduced-motion: reduce) {
-  .textroom .animate-ledger { animation: none; }
+  .folkloreroom .animate-ledger { animation: none; }
 }
 
 /* ── Terminal Components ──────────────────────── */

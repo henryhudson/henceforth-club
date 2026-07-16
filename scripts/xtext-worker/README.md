@@ -15,7 +15,7 @@ in Upstash, not in a Vercel environment.
   constants, then ticks `runWorkerTick` every fifteen seconds. This is the
   only file launchd runs.
 - `aliasLoader.mjs` — a small Node module-resolution hook that lets `run.mjs`
-  import `src/lib/textJob/jobStore.ts` directly, without a build step. See
+  import `src/lib/folkloreJob/jobStore.ts` directly, without a build step. See
   its header comment, and the task 10 report, for why this exists instead of
   a runtime dependency like `tsx` or `ts-node`.
 - `club.henceforth.xtext-worker.plist` — the launchd job definition.
@@ -83,13 +83,13 @@ To stop the worker: `launchctl unload ~/Library/LaunchAgents/club.henceforth.xte
 
 ## The go-live gate
 
-The web archive page (`/text/archive`) is built and tested behind a
+The web archive page (`/folklore/archive`) is built and tested behind a
 mechanical gate — `XTEXT_WEB_ARCHIVE_ENABLED` — that stays unset in
 production until every item below has actually happened. This is a
 checklist for Henry, not something a task can tick off by itself.
 
 - [ ] **The directory backfill has run against production** — every
-      previously-registered handle appears at `/text`, not only ones
+      previously-registered handle appears at `/folklore`, not only ones
       registered after the backfill existed.
 - [ ] **An adversarial review of the money path (tasks 5 through 9) is
       complete** — a fresh reviewer, given the spec, has tried to refute
@@ -100,11 +100,11 @@ checklist for Henry, not something a task can tick off by itself.
       cycle has been watched in the log** (the install steps above).
 - [ ] **A manual end-to-end run has happened with the low-funds wallet** —
       a real quote, paid, produces an inscription that renders at
-      `/text/<handle>` and appears in the directory; and, separately, a
+      `/folklore/<handle>` and appears in the directory; and, separately, a
       deliberately underpaid job is swept back automatically.
 - [ ] **Henry has signed off**, and only then does
       `XTEXT_WEB_ARCHIVE_ENABLED=true` go into the production environment and
-      the "archive yours" call to action on `/text` start meaning something.
+      the "archive yours" call to action on `/folklore` start meaning something.
       Setting the variable alone changes nothing: the page reads the flag at
       build time and is prerendered static, so after setting it, trigger a
       redeploy — the flow only appears once a fresh production build has run

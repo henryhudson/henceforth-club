@@ -1,5 +1,5 @@
 // The bridge that lets scripts/xtext-worker/run.mjs (plain Node, no build
-// step) import src/lib/textJob/jobStore.ts directly. Two things a bundler or
+// step) import src/lib/folkloreJob/jobStore.ts directly. Two things a bundler or
 // ts-node would normally handle are missing from plain Node: the "@/" path
 // alias (tsconfig.json's only path mapping, to ./src) and TypeScript's own
 // convention of writing a relative import with no file extension. Node's own

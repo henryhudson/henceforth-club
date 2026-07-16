@@ -13,8 +13,8 @@ import {
   txidSetHash,
   warmArchiveCache,
 } from "./xArchiveCache";
-import type { XPost } from "@/app/text/parseArchive";
-import type { SocialArchive } from "@/app/text/onchain";
+import type { XPost } from "@/app/folklore/parseArchive";
+import type { SocialArchive } from "@/app/folklore/onchain";
 import { getXTxids } from "./xIndex";
 
 vi.mock("./xIndex", () => ({ getXTxids: vi.fn() }));

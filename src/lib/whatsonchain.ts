@@ -1,4 +1,4 @@
-import { socialArchiveFromScripts, type SocialArchive } from "@/app/text/onchain";
+import { socialArchiveFromScripts, type SocialArchive } from "@/app/folklore/onchain";
 import { voutScriptsFromRawTx } from "./rawTx";
 
 const WOC = "https://api.whatsonchain.com/v1/bsv/main";

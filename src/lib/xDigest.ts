@@ -1,5 +1,5 @@
 import { getRedis } from "./redis";
-import type { SocialArchive } from "@/app/text/onchain";
+import type { SocialArchive } from "@/app/folklore/onchain";
 
 // Per-transaction digest cache. An archive transaction is immutable, so the
 // digest derived from it can be cached forever — the archived endpoint then

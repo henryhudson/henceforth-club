@@ -34,7 +34,7 @@ export const REVENUE_ADDRESS = "1GsP511T8e4VjxYdAGnMYdDd6sWxWybcMP";
 // at this same rate, so the visitor's payment covers the inscription's fee.
 export const FEE_PER_KB = 100;
 
-// Keep in sync with src/lib/textJob/constants.ts LATE_WATCH_DAYS — the same
+// Keep in sync with src/lib/folkloreJob/constants.ts LATE_WATCH_DAYS — the same
 // runtime-import constraint. How long after a job's quote expiry the worker
 // keeps watching a swept job's custody address for a straggler and, only once
 // that window has closed, deletes the retained key (the reaper).

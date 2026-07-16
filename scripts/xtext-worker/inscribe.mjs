@@ -10,7 +10,7 @@
 
 import { LockingScript, OP, P2PKH, SatoshisPerKilobyte, Transaction, Utils } from "@bsv/sdk";
 
-// Keep in sync with src/lib/textJob/constants.ts BROADCAST_RETRIES — this .mjs
+// Keep in sync with src/lib/folkloreJob/constants.ts BROADCAST_RETRIES — this .mjs
 // worker cannot import the TypeScript constants module at runtime (the same
 // reason scripts/board/render-pdf.mjs re-declares its shared constants).
 const BROADCAST_RETRIES = 3;

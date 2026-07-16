@@ -1,6 +1,6 @@
 // The production entry — the only file launchd ever runs. It wires
 // worker.mjs's runWorkerTick with every real dependency: the Upstash-backed
-// job store (src/lib/textJob/jobStore.ts, imported through the alias-loader
+// job store (src/lib/folkloreJob/jobStore.ts, imported through the alias-loader
 // bridge below), live network fetch, the Keychain wrapping key, and the
 // worker's own tuning constants — then ticks every fifteen seconds. Runs on
 // the Mac mini only, launched by club.henceforth.xtext-worker.plist.
@@ -53,7 +53,7 @@ try {
 register(pathToFileURL(path.join(HERE, "aliasLoader.mjs")).href, import.meta.url);
 
 const { listJobsInState, advance, getPayload } = await import(
-  pathToFileURL(path.join(REPO_ROOT, "src/lib/textJob/jobStore.ts")).href
+  pathToFileURL(path.join(REPO_ROOT, "src/lib/folkloreJob/jobStore.ts")).href
 );
 
 const jobsDir = path.join(HERE, "jobs");

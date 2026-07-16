@@ -47,7 +47,7 @@ export async function setXTxids(handle: string, txids: string[]): Promise<boolea
   return true;
 }
 
-// The public directory (/text): who has registered, newest first. A single
+// The public directory (/folklore): who has registered, newest first. A single
 // sorted set rather than one row per handle — the score is the last time the
 // handle registered, so the whole directory reads back pre-sorted with one
 // call. Holds no keys and no money, same as the rest of this module.

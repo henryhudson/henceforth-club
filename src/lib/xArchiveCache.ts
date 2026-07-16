@@ -3,8 +3,8 @@ import type { Redis } from "@upstash/redis";
 import { getRedis } from "./redis";
 import { getXTxids } from "./xIndex";
 import { fetchTxArchiveWithTime as fetchTxArchiveDefault } from "./whatsonchain";
-import { mergeDeltaPosts, stitchToXArchive, resolveMediaKinds, type SocialArchive } from "@/app/text/onchain";
-import { dedupePosts, type XArchive, type XPost, type XProfile } from "@/app/text/parseArchive";
+import { mergeDeltaPosts, stitchToXArchive, resolveMediaKinds, type SocialArchive } from "@/app/folklore/onchain";
+import { dedupePosts, type XArchive, type XPost, type XProfile } from "@/app/folklore/parseArchive";
 
 // Reading a handle's whole archive used to mean stitching every archive
 // transaction and shipping every post in one response — fine at a few dozen
@@ -21,7 +21,7 @@ import { dedupePosts, type XArchive, type XPost, type XProfile } from "@/app/tex
 // genesis instead means re-downloading every archive transaction's raw hex —
 // tens of megabytes each once media batches exist — inside one request, which
 // no serverless function survives; that is exactly the poison-pill loop that
-// took /text down on 2026-07-13 (every request retried the doomed rebuild,
+// took /folklore down on 2026-07-13 (every request retried the doomed rebuild,
 // so meta was never written and the next request retried again).
 
 /** Posts per cached chunk. Chunk `n` holds stitched posts `[n*CHUNK_SIZE, (n+1)*CHUNK_SIZE)`. */

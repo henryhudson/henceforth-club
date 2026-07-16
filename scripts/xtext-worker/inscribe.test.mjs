@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { P2PKH, PrivateKey, Transaction } from "@bsv/sdk";
-import { socialArchiveFromScripts } from "@/app/text/onchain";
+import { socialArchiveFromScripts } from "@/app/folklore/onchain";
 import { voutScriptsFromRawTx } from "@/lib/rawTx";
 import { broadcastArchive, buildInscriptionTx, registerHandle } from "./inscribe.mjs";
 

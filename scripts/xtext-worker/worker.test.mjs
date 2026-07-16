@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { P2PKH, PrivateKey, Script, Transaction } from "@bsv/sdk";
-import { applyEvent } from "@/lib/textJob/jobs";
+import { applyEvent } from "@/lib/folkloreJob/jobs";
 import { createJobKey, loadJobKey } from "./keystore.mjs";
 import { buildSweepTx } from "./sweep.mjs";
 import { revenueAddressError, runWorkerTick } from "./worker.mjs";

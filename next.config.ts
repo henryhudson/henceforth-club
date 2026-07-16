@@ -8,9 +8,15 @@ const nextConfig: NextConfig = {
     root: resolve(__dirname),
   },
   async redirects() {
+    // Both former names of this route point straight at the current one rather
+    // than chaining /x → /text → /folklore. /x is not dead history: the app
+    // publishes "henceforth.club/x" into real X posts (xtextWord.swift), and
+    // those posts are immutable — that link has to keep landing forever.
     return [
-      { source: "/x", destination: "/text", permanent: true },
-      { source: "/x/:path*", destination: "/text/:path*", permanent: true },
+      { source: "/x", destination: "/folklore", permanent: true },
+      { source: "/x/:path*", destination: "/folklore/:path*", permanent: true },
+      { source: "/text", destination: "/folklore", permanent: true },
+      { source: "/text/:path*", destination: "/folklore/:path*", permanent: true },
     ];
   },
 };

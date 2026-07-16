@@ -1,7 +1,7 @@
-import type { SocialArchive } from "@/app/text/onchain";
+import type { SocialArchive } from "@/app/folklore/onchain";
 import { fetchAllUserTweets } from "./xPaginate";
 import { extractMediaRefs, type MediaRef } from "./xMedia";
-import { fullResXAvatar } from "@/app/text/xAvatar";
+import { fullResXAvatar } from "@/app/folklore/xAvatar";
 
 const BASE = "https://api.twitter.com/2";
 

@@ -13,8 +13,8 @@ function spyNextResolve() {
 describe("aliasLoader resolve", () => {
   it("maps an extensionless @/ specifier to the matching .ts file under src/", async () => {
     const nextResolve = spyNextResolve();
-    await resolve("@/lib/textJob/jobs", {}, nextResolve);
-    expect(nextResolve).toHaveBeenCalledWith(fileUrl("src/lib/textJob/jobs.ts"), {});
+    await resolve("@/lib/folkloreJob/jobs", {}, nextResolve);
+    expect(nextResolve).toHaveBeenCalledWith(fileUrl("src/lib/folkloreJob/jobs.ts"), {});
   });
 
   it("maps @/lib/redis the same way — the one runtime alias jobStore.ts actually needs", async () => {
@@ -25,9 +25,9 @@ describe("aliasLoader resolve", () => {
 
   it("resolves an extensionless relative specifier against its parent file's directory", async () => {
     const nextResolve = spyNextResolve();
-    const context = { parentURL: fileUrl("src/lib/textJob/jobStore.ts") };
+    const context = { parentURL: fileUrl("src/lib/folkloreJob/jobStore.ts") };
     await resolve("./jobs", context, nextResolve);
-    expect(nextResolve).toHaveBeenCalledWith(fileUrl("src/lib/textJob/jobs.ts"), context);
+    expect(nextResolve).toHaveBeenCalledWith(fileUrl("src/lib/folkloreJob/jobs.ts"), context);
   });
 
   it("leaves a specifier that is already a real file untouched (just converts it to a file url)", async () => {
