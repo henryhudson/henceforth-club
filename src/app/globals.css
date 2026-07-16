@@ -543,3 +543,9 @@ body:has(.provenance)::before {
   .print-weekly h1 { font-size: 18px; }
   .print-weekly h2 { font-size: 12px; margin-top: 10px; }
 }
+
+/* Stylesheet URL rotation, 2026-07-16: a corrupt copy of this file (fetched
+   mid-deploy, then held by Safari's immutable-asset cache, which no reload
+   refetches) blanked styling site-wide for affected sessions. Content change
+   → new content hash → new URL → every client refetches clean. Safe to
+   delete this comment whenever the file next changes for a real reason. */
