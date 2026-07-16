@@ -60,6 +60,31 @@ describe("fetchAllUserTweets mechanics", () => {
     expect(urls[1]).toContain("pagination_token=TOKEN123");
   });
 
+  it("threads since_id onto EVERY page of a bounded read", async () => {
+    // The bound is what stops a full re-archive re-reading (and re-paying X
+    // for) posts already on chain. It must ride every page, not just the
+    // first — a cursor without the bound would walk back into paid-for
+    // territory on page two.
+    const urls: string[] = [];
+    const fetchFn = pagedFetch(
+      [
+        { data: [{ id: "9" }], meta: { next_token: "MORE" } },
+        { data: [{ id: "8" }], meta: {} },
+      ],
+      urls,
+    );
+    await fetchAllUserTweets("u", "t", "tweet.fields=x", fetchFn, 2, "12345");
+    expect(urls[0]).toContain("since_id=12345");
+    expect(urls[1]).toContain("since_id=12345");
+  });
+
+  it("omits since_id entirely when no bound is given", async () => {
+    const urls: string[] = [];
+    const fetchFn = pagedFetch([{ data: [{ id: "1" }], meta: {} }], urls);
+    await fetchAllUserTweets("u", "t", "tweet.fields=x", fetchFn, 1);
+    expect(urls[0]).not.toContain("since_id");
+  });
+
   it("accumulates media includes across pages", async () => {
     const fetchFn = pagedFetch([
       { data: [{ id: "1" }], includes: { media: [{ media_key: "m1" }] }, meta: { next_token: "A" } },

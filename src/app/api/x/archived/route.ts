@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { getXTxids } from "@/lib/xIndex";
-import { fetchTxArchive } from "@/lib/whatsonchain";
-import { archiveDigest, getTxDigest, setTxDigest, type TxDigest } from "@/lib/xDigest";
+import { archivedTweetIds } from "@/lib/xArchived";
 
 /**
  * GET /api/x/archived?handle=<handle>
@@ -10,6 +8,9 @@ import { archiveDigest, getTxDigest, setTxDigest, type TxDigest } from "@/lib/xD
  * of that handle's archive transactions. The app uses this to inscribe only the
  * DELTA (the tweets not yet on chain) instead of duplicating the whole profile.
  * Public data: a TXID and its posts are already public on the blockchain.
+ *
+ * The union itself lives in lib/xArchived — the archive and quote routes bound
+ * their X read (and its price) from the same set this route serves.
  */
 export async function GET(req: Request) {
   const handle = new URL(req.url).searchParams
@@ -20,48 +21,26 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, reason: "bad-handle" }, { status: 400 });
   }
 
-  const txids = await getXTxids(handle);
-  const tweetIds = new Set<string>();
-  // Posts whose MEDIA is already inscribed — the layers are independent: a post
-  // archived text-only can still have its photos backfilled later, so the app
-  // needs both sets to compute what a new archive would actually add.
-  const mediaPostIds = new Set<string>();
-  for (const txid of txids) {
-    const digest = await resolveDigest(txid);
-    if (!digest) {
-      // Never present a partial union as authoritative. A dropped transaction
-      // would make the app think its tweets are not yet on chain and inscribe
-      // (and pay for) them a second time — better to refuse outright.
-      return NextResponse.json(
-        { ok: false, reason: "index-read-incomplete" },
-        { status: 503 },
-      );
-    }
-    for (const id of digest.tweetIds) tweetIds.add(id);
-    for (const id of digest.mediaPostIds) mediaPostIds.add(id);
+  const archived = await archivedTweetIds(handle);
+  if (!archived) {
+    // Never present a partial union as authoritative. A dropped transaction
+    // would make the app think its tweets are not yet on chain and inscribe
+    // (and pay for) them a second time — better to refuse outright.
+    return NextResponse.json(
+      { ok: false, reason: "index-read-incomplete" },
+      { status: 503 },
+    );
   }
 
   return NextResponse.json({
     ok: true,
-    archived: txids.length > 0,
-    txids,
-    tweetIds: [...tweetIds],
-    mediaPostIds: [...mediaPostIds],
-    count: tweetIds.size,
+    archived: archived.txids.length > 0,
+    txids: archived.txids,
+    tweetIds: [...archived.tweetIds],
+    // Posts whose MEDIA is already inscribed — the layers are independent: a post
+    // archived text-only can still have its photos backfilled later, so the app
+    // needs both sets to compute what a new archive would actually add.
+    mediaPostIds: [...archived.mediaPostIds],
+    count: archived.tweetIds.size,
   });
-}
-
-/**
- * A transaction's digest: from the forever-cache when present, otherwise derived
- * from a fresh fetch and written back to the cache. Null only when the
- * transaction cannot be resolved at all.
- */
-async function resolveDigest(txid: string): Promise<TxDigest | null> {
-  const cached = await getTxDigest(txid);
-  if (cached) return cached;
-  const archive = await fetchTxArchive(txid);
-  if (!archive) return null;
-  const digest = archiveDigest(archive);
-  await setTxDigest(txid, digest);
-  return digest;
 }

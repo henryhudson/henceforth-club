@@ -94,6 +94,7 @@ export async function fetchXArchive(
   token: string,
   maxPages: number = 1,
   fetchFn: typeof fetch = fetch,
+  sinceId?: string,
 ): Promise<{ archive: SocialArchive; mediaRefs: MediaRef[] } | null> {
   const head = await fetchProfileHead(handle, token, fetchFn);
   if (!head) return null;
@@ -112,6 +113,7 @@ export async function fetchXArchive(
       "&media.fields=type,url,variants",
     fetchFn,
     maxPages,
+    sinceId,
   );
 
   return {

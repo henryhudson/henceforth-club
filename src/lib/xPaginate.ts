@@ -44,6 +44,7 @@ export async function fetchAllUserTweets<T = unknown>(
   params: string,
   fetchFn: typeof fetch = fetch,
   maxPages: number = DEFAULT_MAX_PAGES,
+  sinceId?: string,
 ): Promise<{ data: T[]; media: XMedia[] }> {
   const data: T[] = [];
   const media: XMedia[] = [];
@@ -51,8 +52,12 @@ export async function fetchAllUserTweets<T = unknown>(
   const pages = Math.max(1, Math.min(Math.floor(maxPages), PAGE_CEILING));
 
   for (let page = 0; page < pages; page++) {
+    // since_id rides EVERY page: X bills per resource returned, so the bound
+    // is what keeps a re-archive from re-buying posts already on chain — a
+    // cursor without it would walk back into paid-for territory on page two.
     const url =
       `${BASE}/users/${userId}/tweets?max_results=100&${params}` +
+      (sinceId ? `&since_id=${sinceId}` : "") +
       (paginationToken ? `&pagination_token=${paginationToken}` : "");
     const res = await fetchFn(url, {
       headers: { Authorization: `Bearer ${token}` },

@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
-import { fetchXArchive, fetchProfileHead, pagesForPostCount, X_TIMELINE_CEILING } from "@/lib/xfetch";
+import { fetchXArchive, fetchProfileHead } from "@/lib/xfetch";
 import { selectRefs } from "@/lib/xArchive";
 import { payAndReserve, resourcesForPosts } from "@/lib/xGate";
 import { releaseXApiSpend } from "@/lib/xSpend";
+import { archivedTweetIds } from "@/lib/xArchived";
+import { archiveReadPlan } from "@/lib/xReadPlan";
 
 /**
  * GET /api/x/archive?handle=<h>&payment=<txid>&images=1&videos=1&full=1
@@ -21,10 +23,15 @@ import { releaseXApiSpend } from "@/lib/xSpend";
  *    free and without a credential. Base64-ing every photo and video through this
  *    route is what made a whole-profile media response impossible to serve.
  *
- * `full=1` buys the whole reachable timeline. The fee is priced from the posts
- * actually read (lib/xGate `resourcesForPosts`), so a large profile pays for a
- * large read — a flat price would sell a 1,500-post archive for the price of a
- * 100-post one. Ask /api/x/quote first; it is free.
+ * `full=1` buys the whole reachable timeline — MINUS what is already on chain.
+ * When the handle has archive transactions, the read is since-bounded at the
+ * newest archived post id (2026-07-16): X returns only newer posts, so a
+ * re-archive pays for its delta instead of re-buying the entire timeline
+ * every run. The fee is priced from the posts actually read (lib/xGate
+ * `resourcesForPosts` over lib/xReadPlan's estimate, shared with
+ * /api/x/quote), so a large profile pays for a large read — a flat price
+ * would sell a 1,500-post archive for the price of a 100-post one. Ask
+ * /api/x/quote first; it is free.
  */
 
 function flag(value: string | null, defaultValue: boolean): boolean {
@@ -47,18 +54,28 @@ export async function GET(req: Request) {
   const full = flag(url.searchParams.get("full"), false);
 
   // How big is this read? A full archive is priced from the profile's real post
-  // count, so the gate demands a fee that covers what X will actually charge us.
-  // The head costs ONE resource and is not gated — the same half-cent /api/x/quote
-  // spends, and the price of knowing the price.
+  // count MINUS what is already on chain: X bills per resource returned, and a
+  // since_id bound means the posts already archived are not returned — so they
+  // are not paid for twice, by us or by the caller. The bound is derived
+  // SERVER-side from the chain index (lib/xReadPlan, shared with /api/x/quote
+  // so the quoted price and the demanded fee cannot drift); a client-supplied
+  // bound would let a caller lower its own bill. An unreadable index falls
+  // back to the unbounded read — conservative for us, never for the data.
+  // The head costs ONE resource and is not gated — the same half-cent
+  // /api/x/quote spends, and the price of knowing the price.
   let maxPages = 1;
   let billedPosts = 100;
+  let sinceId: string | undefined;
   if (full) {
     const head = await fetchProfileHead(handle, token);
     if (!head) {
       return NextResponse.json({ ok: false, reason: "no-user" }, { status: 404 });
     }
-    maxPages = pagesForPostCount(head.postCount);
-    billedPosts = Math.min(head.postCount, X_TIMELINE_CEILING);
+    const archived = await archivedTweetIds(handle);
+    const plan = archiveReadPlan(head.postCount, archived?.tweetIds ?? new Set());
+    maxPages = plan.maxPages;
+    billedPosts = plan.billedPosts;
+    sinceId = plan.sinceId;
   }
 
   const gate = await payAndReserve(
@@ -67,7 +84,7 @@ export async function GET(req: Request) {
   );
   if (!gate.ok) return gate.response;
 
-  const result = await fetchXArchive(handle, token, maxPages);
+  const result = await fetchXArchive(handle, token, maxPages, fetch, sinceId);
   if (!result) {
     // The gate reserved budget and burned the payment for a read X then
     // failed to serve. The payment's fate is the client's to settle (the app
@@ -88,5 +105,11 @@ export async function GET(req: Request) {
     media,
     pagesRead: maxPages,
     postsRead: result.archive.posts.length,
+    // Present when the read was since-bounded: archive.posts then holds only
+    // posts NEWER than this id — the delta — and everything at or before it
+    // is already on chain. The app inscribes deltas anyway (/api/x/archived),
+    // so nothing is lost; it is stated so nobody mistakes a delta for a
+    // whole profile.
+    sinceId,
   });
 }

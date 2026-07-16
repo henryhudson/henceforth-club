@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
-import { fetchProfileHead, pagesForPostCount, X_TIMELINE_CEILING, POSTS_PER_PAGE } from "@/lib/xfetch";
+import { fetchProfileHead, X_TIMELINE_CEILING, POSTS_PER_PAGE } from "@/lib/xfetch";
 import { resourcesForPosts } from "@/lib/xGate";
 import { resourcesToUsd } from "@/lib/xSpend";
 import { bsvUsd, satsForUsd } from "@/lib/xPrice";
+import { archivedTweetIds } from "@/lib/xArchived";
+import { archiveReadPlan } from "@/lib/xReadPlan";
 
 /**
  * GET /api/x/quote?handle=<h>
@@ -44,11 +46,17 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, reason: "no-user" }, { status: 404 });
   }
 
-  // X will not read further back than its own ceiling, so a bigger account is
-  // quoted for what is actually reachable — never for posts we cannot fetch.
+  // The SAME plan /api/x/archive will charge for (lib/xReadPlan): reachable
+  // posts minus what is already on chain, since-bounded at the newest archived
+  // id. Quote and gate deriving from one function is what stops the quoted
+  // price and the demanded fee drifting apart. X will not read further back
+  // than its own ceiling, so a bigger account is quoted for what is actually
+  // reachable — never for posts we cannot fetch, and (2026-07-16) never again
+  // for posts already bought and inscribed.
+  const archived = await archivedTweetIds(handle);
+  const plan = archiveReadPlan(head.postCount, archived?.tweetIds ?? new Set());
   const readablePosts = Math.min(head.postCount, X_TIMELINE_CEILING);
-  const pages = pagesForPostCount(head.postCount);
-  const resources = resourcesForPosts(readablePosts);
+  const resources = resourcesForPosts(plan.billedPosts);
   const sats = satsForUsd(resourcesToUsd(resources), price.bsvUsd);
 
   return NextResponse.json({
@@ -56,7 +64,11 @@ export async function GET(req: Request) {
     handle: head.username,
     postCount: head.postCount,
     readablePosts,
-    pages,
+    /** Posts already on chain for this handle — the part a full read no longer pays for. */
+    archivedPosts: archived?.tweetIds.size ?? 0,
+    /** Posts the priced read is expected to return: reachable minus archived. */
+    newPostsEstimate: plan.billedPosts,
+    pages: plan.maxPages,
     resources,
     /** The floor. Pay at least this to the archive reward address. */
     sats,
