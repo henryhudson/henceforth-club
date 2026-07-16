@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The post that outlives its platform — folklore compose design</title>
+<style>
+  :root { --bg:#f4ecd8; --ink:#2a2318; --muted:#6b5d45; --rule:#c9b98f; --accent:#8b3a1a; --card:#faf4e4; --shadow:0 1px 3px rgba(60,40,10,0.15); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.68;}
+  .wrap{max-width:860px;margin:0 auto;padding:56px 32px;}
+  header.doc{margin-bottom:40px;border-bottom:3px double var(--rule);padding-bottom:26px;}
+  .eyebrow{font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:33px;line-height:1.16;margin:0 0 12px;font-weight:700;}
+  h2{font-size:24px;margin:46px 0 12px;padding-top:18px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 8px;}
+  .lede{font-size:19px;color:var(--muted);margin:0;font-style:italic;}
+  p{margin:13px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(120,90,30,0.12);padding:2px 6px;border-radius:4px;}
+  pre{background:#2a2318;color:#f0e6cf;padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;background:var(--card);}
+  th,td{text-align:left;padding:9px 12px;border:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .decision{background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 18px;margin:18px 0;box-shadow:var(--shadow);}
+  .decision strong{color:var(--accent);}
+  ul{margin:12px 0;padding-left:26px;} li{margin:6px 0;}
+  .flow{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px 20px;margin:16px 0;box-shadow:var(--shadow);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Design spec &middot; 2026-07-16 &middot; henceforth.club/folklore &middot; status: DRAFT for Henry's review</div>
+<h1>The post that outlives its platform</h1>
+<p class="lede">A compose box on folklore: write once, and the words land on Bitcoin first and on X second. The chain is the record; X is the distribution. Nothing here is built yet &mdash; this document exists to be argued with.</p>
+</header>
+
+<p><strong>What exists.</strong> Folklore reads archives from Bitcoin and ranks posts by committed satoshis &mdash; upload cost plus earned votes, live as of today. The web archive machinery from spec B is built and tested behind its go-live flag: <code>/api/folklore/job</code> accepts work, a Mac mini worker holds a per-job key for minutes, inscribes, and sweeps the remainder to revenue. The app archives whole profiles non-custodially. What nobody can do yet is <em>write a new post</em> from folklore itself.</p>
+
+<p><strong>The ask.</strong> Henry, 2026-07-16: <em>&ldquo;we probably also need a post button &mdash; this should be able to post on folklore and x.&rdquo;</em></p>
+
+<h2>1 &middot; What a folklore post is</h2>
+<p>A folklore post is text inscribed to the author's archive on Bitcoin, appearing in their <code>/folklore/&lt;handle&gt;</code> feed and the ledger, carrying a founding cost like any archived post. Cross-posting to X is an <em>option on top</em>, not the substance: if X refuses, rate-limits, or dies, the folklore post still exists. That ordering is the product's whole thesis said back to it.</p>
+
+<div class="decision"><strong>Decision 1 &mdash; the chain is primary.</strong> A compose is an inscription job first. The X copy is best-effort distribution, marked on the folklore post when it succeeds (&ldquo;also on X&rdquo; with the X post id). We never block permanence on a platform's availability.</div>
+
+<h2>2 &middot; Who can post, in what order of shipping</h2>
+<table>
+<tr><th>Phase</th><th>Who</th><th>How they authenticate</th></tr>
+<tr><td>1 (MVP)</td><td>Henry only &mdash; the witness account</td><td>The board session cookie that already gates <code>/board</code>; the compose box renders only for a signed-in owner</td></tr>
+<tr><td>2</td><td>Any verified handle (spec C binding)</td><td>Signature from the bound key, the same gate <code>/api/x/register</code> enforces</td></tr>
+</table>
+<p>Phase 1 needs no new identity machinery at all. Phase 2 reuses the binding-signature gate that already protects registration.</p>
+
+<h2>3 &middot; The flow</h2>
+<div class="flow">
+<p><strong>Compose</strong> &mdash; a text box on <code>/folklore</code> (owner-only), 280-character soft guide but no hard X limit; text only in phase 1. A live quote shows the inscription cost in sats and pounds, the same quote machinery the archive drop zone uses.</p>
+<p><strong>Pay</strong> &mdash; the spec B rails verbatim: the compose creates a job, the QR asks for the quoted amount, the worker watches, inscribes on confirmation, and sweeps. Henry's phase 1 alternative: pay from the app wallet against the same job id, skipping the QR.</p>
+<p><strong>Inscribe</strong> &mdash; the worker writes the post using the archive's existing OP_RETURN schema with a fresh post id, appends the founding vote at inscription time (the lesson of today's ranking gap: costs are recorded when the money moves, never backfilled), and invalidates the archive cache so the post appears within a minute.</p>
+<p><strong>Cross-post</strong> &mdash; if the author ticked &ldquo;also post to X&rdquo;: after the inscription confirms, the worker calls X's create-post endpoint with the author's OAuth token. Success stamps the folklore post with the X id; failure marks the job <code>x-copy-failed</code>, visibly, with retry. The inscription does not wait for X.</p>
+</div>
+
+<div class="decision"><strong>Decision 2 &mdash; inscribe first, X second.</strong> The alternative (X first, inscribe its returned id) makes the archive mirror X's record, which is the old world's ordering. Here the post id is ours; the X copy carries a link back to <code>henceforth.club/folklore/&lt;handle&gt;</code>. Folklore is the original; X gets the copy.</div>
+
+<h2>4 &middot; The X write integration, honestly</h2>
+<ul>
+<li><strong>Auth:</strong> posting as a user requires OAuth 2.0 user-context tokens with <code>tweet.write</code> scope. Phase 1: a one-time authorization of Henry's own account, refresh token held server-side in <code>.env.local</code>/Vercel env &mdash; the same trust level as the existing shared-token fetch path. Phase 2 needs a real OAuth flow and token store per verified handle.</li>
+<li><strong>Cost and quota:</strong> write quotas differ by API tier and have changed repeatedly; xtext already learned X's pricing the hard way (reads billed per post). <em>Open question 1: verify the current write quota on the account's tier before building &mdash; do not assume.</em></li>
+<li><strong>Policy:</strong> posting the user's own words with their own authorization is the cleanly permitted direction (unlike bulk reading). The 280-character limit and media rules apply to the X copy only; folklore itself has no such limits.</li>
+</ul>
+
+<h2>5 &middot; Money and custody</h2>
+<p>Identical posture to spec B, because it is spec B: the per-job key exists for minutes, holds only that job's payment, refuses to overwrite a published key, and sweeps to revenue. A compose job is smaller and cheaper than an archive job &mdash; one short inscription. The founding vote is appended by the worker inside the job, with the actual fee paid, split across exactly one post: no estimation, no backfill.</p>
+
+<h2>6 &middot; Failure modes</h2>
+<table>
+<tr><th>Failure</th><th>Behaviour</th></tr>
+<tr><td>Paid, inscription fails</td><td>Spec B's existing retry/refund posture; the job state page tells the truth</td></tr>
+<tr><td>Inscribed, X copy fails</td><td>Post exists on folklore, marked &ldquo;X copy failed &middot; retry&rdquo;; never silent</td></tr>
+<tr><td>X token expired</td><td>Compose still works with the X tick disabled and a &ldquo;reconnect X&rdquo; note for the owner</td></tr>
+<tr><td>Double submission</td><td>Job ids are idempotent; the same compose text within one job cannot inscribe twice</td></tr>
+</table>
+
+<h2>7 &middot; What phase 1 is NOT</h2>
+<ul>
+<li>No media in the compose (photos and videos ride the media-attribution work, separately designed).</li>
+<li>No multi-user OAuth &mdash; the witness account only, gated by the board session.</li>
+<li>No replies/threads composed from folklore &mdash; standalone posts first.</li>
+<li>No public compose &mdash; the box renders for the signed-in owner, invisible to visitors.</li>
+</ul>
+
+<h2>8 &middot; Open questions for Henry</h2>
+<ul>
+<li><strong>Q1:</strong> X write quota and tier &mdash; verify before build (section 4).</li>
+<li><strong>Q2:</strong> should the X copy carry the folklore link in every post, or only a footer line on longer posts? (Distribution taste, yours.)</li>
+<li><strong>Q3:</strong> does phase 1 pay by QR (spec B rails, zero new money code) or from the app wallet (nicer for you, new plumbing)? Recommendation: QR first, precisely because it exercises the spec B path end to end with your own money before any stranger's.</li>
+<li><strong>Q4:</strong> is the web-archive go-live flag (<code>XTEXT_WEB_ARCHIVE_ENABLED</code>) turned on with this, or does compose ship behind its own flag?</li>
+</ul>
+
+<p style="margin-top:40px;color:var(--muted);font-style:italic;">Adversarial review required before any money-path task begins &mdash; this document is the thing to attack first.</p>
+
+</div>
+</body>
+</html>
