@@ -7,6 +7,6 @@ import type { ReactNode } from "react";
  * every component below re-skins by reading the same Tailwind theme classes it
  * always has. A plain <div>, not a landmark: the root layout owns <main>.
  */
-export default function TextLayout({ children }: { children: ReactNode }) {
+export default function FolkloreLayout({ children }: { children: ReactNode }) {
   return <div className="folkloreroom">{children}</div>;
 }

@@ -4,7 +4,7 @@ import { useId, useState } from "react";
 import Link from "next/link";
 import type { XPost } from "../parseArchive";
 import type { ThreadContext } from "./threadContext";
-import { formatDate, formatUnixSeconds, shortTxid } from "./PostCard";
+import { Avatar, formatDate, formatUnixSeconds, shortTxid } from "./PostCard";
 
 /**
  * One archived post as a ledger entry. At rest it is a plain row on a hairline
@@ -25,6 +25,7 @@ export default function PostEntry({
   thread,
   handle,
   sats,
+  avatarUrl,
   defaultOpen = false,
 }: {
   post: XPost;
@@ -35,6 +36,10 @@ export default function PostEntry({
   /** Sats this post has earned through paid votes — the ledger fold's signed
    * sum for this post id. Absent until the vote model is live; renders as 0. */
   sats?: number;
+  /** The archive author's profile picture, shown beside every entry. All posts
+   * in an archive share one author, so this is the profile's avatar threaded
+   * down rather than anything per-post. Absent → the row renders as before. */
+  avatarUrl?: string;
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -73,24 +78,34 @@ export default function PostEntry({
         </p>
       ) : null}
 
-      {/* The post text — the toggle. Text only, so no nested interactive. */}
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls={panelId}
-        onClick={() => setOpen((v) => !v)}
-        className="group flex w-full items-start gap-3 text-left"
-      >
-        <p className="min-w-0 flex-1 whitespace-pre-wrap text-base leading-loose text-foreground transition-colors group-hover:text-accent">
-          {post.text}
-        </p>
-        <span
-          aria-hidden
-          className="mt-1 shrink-0 select-none font-mono text-sm text-muted transition-colors group-hover:text-accent"
+      {/* The author's picture sits OUTSIDE the toggle, so the button stays
+          text-only (no nested interactive, and the avatar doesn't become a
+          click target that surprises by opening the entry). */}
+      <div className="flex items-start gap-3">
+        {avatarUrl && (
+          <span className="mt-1 shrink-0">
+            <Avatar size={24} avatarUrl={avatarUrl} initial="" />
+          </span>
+        )}
+        {/* The post text — the toggle. Text only, so no nested interactive. */}
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => setOpen((v) => !v)}
+          className="group flex w-full min-w-0 items-start gap-3 text-left"
         >
-          {open ? "–" : "+"}
-        </span>
-      </button>
+          <p className="min-w-0 flex-1 whitespace-pre-wrap text-base leading-loose text-foreground transition-colors group-hover:text-accent">
+            {post.text}
+          </p>
+          <span
+            aria-hidden
+            className="mt-1 shrink-0 select-none font-mono text-sm text-muted transition-colors group-hover:text-accent"
+          >
+            {open ? "–" : "+"}
+          </span>
+        </button>
+      </div>
 
       {/* Media, each in a fixed-ratio frame so nothing shifts while it loads */}
       {post.media && post.media.length > 0 && (

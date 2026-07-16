@@ -4,6 +4,7 @@ import { getArchivePage } from "@/lib/xArchiveCache";
 import { listHandles } from "@/lib/xIndex";
 import { gbpPerBsv } from "@/lib/xPrice";
 import { readFoundingTotal, readScoresByWindow } from "@/lib/xVotes";
+import FolkloreWordmark from "./_components/FolkloreWordmark";
 import ProfileView from "./_components/ProfileView";
 import ArchiveDropZone from "./_components/ArchiveDropZone";
 import DirectoryRow from "./_components/DirectoryRow";
@@ -23,7 +24,7 @@ export const metadata: Metadata = {
  * conversion section under roughly four thousand words of one man's tweets. */
 const WITNESS_TEASER_POSTS = 6;
 
-export default async function XPage() {
+export default async function FolklorePage() {
   // The web archive flow hides behind its go-live flag; until it is on, the
   // primary action must not lead to a stub that tells a warmed-up visitor to
   // leave (the accent button did exactly that — the top finding of the
@@ -34,66 +35,32 @@ export default async function XPage() {
   // One ledger read, five folds — readScores per window re-read the ledger
   // each time. Shared with /folklore/<handle>, which now carries the same toggle.
   const scoresByWindow = await readScoresByWindow(WITNESS_HANDLE);
-  // The fun stat, and the honest one: every satoshi anyone has paid to put
-  // words on the chain through this page, summed across all archives.
-  const perHandleSats = await Promise.all(handles.map((h) => readFoundingTotal(h.handle)));
-  const totalArchiveSats = perHandleSats.reduce((sum, n) => sum + n, 0);
-  const witnessSats = perHandleSats[handles.findIndex((h) => h.handle === WITNESS_HANDLE)] ?? 0;
+  // One ledger read, not one per handle. This used to fan readFoundingTotal
+  // across every handle in the directory to sum a site-wide total for the
+  // hero's stats line; with that line gone, the witness is the only total the
+  // page still shows, so reading fifty ledgers to use one of them was pure
+  // cost. Restore the fan-out only if a site-wide figure comes back.
+  const witnessSats = await readFoundingTotal(WITNESS_HANDLE);
 
   return (
     // A <div>, not a <main>: the root layout already provides the single <main>
     // landmark for every page (see app/layout.tsx).
     <div className="min-h-screen bg-background pt-16">
-      {/* Hero — the thesis, over a faint ledger grid */}
+      {/* The mark and its tagline, and nothing else. The archive IS the
+          argument — a stranger should meet real posts read from the chain
+          before they meet a pitch, which is the whole finding of the
+          2026-07-14 research. The ways in are said once, in the gateway
+          below, rather than sold twice. */}
       <header className="ledger-grid relative">
-        <div className="mx-auto max-w-2xl px-6 pb-10 pt-14 text-center">
-          <p className="ledger-label">Folklore · content secured</p>
-          <h1 className="mt-4 text-4xl font-bold leading-tight text-foreground sm:text-5xl">
-            An archive X <span className="text-accent">can&rsquo;t revoke</span>.
+        <div className="mx-auto max-w-2xl px-6 pb-8 pt-14 text-center">
+          {/* The wordmark IS the heading — the thesis <h1> that used to carry
+              that job left with the banner, and a page with no <h1> strands
+              anyone navigating by headings. The mark's aria-label supplies the
+              accessible name, so this reads as "Folklore, heading level 1". */}
+          <h1>
+            <FolkloreWordmark className="mx-auto h-auto w-full max-w-[220px] text-foreground sm:max-w-[280px]" />
           </h1>
-          <p className="mx-auto mt-4 max-w-md text-muted">
-            Your X profile, written to Bitcoin — readable from any block explorer, forever, and
-            without us.
-          </p>
-          <p className="mt-6 font-mono text-xs text-muted">
-            <span className="text-accent">{handles.length}</span>{" "}
-            {handles.length === 1 ? "profile" : "profiles"} archived
-            {totalArchiveSats > 0 && (
-              <>
-                {" "}· <span className="text-accent">{totalArchiveSats.toLocaleString("en-GB")}</span>{" "}
-                sats paid to secure it
-              </>
-            )}{" "}
-            · read from the chain, never from a server
-          </p>
-          {/* The action lives in the hero — a ten-second visitor gets the
-              thesis AND the next step without scrolling. */}
-          <div className="mt-7 inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-2 font-mono text-sm">
-            {webArchiveOpen ? (
-              <>
-                <Link
-                  className="rounded-md border border-accent px-4 py-2 text-accent transition-colors hover:bg-accent hover:text-background"
-                  href="/folklore/archive"
-                >
-                  Archive yours &rarr;
-                </Link>
-                <span className="text-muted">or</span>
-                <a
-                  className="rounded-md border border-card-border px-4 py-2 text-foreground transition-colors hover:border-card-border-hover"
-                  href="https://apps.apple.com/app/henceforth/id1602896145"
-                >
-                  Archive with the app &middot; &pound;9.99
-                </a>
-              </>
-            ) : (
-              <a
-                className="rounded-md border border-accent px-4 py-2 text-accent transition-colors hover:bg-accent hover:text-background"
-                href="https://apps.apple.com/app/henceforth/id1602896145"
-              >
-                Archive yours with the app &middot; &pound;9.99 &rarr;
-              </a>
-            )}
-          </div>
+          <p className="ledger-label mt-5">content secured</p>
         </div>
       </header>
 

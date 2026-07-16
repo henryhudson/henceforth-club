@@ -46,6 +46,7 @@ export default function FeedControls({
   threads,
   txTimes,
   handle,
+  avatarUrl,
   scores = {},
   scoresByWindow,
   footer,
@@ -55,6 +56,7 @@ export default function FeedControls({
   threads: readonly (ThreadContext | undefined)[];
   txTimes: Record<string, number>;
   handle?: string;
+  avatarUrl?: string;
   scores?: Record<string, number>;
   scoresByWindow?: Record<ScoreWindow, Record<string, number>>;
   /** The scroll loader, when the caller has one. Rendered ONLY in Latest
@@ -133,6 +135,7 @@ export default function FeedControls({
             thread={threadById.get(post.id)}
             handle={handle}
             sats={windowScores[post.id]}
+            avatarUrl={avatarUrl}
           />
         ))}
       </div>

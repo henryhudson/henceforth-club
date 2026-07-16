@@ -122,6 +122,7 @@ export default function ProfileView({
           threads={threads}
           txTimes={txTimes}
           handle={profile.handle}
+          avatarUrl={profile.avatarUrl}
           scores={scores}
           scoresByWindow={scoresByWindow}
           footer={footer}

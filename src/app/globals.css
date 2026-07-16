@@ -155,8 +155,9 @@ body:has(.folkloreroom) {
   color: #ffffff;
 }
 
-/* The machine layer's micro-label: wide-tracked uppercase mono, the one
-   typographic move that says "ledger" without a second typeface. */
+/* The machine layer's micro-label: wide-tracked uppercase mono. Still the
+   room's only typographic move — the carved FOLKLORE above it is SVG artwork
+   (FolkloreWordmark.tsx), not a second typeface. */
 .folkloreroom .ledger-label {
   font-size: 0.625rem;
   letter-spacing: 0.24em;

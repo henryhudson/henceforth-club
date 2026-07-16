@@ -49,6 +49,7 @@ export default function ProfilePage({
         postCount={postCount}
         initialTxTimes={txTimes}
         initialScores={scores}
+        avatarUrl={archive.profile.avatarUrl}
       />
     ) : undefined;
 

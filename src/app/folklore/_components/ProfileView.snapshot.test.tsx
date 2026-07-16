@@ -17,4 +17,24 @@ describe("ProfileView", () => {
     const html = renderToStaticMarkup(<ProfileView archive={archive} isPreview />);
     expect(html).toContain("live preview");
   });
+
+  it("shows the author's profile picture on every post row", () => {
+    const withAvatar: XArchive = {
+      ...archive,
+      profile: { ...archive.profile, avatarUrl: "https://pbs.twimg.com/profile_images/x_normal.jpg" },
+    };
+    const html = renderToStaticMarkup(<ProfileView archive={withAvatar} isPreview={false} />);
+    // One avatar <img> per article, upgraded to full resolution, plus the
+    // header's. Count img tags, not raw URL occurrences — React 19 also
+    // hoists a <link rel="preload"> carrying the same URL.
+    const rows = html.match(/<article/g)?.length ?? 0;
+    const avatars = html.match(/<img src="[^"]*profile_images\/x\.jpg"/g)?.length ?? 0;
+    expect(rows).toBeGreaterThan(0);
+    expect(avatars).toBe(rows + 1);
+  });
+
+  it("keeps rows avatar-free when the archive has no profile picture", () => {
+    const html = renderToStaticMarkup(<ProfileView archive={archive} isPreview={false} />);
+    expect(html).not.toContain("profile_images");
+  });
 });
