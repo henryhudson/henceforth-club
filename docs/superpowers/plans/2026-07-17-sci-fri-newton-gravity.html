@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sci Fri — Newton's gravity: the film plan</title>
+<style>
+  :root { --bg:#f4f1ea; --ink:#1c1a16; --muted:#6b6358; --rule:#d8d0c0; --accent:#a8431f; --accent-soft:#c4a572; --card:#fbf9f4; --ok:#2f6f3e; --shadow:0 1px 3px rgba(0,0,0,0.08); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.65;}
+  .wrap{max-width:880px;margin:0 auto;padding:56px 32px;} header.doc{margin-bottom:40px;border-bottom:2px solid var(--rule);padding-bottom:24px;}
+  .eyebrow{font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:34px;line-height:1.15;margin:0 0 12px;font-weight:700;} h2{font-size:24px;margin:48px 0 14px;padding-top:20px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 8px;}
+  .lede{font-size:19px;color:var(--muted);margin:0;font-style:italic;}
+  p{margin:13px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(120,90,30,0.12);padding:2px 6px;border-radius:4px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;background:var(--card);}
+  th,td{text-align:left;padding:9px 12px;border:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .note{background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 18px;margin:18px 0;box-shadow:var(--shadow);}
+  .task{display:flex;gap:10px;align-items:flex-start;background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:10px 14px;margin:8px 0;box-shadow:var(--shadow);}
+  .task input[type=checkbox]{margin-top:5px;width:16px;height:16px;accent-color:var(--ok);}
+  .task .t{flex:1;} .task .t strong{display:block;}
+  .task .t em{color:var(--muted);font-size:14px;font-style:normal;}
+  ul{margin:12px 0;padding-left:26px;} li{margin:6px 0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Implementation plan &middot; 2026-07-17 &middot; Sci Fri weekly film &middot; FeynmanFigures (no git repo — local project)</div>
+<h1>Newton&rsquo;s gravity — the apple, the Moon, and why Kepler was right</h1>
+<p class="lede">Last week Kepler told us <em>how</em> the planets move. This week Newton tells us <em>why</em> — and Kepler&rsquo;s three laws stop being observations and become theorems. One force, written first in words, then melting into symbols.</p>
+</header>
+
+<div class="note"><strong>For agentic workers:</strong> the film pipeline is <code>~/Programming/Main/FeynmanFigures</code> — a pure timeline script maps film time to scenes, one SwiftUI view renders any frame deterministically, AVAssetWriter encodes the mp4, and <code>Film/attach-score.swift</code> lays <code>henceforth-theme.mp3</code> underneath. Mirror <code>Keplers Laws/KeplerFilm.swift</code>&rsquo;s architecture exactly: <code>enum NewtonFilmScene</code>, a pure <code>NewtonFilmScript.timeline</code>, a <code>NewtonFilmFrame</code> view at the 972&times;600 golden canvas, dark scheme forced. House rules: <strong>equations in whole words first — symbols may follow after</strong>; every number honest; no hype vocabulary. Swift 6, value types, pure functions — the frame at time t is a pure function or the export is not deterministic.</div>
+
+<h2>The science, checked before the pixels</h2>
+<p>The film&rsquo;s quantitative spine is Newton&rsquo;s own Moon test, and it must be numerically true on screen:</p>
+<ul>
+<li>An apple falls <strong>4.9 metres in its first second</strong> (½ &times; 9.8 m/s²).</li>
+<li>The Moon sits about <strong>60 Earth radii</strong> away. If gravity weakens with the <em>square</em> of distance, the Moon should fall <strong>1/3600th</strong> as fast: 4.9 m &divide; 3600 ≈ <strong>1.36 millimetres in one second</strong>.</li>
+<li>The Moon&rsquo;s actual deviation from a straight line, from its orbital period (27.3 days) and radius: ≈ <strong>1.4 millimetres per second</strong>. The inverse square is not assumed — it is <em>measured against the sky</em>.</li>
+<li>From inverse-square + circular motion, Kepler&rsquo;s third law falls out in three lines: force needed = force supplied → the square of the period is proportional to the cube of the distance. The film shows the third-law line from <em>last week&rsquo;s own figure</em> being re-drawn by Newton&rsquo;s law.</li>
+</ul>
+
+<h2>The script — five scenes, ~62 seconds</h2>
+<table>
+<tr><th>Scene</th><th>Duration</th><th>On screen</th><th>The line (words first)</th></tr>
+<tr><td><code>portrait</code></td><td>4s</td><td>Newton portrait sketch, name, years — mirroring Kepler&rsquo;s opening beat so the series reads as a series</td><td>&ldquo;Isaac Newton, 1642–1727&rdquo;</td></tr>
+<tr><td><code>keplerRecap</code></td><td>8s</td><td>Last week&rsquo;s three figures, small and already-known: ellipse, equal areas, third-law line. They dim to ghosts and stay in the corner</td><td>&ldquo;Last week: how the planets move. Three rules, read from the sky. But nobody knew why.&rdquo;</td></tr>
+<tr><td><code>moonTest</code></td><td>18s</td><td>The cannonball: trajectories arcing further as launch speed grows until one arc misses the ground forever — then the apple and the Moon falling side by side with live counters: 4.9 m &middot; 1.4 mm, and the ratio 60² lighting up</td><td>&ldquo;The Moon is falling. It just keeps missing. Sixty times further away, it falls sixty-times-sixty times more gently.&rdquo;</td></tr>
+<tr><td><code>wordsToSymbols</code></td><td>14s</td><td><strong>The morph</strong> — the sentence assembles word by word, then each phrase migrates and condenses into its symbol: &ldquo;every mass&rdquo;→m₁, &ldquo;pulls every other mass&rdquo;→m₂, &ldquo;the square of the distance&rdquo;→r², the whole sentence settling into F = G m₁m₂ / r²</td><td>&ldquo;Every mass pulls every other mass — more strongly the heavier they are, more weakly with the square of the distance between them.&rdquo;</td></tr>
+<tr><td><code>keplerExplained</code></td><td>12s</td><td>The ghost figures from scene 2 re-light one by one as Newton&rsquo;s law re-derives them: the orbiting dot re-sweeps equal areas (a central force keeps them equal), the third-law line re-draws itself from the formula, the ellipse traces as the inverse-square path. Three quiet check marks</td><td>&ldquo;Kepler measured them. Newton explained them. The same law, from an apple to a planet.&rdquo;</td></tr>
+<tr><td><code>advert</code></td><td>6s</td><td>Series card, henceforth.club, next-week tease</td><td>&ldquo;Sci Fri — every Friday.&rdquo;</td></tr>
+</table>
+
+<div class="note"><strong>The morph is the film&rsquo;s signature.</strong> Henry&rsquo;s standing note: &ldquo;symbols are forgotten and words can be understood&rdquo; — and the film idea attached to it: <em>words morphing into symbols</em>. Scene 4 is that idea made real for the first time. If one scene gets the animation budget, it is this one: per-phrase anchor tracking, so &ldquo;the square of the distance&rdquo; visibly <em>becomes</em> r², not a crossfade.</p></div>
+
+<h2>Build tasks</h2>
+<div class="task"><input type="checkbox"><div class="t"><strong>1 · Scaffold NewtonFilm.swift beside KeplerFilm.swift</strong><em>Scene enum, pure timeline (durations above), frame view at 972×600, dark scheme. Verify: a preview renders scene boundaries at t = 4, 12, 30, 44, 56.</em></div></div>
+<div class="task"><input type="checkbox"><div class="t"><strong>2 · Portrait + Kepler-recap scenes</strong><em>Reuse Kepler figure views as ghosted minis (import, scale, dim). Verify: frame(t=6) shows all three ghosts labelled.</em></div></div>
+<div class="task"><input type="checkbox"><div class="t"><strong>3 · The cannonball</strong><em>Parametric trajectories over a small Earth, launch speed easing up per repeat until the orbit closes. Pure function of local time. Verify: the final arc visibly returns to its start point.</em></div></div>
+<div class="task"><input type="checkbox"><div class="t"><strong>4 · The Moon test counters</strong><em>Apple and Moon fall side by side for one second of film time, slowed 4x, with live distance counters (4.9 m / 1.4 mm) and the 60² ratio beat. The numbers are the science — they must land exactly.</em></div></div>
+<div class="task"><input type="checkbox"><div class="t"><strong>5 · The words-to-symbols morph</strong><em>Sentence assembles; per-phrase anchors migrate into the formula layout; serif words condense into the symbol glyphs. Verify frame-by-frame at t = 46, 49, 52: readable at every instant.</em></div></div>
+<div class="task"><input type="checkbox"><div class="t"><strong>6 · Kepler re-derived</strong><em>Ghost figures re-light with check marks as the formula annotates each: equal areas ← central force; T²∝a³ ← inverse square; ellipse ← conic path. Verify: all three lit by scene end.</em></div></div>
+<div class="task"><input type="checkbox"><div class="t"><strong>7 · Advert beat + full export</strong><em>Series card, then export the mp4 via the film exporter and attach the score (Film/attach-score.swift, henceforth-theme.mp3). Verify: seamless 62s mp4, no dropped frames, audio ends with the picture.</em></div></div>
+<div class="task"><input type="checkbox"><div class="t"><strong>8 · Science pass (the gate)</strong><em>Watch once solely for correctness: every number on screen re-derived by hand; words-before-symbols rule holds in every scene. Nothing ships with a wrong figure.</em></div></div>
+<div class="task"><input type="checkbox"><div class="t"><strong>9 · Henry&rsquo;s cut review</strong><em>Creative artifact: review-gated. Henry watches the cut and signs off before it goes anywhere public.</em></div></div>
+
+<h2>Standing cadence</h2>
+<p>Sci Fri is now a <strong>standing Friday card</strong> on the Morning Board (like the Wednesday ship-day cards): each Friday the card carries that week&rsquo;s topic, building on the last — Kepler → Newton&rsquo;s gravity → (candidates: energy and escape velocity; the tides; the two-body dance). The /hh routine refreshes it every Friday morning.</p>
+
+<h2>Deliberately not this week</h2>
+<ul>
+<li>General relativity teasers — Newton deserves his own week; the &ldquo;gravity is not quite this&rdquo; card is a future episode&rsquo;s cold open.</li>
+<li>Voice-over — the series is words-on-screen with the theme score, as Kepler was.</li>
+<li>Elliptical-orbit derivation in full — the film asserts the conic result honestly (&ldquo;the same law draws the ellipse&rdquo;) without the calculus; the LaTeX companion can carry the derivation.</li>
+</ul>
+
+</div>
+</body>
+</html>
