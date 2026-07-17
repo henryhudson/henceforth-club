@@ -75,6 +75,20 @@ export default function ProfilePage({
             Not yet inscribed &mdash; live preview from X
           </p>
         )}
+        {/* The archive is the reader's to walk away with — one click, one
+            JSON file, verifiable against the chain without us. Inscribed
+            archives only: a live preview has nothing durable to hand over. */}
+        {txid && handle && (
+          <p className="mt-3">
+            <a
+              href={`/folklore/${handle}/export`}
+              download
+              className="font-mono text-[11px] text-muted transition-colors hover:text-accent hover:underline"
+            >
+              download this archive &darr; JSON, yours to keep
+            </a>
+          </p>
+        )}
       </header>
       <ProfileView
         archive={archive}

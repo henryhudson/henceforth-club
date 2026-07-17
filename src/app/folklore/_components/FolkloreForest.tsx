@@ -19,30 +19,43 @@ import { useEffect, useRef } from "react";
  * Decoration only: aria-hidden, pointer-events-none, behind the hero text.
  */
 
-/** Peak heights for one treeline strip, hand-tuned — deterministic, no
- * randomness (a seeded look that never shifts between builds). Values are
- * pine heights in viewBox units on a 1200-wide strip. */
-const BACK_PEAKS = [46, 62, 40, 70, 52, 78, 44, 66, 50, 74, 42, 68, 56, 80, 48, 64, 38, 72, 54, 76, 46, 60, 50, 70];
-const MID_PEAKS = [64, 88, 52, 96, 70, 104, 58, 92, 66, 100, 54, 90, 74, 108, 62, 86, 50, 98, 72, 102, 60, 84, 68, 94];
-const NEAR_PEAKS = [88, 118, 72, 128, 96, 138, 80, 124, 90, 134, 76, 120, 100, 142, 86, 116, 70, 130, 98, 136, 82, 112, 92, 126];
+/** Tree plots for one treeline strip — (x centre, height) pairs on a
+ * 1200-wide stage, hand-tuned and deterministic: a seeded look that never
+ * shifts between builds. Back rows are dense and short, near rows sparse
+ * and tall, and the x positions carry jitter so nothing reads as a comb. */
+const BACK_TREES: ReadonlyArray<readonly [number, number]> = [
+  [18, 74], [76, 96], [128, 66], [180, 108], [242, 84], [298, 118], [352, 72],
+  [408, 102], [470, 88], [524, 124], [578, 78], [634, 110], [692, 92], [748, 128],
+  [806, 70], [858, 100], [914, 82], [968, 116], [1026, 76], [1082, 106], [1136, 90], [1188, 98],
+];
+const MID_TREES: ReadonlyArray<readonly [number, number]> = [
+  [42, 128], [124, 156], [214, 118], [296, 172], [388, 136], [472, 184], [556, 126],
+  [648, 164], [738, 144], [824, 190], [912, 132], [1000, 170], [1090, 150], [1172, 178],
+];
+const NEAR_TREES: ReadonlyArray<readonly [number, number]> = [
+  [60, 190], [204, 236], [352, 176], [500, 252], [652, 200], [800, 244], [948, 186], [1096, 230],
+];
 
-/** A treeline path: evenly spaced pines of the given heights, each a
- * triangle with a small trunk notch, closed along the strip's bottom. */
-function treeline(peaks: readonly number[], height: number): string {
-  const step = 1200 / peaks.length;
-  const parts = [`M0 ${height}`];
-  peaks.forEach((peak, i) => {
-    const left = i * step;
-    const mid = left + step / 2;
-    const spread = step * 0.46;
-    parts.push(
-      `L${(mid - spread).toFixed(1)} ${height}`,
-      `L${mid.toFixed(1)} ${(height - peak).toFixed(1)}`,
-      `L${(mid + spread).toFixed(1)} ${height}`,
-    );
-  });
-  parts.push(`L1200 ${height} Z`);
-  return parts.join(" ");
+/** One spruce as three stacked, widening branch tiers over a stub of trunk —
+ * the layered silhouette a single triangle never manages. Returns closed
+ * subpaths for one <path d>. */
+function spruce(x: number, h: number, baseY: number): string {
+  const tier = (apexY: number, baseHalf: number, tierBaseY: number) =>
+    `M${x.toFixed(1)} ${apexY.toFixed(1)} L${(x - baseHalf).toFixed(1)} ${tierBaseY.toFixed(1)} L${(x + baseHalf).toFixed(1)} ${tierBaseY.toFixed(1)} Z`;
+  const trunkHalf = Math.max(1.4, h * 0.022);
+  return [
+    tier(baseY - h, h * 0.17, baseY - h * 0.52),
+    tier(baseY - h * 0.68, h * 0.25, baseY - h * 0.26),
+    tier(baseY - h * 0.4, h * 0.33, baseY - h * 0.02),
+    `M${(x - trunkHalf).toFixed(1)} ${(baseY - h * 0.08).toFixed(1)} L${(x + trunkHalf).toFixed(1)} ${(baseY - h * 0.08).toFixed(1)} L${(x + trunkHalf).toFixed(1)} ${baseY.toFixed(1)} L${(x - trunkHalf).toFixed(1)} ${baseY.toFixed(1)} Z`,
+  ].join(" ");
+}
+
+/** A whole treeline: every spruce's subpaths plus a low ground band so the
+ * trunks stand on something rather than floating. */
+function treeline(trees: ReadonlyArray<readonly [number, number]>, baseY: number): string {
+  const ground = `M0 ${(baseY - 3).toFixed(1)} L1200 ${(baseY - 3).toFixed(1)} L1200 340 L0 340 Z`;
+  return trees.map(([x, h]) => spruce(x, h, baseY)).join(" ") + " " + ground;
 }
 
 export default function FolkloreForest() {
@@ -81,9 +94,9 @@ export default function FolkloreForest() {
         viewBox="0 0 1200 340"
         preserveAspectRatio="xMidYMax slice"
       >
-        <path d={treeline(BACK_PEAKS, 340)} className="treeline treeline-back" />
-        <path d={treeline(MID_PEAKS, 340)} className="treeline treeline-mid" />
-        <path d={treeline(NEAR_PEAKS, 340)} className="treeline treeline-near" />
+        <path d={treeline(BACK_TREES, 316)} className="treeline treeline-back" />
+        <path d={treeline(MID_TREES, 328)} className="treeline treeline-mid" />
+        <path d={treeline(NEAR_TREES, 340)} className="treeline treeline-near" />
       </svg>
       {/* The cloud bank: blurred drifting ellipses that thin as --reveal grows */}
       <svg className="clouds absolute inset-0 h-full w-full" viewBox="0 0 1200 340" preserveAspectRatio="xMidYMid slice">

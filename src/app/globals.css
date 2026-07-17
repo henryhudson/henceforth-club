@@ -187,9 +187,9 @@ body:has(.folkloreroom) {
   transform: translateY(calc((1 - var(--reveal)) * 15px));
 }
 .folklore-forest .treeline-near {
+  /* Pure silhouette — a stroke outlines every branch-tier subpath separately
+     and reads as wireframe, so the orange lives in the glow, not on edges. */
   fill: #0a0a0e;
-  stroke: rgba(232, 115, 30, 0.22); /* the orange-lit rim of the near pines */
-  stroke-width: 1.5;
   opacity: calc(0.15 + var(--reveal) * 0.85);
   transform: translateY(calc((1 - var(--reveal)) * 7px));
 }
