@@ -106,6 +106,41 @@ export default async function EpisodePage({
           </div>
         </div>
 
+        {/* The finale: only the last episode of the series carries the
+            closing card — the journey named, and the graduate handed
+            somewhere real. Ten episodes deserve an ending, not a footer. */}
+        {!next && (
+          <div className="mt-12 rounded-2xl border border-accent-warm/40 bg-card-bg p-8">
+            <p className="text-xs uppercase tracking-widest text-accent-warm/80">
+              The series, complete
+            </p>
+            <h2 className="mt-3 text-2xl font-bold text-foreground">
+              Ten episodes. You started with{" "}
+              <code className="rounded bg-background/60 px-1.5 py-0.5 font-mono text-accent-warm">2 3 + .</code>{" "}
+              — you finished by writing the lock that guards bitcoin.
+            </h2>
+            <p className="mt-3 leading-relaxed text-muted">
+              Numbers, the stack, words of your own, decisions, loops, three stacks — and then a
+              real script, byte for byte. Everything you typed still lives in your terminal, and
+              everything bitcoin does is made of the same words.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
+              <Link
+                href="/folklore"
+                className="font-mono text-accent-orange transition-opacity hover:opacity-75"
+              >
+                Put words on the chain for real — Folklore →
+              </Link>
+              <Link
+                href="/learn/what-is-henceforth"
+                className="font-mono text-muted/70 transition-colors hover:text-accent-warm"
+              >
+                Watch again from episode one ↺
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Prev / next */}
         <div className="mt-12 flex items-center justify-between border-t border-card-border pt-6 text-sm">
           {prev?.published ? (
