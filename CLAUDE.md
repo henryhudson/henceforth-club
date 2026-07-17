@@ -41,7 +41,7 @@ Deployment is automatic — every `git push` to `main` triggers a Vercel deploy 
 | `/henceforth` | Static | Henceforth detail — terminal demo, features, App Store link |
 | `/dadeckofcards` | Static | DaDeckOfCards detail — card fan, features, App Store link |
 | `/hansard` | Static | Hansard detail — constituency morph animation, features, Coming Soon CTA |
-| `/docs` | Static | Embedded LaTeX PDF (`public/hforth.pdf`) |
+| `/docs` | Static | MDX word reference (`src/app/docs/content.mdx` + `(chapters)` pages) — the LaTeX PDF embed is retired |
 | `/contact` | Static | X profile links (Henceforth, Deck of Cards, personal) — no form |
 | `/hello-world` | Static | Hidden easter egg — Stack Attack game |
 | `/api/hit` | Dynamic | POST — increments Redis visitor counter, returns visitor number |
@@ -105,7 +105,7 @@ Visitor counting uses Upstash Redis via `src/lib/redis.ts`. `PageViewTracker` cl
 - **Monospace everywhere** — Space Mono is the only font, applied globally via `--font-sans`, `--font-mono`, and `--font-serif` all pointing to `--font-space-mono`
 - **Dark mode only** — `dark` class hardcoded on `<html>`, no light mode
 - **Domain**: henceforth.club (hosted on Vercel, DNS via GoDaddy)
-- **Static PDF**: `public/hforth.pdf` is the Henceforth LaTeX documentation — update by copying from `~/Programming/latex/hforth/hforth.pdf` after recompiling
+- **Word reference**: `/docs` renders `src/app/docs/content.mdx` (one `<Word>` entry per vocabulary word; grouped entries cover the op-constant ranges). Vocabulary changes in the app must update it — see the Henceforth repo's "Adding vocabulary words" checklist. The old `public/hforth.pdf` embed is retired.
 
 ## Working rhythm
 

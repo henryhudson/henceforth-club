@@ -12,7 +12,7 @@ Henceforth is built and maintained by Henry Hudson at Henceforth Bitcoin Limited
 
 [github.com/henryhudson/FORTHapp](https://github.com/henryhudson/FORTHapp)
 
-Running the project requires Xcode on any iPhone or iPad. Optimisation for all Apple platforms is in progress. The repository is private at the time of writing — get in touch if you would like access.
+Running the project requires Xcode 26 and a device on iOS 26 or macOS 26 (Tahoe). macOS, iPadOS, and iOS are all supported. The repository is private at the time of writing — get in touch if you would like access.
 
 ### Support
 
@@ -524,6 +524,8 @@ Henceforth accepts integers as binary, octal, decimal and hexadecimal. Just chan
 
 <Word name="pay" stack="(--)">Presents the pay sheet, where you can send Bitcoin.</Word>
 
+<Word name="todo" stack="( -- )">Prints the current project backlog, fetched live from henceforth.club. Server-driven — the list updates by editing the site, not the app. Hidden development word: it appears in no autocomplete or browser surface, but typing it still executes.</Word>
+
 <Word name="receive" stack="(--)">Shows where to get paid: prints the active wallet's current receiving address and presents it as a QR code. Reports only — the address rotates automatically after it receives a payment, never from this word.</Word>
 
 <Word name=".fs">Filename followed by `.fs` extension will load that file's contents into Henceforth.</Word>
@@ -584,7 +586,7 @@ Henceforth has three stacks: the integer stack (main, inspected via `.s`), the d
 
 <Word name="wocgetblockbyheight" stack="(n--)">Takes a block height from the stack and searches WhatsOnChain for info on that block.</Word>
 
-The three words below are *awaitable*: each suspends the line while its network query runs and resumes with the value pushed, so chain state lands on the stack instead of being prose in the transcript — `: pay-rent balance 1000 > if 1000 s" 1A1zP1..." send then ;` is both a Forth word and a payment policy. One query may be in flight at a time; while it runs the terminal shows `awaiting balance… (esc cancels)` and Escape cancels it. A query that cannot answer halts the line with an error — never a sentinel value that could silently flip an `if`.
+The three words below are *awaitable*: each suspends the line while its network query runs and resumes with the value pushed, so chain state lands on the stack instead of being prose in the transcript — `: pay-rent balance 1000 > if 1000 s" 1A1zP1..." send then ;` is both a Forth word and a payment policy. One query may be in flight at a time; while it runs the terminal shows `awaiting balance… (esc cancels · times out in 30s)` — Escape cancels it, and a query that hasn't answered within 30 seconds times out and halts the line. A query that cannot answer halts the line with an error — never a sentinel value that could silently flip an `if`.
 
 <Word name="balance" stack="( -- sats)">Queries the chain for the active wallet's total balance and pushes it in satoshis. The line suspends while the query runs and resumes when the value lands. A failed or partial query halts the line with an error — never a silent low number.</Word>
 
@@ -612,7 +614,7 @@ The transaction builder words allow programmatic construction of Bitcoin transac
 
 <Word name="tx-clear" stack="( -- )">Clears the transaction builder, discarding all inputs and outputs.</Word>
 
-<Word name="tx-broadcast" stack="( -- )">Builds, signs, and broadcasts the current transaction to the BSV network via ARC.</Word>
+<Word name="tx-broadcast" stack="( -- )">Builds, signs, and broadcasts the current transaction to the BSV network via ARC. The legacy spelling `tx-build` dispatches to the same handler.</Word>
 
 <Word name="send" stack="( amount c-addr u -- )">Standard payment in a single word. Pops the destination string from the data stack (placed there by `S"`) and the amount from the integer stack. The string holds one address (single recipient) or N space-separated addresses (equal-split). Validates the inputs, then presents PayView with the amount + address pre-filled. The user long-presses to confirm; Face ID gates the actual broadcast via ARC. Terminal output on success: `sent TXID: <id>`. Usage: `1000 s" 1A1zP1..." send`.</Word>
 
@@ -637,6 +639,14 @@ SCRIPT-END
 
 <a id="ref-crypto" />
 
+### On-Chain Archive
+
+`xtext` and `xmedia` are the on-chain archive words: they write X profiles into Bitcoin transactions, read back publicly at henceforth.club/folklore. Fetching is never free — the archive endpoints demand a small on-chain payment before each read — while inscribing costs the miner fee plus a reward that routes to the handle's owner once they have bound the handle to a wallet key.
+
+<Word name="xtext" stack="( c-addr u -- )">Archives an X profile on-chain. Takes a handle string (from `s"`). The fetch itself is paid: the archive endpoint demands a small on-chain fee per read, broadcast from the active wallet — the fee and its txid print to the terminal. The archive sheet then opens with Text / Images / Videos toggles and a live cost; PAY inscribes the archive JSON, a 1Sat Ordinal per selected photo, and the archive reward. Incremental — only posts not yet on-chain are inscribed. Finished archives are public at henceforth.club/folklore. Usage: `s" jack" xtext`.</Word>
+
+<Word name="xmedia" stack="( c-addr1 u1 c-addr2 u2 -- )">Inscribes a local media file into an X archive as a post of its own — the counterpart to `xtext`, for media the fetch can never reach: a deleted post's video, or anything that only exists as a file you saved. Takes two `s"` strings — the handle, then the filename — read from the app's Files tab. No X API call, so no fetch fee: only the miner fee and the archive reward. Images (jpg, png, gif, webp) and video (mp4, mov) only; the handle must already have an archive. Raises the archive sheet with the cost; PAY writes it to chain. Usage: `s" jack" s" clip.mp4" xmedia`.</Word>
+
 ### Bitcoin Cryptography
 
 <Word name="sign-msg" stack="( -- )">Signs a message with the current wallet key using Bitcoin Signed Message (BSM). Usage: `sign-msg <message>`.</Word>
@@ -651,7 +661,7 @@ SCRIPT-END
 
 ### BAP Identity
 
-BAP (Bitcoin Attestation Protocol) provides a decentralised identity system built on Bitcoin. Identity keys are derived using Type42 (BRC-42) key derivation from the wallet's master key.
+BAP (Bitcoin Attestation Protocol) provides a decentralised identity system built on Bitcoin. Identity keys are derived using Type42 (BRC-42) key derivation from the wallet's master key. The four `bap-*` words are currently hidden from the in-app autocomplete, vocabulary browser, and Word of the Day while their word-level integration is being verified — typing them at the prompt still executes them, and they do not appear in `vlist` output.
 
 <Word name="bap-id" stack="( -- )">Shows the BAP identity key (ID) and signing address for the current wallet.</Word>
 
@@ -751,7 +761,7 @@ All 140+ Bitcoin Script opcodes are exposed as FORTH words. Below are the catego
 
 #### Push Data
 
-<Word name="op_0 … op_16" stack="( - x)">Push the corresponding integer onto the script stack. Equivalent to typing a numeric literal in FORTH.</Word>
+<Word name="op_0 … op_16" stack="( - x)">Push the corresponding script number onto the script stack as a minimally-encoded byte vector — `op_0` pushes the empty vector (Script's canonical zero). Not equivalent to a FORTH numeric literal: literals land on the integer stack, so `5 3 op_add` errors. Use `>scriptnum` to move an integer onto the script stack.</Word>
 <Word name="op_false" stack="( - x)" forth="false">Pushes the empty byte vector (Script canonical zero / FALSE). Alias for OP_0.</Word>
 <Word name="op_pushdata1" stack="( - )">Frames a length-prefixed data push during script recording. At the prompt a 0x literal pushes its bytes directly.</Word>
 <Word name="op_pushdata2" stack="( - )">Frames a length-prefixed data push during script recording. At the prompt a 0x literal pushes its bytes directly.</Word>
@@ -1033,7 +1043,7 @@ Three serialisable JSON formats carry data across the air-gap, exchanged via Air
 
 - **`.hfheaders`** — a contiguous run of validated block headers anchored to a checkpoint hash. The importer hands the run to `commitValidatedHeaderRun` so chain-link, PoW, and checkpoint-anchor invariants self-enforce.
 - **`.hfreceipt`** — proof that a specific transaction was included in the blockchain. Carries (txid, raw tx hex, block height, block hash, TSC Merkle proof, containing header). `verifyTransaction(fromBundle:)` validates inclusion against the importer's own local header with no network call. After SPV passes, the importer re-derives output ownership and refuses receipts that don't pay this wallet.
-- **`.hfaddrpack`** — pre-derived receive addresses pushed signer → watcher. Each entry has the address, derivation scheme, and the scheme-specific derivation reference. Signed by the wallet's m/0/0 BIP32 identity key with DER ECDSA.
+- **`.hfaddrpack`** — pre-derived receive addresses pushed signer → watcher. Each entry has the address, derivation scheme, and the scheme-specific derivation reference. Signed by the wallet's hardened identity key at `m/13'/0'` with DER ECDSA — deliberately isolated from the receive/change derivation tree to avoid ECDSA nonce-reuse leakage.
 
 **Settings → Bitcoin → Air-Gap Tools** exposes three exporters and a single import button (routed by file extension). In v1.0, `.hfaddrpack` import validates the signature; persistence into a watch-only store is a follow-up in a later release.
 
