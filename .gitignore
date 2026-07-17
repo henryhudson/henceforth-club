@@ -64,3 +64,8 @@ scripts/xtext-worker/jobs/
 
 # This Week draft review PDFs (scripts/this-week/render-draft.mjs) — local only
 scripts/this-week/preview/
+
+# Founding-correction artifacts — production ledger snapshots and reviewed
+# plans, never committed (the repo is public).
+ledger-backup-*.json
+plan-founding-*.json
