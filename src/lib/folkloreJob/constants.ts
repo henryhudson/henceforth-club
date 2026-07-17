@@ -1,20 +1,13 @@
 /**
  * Tuning constants for the web-paid inscription path.
- *
- * WEB_PREMIUM_SATS — a one-off manual derivation, not a runtime lookup.
- * WhatsOnChain exchange rate, read by hand on 2026-07-10:
- *   curl -s https://api.whatsonchain.com/v1/bsv/main/exchangerate
- *   → { "rate": 13.625, "currency": "USD" }   (1 bitcoin SV = 13.625 United States dollars)
- * Pounds per dollar: 0.79 (the site's existing conversion constant, see
- * src/app/folklore/_components/CostQuote.tsx).
- *   1 bitcoin SV = 13.625 × 0.79 = 10.76375 pounds
- *   satoshis per pound = 100,000,000 ÷ 10.76375 = 9,290,442.46
- * Rounded to the nearest thousand: 9,290,000 satoshis (about 99.995 pence
- * at the rate above). This constant does not track the price after today;
- * updating it later means repeating this arithmetic by hand and editing
- * both the number and this comment together.
  */
-export const WEB_PREMIUM_SATS = 9_290_000;
+
+/** The web archive's whole price, in pounds. Converted to satoshis at the
+ * LIVE rate at quote time (src/lib/xPrice.ts gbpPerBsv) — never from a
+ * frozen constant; when the rate is unavailable the quote fails closed.
+ * (The predecessor here was WEB_PREMIUM_SATS = 9,290,000 — one pound
+ * hand-converted on 2026-07-10 and never tracking the price again.) */
+export const WEB_PRICE_GBP = 1;
 
 /** How long a quote is honoured before the visitor must ask for a new one. */
 export const QUOTE_EXPIRY_MINUTES = 15;

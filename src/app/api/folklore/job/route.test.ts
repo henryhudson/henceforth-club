@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockParseXExport = vi.fn();
 const mockQuoteArchive = vi.fn();
+const mockGbpPerBsv = vi.fn();
 const mockGetOwner = vi.fn();
 const mockCreateJob = vi.fn();
 
@@ -10,6 +11,9 @@ vi.mock("@/lib/folkloreJob/parseExport", () => ({
 }));
 vi.mock("@/lib/folkloreJob/quote", () => ({
   quoteArchive: (...args: unknown[]) => mockQuoteArchive(...args),
+}));
+vi.mock("@/lib/xPrice", () => ({
+  gbpPerBsv: (...args: unknown[]) => mockGbpPerBsv(...args),
 }));
 vi.mock("@/lib/xOwner", () => ({
   getOwner: (...args: unknown[]) => mockGetOwner(...args),
@@ -66,10 +70,12 @@ beforeEach(() => {
   vi.stubEnv("XTEXT_WEB_ARCHIVE_ENABLED", "true");
   mockParseXExport.mockReset();
   mockQuoteArchive.mockReset();
+  mockGbpPerBsv.mockReset();
+  mockGbpPerBsv.mockResolvedValue(10.76375);
   mockGetOwner.mockReset();
   mockCreateJob.mockReset();
   mockParseXExport.mockReturnValue(PARSED_OK);
-  mockQuoteArchive.mockReturnValue(QUOTE);
+  mockQuoteArchive.mockReturnValue({ kind: "quoted", quote: QUOTE });
   mockGetOwner.mockResolvedValue(null);
   mockCreateJob.mockResolvedValue({ ok: true, job: JOB });
 });
@@ -138,9 +144,25 @@ describe("POST /api/folklore/job", () => {
       expiresAtMs: JOB.expiresAtMs,
       claimedHandle: false,
     });
-    expect(mockQuoteArchive).toHaveBeenCalledWith(PARSED_OK.archiveBytes);
+    expect(mockQuoteArchive).toHaveBeenCalledWith(PARSED_OK.archiveBytes, 10.76375);
     expect(mockGetOwner).toHaveBeenCalledWith("henry");
     expect(mockCreateJob).toHaveBeenCalledWith(PARSED_OK, QUOTE, expect.any(Number));
+  });
+
+  it("refuses with price-unavailable when the quote cannot convert the pound — no job is opened, no address issued", async () => {
+    mockQuoteArchive.mockReturnValue({ kind: "rate-unavailable" });
+    const res = await POST(multipartRequest());
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ ok: false, reason: "price-unavailable" });
+    expect(mockCreateJob).not.toHaveBeenCalled();
+  });
+
+  it("refuses distinctly when £1 no longer covers the fee — the rate is live, the price is the problem", async () => {
+    mockQuoteArchive.mockReturnValue({ kind: "price-below-fee" });
+    const res = await POST(multipartRequest());
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ ok: false, reason: "price-below-fee" });
+    expect(mockCreateJob).not.toHaveBeenCalled();
   });
 
   it("adds a claimed-handle notice when the handle already has an owner", async () => {

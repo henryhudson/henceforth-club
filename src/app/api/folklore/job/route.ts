@@ -4,6 +4,7 @@ import { quoteArchive } from "@/lib/folkloreJob/quote";
 import { getOwner } from "@/lib/xOwner";
 import { createJob } from "@/lib/folkloreJob/jobStore";
 import { MAX_ARCHIVE_BYTES } from "@/lib/folkloreJob/constants";
+import { gbpPerBsv } from "@/lib/xPrice";
 
 // The whole multipart body, not just the archive JSON the parser will later
 // measure against MAX_ARCHIVE_BYTES — a compressed zip well under that limit
@@ -66,9 +67,18 @@ export async function POST(req: Request) {
     return refusal(parsed.reason, 422);
   }
 
-  const quote = quoteArchive(parsed.archiveBytes);
+  // The £1 price converts at the LIVE rate; without it there is no honest
+  // number to charge, so the quote refuses rather than reach for a stale
+  // constant (the same fail-closed rule the pound display already follows).
+  const quoted = quoteArchive(parsed.archiveBytes, await gbpPerBsv());
+  if (quoted.kind === "rate-unavailable") {
+    return refusal("price-unavailable", 503);
+  }
+  if (quoted.kind === "price-below-fee") {
+    return refusal("price-below-fee", 503);
+  }
   const owner = await getOwner(parsed.handle);
-  const created = await createJob(parsed, quote, Date.now());
+  const created = await createJob(parsed, quoted.quote, Date.now());
   if (!created.ok) {
     return refusal(created.refused, 503);
   }

@@ -12,17 +12,13 @@ import { qrSvg } from "./qr";
 export default function PaymentPanel({
   address,
   priceSats,
-  gbpPerBsv,
 }: {
   address: string;
   priceSats: number;
-  /** Live pounds-per-coin from the server page — display softener only. */
-  gbpPerBsv?: number;
 }) {
   const uri = bitcoinUri(address, priceSats);
   const { size, path } = qrSvg(uri);
   const amount = bitcoinAmount(priceSats);
-  const pounds = gbpPerBsv === undefined ? undefined : (priceSats / 1e8) * gbpPerBsv;
 
   return (
     <div className="rounded-2xl border border-card-border bg-card-bg p-6 text-center">
@@ -37,8 +33,12 @@ export default function PaymentPanel({
       </a>
       <p className="mt-4 select-all break-all font-mono text-sm text-foreground">{address}</p>
       <p className="mt-1 select-all font-mono text-sm text-muted">
-        {pounds !== undefined && <>about &pound;{pounds.toFixed(2)} &middot; </>}
-        {amount} bitcoin SV &middot; {priceSats.toLocaleString("en-GB")} satoshis
+        &pound;1 &middot; {amount} bitcoin SV &middot; {priceSats.toLocaleString("en-GB")} satoshis
+      </p>
+      {/* One output, exactly: the watcher matches a single payment of the
+          quoted amount — two half-pound legs read as short, forever. */}
+      <p className="mt-2 text-xs text-accent-orange">
+        Pay the exact amount in one payment — split payments cannot be matched.
       </p>
       <p className="mt-3 text-xs text-muted">
         Pay with any Bitcoin SV wallet —{" "}

@@ -21,4 +21,10 @@ describe("PaymentPanel", () => {
     const html = renderToStaticMarkup(<PaymentPanel address={ADDRESS} priceSats={9_290_500} />);
     expect(html).toMatch(/<path d="M[^"]+"/);
   });
+
+  it("says the flat pound and the one-payment rule out loud", () => {
+    const html = renderToStaticMarkup(<PaymentPanel address={ADDRESS} priceSats={9_290_500} />);
+    expect(html).toContain("£1");
+    expect(html).toContain("one payment");
+  });
 });

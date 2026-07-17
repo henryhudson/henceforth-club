@@ -32,7 +32,7 @@ describe("ArchivePage — the mechanical gate", () => {
     const html = renderToStaticMarkup(await ArchivePage());
     expect(html).not.toContain("arrives shortly");
     expect(html).toContain("Choose or drop");
-    expect(html).toContain("Pay to inscribe your export");
+    expect(html).toContain("£1 to inscribe your export");
   });
 });
 

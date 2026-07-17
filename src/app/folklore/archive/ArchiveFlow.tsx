@@ -37,7 +37,7 @@ type JobStatus = {
   failureReason?: string;
 };
 
-export default function ArchiveFlow({ gbpPerBsv }: { gbpPerBsv?: number }) {
+export default function ArchiveFlow() {
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [handle, setHandle] = useState<string | null>(null);
@@ -143,7 +143,7 @@ export default function ArchiveFlow({ gbpPerBsv }: { gbpPerBsv?: number }) {
               <span className="text-foreground">tweets.js · profile.js · account.js</span>{" "}
               from the export X emailed you
               <span className="mt-1 block text-xs">
-                Sent to us once, to price and inscribe. Nothing else leaves your browser.
+                Sent to us once, to inscribe for a flat £1. Nothing else leaves your browser.
               </span>
             </>
           )}
@@ -163,13 +163,7 @@ export default function ArchiveFlow({ gbpPerBsv }: { gbpPerBsv?: number }) {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-6 pb-16">
-      <QuoteCard
-        feeSats={quote.feeSats}
-        premiumSats={quote.premiumSats}
-        priceSats={quote.priceSats}
-        claimedNotice={quote.notice}
-        gbpPerBsv={gbpPerBsv}
-      />
+      <QuoteCard priceSats={quote.priceSats} claimedNotice={quote.notice} />
 
       <div className="space-y-3 rounded-2xl border border-card-border bg-card-bg p-6 text-sm">
         <label className="flex items-start gap-2">
@@ -192,7 +186,7 @@ export default function ArchiveFlow({ gbpPerBsv }: { gbpPerBsv?: number }) {
         </label>
       </div>
 
-      {readyToPay && status.address && <PaymentPanel address={status.address} priceSats={status.priceSats} gbpPerBsv={gbpPerBsv} />}
+      {readyToPay && status.address && <PaymentPanel address={status.address} priceSats={status.priceSats} />}
       {!readyToPay && status.address && (
         <p className="text-center text-sm text-muted">
           Confirm both boxes above to reveal your payment address.

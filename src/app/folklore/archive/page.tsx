@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import ArchiveFlow from "./ArchiveFlow";
-import { gbpPerBsv } from "@/lib/xPrice";
 
 /**
  * Metadata rides the same gate as the page body: while the flag is off, the
@@ -67,13 +66,14 @@ export default async function ArchivePage() {
     <div className="min-h-screen bg-background pt-20">
       <header className="mx-auto max-w-2xl px-6 py-10 text-center">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Archive yours</p>
-        <h1 className="mt-3 text-3xl font-bold text-foreground">Pay to inscribe your export</h1>
+        <h1 className="mt-3 text-3xl font-bold text-foreground">&pound;1 to inscribe your export</h1>
         <p className="mt-2 text-sm text-muted">
-          Drop the export X sent you. We quote the fee, you pay once, the archive lands on Bitcoin.
+          Drop the export X sent you. One pound of Bitcoin SV, paid once, and the archive lands on
+          the chain forever.
         </p>
       </header>
 
-      <ArchiveFlow gbpPerBsv={await gbpPerBsv()} />
+      <ArchiveFlow />
 
       <p className="mx-auto max-w-2xl px-6 pb-10 text-center text-sm text-muted">
         <Link href="/folklore" className="text-accent hover:underline">

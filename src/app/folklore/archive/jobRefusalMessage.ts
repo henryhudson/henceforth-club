@@ -20,6 +20,10 @@ export function jobRefusalMessage(reason: unknown): string {
       return "The archive worker is at capacity right now — try again shortly.";
     case "store-unavailable":
       return "The archive service is temporarily unavailable — try again shortly.";
+    case "price-unavailable":
+      return "The live exchange rate is unavailable, so the £1 price can't be converted honestly right now. Nothing was charged — try again shortly.";
+    case "price-below-fee":
+      return "At today's exchange rate, £1 no longer covers this archive's mining fee, so the flat price can't honestly be offered. Nothing was charged.";
     default:
       return "Something went wrong reading that export. Nothing was charged — try again.";
   }

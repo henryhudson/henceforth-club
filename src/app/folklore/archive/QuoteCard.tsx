@@ -1,46 +1,28 @@
 /**
- * The fee/premium split for a quoted job, the claimed-handle notice verbatim
- * when the route sent one, and the media toggles — greyed, since photos and
- * videos are not part of this web path (v1 is text-only); a visitor who
- * wants them is pointed at the app rather than shown a control that does
- * nothing.
+ * The quoted price — a flat pound, stated once (the fee/premium split still
+ * exists in the job record for the worker; a visitor buying permanence for
+ * £1 does not need the ledger's internals itemised) — the claimed-handle
+ * notice verbatim when the route sent one, and the media toggles — greyed,
+ * since photos and videos are not part of this web path (v1 is text-only);
+ * a visitor who wants them is pointed at the app rather than shown a
+ * control that does nothing.
  */
 export default function QuoteCard({
-  feeSats,
-  premiumSats,
   priceSats,
   claimedNotice,
-  gbpPerBsv,
 }: {
-  feeSats: number;
-  premiumSats: number;
   priceSats: number;
   claimedNotice?: string;
-  /** Live pounds-per-coin from the server page; the fiat figure is omitted
-   * when the rate is unavailable rather than computed from a stale anchor. */
-  gbpPerBsv?: number;
 }) {
   const n = (v: number) => v.toLocaleString("en-GB");
-  const pounds = gbpPerBsv === undefined ? undefined : (priceSats / 1e8) * gbpPerBsv;
 
   return (
     <div className="rounded-2xl border border-card-border bg-card-bg p-6">
-      <div className="space-y-2">
-        <div className="flex justify-between text-sm">
-          <span className="text-muted">Miner fee</span>
-          <span className="text-foreground">{n(feeSats)} satoshis</span>
-        </div>
-        <div className="flex justify-between text-sm">
-          <span className="text-muted">Premium</span>
-          <span className="text-foreground">{n(premiumSats)} satoshis</span>
-        </div>
-        <div className="flex justify-between border-t border-card-border pt-2 text-sm font-bold">
-          <span className="text-muted">Total</span>
-          <span className="text-foreground">
-            {pounds !== undefined && `about £${pounds.toFixed(2)} — `}
-            {n(priceSats)} satoshis
-          </span>
-        </div>
+      <div className="flex items-baseline justify-between">
+        <span className="text-sm text-muted">Price</span>
+        <span className="text-lg font-bold text-foreground">
+          &pound;1 <span className="text-sm font-normal text-muted">&middot; {n(priceSats)} satoshis at the live rate</span>
+        </span>
       </div>
 
       {claimedNotice && <p className="mt-4 text-sm text-accent-orange">{claimedNotice}</p>}

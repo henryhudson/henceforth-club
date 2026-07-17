@@ -59,7 +59,10 @@ export async function bsvUsd(
 }
 
 const FRANKFURTER_RATE = "https://api.frankfurter.app/latest?from=USD&to=GBP";
-/** Currency pairs drift slowly; an hour is honest for a display figure. */
+/** Currency pairs drift slowly. An hour was calibrated for display, and the
+ * flat-£1 charge now rides it too (see gbpPerBsv) — acceptable because
+ * intra-hour pound drift on a £1 price is sub-penny, but shortening this is
+ * a money decision, not a display one. */
 const POUND_CACHE_MS = 60 * 60 * 1000;
 
 let poundCache: { gbpPerUsd: number; at: number } | null = null;
@@ -68,11 +71,13 @@ export type PoundRate = { ok: true; gbpPerUsd: number } | { ok: false; reason: "
 
 /**
  * The European Central Bank's USD→GBP rate (via frankfurter.app — free, no
- * key), cached for an hour. Display-only money: this softens satoshi figures
- * into pounds on the quote surfaces; the payment floor is NEVER derived from
- * it, so a failure means the pound figure is simply omitted, not a wrong
- * price. It replaced a hardcoded `GBP_PER_USD = 0.79` that silently drifted
- * with every currency move.
+ * key), cached for an hour. MONEY-BEARING since the flat-£1 web archive
+ * (2026-07-17): gbpPerBsv multiplies this into the charged price on
+ * /api/folklore/job, so isUsableRate and the cache policy guard real money —
+ * a failure fails the quote closed rather than mispricing it. On the display
+ * surfaces a failure still just omits the pound figure. It replaced a
+ * hardcoded `GBP_PER_USD = 0.79` that silently drifted with every currency
+ * move.
  */
 export async function gbpPerUsd(
   fetchFn: typeof fetch = fetch,
@@ -99,9 +104,10 @@ export function satsToPounds(sats: number, bsvUsdRate: number, gbpPerUsdRate: nu
 }
 
 /**
- * Pounds per whole coin, or undefined when either rate is unavailable —
- * callers render the fiat softener only when it is real. The one number a
- * page needs to thread through its quote components.
+ * Pounds per whole coin, or undefined when either rate is unavailable.
+ * Display callers render the pound figure only when it is real — and since
+ * the flat-£1 web archive this is also the rate that SETS the charged price
+ * (src/lib/folkloreJob/quote.ts), whose quote fails closed on undefined.
  */
 export async function gbpPerBsv(
   fetchFn: typeof fetch = fetch,
