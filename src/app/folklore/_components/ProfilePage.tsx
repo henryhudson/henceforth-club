@@ -2,18 +2,11 @@ import type { XArchive } from "../parseArchive";
 import type { ScoreWindow } from "@/lib/xScore";
 import type { RatingTable } from "@/lib/kudos/elo";
 import ProfileView from "./ProfileView";
-import PostsScrollLoader from "./PostsScrollLoader";
 import ReaderKeys from "./ReaderKeys";
 
 /**
  * Shared profile page shell used by both `/folklore/<handle>` and `/folklore/tx/<txid>`.
- * When `txid` is present the profile was read from Bitcoin and we link the
- * transaction; otherwise it's a pre-inscription live preview. `postCount`
- * and `handle` are only set by the paginated `/folklore/<handle>` route — when the
- * archive holds more posts than are rendered yet, a scroll loader appends
- * the rest as the visitor scrolls, and `j`/`k`/`o` become available.
- * `txCount`, `photoCount`, `firstInscribedAt`, and `txTimes` feed the header's
- * permanence line and each post card's outpoint chip.
+ * FeedControls pages the full archive when `handle` + `postCount` are set.
  */
 export default function ProfilePage({
   archive,
@@ -46,30 +39,10 @@ export default function ProfilePage({
   scoresByWindow?: Record<ScoreWindow, Record<string, number>>;
   foundingByPost?: Record<string, number>;
   verified?: { bindingPostId: string };
-  /** The server's per-request KUDOS_ENABLED read — text rows carry the
-   * kudos control only behind it. */
   kudosEnabled?: boolean;
-  /** Public tip counts by post id, from the server's bulk read. */
   tipsByPost?: Record<string, number>;
-  /** The duel-rating table, threaded only while the kudos flag is on — the
-   * Best tab then sorts by Elo instead of the decayed fold. */
   eloByPost?: RatingTable;
 }) {
-  const scrollLoader =
-    handle !== undefined && postCount !== undefined && postCount > archive.posts.length ? (
-      <PostsScrollLoader
-        handle={handle}
-        initialCount={archive.posts.length}
-        postCount={postCount}
-        initialTxTimes={txTimes}
-        initialScores={scores}
-        avatarUrl={archive.profile.avatarUrl}
-        displayName={archive.profile.displayName}
-        foundingByPost={foundingByPost}
-        kudosEnabled={kudosEnabled}
-      />
-    ) : undefined;
-
   return (
     <main className="min-h-screen bg-background">
       <header className="mx-auto max-w-2xl px-6 py-8 text-center">
@@ -88,9 +61,6 @@ export default function ProfilePage({
             Not yet inscribed &mdash; live preview from X
           </p>
         )}
-        {/* The archive is the reader's to walk away with — one click, one
-            JSON file, verifiable against the chain without us. Inscribed
-            archives only: a live preview has nothing durable to hand over. */}
         {txid && handle && (
           <p className="mt-3">
             <a
@@ -106,7 +76,7 @@ export default function ProfilePage({
       <ProfileView
         archive={archive}
         postCount={postCount}
-        footer={scrollLoader}
+        handle={handle}
         isPreview={!txid}
         photoCount={photoCount}
         txCount={txCount}
@@ -121,7 +91,7 @@ export default function ProfilePage({
         tipsByPost={tipsByPost}
         eloByPost={eloByPost}
       />
-      <ReaderKeys handle={handle} />
+      {handle && <ReaderKeys handle={handle} />}
     </main>
   );
 }

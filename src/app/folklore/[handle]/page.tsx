@@ -29,7 +29,7 @@ export default async function HandlePage(
 
   if (!page) {
     return (
-      <main className="min-h-screen bg-background pt-28">
+      <main className="min-h-screen bg-background">
         <div className="mx-auto max-w-2xl px-6 text-center">
           <h1 className="text-2xl font-bold text-foreground">@{handle}</h1>
           <p className="mt-3 text-muted">This profile isn&rsquo;t archived on Bitcoin yet.</p>

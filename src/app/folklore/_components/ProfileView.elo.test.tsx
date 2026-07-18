@@ -27,6 +27,7 @@ const eloByPost: RatingTable = {
 };
 
 describe("the flag on — Elo sorts the folklore", () => {
+  // Best is selected so SSR sees ranked order; production still opens on Latest.
   const html = renderToStaticMarkup(
     <ProfileView
       archive={archive}
@@ -36,11 +37,24 @@ describe("the flag on — Elo sorts the folklore", () => {
       foundingByPost={{ "3": 500 }}
       kudosEnabled
       eloByPost={eloByPost}
+      defaultMode="best"
     />,
   );
 
   it("sorts the Best tab by Elo rating, not the decayed fold", () => {
     expect(postOrder(html)).toEqual(["2", "1", "3"]);
+  });
+
+  it("opens on Latest by default so the full archive can scroll", () => {
+    const latest = renderToStaticMarkup(
+      <ProfileView
+        archive={archive}
+        isPreview={false}
+        kudosEnabled
+        eloByPost={eloByPost}
+      />,
+    );
+    expect(postOrder(latest)).toEqual(["1", "2", "3"]);
   });
 
   it("retires the decayed-fold window buttons from the sort", () => {
@@ -77,6 +91,7 @@ describe("the flag on — Elo sorts the folklore", () => {
           "2": { rating: 1490, duels: 19 },
           "3": { rating: 1500, duels: 21 },
         }}
+        defaultMode="best"
       />,
     );
     expect(boundary).toContain("1,520");
@@ -91,6 +106,7 @@ describe("the flag off — the decayed-fold sort stands, production unchanged", 
       isPreview={false}
       scores={decayedScores}
       scoresByWindow={scoresByWindow}
+      defaultMode="best"
     />,
   );
 

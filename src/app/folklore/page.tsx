@@ -98,6 +98,7 @@ export default async function FolklorePage() {
         <ProfileView
           archive={{ profile: witness.profile, posts: witness.posts }}
           postCount={witness.postCount}
+          handle={WITNESS_HANDLE}
           isPreview={false}
           txCount={witness.txCount}
           photoCount={witness.photoCount}

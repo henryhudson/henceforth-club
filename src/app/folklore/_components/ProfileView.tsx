@@ -1,26 +1,20 @@
-import type { ReactNode } from "react";
 import type { ScoreWindow } from "@/lib/xScore";
 import type { RatingTable } from "@/lib/kudos/elo";
 import { dedupePosts, type XArchive } from "../parseArchive";
-import { Avatar, computeShowParent, formatDate, formatUnixSeconds } from "./PostCard";
-import { buildThreadContext } from "./threadContext";
+import { Avatar, formatDate, formatUnixSeconds } from "./PostCard";
 import { buildPermanenceLine } from "./permanenceLine";
 import FeedControls from "./FeedControls";
 
 /**
  * The header card and post feed for a profile. `postCount` is the archive's
- * TRUE total post count when known (the paginated `/folklore/<handle>` route only
- * ever hands this a first slice); it falls back to what's actually in
- * `archive.posts` for the untouched `/folklore/tx/<txid>` view, which has no
- * separate notion of a total. `footer` renders after the feed, inside the
- * same narrowed reading column — the scroll loader mounts there. `isPreview`
- * picks the permanence line's honest "not yet inscribed" phrasing over
- * claims about transactions and inscribing dates a preview doesn't have.
+ * TRUE total when known (the paginated `/folklore/<handle>` route only hands
+ * a first slice); FeedControls pages the rest. `isPreview` picks the
+ * permanence line's honest "not yet inscribed" phrasing.
  */
 export default function ProfileView({
   archive,
   postCount,
-  footer,
+  handle,
   isPreview,
   photoCount,
   txCount,
@@ -35,49 +29,31 @@ export default function ProfileView({
   tipsByPost,
   eloByPost,
   header = "profile",
+  defaultMode,
 }: {
   archive: XArchive;
   postCount?: number;
-  footer?: ReactNode;
+  /** Paging handle — when set with postCount, the feed loads the whole archive. */
+  handle?: string;
   isPreview: boolean;
   photoCount?: number;
   txCount?: number;
-  /** Total satoshis paid to archive this profile — what permanence cost. */
   archiveSats?: number;
   firstInscribedAt?: number;
   txTimes?: Record<string, number>;
-  /** Single flat score table (one window) — what callers not yet wired to
-   * the full per-window fetch pass; `FeedControls`' Best mode falls back to
-   * this when `scoresByWindow` is absent. */
   scores?: Record<string, number>;
-  /** All five windows' score tables. When present, Best mode ranks by
-   * whichever window is selected; when absent, Best falls back to `scores`
-   * (window-invariant but still real, rather than disabled). */
   scoresByWindow?: Record<ScoreWindow, Record<string, number>>;
-  /** Per-post upload costs (the founding entries) — the other half of the
-   * chip PostEntry renders; the ranking is founding + earned. */
   foundingByPost?: Record<string, number>;
   verified?: { bindingPostId: string };
-  /** Threaded from the server's per-request KUDOS_ENABLED read — text rows
-   * carry the kudos control only behind it. */
   kudosEnabled?: boolean;
-  /** Public tip counts by post id, from the server's bulk read. */
   tipsByPost?: Record<string, number>;
-  /** The duel-rating table, threaded only while the kudos flag is on — the
-   * Best tab then sorts by Elo (the decayed-fold windows retire from the
-   * sort) and each row wears its rating or the unranked badge. Absent, the
-   * decayed-fold sort stands unchanged. */
   eloByPost?: RatingTable;
-  /** "profile" (default) opens with the identity card — the profile page's
-   * whole point. "ledger" skips it: on the landing every entry is signed by
-   * its author (picture + name linking to the profile), so a card up top
-   * would say the same thing twice. */
   header?: "profile" | "ledger";
+  /** Pass-through for SSR tests that assert Best-tab ranking. */
+  defaultMode?: "latest" | "best";
 }) {
   const { profile } = archive;
   const posts = dedupePosts(archive.posts);
-  const showParent = computeShowParent(posts);
-  const threads = buildThreadContext(posts);
   const initial = (profile.displayName || profile.handle || "?").charAt(0).toUpperCase();
   const permanenceLine = buildPermanenceLine({
     postCount: postCount ?? posts.length,
@@ -156,10 +132,9 @@ export default function ProfileView({
         )}
         <FeedControls
           posts={posts}
-          showParent={showParent}
-          threads={threads}
           txTimes={txTimes}
-          handle={profile.handle}
+          handle={handle ?? profile.handle}
+          postCount={postCount}
           avatarUrl={profile.avatarUrl}
           displayName={profile.displayName}
           foundingByPost={foundingByPost}
@@ -168,7 +143,7 @@ export default function ProfileView({
           kudosEnabled={kudosEnabled}
           tipsByPost={tipsByPost}
           eloByPost={eloByPost}
-          footer={footer}
+          defaultMode={defaultMode}
         />
       </div>
     </div>
