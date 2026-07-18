@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Folklore kudos — one-on-one ranking, a proper Elo, satoshis wearing a friendlier name</title>
+<style>
+  :root { --bg:#f4f1ea; --ink:#1c1a16; --muted:#6b6358; --rule:#d8d0c0; --accent:#a8431f; --accent-soft:#c4a572; --card:#fbf9f4; --code-bg:#1e1e1e; --code-ink:#e8e8e8; --ok:#2f6f3e; --warn:#a8431f; --shadow:0 1px 3px rgba(0,0,0,0.08); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.65;}
+  .wrap{max-width:880px;margin:0 auto;padding:56px 32px;} header.doc{margin-bottom:40px;border-bottom:2px solid var(--rule);padding-bottom:24px;}
+  .eyebrow{font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:34px;line-height:1.15;margin:0 0 12px;font-weight:700;} h2{font-size:24px;margin:48px 0 14px;padding-top:20px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 10px;} .lede{font-size:19px;color:var(--muted);margin:0;} p{margin:14px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(0,0,0,0.06);padding:2px 6px;border-radius:4px;}
+  pre{background:var(--code-bg);color:var(--code-ink);padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;} th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .task{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:8px 22px 18px;margin:22px 0;box-shadow:var(--shadow);}
+  .task .tasknum{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);}
+  .files{font-size:14px;background:#efe9dc;border-radius:6px;padding:10px 14px;margin:10px 0;}
+  .note{background:#f6efe0;border-left:4px solid var(--accent-soft);padding:10px 16px;border-radius:0 6px 6px 0;margin:14px 0;}
+  ul{margin:12px 0;padding-left:24px;} li{margin:5px 0;}
+  ul.steps{list-style:none;padding-left:4px;} ul.steps>li{margin:12px 0;padding-left:30px;position:relative;}
+  ul.steps>li input[type=checkbox]{position:absolute;left:0;top:5px;width:18px;height:18px;}
+  .badge{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:2px 8px;border-radius:999px;white-space:nowrap;background:#f3dcd2;color:var(--accent);}
+  .effort{font-size:13px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Design + implementation plan &middot; 2026-07-18 &middot; folklore &middot; site + Mac mini worker</div>
+<h1>Kudos — one-on-one ranking, a proper Elo</h1>
+<p class="lede">Kudos are satoshis wearing a friendlier name. The arena deals two texts; you click up or down; 0.1&nbsp;pence moves from your float to the winning author, and the rating that sorts the whole folklore is a pure fold over the duels. One document — the design and the build plan together, at Henry's request.</p>
+</header>
+
+<div class="note"><strong>Decisions settled in brainstorm (Henry, 2026-07-18):</strong> kudos are paid but never called satoshis in copy &middot; duels replace the planned up/down paid-vote pipeline (<code>xtext-v2-t4/t5</code> superseded) &middot; one site-wide Elo pool &middot; a kudos is 0.1 UK pence &middot; opening a profile costs <strong>£2 + the archive's inscription cost</strong> and the £2 returns to the user as their kudos float (~2,000 kudos) &middot; giving kudos is click-only, no QR at the moment of choice &middot; kudos are private &middot; in-feed kudos on any text as you browse.</div>
+
+<h2>Part one — the design</h2>
+
+<h3>1 · Product shape and money flow</h3>
+<p>Opening a folklore profile is repriced from the staged flat £1 to <strong>£2 + inscription cost</strong>, priced at the live pound rate through the existing <code>quoteArchive</code> sum type (fails closed on no rate, floors above fee + dust). The £2 is not revenue: it funds the buyer's <strong>kudos float</strong> — 2,000 kudos at 0.1 pence each, a private balance attached to their profile. Kudos spent flow to the receiving text's author; authors' earnings accrue privately and the Mac mini worker settles them <strong>on-chain in real satoshis</strong> on a daily aggregated sweep. The economy is circular: your £2 funds your taste-making, being ranked well funds more of yours.</p>
+<p><strong>Custody, named honestly:</strong> between funding and settlement the float pool is platform custody — a step past spec B's ephemeral per-job class, because it stands. It therefore ships flag-gated behind a full adversarial money-path review (task 11) and a funded end-to-end (task 12). A user-triggered withdraw leg is the designed fast follow, deliberately not in this build.</p>
+
+<h3>2 · The Elo algorithm — a pure fold, never a stored number</h3>
+<p>Exactly the <code>xScore.ts</code> shape: an <strong>append-only duel ledger</strong> is the only truth; ratings are a deterministic replay over it, so a correction (a gamed batch struck out, a refunded float) is a replay, never a patch to a cached number.</p>
+<ul>
+<li><strong>Ledger entry:</strong> <code>{ seq, duelId, winnerPostId, loserPostId, day }</code> — no giver identity in the fold's input. Privacy is structural, not policy.</li>
+<li><strong>Update:</strong> <code>R&prime; = R + K·(1 − E)</code> for the winner, mirrored for the loser, with <code>E = 1/(1 + 10^((R_loser − R_winner)/400))</code>. All texts start at 1500.</li>
+<li><strong>K schedule:</strong> K=40 while a text has fewer than 20 duels (provisional — finds its level fast, shows an "unranked" badge), K=16 after (the top stays stable).</li>
+<li><strong>Author rating</strong> ("kudos to users"): mean of the author's top five texts — rewards peaks, not flooding.</li>
+<li><strong>Reads:</strong> a cached fold checkpoint (ratings as of sequence N) plus a fold of duels after N. The checkpoint is a cache, never a source of truth.</li>
+</ul>
+
+<h3>3 · Surfaces</h3>
+<p><strong>The arena</strong> (<code>/folklore/arena</code>): a dealt stacked pair — click <strong>up</strong> to crown the upper text, <strong>down</strong> for the lower; one kudos moves, the next pair deals instantly. <strong>In-feed kudos:</strong> every text row and single-post page gets a quiet kudos control — one tap, one kudos to the author, a public count ticks. In-feed kudos are <strong>tips, not duels</strong>: they never move Elo (a proper Elo cannot ingest single-sided applause); they raise the text's <em>dealing priority</em>, buying it duel exposure it must then win on merit. Visitors without a float see both controls disabled with a one-line "open your archive to get kudos" nudge — the £2 funnel.</p>
+
+<h3>4 · The dealer and anti-gaming</h3>
+<p>Pairs are <strong>server-dealt, never chosen</strong>: 60% rating-adjacent (informative duels), 20% provisional-versus-established (fast placement), 15% tip-priority, 5% uniform random (nothing rots undealt). A duel resolution is valid only with the dealer's <strong>dealt-pair token</strong> — single use, ten-minute expiry, bound to the session — so a matchup cannot be constructed by the voter, which kills targeted self-pumping. Remaining self-kudos economics: you cannot pick your pairing, Elo's expected-score term makes repeat wins over weak opposition worth less and less, and a per-float daily duel cap (200) bounds damage. The strike-and-replay corrections lever covers whatever slips through.</p>
+
+<h3>5 · Data model and settlement</h3>
+<table>
+<tr><th>Key</th><th>Holds</th><th>Visibility</th></tr>
+<tr><td><code>kudos:float:&lt;profile&gt;</code></td><td>balance in kudos units; server-authoritative, debit-then-record</td><td>private (owner sees own)</td></tr>
+<tr><td><code>kudos:duels</code></td><td>global append-only duel ledger — the fold's only input</td><td>private rows; public fold output</td></tr>
+<tr><td><code>kudos:tips:&lt;postId&gt;</code></td><td>public tip count; giver never recorded</td><td>count public</td></tr>
+<tr><td><code>kudos:earned:&lt;handle&gt;</code></td><td>accrued kudos awaiting settlement</td><td>private</td></tr>
+<tr><td><code>kudos:fold:checkpoint</code></td><td>ratings as of sequence N (cache)</td><td>internal</td></tr>
+<tr><td><code>kudos:pair:&lt;token&gt;</code></td><td>dealt pair, single-use, 10-minute expiry</td><td>internal</td></tr>
+</table>
+<p><strong>Conservation invariant (tested, load-bearing):</strong> for every profile and globally, <code>funded = float + spent</code> and <code>spent = earned_unsettled + settled</code>, all in integer kudos units. A kudos is never minted, never double-spent, never lost to rounding — conversion to satoshis happens only at the two edges (funding in, settlement out, each at that day's live rate; the platform bears drift between them, small at these sizes). <strong>Settlement:</strong> a daily worker sweep pays each author's accrual in one aggregated transaction — no giver identities on-chain — dust-floored at 546 satoshis with sub-dust rolling to the next sweep, logged like every worker money movement.</p>
+<p><strong>Float identity:</strong> profile creation issues an opaque bearer token — set as a cookie and shown once as a recovery string. Another device means pasting the recovery string. Deliberately primitive for v1; account recovery beyond the string is out of scope.</p>
+
+<h3>6 · What this supersedes, and what it does not touch</h3>
+<ul>
+<li><strong>Superseded:</strong> the ▲/▼ ballot-address pipeline (<code>xtext-v2-t4</code>) and its decayed-fold Best ranking (<code>xtext-v2-t5</code>). Losing a duel is the downvote; the platform-collects-downvotes leg dies entirely.</li>
+<li><strong>Kept:</strong> the sats economics display (earned chips, founding costs) — money and quality become two separate visible axes. Founding entries stay as economics, not ranking.</li>
+<li><strong>Repriced before it ever went live:</strong> the staged £1 flat web-archive price becomes £2 + cost as part of this build — the £1 go-live queue should either flip with the old price and reprice later, or wait and flip once (Henry's call, flagged on the go-live card).</li>
+<li><strong>Out of this build:</strong> the withdraw leg (fast follow), card payments, treasury promo gifting, media duels, multi-device account recovery.</li>
+</ul>
+
+<h2>Part two — the build plan</h2>
+
+<div class="note"><strong>For agentic workers:</strong> REQUIRED SUB-SKILL — <code>superpowers:subagent-driven-development</code> or <code>superpowers:executing-plans</code>. Repository: <code>/Users/henryhudson/Programming/Main/henceforth-club</code>, work on <code>main</code>, commit per task, <strong>every push deploys production in ~30 seconds</strong> — nothing in tasks 1–10 is reachable while <code>KUDOS_ENABLED</code> is unset, and the arena page and kudos controls render only behind it. Errors as values in the pure core; time and randomness are parameters; no acronyms in prose; commits end <code>Co-Authored-By: Claude Fable 5 &lt;noreply@anthropic.com&gt;</code>. Suite is ~650 green before this plan; every task ends with the full suite green.</div>
+
+<h3>Tuning constants (one module, task 1)</h3>
+<p><code>KUDOS_PENCE = 0.1</code> · <code>FLOAT_POUNDS = 2</code> · <code>ELO_START = 1500</code> · <code>K_PROVISIONAL = 40</code> · <code>K_ESTABLISHED = 16</code> · <code>PROVISIONAL_DUELS = 20</code> · <code>AUTHOR_TOP_N = 5</code> · <code>DEAL_MIX = 60/20/15/5</code> · <code>PAIR_TOKEN_MINUTES = 10</code> · <code>DAILY_DUEL_CAP = 200</code> · <code>SETTLE_DUST_SATS = 546</code></p>
+
+<div class="task"><span class="tasknum">Task 1 · the Elo core</span> <span class="badge">pure</span>
+<div class="files">src/lib/kudos/elo.ts · src/lib/kudos/constants.ts · elo.test.ts</div>
+<ul class="steps">
+<li><input type="checkbox"> Types: <code>DuelEntry</code>, <code>Rating { rating, duels }</code>, <code>RatingTable</code>. <code>expectedScore</code>, <code>applyDuel</code>, <code>foldDuels(entries, from?: Checkpoint)</code> — total functions, integer sequence, no clock.</li>
+<li><input type="checkbox"> K schedule and provisional logic; <code>authorRatings(table, postsByAuthor)</code> mean-of-top-five.</li>
+<li><input type="checkbox"> Tests: determinism (same ledger → same table), commutation failure honesty (order matters and is pinned), K transition at duel 20, author aggregate, checkpoint fold equals full fold.</li>
+</ul></div>
+
+<div class="task"><span class="tasknum">Task 2 · duel ledger + checkpoint</span> <span class="badge">redis edge</span>
+<div class="files">src/lib/kudos/ledger.ts · ledger.test.ts</div>
+<ul class="steps">
+<li><input type="checkbox"> Append-only <code>kudos:duels</code> with monotone <code>seq</code>; read-since; checkpoint write/read; null-Redis safe like <code>xVotes.ts</code>.</li>
+<li><input type="checkbox"> Strike-and-replay: <code>strikeDuels(duelIds)</code> removes entries and invalidates the checkpoint — corrections are replays.</li>
+</ul></div>
+
+<div class="task"><span class="tasknum">Task 3 · float accounting</span> <span class="badge">money core</span>
+<div class="files">src/lib/kudos/float.ts · float.test.ts</div>
+<ul class="steps">
+<li><input type="checkbox"> Integer kudos units only. <code>fundFloat</code>, <code>debitForDuel</code>, <code>debitForTip</code>, <code>accrueEarned</code>, <code>markSettled</code> — each returns a discriminated result (<code>insufficient</code>, <code>capped</code>, <code>recorded</code>), debit-then-record ordering stated in code.</li>
+<li><input type="checkbox"> Conservation property test: any sequence of operations preserves <code>funded = float + earned_unsettled + settled</code> per profile and globally; concurrent-debit race pinned via the atomic decrement result.</li>
+</ul></div>
+
+<div class="task"><span class="tasknum">Task 4 · the dealer</span> <span class="badge">pure + token</span>
+<div class="files">src/lib/kudos/dealer.ts · dealer.test.ts</div>
+<ul class="steps">
+<li><input type="checkbox"> <code>dealPair(table, priorities, rng)</code> — randomness injected; the 60/20/15/5 mix; never deals a text against itself or a pair with the same author on both sides when alternatives exist.</li>
+<li><input type="checkbox"> Dealt-pair tokens: issue/consume single-use with expiry (Redis <code>SET NX EX</code>); resolution without a live token is refused.</li>
+<li><input type="checkbox"> Distribution test over a seeded run (mix within tolerance); token single-use and expiry tests.</li>
+</ul></div>
+
+<div class="task"><span class="tasknum">Task 5 · tips</span> <span class="badge">redis edge</span>
+<div class="files">src/lib/kudos/tips.ts · tips.test.ts</div>
+<ul class="steps">
+<li><input type="checkbox"> Tip = float debit + public count increment + earned accrual + dealer-priority bump (decaying). No Elo write anywhere in the path — asserted by test.</li>
+</ul></div>
+
+<div class="task"><span class="tasknum">Task 6 · repricing + float funding</span> <span class="badge">money</span>
+<div class="files">src/lib/folkloreJob/quote.ts · src/lib/folkloreJob/* · tests</div>
+<ul class="steps">
+<li><input type="checkbox"> <code>quoteArchive</code> gains the £2 float leg: price = inscription fee + £2-at-live-rate, same fail-closed arms; quote copy names the kudos float plainly.</li>
+<li><input type="checkbox"> On job completion the float funds atomically with the profile (2,000 kudos) and the bearer token issues; the recovery string renders exactly once on the done screen.</li>
+<li><input type="checkbox"> The worker's record schema is untouched; the £2 leg exits to the float pool address alongside the premium-to-cold output.</li>
+</ul></div>
+
+<div class="task"><span class="tasknum">Task 7 · the routes</span> <span class="badge">api</span>
+<div class="files">src/app/api/folklore/duel/route.ts · tip/route.ts · float/route.ts · tests</div>
+<ul class="steps">
+<li><input type="checkbox"> <code>GET duel</code> deals (token + pair), <code>POST duel</code> resolves (token, winner) → debit, append, next deal in the response. <code>POST tip</code>. <code>GET float</code> → balance. All refuse cleanly without <code>KUDOS_ENABLED</code>; all bearer-token authenticated; daily cap enforced at debit.</li>
+</ul></div>
+
+<div class="task"><span class="tasknum">Task 8 · the arena + in-feed control</span> <span class="badge">ui</span>
+<div class="files">src/app/folklore/arena/page.tsx · components · snapshot tests</div>
+<ul class="steps">
+<li><input type="checkbox"> Stacked pair, click up or down, optimistic next-pair; float balance quietly in the corner; disabled state with the £2 nudge. Kudos control on text rows and single-post pages, count visible.</li>
+</ul></div>
+
+<div class="task"><span class="tasknum">Task 9 · Elo sorts the folklore</span> <span class="badge">integration</span>
+<div class="files">ProfileView · directory · tests</div>
+<ul class="steps">
+<li><input type="checkbox"> Best tab and the directory sort by Elo (texts and author aggregate respectively); unranked badge under 20 duels; economics chips unchanged beside the rating. The decayed-fold windows retire from the sort.</li>
+</ul></div>
+
+<div class="task"><span class="tasknum">Task 10 · settlement sweep</span> <span class="badge">worker · money</span>
+<div class="files">scripts/xtext-worker/settle-kudos.mjs · worker tests</div>
+<ul class="steps">
+<li><input type="checkbox"> Daily sweep: read accruals ≥ dust, one aggregated payment per author from the float pool, <code>markSettled</code> on acceptance only, sub-dust rolls, every movement logged. Idempotent per day; a failed broadcast leaves accruals intact.</li>
+</ul></div>
+
+<div class="task"><span class="tasknum">Task 11 · GATE — adversarial money-path review</span> <span class="badge">gate</span>
+<ul class="steps">
+<li><input type="checkbox"> Three lenses (money / data-integrity / regression) attack the float pool custody, the £2 round-trip, the conservation invariant under races, the dealer's gaming surface, and the settlement sweep. Unanimous SHIP required; blockers loop to a fix round, as with the retry fix's three-round gate.</li>
+</ul></div>
+
+<div class="task"><span class="tasknum">Task 12 · GATE — funded end-to-end + flag</span> <span class="badge">gate · Henry</span>
+<ul class="steps">
+<li><input type="checkbox"> Low-funds real-money run: profile → £2 float lands → duels + tips → daily settlement pays a real wallet → conservation totals reconcile. Fresh build, live monitoring, per the real-money standard.</li>
+<li><input type="checkbox"> Henry sets <code>KUDOS_ENABLED</code>, redeploys, signs off. Decide the £1/£2 go-live sequencing on the way in.</li>
+</ul></div>
+
+<h2>Open decisions (Henry)</h2>
+<ul>
+<li>Go-live sequencing: flip the staged web archive at £1 first and reprice to £2 with kudos later, or hold and launch once at £2 + float?</li>
+<li>Settlement cadence: daily (designed) or weekly to start?</li>
+<li>Arena placement: linked from the folklore landing header, or a card in the gateway?</li>
+</ul>
+
+</div>
+</body>
+</html>
