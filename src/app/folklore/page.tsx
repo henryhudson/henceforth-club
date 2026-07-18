@@ -14,6 +14,7 @@ import ProfileView from "./_components/ProfileView";
 import ArchiveDropZone from "./_components/ArchiveDropZone";
 import DirectoryRow from "./_components/DirectoryRow";
 import Proof from "./_components/Proof";
+import PinnedPost from "./_components/PinnedPost";
 import { WITNESS_HANDLE } from "./witness";
 
 export const revalidate = 3600;
@@ -66,11 +67,8 @@ export default async function FolklorePage() {
     // A <div>, not a <main>: the root layout already provides the single <main>
     // landmark for every page (see app/layout.tsx).
     <div className="min-h-screen bg-background">
-      {/* The mark and its tagline, and nothing else. The archive IS the
-          argument — a stranger should meet real posts read from the chain
-          before they meet a pitch, which is the whole finding of the
-          2026-07-14 research. The ways in are said once, in the gateway
-          below, rather than sold twice. */}
+      {/* The mark and the pinned founding tweet — not a tagline. The archive
+          below is the argument: real posts read from the chain. */}
       <header className="relative overflow-hidden">
         <FolkloreForest />
         <div className="relative z-10 mx-auto max-w-2xl px-6 pb-16 pt-16 text-center">
@@ -82,11 +80,7 @@ export default async function FolklorePage() {
             <FolkloreWordmark className="mx-auto h-auto w-full max-w-[220px] text-accent sm:max-w-[280px]" />
           </h1>
           <p className="ledger-label mt-5">content secured</p>
-          {/* Henry's line, verbatim — the product in one sentence, and the
-              only human copy the hero carries. */}
-          <p className="mx-auto mt-4 max-w-md text-muted">
-            Talk to descendants about information your ancestors desired to pass on.
-          </p>
+          <PinnedPost />
         </div>
       </header>
 
