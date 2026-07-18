@@ -32,10 +32,10 @@
 <header class="doc">
 <div class="eyebrow">Design + implementation plan &middot; 2026-07-18 &middot; folklore &middot; site + Mac mini worker</div>
 <h1>Kudos — one-on-one ranking, a proper Elo</h1>
-<p class="lede">Kudos are satoshis wearing a friendlier name. The arena deals two texts; you click up or down; 0.1&nbsp;pence moves from your float to the winning author, and the rating that sorts the whole folklore is a pure fold over the duels. One document — the design and the build plan together, at Henry's request.</p>
+<p class="lede">Kudos are satoshis wearing a friendlier name. The arena deals two texts; you give kudos — one or many — to the one you prefer, and that gesture crowns the duel: 0.1&nbsp;pence per kudos moves from your float to the winning author, and the rating that sorts the whole folklore is a pure fold over the duels. One document — the design and the build plan together, at Henry's request.</p>
 </header>
 
-<div class="note"><strong>Decisions settled in brainstorm (Henry, 2026-07-18):</strong> kudos are paid but never called satoshis in copy &middot; duels replace the planned up/down paid-vote pipeline (<code>xtext-v2-t4/t5</code> superseded) &middot; one site-wide Elo pool &middot; a kudos is 0.1 UK pence &middot; opening a profile costs <strong>£2 + the archive's inscription cost</strong> and the £2 returns to the user as their kudos float (~2,000 kudos) &middot; giving kudos is click-only, no QR at the moment of choice &middot; kudos are private &middot; in-feed kudos on any text as you browse.</div>
+<div class="note"><strong>Decisions settled in brainstorm (Henry, 2026-07-18):</strong> kudos are paid but never called satoshis in copy &middot; duels replace the planned up/down paid-vote pipeline (<code>xtext-v2-t4/t5</code> superseded) &middot; one site-wide Elo pool &middot; a kudos is 0.1 UK pence &middot; opening a profile costs <strong>£2 + the archive's inscription cost</strong> and the £2 returns to the user as their kudos float (~2,000 kudos) &middot; giving kudos is click-only, no QR at the moment of choice &middot; kudos are private &middot; in-feed kudos on any text as you browse &middot; <strong>no vote buttons anywhere</strong> — the kudos gesture itself (one or more) crowns the dealt pair's winner; the amount is money and generosity, the rating swing stays binary (2026-07-18 evening correction).</div>
 
 <h2>Part one — the design</h2>
 
@@ -54,7 +54,7 @@
 </ul>
 
 <h3>3 · Surfaces</h3>
-<p><strong>The arena</strong> (<code>/folklore/arena</code>): a dealt stacked pair — click <strong>up</strong> to crown the upper text, <strong>down</strong> for the lower; one kudos moves, the next pair deals instantly. <strong>In-feed kudos:</strong> every text row and single-post page gets a quiet kudos control — one tap, one kudos to the author, a public count ticks. In-feed kudos are <strong>tips, not duels</strong>: they never move Elo (a proper Elo cannot ingest single-sided applause); they raise the text's <em>dealing priority</em>, buying it duel exposure it must then win on merit. Visitors without a float see both controls disabled with a one-line "open your archive to get kudos" nudge — the £2 funnel.</p>
+<p><strong>The arena</strong> (<code>/folklore/arena</code>): a dealt stacked pair with <strong>no vote buttons</strong> — each text carries the same kudos control as everywhere else. Giving kudos to the one you prefer crowns it: the first kudos resolves the duel (binary, whatever the amount), further taps in the same beat add kudos to the winner (tap = one, keep tapping or hold = more — the amount is generosity, all of it to the author), and the next pair deals instantly. Kudos on the losing side of an already-resolved pair simply count as tips. <strong>In-feed kudos:</strong> every text row and single-post page gets the identical control — one tap, one kudos (or more) to the author, a public count ticks. In-feed kudos are <strong>tips, not duels</strong>: they never move Elo (a proper Elo cannot ingest single-sided applause); they raise the text's <em>dealing priority</em>, buying it duel exposure it must then win on merit. One gesture everywhere; only the arena's dealt pair turns it into a ranking event. Visitors without a float see the controls disabled with a one-line "open your archive to get kudos" nudge — the £2 funnel.</p>
 
 <h3>4 · The dealer and anti-gaming</h3>
 <p>Pairs are <strong>server-dealt, never chosen</strong>: 60% rating-adjacent (informative duels), 20% provisional-versus-established (fast placement), 15% tip-priority, 5% uniform random (nothing rots undealt). A duel resolution is valid only with the dealer's <strong>dealt-pair token</strong> — single use, ten-minute expiry, bound to the session — so a matchup cannot be constructed by the voter, which kills targeted self-pumping. Remaining self-kudos economics: you cannot pick your pairing, Elo's expected-score term makes repeat wins over weak opposition worth less and less, and a per-float daily duel cap (200) bounds damage. The strike-and-replay corrections lever covers whatever slips through.</p>
@@ -134,13 +134,13 @@
 <div class="task"><span class="tasknum">Task 7 · the routes</span> <span class="badge">api</span>
 <div class="files">src/app/api/folklore/duel/route.ts · tip/route.ts · float/route.ts · tests</div>
 <ul class="steps">
-<li><input type="checkbox"> <code>GET duel</code> deals (token + pair), <code>POST duel</code> resolves (token, winner) → debit, append, next deal in the response. <code>POST tip</code>. <code>GET float</code> → balance. All refuse cleanly without <code>KUDOS_ENABLED</code>; all bearer-token authenticated; daily cap enforced at debit.</li>
+<li><input type="checkbox"> <code>GET duel</code> deals (token + pair), <code>POST duel</code> resolves (token, winnerPostId, <code>amount ≥ 1</code>) → debit the amount, append ONE binary duel entry, accrue the amount to the winner's author, next deal in the response. Kudos sent for the resolved pair's other text (stale token) degrade to tips, never a second duel. <code>POST tip</code> (postId, amount). <code>GET float</code> → balance. All refuse cleanly without <code>KUDOS_ENABLED</code>; all bearer-token authenticated; daily cap enforced at debit.</li>
 </ul></div>
 
 <div class="task"><span class="tasknum">Task 8 · the arena + in-feed control</span> <span class="badge">ui</span>
 <div class="files">src/app/folklore/arena/page.tsx · components · snapshot tests</div>
 <ul class="steps">
-<li><input type="checkbox"> Stacked pair, click up or down, optimistic next-pair; float balance quietly in the corner; disabled state with the £2 nudge. Kudos control on text rows and single-post pages, count visible.</li>
+<li><input type="checkbox"> Stacked pair, no buttons — the shared kudos control on each text; first kudos crowns, rapid further taps accumulate to the winner (a short commit beat batches the amount), optimistic next-pair; float balance quietly in the corner; disabled state with the £2 nudge. The same control on text rows and single-post pages, count visible.</li>
 </ul></div>
 
 <div class="task"><span class="tasknum">Task 9 · Elo sorts the folklore</span> <span class="badge">integration</span>
