@@ -22,8 +22,8 @@
   --mb-grid-fade: rgba(180, 83, 9, 0.05);
   --mb-serif: "New York", "Iowan Old Style", ui-serif, Georgia, serif;
   --mb-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
-  --mb-radius: 8px;
-  --mb-radius-sm: 5px;
+  --mb-radius: 0;
+  --mb-radius-sm: 0;
 
   min-height: 100vh;
   background-color: var(--mb-ink);
@@ -143,7 +143,7 @@ body:has(.morning-board[data-theme="dark"]) {
   gap: 6px;
   padding: 4px 10px;
   border: 1px solid var(--mb-line-strong);
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--mb-panel);
   color: var(--mb-muted);
   font-size: 10.5px;
@@ -173,7 +173,7 @@ body:has(.morning-board[data-theme="dark"]) {
   padding: 12px 14px 12px 16px;
   border-left: 2.5px solid var(--mb-amber);
   background: linear-gradient(90deg, var(--mb-amber-dim), transparent 70%);
-  border-radius: 0 var(--mb-radius-sm) var(--mb-radius-sm) 0;
+  border-radius: 0;
 }
 
 .morning-board .mb-strap-label {
@@ -209,7 +209,7 @@ body:has(.morning-board[data-theme="dark"]) {
   font-size: 10.5px;
   padding: 3px 9px 3px 7px;
   border: 1px solid var(--mb-line);
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--mb-panel);
 }
 
@@ -314,7 +314,7 @@ body:has(.morning-board[data-theme="dark"]) {
 
 .morning-board .mb-bar {
   height: 2px;
-  border-radius: 1px;
+  border-radius: 0;
   background: var(--mb-line);
   overflow: hidden;
 }
@@ -323,7 +323,7 @@ body:has(.morning-board[data-theme="dark"]) {
   display: block;
   height: 100%;
   background: var(--mb-site);
-  border-radius: 1px;
+  border-radius: 0;
 }
 
 .morning-board .mb-day.today .mb-bar > i {
@@ -335,7 +335,7 @@ body:has(.morning-board[data-theme="dark"]) {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   padding: 2px 7px;
-  border-radius: 999px;
+  border-radius: 0;
   border: 1px solid color-mix(in srgb, var(--mb-amber) 45%, transparent);
   color: var(--mb-amber);
   background: var(--mb-amber-dim);
@@ -401,9 +401,9 @@ body:has(.morning-board[data-theme="dark"]) {
 }
 
 .morning-board .mb-meridian {
-  height: 3px;
+  height: 2px;
   margin: 12px 0 4px;
-  border-radius: 2px;
+  border-radius: 0;
 }
 
 /* Filters */
@@ -453,7 +453,7 @@ body:has(.morning-board[data-theme="dark"]) {
   min-width: 1.4em;
   text-align: center;
   padding: 1px 6px;
-  border-radius: 999px;
+  border-radius: 0;
   border: 1px solid var(--mb-line);
   background: var(--mb-panel);
 }
@@ -512,7 +512,7 @@ body:has(.morning-board[data-theme="dark"]) {
   align-items: center;
   gap: 4px;
   padding: 1px 6px;
-  border-radius: 999px;
+  border-radius: 0;
   border: 1px solid var(--mb-line);
   background: color-mix(in srgb, var(--mb-ink) 40%, transparent);
   letter-spacing: 0.04em;
@@ -541,7 +541,7 @@ body:has(.morning-board[data-theme="dark"]) {
   font-size: 9.5px;
   padding: 1px 6px;
   border: 1px solid var(--mb-line);
-  border-radius: 999px;
+  border-radius: 0;
   color: var(--mb-muted);
 }
 
@@ -579,7 +579,7 @@ body:has(.morning-board[data-theme="dark"]) {
 
 .morning-board .mb-card .move-row button {
   border: 1px solid var(--mb-line);
-  border-radius: 5px;
+  border-radius: 0;
   padding: 2px 8px;
   font-size: 10px;
   color: var(--mb-muted);
