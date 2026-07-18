@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import type { Redis } from "@upstash/redis";
 import { backfillFoundingVotes, splitFeeByWeights } from "./foundingBackfill";
-import { readScores } from "./xVotes";
+import { foldFoundingByPost } from "./xScore";
+import { readScores, readVoteLedger } from "./xVotes";
 
 /** A minimal in-memory stand-in for the Upstash client — only the calls
  * xVotes actually makes: `set` (with nx), `rpush`, `lrange`. Hands back the
@@ -43,7 +44,9 @@ describe("backfillFoundingVotes", () => {
     const again = await backfillFoundingVotes("alice", posts, txTimes, { feeOf, redis: r.redis });
     expect(first).toEqual({ recorded: 1, duplicate: 0, skipped: 0 });
     expect(again).toEqual({ recorded: 0, duplicate: 1, skipped: 0 }); // idempotent
-    expect(await readScores("alice", "week", "2026-07-10", r.redis)).toEqual({ p1: 1000 });
+    // Founding is ledgered but never ranks.
+    expect(await readScores("alice", "week", "2026-07-10", r.redis)).toEqual({});
+    expect(foldFoundingByPost(await readVoteLedger("alice", r.redis))).toEqual({ p1: 1000 });
   });
 
   it("splits a shared transaction's fee across its posts, one fee fetch per txid", async () => {
@@ -55,7 +58,12 @@ describe("backfillFoundingVotes", () => {
     const res = await backfillFoundingVotes("alice", posts, txTimes, { feeOf, redis: r.redis });
     expect(res).toEqual({ recorded: 3, duplicate: 0, skipped: 0 });
     expect(calls).toBe(1);                              // one fetch per txid, not per post
-    expect(await readScores("alice", "week", "2026-07-10", r.redis)).toEqual({ p1: 300, p2: 300, p3: 300 }); // 900/3
+    expect(await readScores("alice", "week", "2026-07-10", r.redis)).toEqual({});
+    expect(foldFoundingByPost(await readVoteLedger("alice", r.redis))).toEqual({
+      p1: 300,
+      p2: 300,
+      p3: 300,
+    });
   });
 });
 
@@ -97,9 +105,11 @@ describe("weighted backfill", () => {
       { feeOf: async () => 200_020, redis: r.redis },
     );
     expect(res).toEqual({ recorded: 3, duplicate: 0, skipped: 0 });
+    // Founding is ledgered for archive economics but is not ranking.
     const scores = await readScores("alice", "all", "2026-07-12", r.redis);
-    expect(scores.photo + scores.text1 + scores.text2).toBe(200_020);
-    expect(scores.photo).toBeGreaterThan(199_900);
-    expect(scores.text1).toBeGreaterThan(0); // even the smallest post carries real cost
+    expect(scores).toEqual({});
+    const founding = foldFoundingByPost(await readVoteLedger("alice", r.redis));
+    expect(founding.photo + founding.text1 + founding.text2).toBe(200_020);
+    expect(founding.photo).toBeGreaterThan(199_900);
   });
 });

@@ -59,9 +59,10 @@ describe("the control on text rows and single-post pages", () => {
     expect(controls).toBe(rows);
   });
 
-  it("is invisible without the flag — the markup carries no kudos control at all", () => {
+  it("is invisible without the flag — no give-kudos control on the rows", () => {
     const html = renderToStaticMarkup(<ProfileView archive={archive} isPreview={false} />);
-    expect(html).not.toContain("kudos");
+    expect(html).not.toContain("give kudos");
+    expect(html).not.toContain("✦ kudos");
   });
 
   it("shows the public count on a single post row", () => {

@@ -77,15 +77,14 @@ export async function appendFoundingVote(
     txid: `${fv.inscriptionTxid}:${fv.postId}`, // per-post unique: a shared inscription txid can't collide across posts
     postId: fv.postId, dir: "up",
     sats: fv.uploadCostSats, day: fv.inscriptionDay,
-    founding: true, // upload cost = the permanent score floor; never windowed
+    founding: true, // ledger record of upload cost — not part of ranking
   };
   return appendVote(handle, entry, redis); // reuses the txid gate + append
 }
 
-/** The earned-sats score for every voted post of a handle within the chosen
- * window, folded from the ledger as of `asOfDay`: a map of post id → sats.
- * Sats can be negative when down-votes outweigh up-votes — the fold is a
- * signed sum. Empty when nobody has voted, or when Redis isn't configured.
+/** Kudos score for every post of a handle within the chosen window: paid
+ * votes only, never founding/upload cost. Map of post id → sats (signed).
+ * Empty when nobody has given kudos, or when Redis isn't configured.
  * Null-Redis safe like the rest of this module. */
 export async function readScores(
   handle: string,
@@ -100,11 +99,9 @@ export async function readScores(
 
 export const SCORE_WINDOWS: readonly ScoreWindow[] = ["day", "week", "month", "year", "all"];
 
-/** Both per-post views of a handle's ledger — every window's score table AND
- * each post's upload cost — from ONE ledger read. The feed shows an entry's
- * whole economics (cost to inscribe, sats earned since; the ranking is their
- * sum), and reading the ledger once per view was exactly the smell the
- * 2026-07-12 "5x ledger read" follow-up flagged. */
+/** Both per-post views of a handle's ledger — every window's kudos score
+ * table AND each post's upload cost — from ONE ledger read. Ranking uses
+ * kudos only; founding is kept for archive totals, not Best. */
 export async function readLedgerRollup(
   handle: string,
   asOfDay: string = dateKey(),

@@ -41,8 +41,8 @@ export default function PostEntry({
   txTime?: number;
   thread?: ThreadContext;
   handle?: string;
-  /** Sats this post has earned through paid votes — the ledger fold's signed
-   * sum for this post id. Absent until the vote model is live; renders as 0. */
+  /** Kudos earned through paid votes — ranking score for this post. Upload
+   * cost is never included. Absent until someone has given kudos. */
   sats?: number;
   /** The archive author's profile picture, shown beside every entry. All posts
    * in an archive share one author, so this is the profile's avatar threaded
@@ -50,9 +50,7 @@ export default function PostEntry({
   avatarUrl?: string;
   /** The author's display name, shown with the handle above the text. */
   displayName?: string;
-  /** This post's upload cost — its founding entry's sats. With `sats` (the
-   * windowed fold: founding + votes) beside it, earned = sats − founding.
-   * The ranking IS their sum, so the chip shows both components. */
+  /** Upload cost — not shown on the ranking chip (kept for call-site compat). */
   foundingSats?: number;
   /** True only when the server read KUDOS_ENABLED for this request — the
    * kudos control renders solely behind it, so without the flag a row
@@ -219,30 +217,18 @@ export default function PostEntry({
               </span>
             </>
           ))}
-        {/* The ranking, shown as its two components: what the post cost to
-            inscribe (its founding entry) plus what it has earned in paid
-            votes since — Best sorts by their sum. Earned renders from zero
-            up (and honestly negative) once a cost anchors the row; a row
-            with no founding record keeps the old earned-only chip. */}
-        {(foundingSats ?? 0) > 0 ? (
+        {/* Ranking chip — kudos only. Upload cost never appears here. */}
+        {(sats ?? 0) !== 0 && (
           <>
             <span aria-hidden>·</span>
             <span
-              className="font-mono"
-              title="Ranked by upload cost + sats earned through paid votes"
+              className="font-mono text-accent"
+              title="Kudos earned through paid votes — ranking score only"
             >
-              ◈ cost <span className="text-accent">{formatSats(foundingSats ?? 0)}</span> · earned{" "}
-              <span className="text-accent">{formatSats((sats ?? 0) - (foundingSats ?? 0))}</span> sats
+              ◈ {formatSats(sats ?? 0)} kudos
             </span>
           </>
-        ) : (sats ?? 0) > 0 ? (
-          <>
-            <span aria-hidden>·</span>
-            <span className="font-mono text-accent" title="Sats earned through paid votes">
-              ◈ {formatSats(sats ?? 0)} sats
-            </span>
-          </>
-        ) : null}
+        )}
         {kudosEnabled && handle && (
           <>
             <span aria-hidden>·</span>

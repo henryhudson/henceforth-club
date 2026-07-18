@@ -49,20 +49,18 @@ describe("ProfileView", () => {
     expect(html.match(/@someone/g)?.length).toBe(rows + 1); // rows + the header card
   });
 
-  it("shows each post's whole economics: cost to inscribe plus sats earned", () => {
+  it("shows kudos only — never upload cost — on the ranking chip", () => {
     const html = renderToStaticMarkup(
       <ProfileView
         archive={archive}
         isPreview={false}
-        scores={{ "1": 4312 }}
+        scores={{ "1": 150_000 }}
         foundingByPost={{ "1": 3412 }}
       />,
     );
-    // Post 1: cost 3,412, earned = 4,312 − 3,412 = 900. Ranked by the sum.
-    expect(html).toContain("cost");
-    expect(html).toContain("3,412");
-    expect(html).toContain("earned");
-    expect(html).toContain(">900<");
+    expect(html).toContain("◈ 150,000 kudos");
+    expect(html).not.toContain("◈ cost");
+    expect(html).not.toContain("3,412");
   });
 
   it('hides the identity card in "ledger" mode — the landing, where rows are signed instead', () => {

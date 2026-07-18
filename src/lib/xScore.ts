@@ -7,7 +7,8 @@
 // number.
 
 export type ScoreWindow = "day" | "week" | "month" | "year" | "all";
-export const DEFAULT_WINDOW: ScoreWindow = "week";
+/** All-time kudos by default — ranking is earned votes only, not upload cost. */
+export const DEFAULT_WINDOW: ScoreWindow = "all";
 
 export type VoteDirection = "up" | "down";
 
@@ -31,9 +32,10 @@ export type VoteLedgerEntry = {
   founding?: boolean;
 };
 
-/** A founding entry is the post's upload cost — the ranking's permanent
- * floor. Detected by the explicit flag or the composite `txid:postId` form
- * (a real funding txid is bare hex and never contains a colon). */
+/** A founding entry is the post's upload cost — ledgered for archive
+ * economics, excluded from ranking. Detected by the explicit flag or the
+ * composite `txid:postId` form (a real funding txid is bare hex and never
+ * contains a colon). */
 export function isFoundingEntry(entry: VoteLedgerEntry): boolean {
   return entry.founding === true || entry.txid.includes(":");
 }
@@ -65,12 +67,10 @@ export function windowStartDay(
 
 /**
  * The pure fold: an append-only ledger in, a score table out —
- * `score(post) = founding cost (always) + Σ votes (±sats) within the window`
- * as of `asOfDay`. The founding entry is the post's upload cost and is the
- * ranking's permanent floor — it never ages out of a window (the rule set
- * 2026-07-12: the cost of uploading is the initial score; received sats add
- * to it); only received votes are time-windowed. A vote whose day can't be
- * read contributes nothing, rather than turning the whole table to NaN.
+ * `score(post) = Σ kudos votes (±sats) within the window` as of `asOfDay`.
+ * Founding / upload-cost entries never count: ranking is what people gave
+ * the post, not what it cost to inscribe. A vote whose day can't be read
+ * contributes nothing, rather than turning the whole table to NaN.
  * Total: any ledger and any as-of day fold to a table.
  */
 export function foldScores(
@@ -79,10 +79,9 @@ export function foldScores(
   windowStart: string | null = null,
 ): Record<string, number> {
   return ledger.reduce<Record<string, number>>((table, entry) => {
-    if (!isFoundingEntry(entry)) {
-      if (Number.isNaN(daysBetween(entry.day, asOfDay))) return table; // unreadable day
-      if (windowStart !== null && entry.day < windowStart) return table; // before the window
-    }
+    if (isFoundingEntry(entry)) return table; // upload cost is not ranking
+    if (Number.isNaN(daysBetween(entry.day, asOfDay))) return table; // unreadable day
+    if (windowStart !== null && entry.day < windowStart) return table; // before the window
     const signed = entry.dir === "up" ? entry.sats : -entry.sats;
     table[entry.postId] = (table[entry.postId] ?? 0) + signed;
     return table;
@@ -96,9 +95,9 @@ export function totalFoundingSats(ledger: readonly VoteLedgerEntry[]): number {
   return ledger.reduce((sum, entry) => (isFoundingEntry(entry) ? sum + entry.sats : sum), 0);
 }
 
-/** Each post's upload cost — the founding entries alone, keyed by post. With
- * a score table beside it, a post's earned sats are `score − founding`: the
- * fold already counts founding at full weight in every window. */
+/** Each post's upload cost — the founding entries alone, keyed by post.
+ * Separate from ranking: foldScores ignores founding; this map is for
+ * archive economics elsewhere, not the Best sort. */
 export function foldFoundingByPost(
   ledger: readonly VoteLedgerEntry[],
 ): Record<string, number> {

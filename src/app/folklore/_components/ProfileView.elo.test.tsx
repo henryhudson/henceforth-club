@@ -67,17 +67,15 @@ describe("the flag on — Elo sorts the folklore", () => {
     expect(html).toContain("unranked");
   });
 
-  it("says the ledger ranks by duels, not by committed sats", () => {
+  it("says the ledger ranks by duels, not by kudos", () => {
     expect(html).toContain("ranked by duels won");
-    expect(html).not.toContain("ranked by committed sats");
+    expect(html).not.toContain("ranked by kudos");
   });
 
-  it("keeps the economics chips unchanged beside the rating", () => {
-    // Post 3: cost 500, earned = 900 − 500 = 400 — the same chip as ever.
-    expect(html).toContain("cost");
-    expect(html).toContain(">500<");
-    expect(html).toContain("earned");
-    expect(html).toContain(">400<");
+  it("shows kudos beside the rating, never cost or upload chips", () => {
+    // scores map is still the kudos fold (post 3 = 900); founding is ignored.
+    expect(html).toContain("◈ 900 kudos");
+    expect(html).not.toContain("◈ cost");
   });
 
   it("rates a text at exactly twenty duels — the badge is strictly under twenty", () => {
@@ -120,7 +118,7 @@ describe("the flag off — the decayed-fold sort stands, production unchanged", 
 
   it("carries no rating markup at all — no badge, no duel copy", () => {
     expect(html).not.toContain("unranked");
-    expect(html).toContain("ranked by committed sats");
+    expect(html).toContain("ranked by kudos");
     expect(html).not.toContain("duels");
   });
 });

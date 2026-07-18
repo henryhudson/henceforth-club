@@ -123,10 +123,10 @@ export default function ProfileView({
           </>
         ) : (
           <>
-            <p className="ledger-label mb-1">The ledger · ranked by committed sats · tap a post to open it</p>
+            <p className="ledger-label mb-1">The ledger · ranked by kudos · tap a post to open it</p>
             <p className="mb-3 text-xs text-muted">
-              Posts earn sats through paid votes from the Henceforth app — a post&rsquo;s worth here is
-              what people committed to it, not applause it can&rsquo;t keep.
+              Posts rank by kudos people paid for them — upload fee never counts. Worth here is
+              what others committed, not applause it can&rsquo;t keep.
             </p>
           </>
         )}
