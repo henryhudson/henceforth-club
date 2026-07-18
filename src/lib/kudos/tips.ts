@@ -90,6 +90,20 @@ export async function readTipCount(
   return (await redis.get<number>(tipCountKey(postId))) ?? 0;
 }
 
+/** Every post's public tip count in one round trip — the feed's bulk read,
+ * one mget for a whole page of rows. Missing counts read zero. Total on an
+ * empty list, and null-Redis safe: all zeros. */
+export async function readTipCounts(
+  postIds: readonly string[],
+  redis: Redis | null = getRedis(),
+): Promise<Record<string, number>> {
+  if (!redis || postIds.length === 0) {
+    return Object.fromEntries(postIds.map((postId) => [postId, 0]));
+  }
+  const counts = await redis.mget<(number | null)[]>(...postIds.map(tipCountKey));
+  return Object.fromEntries(postIds.map((postId, index) => [postId, counts[index] ?? 0]));
+}
+
 /** Every post's dealer priority as of `asOfDay` in one round trip — the
  * bulk read the dealer's candidate pool uses. Untipped posts read zero.
  * Total on an empty list, and null-Redis safe: all zeros. */

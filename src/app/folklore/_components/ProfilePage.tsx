@@ -28,6 +28,8 @@ export default function ProfilePage({
   scoresByWindow,
   foundingByPost,
   verified,
+  kudosEnabled = false,
+  tipsByPost,
 }: {
   archive: XArchive;
   txid?: string | null;
@@ -42,6 +44,11 @@ export default function ProfilePage({
   scoresByWindow?: Record<ScoreWindow, Record<string, number>>;
   foundingByPost?: Record<string, number>;
   verified?: { bindingPostId: string };
+  /** The server's per-request KUDOS_ENABLED read — text rows carry the
+   * kudos control only behind it. */
+  kudosEnabled?: boolean;
+  /** Public tip counts by post id, from the server's bulk read. */
+  tipsByPost?: Record<string, number>;
 }) {
   const scrollLoader =
     handle !== undefined && postCount !== undefined && postCount > archive.posts.length ? (
@@ -54,6 +61,7 @@ export default function ProfilePage({
         avatarUrl={archive.profile.avatarUrl}
         displayName={archive.profile.displayName}
         foundingByPost={foundingByPost}
+        kudosEnabled={kudosEnabled}
       />
     ) : undefined;
 
@@ -104,6 +112,8 @@ export default function ProfilePage({
         scoresByWindow={scoresByWindow}
         foundingByPost={foundingByPost}
         verified={verified}
+        kudosEnabled={kudosEnabled}
+        tipsByPost={tipsByPost}
       />
       <ReaderKeys handle={handle} />
     </main>

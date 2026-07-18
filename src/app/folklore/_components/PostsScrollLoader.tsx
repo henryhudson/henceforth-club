@@ -31,6 +31,7 @@ export default function PostsScrollLoader({
   avatarUrl,
   displayName,
   foundingByPost = {},
+  kudosEnabled = false,
 }: {
   handle: string;
   initialCount: number;
@@ -40,6 +41,9 @@ export default function PostsScrollLoader({
   avatarUrl?: string;
   displayName?: string;
   foundingByPost?: Record<string, number>;
+  /** The server's per-request KUDOS_ENABLED read — scroll-loaded rows carry
+   * the kudos control only behind it, like the server-rendered ones. */
+  kudosEnabled?: boolean;
 }) {
   const [posts, setPosts] = useState<XPost[]>([]);
   const [txTimes, setTxTimes] = useState<Record<string, number>>(initialTxTimes);
@@ -109,6 +113,7 @@ export default function PostsScrollLoader({
             avatarUrl={avatarUrl}
             displayName={displayName}
             foundingSats={foundingByPost[post.id]}
+            kudosEnabled={kudosEnabled}
           />
         ))}
       </div>

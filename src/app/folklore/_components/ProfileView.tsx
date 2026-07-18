@@ -30,6 +30,8 @@ export default function ProfileView({
   scoresByWindow,
   foundingByPost,
   verified,
+  kudosEnabled = false,
+  tipsByPost,
   header = "profile",
 }: {
   archive: XArchive;
@@ -54,6 +56,11 @@ export default function ProfileView({
    * chip PostEntry renders; the ranking is founding + earned. */
   foundingByPost?: Record<string, number>;
   verified?: { bindingPostId: string };
+  /** Threaded from the server's per-request KUDOS_ENABLED read — text rows
+   * carry the kudos control only behind it. */
+  kudosEnabled?: boolean;
+  /** Public tip counts by post id, from the server's bulk read. */
+  tipsByPost?: Record<string, number>;
   /** "profile" (default) opens with the identity card — the profile page's
    * whole point. "ledger" skips it: on the landing every entry is signed by
    * its author (picture + name linking to the profile), so a card up top
@@ -139,6 +146,8 @@ export default function ProfileView({
           foundingByPost={foundingByPost}
           scores={scores}
           scoresByWindow={scoresByWindow}
+          kudosEnabled={kudosEnabled}
+          tipsByPost={tipsByPost}
           footer={footer}
         />
       </div>

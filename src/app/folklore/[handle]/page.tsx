@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getArchivePage, PAGE_SIZE } from "@/lib/xArchiveCache";
 import { getOwner } from "@/lib/xOwner";
 import { readFoundingTotal, readLedgerRollup } from "@/lib/xVotes";
+import { readTipCounts } from "@/lib/kudos/tips";
 import { DEFAULT_WINDOW } from "@/lib/xScore";
 import ProfilePage from "../_components/ProfilePage";
 
@@ -43,10 +44,14 @@ export default async function HandlePage(
   // profile shipped with one window has a Best tab that can go silently
   // inert (2026-07-12). With scoresByWindow present, FeedControls renders
   // the day/week/month/year/all toggle here too.
-  const [owner, { scoresByWindow, foundingByPost }, archiveSats] = await Promise.all([
+  // The kudos flag is read per request, exactly like the routes — without it
+  // the page renders no kudos markup and reads no tip counts.
+  const kudosEnabled = process.env.KUDOS_ENABLED === "true";
+  const [owner, { scoresByWindow, foundingByPost }, archiveSats, tipsByPost] = await Promise.all([
     getOwner(handle),
     readLedgerRollup(handle),
     readFoundingTotal(handle),
+    kudosEnabled ? readTipCounts(page.posts.map((post) => post.id)) : undefined,
   ]);
 
   return (
@@ -64,6 +69,8 @@ export default async function HandlePage(
       scoresByWindow={scoresByWindow}
       foundingByPost={foundingByPost}
       verified={owner ? { bindingPostId: owner.bindingPostId } : undefined}
+      kudosEnabled={kudosEnabled}
+      tipsByPost={tipsByPost}
     />
   );
 }

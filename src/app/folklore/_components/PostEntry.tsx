@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { XPost } from "../parseArchive";
 import type { ThreadContext } from "./threadContext";
 import { Avatar, formatDate, formatUnixSeconds, shortTxid } from "./PostCard";
+import FeedKudos from "./FeedKudos";
 
 /**
  * One archived post as a ledger entry. At rest it is a plain row on a hairline
@@ -28,6 +29,8 @@ export default function PostEntry({
   avatarUrl,
   displayName,
   foundingSats,
+  kudosEnabled = false,
+  tipCount,
   defaultOpen = false,
 }: {
   post: XPost;
@@ -48,6 +51,12 @@ export default function PostEntry({
    * windowed fold: founding + votes) beside it, earned = sats − founding.
    * The ranking IS their sum, so the chip shows both components. */
   foundingSats?: number;
+  /** True only when the server read KUDOS_ENABLED for this request — the
+   * kudos control renders solely behind it, so without the flag a row
+   * carries no kudos markup at all. */
+  kudosEnabled?: boolean;
+  /** The post's public tip count, threaded from the server's bulk read. */
+  tipCount?: number;
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -200,6 +209,12 @@ export default function PostEntry({
             </span>
           </>
         ) : null}
+        {kudosEnabled && handle && (
+          <>
+            <span aria-hidden>·</span>
+            <FeedKudos handle={handle} postId={post.id} count={tipCount} />
+          </>
+        )}
         {!open && post.txid && (
           <>
             <span aria-hidden>·</span>

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getArchivePage, getArchivePost, PAGE_SIZE } from "@/lib/xArchiveCache";
 import { readLedgerRollup } from "@/lib/xVotes";
+import { readTipCount } from "@/lib/kudos/tips";
 import { DEFAULT_WINDOW } from "@/lib/xScore";
 import PostEntry from "../../_components/PostEntry";
 import { buildThreadContext } from "../../_components/threadContext";
@@ -28,11 +29,15 @@ export default async function PostPage(
   { params }: { params: Promise<{ handle: string; postId: string }> },
 ) {
   const { handle, postId } = await params;
-  const [post, page, feed, { scoresByWindow, foundingByPost }] = await Promise.all([
+  // The kudos flag is read per request, exactly like the routes — without it
+  // the page renders no kudos markup and reads no tip count.
+  const kudosEnabled = process.env.KUDOS_ENABLED === "true";
+  const [post, page, feed, { scoresByWindow, foundingByPost }, tipCount] = await Promise.all([
     getArchivePost(handle, postId),
     getArchivePage(handle, 0, 0),
     getArchivePage(handle, 0, PAGE_SIZE),
     readLedgerRollup(handle),
+    kudosEnabled ? readTipCount(postId) : undefined,
   ]);
   const scores = scoresByWindow[DEFAULT_WINDOW];
   if (!post || !page) notFound();
@@ -62,6 +67,8 @@ export default async function PostPage(
             avatarUrl={page.profile.avatarUrl}
             displayName={page.profile.displayName}
             foundingSats={foundingByPost[post.id]}
+            kudosEnabled={kudosEnabled}
+            tipCount={tipCount}
             defaultOpen
           />
         </div>

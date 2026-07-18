@@ -4,6 +4,7 @@ import { getArchivePage } from "@/lib/xArchiveCache";
 import { listHandles } from "@/lib/xIndex";
 import { gbpPerBsv } from "@/lib/xPrice";
 import { readFoundingTotal, readLedgerRollup } from "@/lib/xVotes";
+import { readTipCounts } from "@/lib/kudos/tips";
 import FolkloreWordmark from "./_components/FolkloreWordmark";
 import FolkloreForest from "./_components/FolkloreForest";
 import ProfileView from "./_components/ProfileView";
@@ -42,6 +43,13 @@ export default async function FolklorePage() {
   // page still shows, so reading fifty ledgers to use one of them was pure
   // cost. Restore the fan-out only if a site-wide figure comes back.
   const witnessSats = await readFoundingTotal(WITNESS_HANDLE);
+  // The kudos flag, read the same way as the web-archive flag above — the
+  // witness rows carry the kudos control only behind it.
+  const kudosEnabled = process.env.KUDOS_ENABLED === "true";
+  const tipsByPost =
+    kudosEnabled && witness
+      ? await readTipCounts(witness.posts.map((post) => post.id))
+      : undefined;
 
   return (
     // A <div>, not a <main>: the root layout already provides the single <main>
@@ -87,6 +95,8 @@ export default async function FolklorePage() {
           txTimes={witness.txTimes}
           scoresByWindow={scoresByWindow}
           foundingByPost={foundingByPost}
+          kudosEnabled={kudosEnabled}
+          tipsByPost={tipsByPost}
           header="ledger"
         />
       ) : (

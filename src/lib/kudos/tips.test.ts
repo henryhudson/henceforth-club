@@ -5,6 +5,7 @@ import { readProfileAccount, readHandleAccount, fundFloat } from "./float";
 import {
   decayedPriority,
   readTipCount,
+  readTipCounts,
   readTipPriorities,
   readTipPriority,
   recordTip,
@@ -229,5 +230,22 @@ describe("no Elo write anywhere in the tip path", () => {
       expect(ELO_KEYS).not.toContain(key);
       expect(ALLOWED_PREFIXES.some((prefix) => key.startsWith(prefix))).toBe(true);
     }
+  });
+});
+
+describe("readTipCounts — the feed's bulk read", () => {
+  it("reads every post's public count in one round trip, missing counts as zero", async () => {
+    const redis = fakeRedis();
+    await fundFloat("giver", 100, redis);
+    await recordTip("giver", "post-a", "author", 5, DAY, redis);
+    await recordTip("giver", "post-a", "author", 2, DAY, redis);
+
+    const counts = await readTipCounts(["post-a", "post-b"], redis);
+    expect(counts).toEqual({ "post-a": 7, "post-b": 0 });
+  });
+
+  it("is total on an empty list and null-Redis safe", async () => {
+    expect(await readTipCounts([], fakeRedis())).toEqual({});
+    expect(await readTipCounts(["post-a"], null)).toEqual({ "post-a": 0 });
   });
 });

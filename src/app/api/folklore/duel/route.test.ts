@@ -12,6 +12,7 @@ const mockReadResolvedPair = vi.fn();
 const mockDebitForDuel = vi.fn();
 const mockAccrueEarned = vi.fn();
 const mockRecordTip = vi.fn();
+const mockGetArchivePost = vi.fn();
 
 vi.mock("@/lib/kudos/auth", () => ({
   authenticateBearer: (...args: unknown[]) => mockAuthenticateBearer(...args),
@@ -36,6 +37,9 @@ vi.mock("@/lib/kudos/float", () => ({
 }));
 vi.mock("@/lib/kudos/tips", () => ({
   recordTip: (...args: unknown[]) => mockRecordTip(...args),
+}));
+vi.mock("@/lib/xArchiveCache", () => ({
+  getArchivePost: (...args: unknown[]) => mockGetArchivePost(...args),
 }));
 
 import { GET, POST } from "./route";
@@ -74,9 +78,15 @@ beforeEach(() => {
     mockDebitForDuel,
     mockAccrueEarned,
     mockRecordTip,
+    mockGetArchivePost,
   ]) {
     mock.mockReset();
   }
+  mockGetArchivePost.mockImplementation(async (_handle: string, postId: string) => ({
+    id: postId,
+    at: "2026-07-18T00:00:00Z",
+    text: `text of ${postId}`,
+  }));
   mockAuthenticateBearer.mockResolvedValue({
     kind: "authenticated",
     profile: "henry",
@@ -133,7 +143,7 @@ describe("GET /api/folklore/duel — the deal", () => {
     expect(mockDealPair).not.toHaveBeenCalled();
   });
 
-  it("deals a pair and issues its single-use token, bound to the bearer", async () => {
+  it("deals a pair and issues its single-use token, bound to the bearer — each side hydrated with its text for the arena", async () => {
     const res = await GET(getRequest());
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
@@ -141,12 +151,22 @@ describe("GET /api/folklore/duel — the deal", () => {
       deal: {
         token: "tok-next",
         pair: [
-          { postId: "p1", author: "ann" },
-          { postId: "p2", author: "ben" },
+          { postId: "p1", author: "ann", text: "text of p1" },
+          { postId: "p2", author: "ben", text: "text of p2" },
         ],
       },
     });
     expect(mockIssuePairToken).toHaveBeenCalledWith(PAIR);
+    expect(mockGetArchivePost).toHaveBeenCalledWith("ann", "p1");
+    expect(mockGetArchivePost).toHaveBeenCalledWith("ben", "p2");
+  });
+
+  it("deals with an empty text when the archive cache cannot say — never a failed deal over display data", async () => {
+    mockGetArchivePost.mockResolvedValue(null);
+    const res = await GET(getRequest());
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.deal.pair.map((side: { text: string }) => side.text)).toEqual(["", ""]);
   });
 
   it("answers a null deal when the pool cannot put up two texts", async () => {
@@ -219,8 +239,8 @@ describe("POST /api/folklore/duel — the resolution", () => {
       next: {
         token: "tok-next",
         pair: [
-          { postId: "p1", author: "ann" },
-          { postId: "p2", author: "ben" },
+          { postId: "p1", author: "ann", text: "text of p1" },
+          { postId: "p2", author: "ben", text: "text of p2" },
         ],
       },
     });

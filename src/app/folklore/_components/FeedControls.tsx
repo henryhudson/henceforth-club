@@ -51,6 +51,8 @@ export default function FeedControls({
   foundingByPost = {},
   scores = {},
   scoresByWindow,
+  kudosEnabled = false,
+  tipsByPost,
   footer,
 }: {
   posts: readonly XPost[];
@@ -63,6 +65,11 @@ export default function FeedControls({
   foundingByPost?: Record<string, number>;
   scores?: Record<string, number>;
   scoresByWindow?: Record<ScoreWindow, Record<string, number>>;
+  /** Threaded from the server's per-request KUDOS_ENABLED read — rows carry
+   * the kudos control only behind it. */
+  kudosEnabled?: boolean;
+  /** Public tip counts by post id, from the server's bulk read. */
+  tipsByPost?: Record<string, number>;
   /** The scroll loader, when the caller has one. Rendered ONLY in Latest
    * mode: the loader always appends chronological pages, so under Best it
    * quietly degraded the ranking at post 31 — sat-ranked rows, then an
@@ -142,6 +149,8 @@ export default function FeedControls({
             avatarUrl={avatarUrl}
             displayName={displayName}
             foundingSats={foundingByPost[post.id]}
+            kudosEnabled={kudosEnabled}
+            tipCount={tipsByPost?.[post.id]}
           />
         ))}
       </div>

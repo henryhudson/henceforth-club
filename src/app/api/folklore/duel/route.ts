@@ -13,6 +13,7 @@ import {
 } from "@/lib/kudos/dealer";
 import { accrueEarned, debitForDuel } from "@/lib/kudos/float";
 import { recordTip } from "@/lib/kudos/tips";
+import { getArchivePost } from "@/lib/xArchiveCache";
 import { dateKey } from "@/lib/redis";
 
 function refusal(reason: string, status: number) {
@@ -26,9 +27,19 @@ function parsedAmount(value: unknown): number | null {
     : null;
 }
 
+/** One side as the arena renders it: the dealt side plus the text itself,
+ * read from the archive cache — empty when the cache cannot say, so a deal
+ * never fails over display data. */
+type WireSide = DealtSide & { text: string };
+
 /** What a deal looks like on the wire: the single-use token and the two
  * dealt sides, in stack order. */
-type WireDeal = { token: string; pair: [DealtSide, DealtSide] };
+type WireDeal = { token: string; pair: [WireSide, WireSide] };
+
+async function hydratedSide(side: DealtSide): Promise<WireSide> {
+  const post = await getArchivePost(side.author, side.postId);
+  return { ...side, text: post?.text ?? "" };
+}
 
 type NextDeal =
   | { kind: "dealt"; deal: WireDeal }
@@ -57,9 +68,10 @@ async function dealNext(profile: string): Promise<NextDeal> {
   };
   const issued = await issuePairToken(record);
   if (issued.kind !== "issued") return { kind: "unavailable" };
+  const [sideA, sideB] = await Promise.all([hydratedSide(record.a), hydratedSide(record.b)]);
   return {
     kind: "dealt",
-    deal: { token: issued.token, pair: [record.a, record.b] },
+    deal: { token: issued.token, pair: [sideA, sideB] },
   };
 }
 
