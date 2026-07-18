@@ -70,3 +70,14 @@ export async function issueFloatOnCompletion(
   await fundFloat(profile, FLOAT_KUDOS, redis);
   return { kind: "issued", token, kudos: FLOAT_KUDOS };
 }
+
+/** The profile a bearer token belongs to, or null for a token the platform
+ * never issued. Null-Redis safe: null — the caller distinguishes a missing
+ * store before calling when it needs to. */
+export async function profileForToken(
+  token: string,
+  redis: Redis | null = getRedis(),
+): Promise<string | null> {
+  if (!redis) return null;
+  return redis.get<string>(tokenKey(token));
+}

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Redis } from "@upstash/redis";
 import { FLOAT_KUDOS } from "@/lib/kudos/constants";
 import { readProfileAccount } from "@/lib/kudos/float";
-import { floatLegSats, issueFloatOnCompletion } from "./floatFunding";
+import { floatLegSats, issueFloatOnCompletion, profileForToken } from "./floatFunding";
 
 /** A minimal in-memory stand-in for the Upstash client — only the calls the
  * funding path actually makes: `incrby`, `get`, and `set` with the `nx`
@@ -115,5 +115,21 @@ describe("issueFloatOnCompletion — the £2 leg lands as 2,000 kudos, exactly o
     expect(await issueFloatOnCompletion(doneJob, () => "token-abc", null)).toEqual({
       kind: "unavailable",
     });
+  });
+});
+
+describe("profileForToken — the bearer token resolved back to its profile", () => {
+  it("resolves an issued token to the lowercased profile it funds", async () => {
+    const redis = fakeRedis();
+    await issueFloatOnCompletion(doneJob, () => "token-abc", redis);
+    expect(await profileForToken("token-abc", redis)).toBe("henry");
+  });
+
+  it("is null for a token never issued", async () => {
+    expect(await profileForToken("never-issued", fakeRedis())).toBeNull();
+  });
+
+  it("is null-Redis safe: null", async () => {
+    expect(await profileForToken("token-abc", null)).toBeNull();
   });
 });

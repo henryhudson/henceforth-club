@@ -90,6 +90,28 @@ export async function readTipCount(
   return (await redis.get<number>(tipCountKey(postId))) ?? 0;
 }
 
+/** Every post's dealer priority as of `asOfDay` in one round trip — the
+ * bulk read the dealer's candidate pool uses. Untipped posts read zero.
+ * Total on an empty list, and null-Redis safe: all zeros. */
+export async function readTipPriorities(
+  postIds: readonly string[],
+  asOfDay: string = dateKey(),
+  redis: Redis | null = getRedis(),
+): Promise<Record<string, number>> {
+  if (!redis || postIds.length === 0) {
+    return Object.fromEntries(postIds.map((postId) => [postId, 0]));
+  }
+  const records = await redis.mget<(TipPriorityRecord | null)[]>(
+    ...postIds.map(priorityKey),
+  );
+  return Object.fromEntries(
+    postIds.map((postId, index) => {
+      const standing = records[index];
+      return [postId, standing ? decayedPriority(standing, asOfDay) : 0];
+    }),
+  );
+}
+
 /** A post's dealer priority as of `asOfDay`, decayed on read — what the
  * dealer feeds its tip-priority draw. Null-Redis safe: zero. */
 export async function readTipPriority(

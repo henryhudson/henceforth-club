@@ -5,6 +5,7 @@ import { readProfileAccount, readHandleAccount, fundFloat } from "./float";
 import {
   decayedPriority,
   readTipCount,
+  readTipPriorities,
   readTipPriority,
   recordTip,
   type TipPriorityRecord,
@@ -35,6 +36,10 @@ function fakeRedis(trace?: (command: string, key: string) => void): Redis {
     get: async (key: string) => {
       trace?.("get", key);
       return store.get(key) ?? null;
+    },
+    mget: async (...keys: string[]) => {
+      for (const key of keys) trace?.("mget", key);
+      return keys.map((key) => store.get(key) ?? null);
     },
     set: async (key: string, value: unknown) => {
       trace?.("set", key);
@@ -156,6 +161,39 @@ describe("readers", () => {
   it("are null-Redis safe: zero", async () => {
     expect(await readTipCount("post-1", null)).toBe(0);
     expect(await readTipPriority("post-1", DAY, null)).toBe(0);
+  });
+});
+
+describe("readTipPriorities — the dealer's bulk read", () => {
+  it("reads every post's decayed priority in one round trip, zero for the untipped", async () => {
+    const redis = fakeRedis();
+    await fundFloat("alice", 1000, redis);
+    await recordTip("alice", "post-1", "bob", 40, DAY, redis);
+    await recordTip("alice", "post-2", "carol", 16, "2026-07-11", redis);
+
+    const priorities = await readTipPriorities(["post-1", "post-2", "post-9"], DAY, redis);
+    expect(priorities["post-1"]).toBe(40);
+    // Tipped a half-life of days ago: 16 has decayed to 8 by DAY.
+    expect(TIP_PRIORITY_HALF_LIFE_DAYS).toBe(7);
+    expect(priorities["post-2"]).toBeCloseTo(8, 10);
+    expect(priorities["post-9"]).toBe(0);
+  });
+
+  it("matches the single reader post for post", async () => {
+    const redis = fakeRedis();
+    await fundFloat("alice", 1000, redis);
+    await recordTip("alice", "post-1", "bob", 25, "2026-07-04", redis);
+
+    const bulk = await readTipPriorities(["post-1"], DAY, redis);
+    expect(bulk["post-1"]).toBe(await readTipPriority("post-1", DAY, redis));
+  });
+
+  it("is total on an empty list and null-Redis safe: zeros", async () => {
+    expect(await readTipPriorities([], DAY, fakeRedis())).toEqual({});
+    expect(await readTipPriorities(["post-1", "post-2"], DAY, null)).toEqual({
+      "post-1": 0,
+      "post-2": 0,
+    });
   });
 });
 

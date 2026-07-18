@@ -136,7 +136,7 @@
 <div class="task"><span class="tasknum">Task 7 · the routes</span> <span class="badge">api</span>
 <div class="files">src/app/api/folklore/duel/route.ts · tip/route.ts · float/route.ts · tests</div>
 <ul class="steps">
-<li><input type="checkbox"> <code>GET duel</code> deals (token + pair), <code>POST duel</code> resolves (token, winnerPostId, <code>amount ≥ 1</code>) → debit the amount, append ONE binary duel entry, accrue the amount to the winner's author, next deal in the response. Kudos sent for the resolved pair's other text (stale token) degrade to tips, never a second duel. <code>POST tip</code> (postId, amount). <code>GET float</code> → balance. All refuse cleanly without <code>KUDOS_ENABLED</code>; all bearer-token authenticated; daily cap enforced at debit.</li>
+<li><input type="checkbox" checked> <code>GET duel</code> deals (token + pair), <code>POST duel</code> resolves (token, winnerPostId, <code>amount ≥ 1</code>) → debit the amount, append ONE binary duel entry, accrue the amount to the winner's author, next deal in the response. Kudos sent for the resolved pair's other text (stale token) degrade to tips, never a second duel. <code>POST tip</code> (postId, amount). <code>GET float</code> → balance. All refuse cleanly without <code>KUDOS_ENABLED</code>; all bearer-token authenticated; daily cap enforced at debit.</li>
 </ul></div>
 
 <div class="task"><span class="tasknum">Task 8 · the arena + in-feed control</span> <span class="badge">ui</span>

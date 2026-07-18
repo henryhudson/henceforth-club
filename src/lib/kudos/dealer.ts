@@ -253,3 +253,38 @@ export async function consumePairToken(
   }
   return { kind: "consumed", pair: record };
 }
+
+// ── Resolved pairs ───────────────────────────────────────────────────────
+//
+// After a duel resolves, its pair lives on briefly under
+// kudos:pair:resolved:<token> — the arena's rapid follow-up taps arrive
+// with the consumed token, and this record is how they degrade to tips on
+// the pair's texts instead of a second duel (or a refusal). Same window as
+// the token itself; reading never burns it, since many taps may follow.
+
+const resolvedPairKey = (token: string) => `kudos:pair:resolved:${token}`;
+
+export type MarkPairResolvedResult = "marked" | "unavailable";
+
+/** Record a consumed token's pair as resolved, for the follow-up window. */
+export async function markPairResolved(
+  token: string,
+  record: DealtPairRecord,
+  redis: Redis | null = getRedis(),
+): Promise<MarkPairResolvedResult> {
+  if (!redis) return "unavailable";
+  await redis.set(resolvedPairKey(token), record, {
+    ex: PAIR_TOKEN_MINUTES * 60,
+  });
+  return "marked";
+}
+
+/** The pair a token resolved, while the follow-up window lasts — null once
+ * it closes, for a token never resolved, or without Redis. */
+export async function readResolvedPair(
+  token: string,
+  redis: Redis | null = getRedis(),
+): Promise<DealtPairRecord | null> {
+  if (!redis) return null;
+  return redis.get<DealtPairRecord>(resolvedPairKey(token));
+}

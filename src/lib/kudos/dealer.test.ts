@@ -6,6 +6,8 @@ import {
   consumePairToken,
   dealPair,
   issuePairToken,
+  markPairResolved,
+  readResolvedPair,
   type DealCandidate,
   type DealtPairRecord,
 } from "./dealer";
@@ -210,6 +212,10 @@ function fakeRedis(clock: { now: number }): Redis {
       store.delete(key);
       return entry !== undefined && live(entry) ? (JSON.parse(entry.raw) as T) : null;
     },
+    get: async <T,>(key: string) => {
+      const entry = store.get(key);
+      return entry !== undefined && live(entry) ? (JSON.parse(entry.raw) as T) : null;
+    },
   } as unknown as Redis;
 }
 
@@ -302,5 +308,35 @@ describe("pair tokens", () => {
   it("is null-Redis safe: unavailable on both sides", async () => {
     expect(await issuePairToken(RECORD, "token-1", null)).toEqual({ kind: "unavailable" });
     expect(await consumePairToken("token-1", "alice", null)).toEqual({ kind: "unavailable" });
+  });
+});
+
+describe("resolved-pair marker — how stale kudos find their tip", () => {
+  it("round-trips the pair after resolution, and reading never burns it", async () => {
+    const redis = fakeRedis({ now: 0 });
+    expect(await markPairResolved("token-1", RECORD, redis)).toBe("marked");
+    expect(await readResolvedPair("token-1", redis)).toEqual(RECORD);
+    expect(await readResolvedPair("token-1", redis)).toEqual(RECORD);
+  });
+
+  it("is null for a token never resolved", async () => {
+    expect(await readResolvedPair("never", fakeRedis({ now: 0 }))).toBeNull();
+  });
+
+  it("expires with the same ten-minute window as the token it follows", async () => {
+    const clock = { now: 0 };
+    const redis = fakeRedis(clock);
+    await markPairResolved("token-1", RECORD, redis);
+
+    clock.now = PAIR_TOKEN_MINUTES * 60 * 1000 - 1;
+    expect(await readResolvedPair("token-1", redis)).toEqual(RECORD);
+
+    clock.now = PAIR_TOKEN_MINUTES * 60 * 1000;
+    expect(await readResolvedPair("token-1", redis)).toBeNull();
+  });
+
+  it("is null-Redis safe: unavailable to mark, null to read", async () => {
+    expect(await markPairResolved("token-1", RECORD, null)).toBe("unavailable");
+    expect(await readResolvedPair("token-1", null)).toBeNull();
   });
 });
