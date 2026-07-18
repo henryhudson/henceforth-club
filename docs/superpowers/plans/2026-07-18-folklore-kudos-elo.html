@@ -92,9 +92,9 @@
 <div class="task"><span class="tasknum">Task 1 · the Elo core</span> <span class="badge">pure</span>
 <div class="files">src/lib/kudos/elo.ts · src/lib/kudos/constants.ts · elo.test.ts</div>
 <ul class="steps">
-<li><input type="checkbox"> Types: <code>DuelEntry</code>, <code>Rating { rating, duels }</code>, <code>RatingTable</code>. <code>expectedScore</code>, <code>applyDuel</code>, <code>foldDuels(entries, from?: Checkpoint)</code> — total functions, integer sequence, no clock.</li>
-<li><input type="checkbox"> K schedule and provisional logic; <code>authorRatings(table, postsByAuthor)</code> mean-of-top-five.</li>
-<li><input type="checkbox"> Tests: determinism (same ledger → same table), commutation failure honesty (order matters and is pinned), K transition at duel 20, author aggregate, checkpoint fold equals full fold.</li>
+<li><input type="checkbox" checked> Types: <code>DuelEntry</code>, <code>Rating { rating, duels }</code>, <code>RatingTable</code>. <code>expectedScore</code>, <code>applyDuel</code>, <code>foldDuels(entries, from?: Checkpoint)</code> — total functions, integer sequence, no clock.</li>
+<li><input type="checkbox" checked> K schedule and provisional logic; <code>authorRatings(table, postsByAuthor)</code> mean-of-top-five.</li>
+<li><input type="checkbox" checked> Tests: determinism (same ledger → same table), commutation failure honesty (order matters and is pinned), K transition at duel 20, author aggregate, checkpoint fold equals full fold.</li>
 </ul></div>
 
 <div class="task"><span class="tasknum">Task 2 · duel ledger + checkpoint</span> <span class="badge">redis edge</span>
