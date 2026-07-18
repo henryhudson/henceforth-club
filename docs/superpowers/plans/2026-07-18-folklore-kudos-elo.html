@@ -107,8 +107,8 @@
 <div class="task"><span class="tasknum">Task 3 · float accounting</span> <span class="badge">money core</span>
 <div class="files">src/lib/kudos/float.ts · float.test.ts</div>
 <ul class="steps">
-<li><input type="checkbox"> Integer kudos units only. <code>fundFloat</code>, <code>debitForDuel</code>, <code>debitForTip</code>, <code>accrueEarned</code>, <code>markSettled</code> — each returns a discriminated result (<code>insufficient</code>, <code>capped</code>, <code>recorded</code>), debit-then-record ordering stated in code.</li>
-<li><input type="checkbox"> Conservation property test: any sequence of operations preserves <code>funded = float + earned_unsettled + settled</code> per profile and globally; concurrent-debit race pinned via the atomic decrement result.</li>
+<li><input type="checkbox" checked> Integer kudos units only. <code>fundFloat</code>, <code>debitForDuel</code>, <code>debitForTip</code>, <code>accrueEarned</code>, <code>markSettled</code> — each returns a discriminated result (<code>insufficient</code>, <code>capped</code>, <code>recorded</code>), debit-then-record ordering stated in code.</li>
+<li><input type="checkbox" checked> Conservation property test: any sequence of operations preserves <code>funded = float + earned_unsettled + settled</code> per profile and globally; concurrent-debit race pinned via the atomic decrement result.</li>
 </ul></div>
 
 <div class="task"><span class="tasknum">Task 4 · the dealer</span> <span class="badge">pure + token</span>
