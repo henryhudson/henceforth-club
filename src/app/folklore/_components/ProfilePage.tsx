@@ -71,7 +71,7 @@ export default function ProfilePage({
     ) : undefined;
 
   return (
-    <main className="min-h-screen bg-background pt-16">
+    <main className="min-h-screen bg-background">
       <header className="mx-auto max-w-2xl px-6 py-8 text-center">
         <p className="ledger-label">Reclaimed from X · {txid ? "on Bitcoin" : "preview"}</p>
         {txid ? (

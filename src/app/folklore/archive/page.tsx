@@ -67,7 +67,7 @@ export default async function ArchivePage() {
   const kudosEnabled = process.env.KUDOS_ENABLED === "true";
 
   return (
-    <div className="min-h-screen bg-background pt-20">
+    <div className="min-h-screen bg-background">
       <header className="mx-auto max-w-2xl px-6 py-10 text-center">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Archive yours</p>
         <h1 className="mt-3 text-3xl font-bold text-foreground">&pound;2 + the inscription fee</h1>

@@ -65,7 +65,7 @@ export default async function FolklorePage() {
   return (
     // A <div>, not a <main>: the root layout already provides the single <main>
     // landmark for every page (see app/layout.tsx).
-    <div className="min-h-screen bg-background pt-16">
+    <div className="min-h-screen bg-background">
       {/* The mark and its tagline, and nothing else. The archive IS the
           argument — a stranger should meet real posts read from the chain
           before they meet a pitch, which is the whole finding of the

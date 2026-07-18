@@ -38,7 +38,8 @@ export default function Navbar() {
     };
   }, [open]);
 
-  if (pathname?.startsWith("/provenance")) return null;
+  // Immersive surfaces — no club chrome. Provenance and Folklore own the frame.
+  if (pathname?.startsWith("/provenance") || pathname?.startsWith("/folklore")) return null;
 
   const apps: NavLink[] = [
     { href: "/henceforth", label: "Henceforth", hoverColor: "hover:text-accent-warm" },

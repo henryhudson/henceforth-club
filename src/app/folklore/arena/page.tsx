@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default function ArenaPage() {
   if (process.env.KUDOS_ENABLED !== "true") notFound();
   return (
-    <main className="min-h-screen bg-background pt-16">
+    <main className="min-h-screen bg-background">
       <Arena />
     </main>
   );

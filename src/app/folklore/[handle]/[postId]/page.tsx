@@ -48,7 +48,7 @@ export default async function PostPage(
   const thread = feed && threadIndex >= 0 ? buildThreadContext(feed.posts)[threadIndex] : undefined;
 
   return (
-    <main className="min-h-screen bg-background pt-16">
+    <main className="min-h-screen bg-background">
       <div className="mx-auto max-w-[68ch] px-6 py-8">
         <p className="ledger-label mb-3">
           <Link href={`/folklore/${handle}`} className="hover:text-accent">
