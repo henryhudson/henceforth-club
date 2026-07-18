@@ -35,13 +35,15 @@
 <p class="lede">Kudos are satoshis wearing a friendlier name. The arena deals two texts; you give kudos — one or many — to the one you prefer, and that gesture crowns the duel: 0.1&nbsp;pence per kudos moves from your float to the winning author, and the rating that sorts the whole folklore is a pure fold over the duels. One document — the design and the build plan together, at Henry's request.</p>
 </header>
 
-<div class="note"><strong>Decisions settled in brainstorm (Henry, 2026-07-18):</strong> kudos are paid but never called satoshis in copy &middot; duels replace the planned up/down paid-vote pipeline (<code>xtext-v2-t4/t5</code> superseded) &middot; one site-wide Elo pool &middot; a kudos is 0.1 UK pence &middot; opening a profile costs <strong>£2 + the archive's inscription cost</strong> and the £2 returns to the user as their kudos float (~2,000 kudos) &middot; giving kudos is click-only, no QR at the moment of choice &middot; kudos are private &middot; in-feed kudos on any text as you browse &middot; <strong>no vote buttons anywhere</strong> — the kudos gesture itself (one or more) crowns the dealt pair's winner; the amount is money and generosity, the rating swing stays binary (2026-07-18 evening correction).</div>
+<div class="note"><strong>Decisions settled in brainstorm (Henry, 2026-07-18):</strong> kudos are paid but never called satoshis in copy &middot; duels replace the planned up/down paid-vote pipeline (<code>xtext-v2-t4/t5</code> superseded) &middot; one site-wide Elo pool &middot; a kudos is 0.1 UK pence &middot; opening a profile costs <strong>£2 + the archive's inscription cost</strong> and the £2 returns to the user as their kudos float (~2,000 kudos) &middot; giving kudos is click-only, no QR at the moment of choice &middot; kudos are private &middot; in-feed kudos on any text as you browse &middot; <strong>no vote buttons anywhere</strong> — the kudos gesture itself (one or more) crowns the dealt pair's winner; the amount is money and generosity, the rating swing stays binary (2026-07-18 evening correction) &middot; <strong>Stripe card payments alongside the bitcoin QR</strong> for profile creation, both crediting the same float ledger; the card price grosses up to cover fees and a tax reserve — <strong>the tax numbers themselves are set with Henry in the taxes session on 2026-07-19</strong>.</div>
 
 <h2>Part one — the design</h2>
 
 <h3>1 · Product shape and money flow</h3>
 <p>Opening a folklore profile is repriced from the staged flat £1 to <strong>£2 + inscription cost</strong>, priced at the live pound rate through the existing <code>quoteArchive</code> sum type (fails closed on no rate, floors above fee + dust). The £2 is not revenue: it funds the buyer's <strong>kudos float</strong> — 2,000 kudos at 0.1 pence each, a private balance attached to their profile. Kudos spent flow to the receiving text's author; authors' earnings accrue privately and the Mac mini worker settles them <strong>on-chain in real satoshis</strong> on a daily aggregated sweep. The economy is circular: your £2 funds your taste-making, being ranked well funds more of yours.</p>
-<p><strong>Custody, named honestly:</strong> between funding and settlement the float pool is platform custody — a step past spec B's ephemeral per-job class, because it stands. It therefore ships flag-gated behind a full adversarial money-path review (task 11) and a funded end-to-end (task 12). A user-triggered withdraw leg is the designed fast follow, deliberately not in this build.</p>
+<p><strong>Two funding rails, one float ledger.</strong> Bitcoiners pay the existing QR; everyone else pays card via Stripe Checkout — the webhook credits the float as closed-loop kudos points and starts the archive job. On the card rail <em>no bitcoin moves at funding time at all</em>: the payer's float is ledger points spendable only in the folklore, and treasury converts to satoshis only when authors settle. That closed-loop framing is deliberate Stripe posture — the card payer never receives withdrawable cryptocurrency (the authors do, and they are not the card payers), which keeps the product out of Stripe's restricted-business category. Consequence: the withdraw-your-float fast follow stays <strong>parked while card payments exist</strong>.</p>
+<p><strong>Pricing grosses up, in one place:</strong> <code>card_price = (FLOAT_POUNDS + inscription_cost + MARGIN_POUNDS) / (1 − TAX_RESERVE_RATE) + stripe_fees</code>, every parameter a named constant. <code>TAX_RESERVE_RATE</code> is a placeholder until the taxes session (2026-07-19, with Henry's accountant's numbers — value-added-tax exposure, capital-gains treatment of treasury disposals, and the income reserve are decided there, not here). A <strong>revenue ledger</strong> records every sale (gross, Stripe fee, tax reserve, float liability, inscription cost) and every settlement's market value at time of send (each treasury disposal is a capital-gains event), exportable as a spreadsheet for the accountant.</p>
+<p><strong>Custody, named honestly:</strong> between funding and settlement the float pool is platform custody — a step past spec B's ephemeral per-job class, because it stands. It therefore ships flag-gated behind a full adversarial money-path review (task 11) and a funded end-to-end (task 12).</p>
 
 <h3>2 · The Elo algorithm — a pure fold, never a stored number</h3>
 <p>Exactly the <code>xScore.ts</code> shape: an <strong>append-only duel ledger</strong> is the only truth; ratings are a deterministic replay over it, so a correction (a gamed batch struck out, a refunded float) is a replay, never a patch to a cached number.</p>
@@ -77,7 +79,7 @@
 <li><strong>Superseded:</strong> the ▲/▼ ballot-address pipeline (<code>xtext-v2-t4</code>) and its decayed-fold Best ranking (<code>xtext-v2-t5</code>). Losing a duel is the downvote; the platform-collects-downvotes leg dies entirely.</li>
 <li><strong>Kept:</strong> the sats economics display (earned chips, founding costs) — money and quality become two separate visible axes. Founding entries stay as economics, not ranking.</li>
 <li><strong>Repriced before it ever went live:</strong> the staged £1 flat web-archive price becomes £2 + cost as part of this build — the £1 go-live queue should either flip with the old price and reprice later, or wait and flip once (Henry's call, flagged on the go-live card).</li>
-<li><strong>Out of this build:</strong> the withdraw leg (fast follow), card payments, treasury promo gifting, media duels, multi-device account recovery.</li>
+<li><strong>Out of this build:</strong> the withdraw leg (parked while card payments exist — Stripe posture), treasury promo gifting, media duels, multi-device account recovery.</li>
 </ul>
 
 <h2>Part two — the build plan</h2>
@@ -85,7 +87,7 @@
 <div class="note"><strong>For agentic workers:</strong> REQUIRED SUB-SKILL — <code>superpowers:subagent-driven-development</code> or <code>superpowers:executing-plans</code>. Repository: <code>/Users/henryhudson/Programming/Main/henceforth-club</code>, work on <code>main</code>, commit per task, <strong>every push deploys production in ~30 seconds</strong> — nothing in tasks 1–10 is reachable while <code>KUDOS_ENABLED</code> is unset, and the arena page and kudos controls render only behind it. Errors as values in the pure core; time and randomness are parameters; no acronyms in prose; commits end <code>Co-Authored-By: Claude Fable 5 &lt;noreply@anthropic.com&gt;</code>. Suite is ~650 green before this plan; every task ends with the full suite green.</div>
 
 <h3>Tuning constants (one module, task 1)</h3>
-<p><code>KUDOS_PENCE = 0.1</code> · <code>FLOAT_POUNDS = 2</code> · <code>ELO_START = 1500</code> · <code>K_PROVISIONAL = 40</code> · <code>K_ESTABLISHED = 16</code> · <code>PROVISIONAL_DUELS = 20</code> · <code>AUTHOR_TOP_N = 5</code> · <code>DEAL_MIX = 60/20/15/5</code> · <code>PAIR_TOKEN_MINUTES = 10</code> · <code>DAILY_DUEL_CAP = 200</code> · <code>SETTLE_DUST_SATS = 546</code></p>
+<p><code>KUDOS_PENCE = 0.1</code> · <code>FLOAT_POUNDS = 2</code> · <code>ELO_START = 1500</code> · <code>K_PROVISIONAL = 40</code> · <code>K_ESTABLISHED = 16</code> · <code>PROVISIONAL_DUELS = 20</code> · <code>AUTHOR_TOP_N = 5</code> · <code>DEAL_MIX = 60/20/15/5</code> · <code>PAIR_TOKEN_MINUTES = 10</code> · <code>DAILY_DUEL_CAP = 200</code> · <code>SETTLE_DUST_SATS = 546</code> · <code>MARGIN_POUNDS</code>, <code>TAX_RESERVE_RATE</code>, <code>STRIPE_FEE_RATE</code>, <code>STRIPE_FEE_FIXED_PENCE</code> — <span class="badge">set in the 2026-07-19 taxes session</span></p>
 
 <div class="task"><span class="tasknum">Task 1 · the Elo core</span> <span class="badge">pure</span>
 <div class="files">src/lib/kudos/elo.ts · src/lib/kudos/constants.ts · elo.test.ts</div>
@@ -155,9 +157,23 @@
 <li><input type="checkbox"> Daily sweep: read accruals ≥ dust, one aggregated payment per author from the float pool, <code>markSettled</code> on acceptance only, sub-dust rolls, every movement logged. Idempotent per day; a failed broadcast leaves accruals intact.</li>
 </ul></div>
 
+<div class="task"><span class="tasknum">Task 13 · Stripe rail</span> <span class="badge">money · stripe</span> <span class="effort">(build order: after task 7, before the gates — numbered here to preserve task identities above)</span>
+<div class="files">src/app/api/folklore/checkout/route.ts · webhook route · src/lib/kudos/pricing.ts · tests</div>
+<ul class="steps">
+<li><input type="checkbox"> <code>pricing.ts</code>: the gross-up function as a pure total function of named constants + inscription quote; tests pin the arithmetic and the fail-closed arms (no live rate → no card price).</li>
+<li><input type="checkbox"> Stripe Checkout session for profile creation (card price from <code>pricing.ts</code>); the webhook — signature-verified, idempotent by event id — credits the float and enqueues the archive job exactly once. Replay, forgery, and duplicate-event tests.</li>
+<li><input type="checkbox"> Refunds and disputes: a refund webhook freezes the float, claws back the unspent balance, records any shortfall (spent-then-refunded) in the revenue ledger; disputes never mint or double-credit. Tests.</li>
+</ul></div>
+
+<div class="task"><span class="tasknum">Task 14 · revenue ledger + accountant export</span> <span class="badge">accounting</span> <span class="effort">(build order: with task 13)</span>
+<div class="files">src/lib/kudos/revenue.ts · export script · tests</div>
+<ul class="steps">
+<li><input type="checkbox"> Append-only revenue ledger: per sale — gross, Stripe fee, tax reserve, float liability, inscription cost, rail; per settlement — recipient, kudos, satoshis, market value at send (the capital-gains disposal record). Spreadsheet export for the accountant. Conservation extends across rails: card-funded + QR-funded = floats + earned + settled.</li>
+</ul></div>
+
 <div class="task"><span class="tasknum">Task 11 · GATE — adversarial money-path review</span> <span class="badge">gate</span>
 <ul class="steps">
-<li><input type="checkbox"> Three lenses (money / data-integrity / regression) attack the float pool custody, the £2 round-trip, the conservation invariant under races, the dealer's gaming surface, and the settlement sweep. Unanimous SHIP required; blockers loop to a fix round, as with the retry fix's three-round gate.</li>
+<li><input type="checkbox"> Three lenses (money / data-integrity / regression) attack the float pool custody, the £2 round-trip on BOTH rails, the Stripe webhook (forgery, replay, refund-after-spend), the conservation invariant under races, the dealer's gaming surface, and the settlement sweep. Unanimous SHIP required; blockers loop to a fix round, as with the retry fix's three-round gate.</li>
 </ul></div>
 
 <div class="task"><span class="tasknum">Task 12 · GATE — funded end-to-end + flag</span> <span class="badge">gate · Henry</span>
@@ -168,6 +184,7 @@
 
 <h2>Open decisions (Henry)</h2>
 <ul>
+<li><strong>Taxes session, 2026-07-19:</strong> set <code>TAX_RESERVE_RATE</code>, <code>MARGIN_POUNDS</code>, and the Stripe fee constants with the accountant's numbers; settle the value-added-tax question and the capital-gains recording detail. The build does not need these to start — they are constants, and tasks 1–5 touch no pricing.</li>
 <li>Go-live sequencing: flip the staged web archive at £1 first and reprice to £2 with kudos later, or hold and launch once at £2 + float?</li>
 <li>Settlement cadence: daily (designed) or weekly to start?</li>
 <li>Arena placement: linked from the folklore landing header, or a card in the gateway?</li>
