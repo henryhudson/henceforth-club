@@ -31,11 +31,7 @@
   font-family: var(--mb-mono);
   font-size: 12.5px;
   line-height: 1.5;
-  background-image:
-    radial-gradient(ellipse 80% 50% at 50% -10%, var(--mb-grid-fade), transparent 55%),
-    linear-gradient(var(--mb-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--mb-line) 1px, transparent 1px);
-  background-size: 100% 100%, 48px 48px, 48px 48px;
+  background-image: radial-gradient(ellipse 80% 50% at 50% -10%, var(--mb-grid-fade), transparent 55%);
   background-attachment: fixed;
   color-scheme: light;
 }
@@ -690,6 +686,6 @@ body:has(.morning-board[data-theme="dark"]) {
 
 @media (prefers-reduced-motion: reduce) {
   .morning-board {
-    background-image: none;
+    background-image: radial-gradient(ellipse 80% 50% at 50% -10%, var(--mb-grid-fade), transparent 55%);
   }
 }
