@@ -21,9 +21,19 @@ type QuoteResponse = {
   jobId: string;
   feeSats: number;
   premiumSats: number;
+  floatSats: number;
   priceSats: number;
+  kudosEnabled: boolean;
   claimedHandle: boolean;
   notice?: string;
+};
+
+/** The £2 leg landing as kudos on the done screen — present on exactly one
+ * poll response, the first to see the job done; the server never sends the
+ * recovery string twice, and never sends it at all while kudos are off. */
+type KudosFloatGrant = {
+  recoveryString: string;
+  kudos: number;
 };
 
 type JobStatus = {
@@ -35,6 +45,7 @@ type JobStatus = {
   inscriptionTxid?: string;
   sweepTxid?: string;
   failureReason?: string;
+  kudosFloat?: KudosFloatGrant;
 };
 
 export default function ArchiveFlow() {
@@ -45,6 +56,7 @@ export default function ArchiveFlow() {
   const [status, setStatus] = useState<JobStatus | null>(null);
   const [permanenceChecked, setPermanenceChecked] = useState(false);
   const [ownAccountChecked, setOwnAccountChecked] = useState(false);
+  const [floatGrant, setFloatGrant] = useState<KudosFloatGrant | null>(null);
 
   const jobId = quote?.jobId;
   const isTerminal = status?.state === "done" || status?.state === "swept";
@@ -61,7 +73,13 @@ export default function ArchiveFlow() {
         const res = await fetch(`/api/folklore/job/${jobId}`);
         if (!res.ok) return; // transient — retried next tick
         const body = (await res.json()) as JobStatus;
-        if (active) setStatus(body);
+        if (active) {
+          setStatus(body);
+          // The recovery string arrives on exactly one response; keep it in
+          // state so the done screen can render it — once, never again after
+          // this page is gone.
+          if (body.kudosFloat) setFloatGrant(body.kudosFloat);
+        }
       } catch {
         // a flaky fetch just leaves the last known status in place
       }
@@ -143,7 +161,8 @@ export default function ArchiveFlow() {
               <span className="text-foreground">tweets.js · profile.js · account.js</span>{" "}
               from the export X emailed you
               <span className="mt-1 block text-xs">
-                Sent to us once, to inscribe for a flat £1. Nothing else leaves your browser.
+                Sent to us once, to inscribe for £2 plus the miner&rsquo;s fee. Nothing else leaves
+                your browser.
               </span>
             </>
           )}
@@ -163,7 +182,7 @@ export default function ArchiveFlow() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-6 pb-16">
-      <QuoteCard priceSats={quote.priceSats} claimedNotice={quote.notice} />
+      <QuoteCard priceSats={quote.priceSats} claimedNotice={quote.notice} kudosEnabled={quote.kudosEnabled} />
 
       <div className="space-y-3 rounded-2xl border border-card-border bg-card-bg p-6 text-sm">
         <label className="flex items-start gap-2">
@@ -200,6 +219,21 @@ export default function ArchiveFlow() {
           <Link href={`/folklore/${handle}`} className="mt-3 inline-block text-accent hover:underline">
             View your archive &rarr;
           </Link>
+        )}
+        {status.state === "done" && floatGrant && (
+          <div className="mt-5 border-t border-card-border pt-5 text-left">
+            <p className="font-semibold text-foreground">
+              Your kudos float is funded &mdash; {floatGrant.kudos.toLocaleString("en-GB")} kudos to
+              give to the writing you rate.
+            </p>
+            <p className="mt-2 text-sm text-muted">
+              This browser is signed in already. Your recovery string, shown exactly once &mdash;
+              save it now; it is the only way into your kudos from another device:
+            </p>
+            <p className="mt-2 select-all break-all rounded-lg border border-card-border bg-background p-3 font-mono text-sm text-foreground">
+              {floatGrant.recoveryString}
+            </p>
+          </div>
         )}
       </div>
     </div>

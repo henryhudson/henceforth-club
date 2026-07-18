@@ -10,6 +10,11 @@ export const KUDOS_PENCE = 0.1;
  * (2,000 kudos at KUDOS_PENCE each). */
 export const FLOAT_POUNDS = 2;
 
+/** The kudos the £2 leg funds on completion: FLOAT_POUNDS in pence at
+ * KUDOS_PENCE per kudos, rounded once here — the raw floating-point division
+ * lands a hair under 2,000, and the credit must be one exact integer. */
+export const FLOAT_KUDOS = Math.round((FLOAT_POUNDS * 100) / KUDOS_PENCE);
+
 /** Every text starts here; a rating is a fold over the duel ledger, never a
  * stored number. */
 export const ELO_START = 1500;

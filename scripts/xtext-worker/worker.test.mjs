@@ -6,7 +6,7 @@ import { P2PKH, PrivateKey, Script, Transaction } from "@bsv/sdk";
 import { applyEvent } from "@/lib/folkloreJob/jobs";
 import { createJobKey, loadJobKey } from "./keystore.mjs";
 import { buildSweepTx } from "./sweep.mjs";
-import { revenueAddressError, runWorkerTick } from "./worker.mjs";
+import { floatLegSats, floatPoolAddressError, revenueAddressError, runWorkerTick } from "./worker.mjs";
 
 const WRAP_KEY = Buffer.from("11".repeat(32), "hex");
 
@@ -76,6 +76,32 @@ describe("revenueAddressError (hard rule 1 — refuse to start without a valid c
   });
   it("a valid address is accepted", () => {
     expect(revenueAddressError(PrivateKey.fromRandom().toAddress())).toBeNull();
+  });
+});
+
+describe("floatPoolAddressError — the £2 leg's destination, validated like the revenue address", () => {
+  it("an unset float pool address refuses (per job, not at startup)", () => {
+    expect(floatPoolAddressError("")).not.toBeNull();
+    expect(floatPoolAddressError(undefined)).not.toBeNull();
+  });
+  it("a malformed float pool address refuses", () => {
+    expect(floatPoolAddressError("not-an-address")).not.toBeNull();
+  });
+  it("a valid address is accepted", () => {
+    expect(floatPoolAddressError(PrivateKey.fromRandom().toAddress())).toBeNull();
+  });
+});
+
+describe("floatLegSats — the £2 leg derived from the untouched record schema", () => {
+  it("is price minus fee minus premium on a £2-era record", () => {
+    expect(floatLegSats({ feeSats: 1_000, premiumSats: 0, priceSats: 19_000 })).toBe(18_000);
+  });
+  it("is zero on a £1-era record, whose fee plus premium is the whole price", () => {
+    expect(floatLegSats({ feeSats: 500, premiumSats: 9_290_000, priceSats: 9_290_500 })).toBe(0);
+  });
+  it("is zero on records missing or corrupting the decomposition", () => {
+    expect(floatLegSats({ premiumSats: 5_000, priceSats: 6_000 })).toBe(0); // no feeSats recorded
+    expect(floatLegSats({ feeSats: 2_000, premiumSats: 0, priceSats: 1_000 })).toBe(0); // negative leg
   });
 });
 
@@ -161,6 +187,115 @@ describe("runWorkerTick", () => {
 
       expect(loadJobKey("happy-job", WRAP_KEY, jobsDir)).toBeNull();
       expect(store.jobs.get("happy-job").state).toBe("done"); // still terminal — the reap changes no state
+    } finally {
+      rmSync(jobsDir, { recursive: true, force: true });
+    }
+  });
+
+  it("routes a £2-era job's float leg to the float pool address alongside the inscription", async () => {
+    const jobsDir = mkdtempSync(path.join(tmpdir(), "xtext-worker-float-"));
+    try {
+      const revenueAddress = PrivateKey.fromRandom().toAddress();
+      const floatPoolAddress = PrivateKey.fromRandom().toAddress();
+      const fundingTxid = "55".repeat(32);
+      const fundingHex = fundingTxHex(standardP2pkhUnlock(PrivateKey.fromRandom()));
+      const archive = { v: 1, source: "x", handle: "flora", profile: {}, posts: [{ id: "1", at: "2020-01-01", text: "hi" }] };
+
+      expect(createJobKey("float-job", WRAP_KEY, jobsDir)).not.toBeNull();
+      const store = makeStore(
+        [
+          {
+            jobId: "float-job",
+            handle: "flora",
+            state: "funded",
+            feeSats: 1_000,
+            premiumSats: 0,
+            priceSats: 19_000,
+            expiresAtMs: 10_000,
+            fundingTxid,
+            fundingVout: 0,
+            fundingSats: 1_000_000,
+          },
+        ],
+        { "float-job": archive },
+      );
+      const fetchFn = stubFetch({ fundingTxid, fundingHex, utxoValue: 1_000_000 });
+
+      await runWorkerTick({
+        listJobsInState: store.listJobsInState,
+        advance: store.advance,
+        getPayload: store.getPayload,
+        fetchFn,
+        wrapKey: WRAP_KEY,
+        jobsDir,
+        revenueAddress,
+        floatPoolAddress,
+        feeRate: 100,
+        registerBaseUrl: "https://www.henceforth.club",
+        nowMs: 2_000,
+      });
+
+      expect(store.jobs.get("float-job").state).toBe("done");
+
+      // The broadcast bytes themselves carry the float leg: exactly 18,000
+      // satoshis (price minus fee minus premium) locked to the pool address.
+      const arcCall = fetchFn.mock.calls.find(([url]) => url.includes("arc.gorillapool.io"));
+      expect(arcCall).toBeDefined();
+      const tx = Transaction.fromHex(arcCall[1].body);
+      const poolScript = new P2PKH().lock(floatPoolAddress).toHex();
+      const poolOutputs = tx.outputs.filter((o) => o.lockingScript.toHex() === poolScript);
+      expect(poolOutputs).toHaveLength(1);
+      expect(poolOutputs[0].satoshis).toBe(18_000);
+      // No premium output — the £2 is not revenue.
+      const revenueScript = new P2PKH().lock(revenueAddress).toHex();
+      expect(tx.outputs.some((o) => o.lockingScript.toHex() === revenueScript)).toBe(false);
+    } finally {
+      rmSync(jobsDir, { recursive: true, force: true });
+    }
+  });
+
+  it("a float leg with no float pool configured refuses to inscribe and routes to the refund path", async () => {
+    const jobsDir = mkdtempSync(path.join(tmpdir(), "xtext-worker-nopool-"));
+    try {
+      const fundingTxid = "66".repeat(32);
+      const fundingHex = fundingTxHex(standardP2pkhUnlock(PrivateKey.fromRandom()));
+      const archive = { v: 1, source: "x", handle: "flora", profile: {}, posts: [{ id: "1", at: "2020-01-01", text: "hi" }] };
+
+      const store = makeStore(
+        [
+          {
+            jobId: "no-pool-job",
+            handle: "flora",
+            state: "funded",
+            feeSats: 1_000,
+            premiumSats: 0,
+            priceSats: 19_000,
+            expiresAtMs: 10_000,
+            fundingTxid,
+            fundingVout: 0,
+            fundingSats: 1_000_000,
+          },
+        ],
+        { "no-pool-job": archive },
+      );
+      const fetchFn = stubFetch({ fundingTxid, fundingHex, utxoValue: 1_000_000 });
+
+      await runWorkerTick({
+        listJobsInState: store.listJobsInState,
+        advance: store.advance,
+        getPayload: store.getPayload,
+        fetchFn,
+        wrapKey: WRAP_KEY,
+        jobsDir,
+        revenueAddress: PrivateKey.fromRandom().toAddress(),
+        feeRate: 100,
+        registerBaseUrl: "https://www.henceforth.club",
+        nowMs: 2_000,
+      });
+
+      const job = store.jobs.get("no-pool-job");
+      expect(job.state).toBe("sweeping");
+      expect(job.failureReason).toBe("float-pool-unconfigured");
     } finally {
       rmSync(jobsDir, { recursive: true, force: true });
     }

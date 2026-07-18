@@ -53,20 +53,21 @@ const PARSED_OK = {
   archiveBytes: 1234,
   contentHash: "hash123",
 };
-const QUOTE = { feeSats: 500, premiumSats: 9_290_000, priceSats: 9_290_500 };
+const QUOTE = { feeSats: 500, floatSats: 18_581_000, premiumSats: 0, priceSats: 18_581_500 };
 const JOB = {
   jobId: "job-1",
   handle: "henry",
   contentHash: "hash123",
   feeSats: 500,
-  premiumSats: 9_290_000,
-  priceSats: 9_290_500,
+  premiumSats: 0,
+  priceSats: 18_581_500,
   state: "quoted" as const,
   createdAtMs: 1_700_000_000_000,
   expiresAtMs: 1_700_000_900_000,
 };
 
 beforeEach(() => {
+  vi.unstubAllEnvs();
   vi.stubEnv("XTEXT_WEB_ARCHIVE_ENABLED", "true");
   mockParseXExport.mockReset();
   mockQuoteArchive.mockReset();
@@ -141,12 +142,24 @@ describe("POST /api/folklore/job", () => {
       priceSats: JOB.priceSats,
       feeSats: JOB.feeSats,
       premiumSats: JOB.premiumSats,
+      floatSats: QUOTE.floatSats,
+      kudosEnabled: false,
       expiresAtMs: JOB.expiresAtMs,
       claimedHandle: false,
     });
     expect(mockQuoteArchive).toHaveBeenCalledWith(PARSED_OK.archiveBytes, 10.76375);
     expect(mockGetOwner).toHaveBeenCalledWith("henry");
     expect(mockCreateJob).toHaveBeenCalledWith(PARSED_OK, QUOTE, expect.any(Number));
+  });
+
+  it("reports kudosEnabled true only when KUDOS_ENABLED is exactly \"true\" — checked server-side per request", async () => {
+    vi.stubEnv("KUDOS_ENABLED", "true");
+    const enabled = await (await POST(multipartRequest())).json();
+    expect(enabled.kudosEnabled).toBe(true);
+
+    vi.stubEnv("KUDOS_ENABLED", "1");
+    const disabled = await (await POST(multipartRequest())).json();
+    expect(disabled.kudosEnabled).toBe(false);
   });
 
   it("refuses with price-unavailable when the quote cannot convert the pound — no job is opened, no address issued", async () => {
@@ -157,7 +170,7 @@ describe("POST /api/folklore/job", () => {
     expect(mockCreateJob).not.toHaveBeenCalled();
   });
 
-  it("refuses distinctly when £1 no longer covers the fee — the rate is live, the price is the problem", async () => {
+  it("refuses distinctly when the £2 float leg falls to dust — the rate is live, the price is the problem", async () => {
     mockQuoteArchive.mockReturnValue({ kind: "price-below-fee" });
     const res = await POST(multipartRequest());
     expect(res.status).toBe(503);

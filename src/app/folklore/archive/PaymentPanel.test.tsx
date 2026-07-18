@@ -22,9 +22,10 @@ describe("PaymentPanel", () => {
     expect(html).toMatch(/<path d="M[^"]+"/);
   });
 
-  it("says the flat pound and the one-payment rule out loud", () => {
+  it("says the repriced sum and the one-payment rule out loud", () => {
     const html = renderToStaticMarkup(<PaymentPanel address={ADDRESS} priceSats={9_290_500} />);
-    expect(html).toContain("£1");
+    expect(html).toContain("£2 + inscription fee");
+    expect(html).not.toContain("£1");
     expect(html).toContain("one payment");
   });
 });

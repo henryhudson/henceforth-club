@@ -33,22 +33,30 @@ const REJECTED_STATUSES = new Set(["REJECTED", "DOUBLE_SPEND_ATTEMPTED"]);
 
 /**
  * Build the archive inscription transaction: one input (the visitor's funding
- * output at the job's custody address), two outputs — the archive as an
- * OP_RETURN carrying exactly the JSON the showroom reader parses, and the flat
- * premium to the revenue address. No reward output, no change output: the
- * overpayment above price becomes miner fee, so nothing routes back to the
- * ephemeral key.
+ * output at the job's custody address) and up to three outputs — the archive
+ * as an OP_RETURN carrying exactly the JSON the showroom reader parses, the
+ * premium to the revenue address when one exists (a £1-era job still in
+ * flight), and the £2 kudos float leg to the float pool address when one
+ * exists (every £2-era job; its premium is zero — the £2 is not revenue). No
+ * reward output, no change output: the overpayment above price becomes miner
+ * fee, so nothing routes back to the ephemeral key.
  *
  * The fee is implicit — input minus outputs, since there is no change to
- * absorb it — so a funding output too small to cover archive plus premium plus
- * the size-based fee cannot build a valid transaction. That is a refusal, not a
- * throw: { ok: false, reason: "underfunded" } routes to broadcast-failed and
- * the sweep, never a malformed broadcast.
+ * absorb it — so a funding output too small to cover archive plus premium
+ * plus float leg plus the size-based fee cannot build a valid transaction.
+ * That is a refusal, not a throw: { ok: false, reason: "underfunded" } routes
+ * to broadcast-failed and the sweep, never a malformed broadcast. A float leg
+ * with no pool address to pay it to refuses the same way — money never
+ * broadcasts to nowhere.
  *
- * revenueAddress is a required argument, never read from a constant — the
- * worker owns the one true value and gates on it at startup.
+ * revenueAddress and floatPoolAddress are arguments, never read from
+ * constants — the worker owns the true values and gates on them.
  */
-export async function buildInscriptionTx({ jobKey, funding, archiveJson, premiumSats, revenueAddress, feeRate }) {
+export async function buildInscriptionTx({ jobKey, funding, archiveJson, premiumSats, revenueAddress, floatSats = 0, floatPoolAddress = null, feeRate }) {
+  if (floatSats > 0 && !floatPoolAddress) {
+    return { ok: false, reason: "float-pool-unconfigured" };
+  }
+
   const json = typeof archiveJson === "string" ? archiveJson : JSON.stringify(archiveJson);
 
   const tx = new Transaction();
@@ -70,10 +78,15 @@ export async function buildInscriptionTx({ jobKey, funding, archiveJson, premium
     .writeOpCode(OP.OP_RETURN)
     .writeBin(Utils.toArray(json, "utf8"));
   tx.addOutput({ lockingScript: opReturn, satoshis: 0 });
-  tx.addOutput({ lockingScript: new P2PKH().lock(revenueAddress), satoshis: premiumSats });
+  if (premiumSats > 0) {
+    tx.addOutput({ lockingScript: new P2PKH().lock(revenueAddress), satoshis: premiumSats });
+  }
+  if (floatSats > 0) {
+    tx.addOutput({ lockingScript: new P2PKH().lock(floatPoolAddress), satoshis: floatSats });
+  }
 
   const requiredFee = await new SatoshisPerKilobyte(feeRate).computeFee(tx);
-  const availableFee = funding.sats - premiumSats; // no change output — everything left is fee
+  const availableFee = funding.sats - premiumSats - floatSats; // no change output — everything left is fee
   if (availableFee < requiredFee) {
     return { ok: false, reason: "underfunded" };
   }

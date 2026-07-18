@@ -30,13 +30,16 @@ describe("the showroom never reaches X", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("costs nothing to run: no file under src/app/folklore reads an environment variable, other than the web archive's own mechanical gate", () => {
-    // XTEXT_WEB_ARCHIVE_ENABLED (task 10, src/app/folklore/archive/page.tsx) is an
-    // in-house feature flag, never a credential and never a path to X's
-    // costed application programming interface — the one allowed exception
+  it("costs nothing to run: no file under src/app/folklore reads an environment variable, other than the in-house feature flags", () => {
+    // XTEXT_WEB_ARCHIVE_ENABLED (task 10, src/app/folklore/archive/page.tsx)
+    // and KUDOS_ENABLED (the kudos economy's own gate, same page) are
+    // in-house feature flags, never credentials and never a path to X's
+    // costed application programming interface — the only allowed exceptions
     // to this invariant.
     const offenders = files.filter((f) => {
-      const content = readFileSync(f, "utf8").replaceAll("process.env.XTEXT_WEB_ARCHIVE_ENABLED", "");
+      const content = readFileSync(f, "utf8")
+        .replaceAll("process.env.XTEXT_WEB_ARCHIVE_ENABLED", "")
+        .replaceAll("process.env.KUDOS_ENABLED", "");
       return content.includes("process.env");
     });
     expect(offenders).toEqual([]);

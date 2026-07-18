@@ -1,33 +1,41 @@
 import { describe, expect, it } from "vitest";
 import { estimateSingleOpReturn } from "@/lib/archiveCost";
+import { FLOAT_POUNDS } from "@/lib/kudos/constants";
 import { quoteArchive, type QuoteResult } from "./quote";
 
 /** 2026-07-10's hand-read rate, now injected instead of frozen. */
 const RATE = 10.76375;
+
+const floatSatsAt = (rate: number) => Math.ceil((100_000_000 * FLOAT_POUNDS) / rate);
 
 function quoted(result: QuoteResult) {
   if (result.kind !== "quoted") throw new Error(`expected a quote, got ${result.kind}`);
   return result.quote;
 }
 
-describe("quoteArchive — a flat £1 at the live rate", () => {
-  it("prices exactly one pound of satoshis, rounded up", () => {
+describe("quoteArchive — the inscription fee plus the £2 kudos float leg, at the live rate", () => {
+  it("prices exactly fee plus two pounds of satoshis, the float leg rounded up", () => {
     const q = quoted(quoteArchive(208731, RATE));
-    expect(q.priceSats).toBe(Math.ceil(100_000_000 / RATE)); // 9,290,443
-  });
-
-  it("keeps the fee/premium decomposition the worker spends by: fee from the fixture-pinned estimator, premium the remainder", () => {
-    const q = quoted(quoteArchive(208731, RATE));
+    expect(q.floatSats).toBe(floatSatsAt(RATE));
     expect(q.feeSats).toBe(estimateSingleOpReturn(208731).minerFeeSats);
-    expect(q.premiumSats).toBe(q.priceSats - q.feeSats);
-    expect(q.feeSats + q.premiumSats).toBe(q.priceSats); // no satoshi invented or lost
+    expect(q.priceSats).toBe(q.feeSats + q.floatSats);
   });
 
-  it("a dearer coin means fewer satoshis — the pound is the constant", () => {
+  it("keeps a complete decomposition the worker spends by: fee + premium + float = price, no satoshi invented or lost", () => {
+    const q = quoted(quoteArchive(208731, RATE));
+    expect(q.feeSats + q.premiumSats + q.floatSats).toBe(q.priceSats);
+  });
+
+  it("carries no revenue premium — the £2 funds the buyer's kudos float, it is not income", () => {
+    const q = quoted(quoteArchive(208731, RATE));
+    expect(q.premiumSats).toBe(0);
+  });
+
+  it("a dearer coin means a smaller float leg — the two pounds are the constant", () => {
     const cheap = quoted(quoteArchive(1000, 10));
     const dear = quoted(quoteArchive(1000, 100));
-    expect(dear.priceSats).toBeLessThan(cheap.priceSats);
-    expect(dear.priceSats).toBe(1_000_000);
+    expect(dear.floatSats).toBeLessThan(cheap.floatSats);
+    expect(dear.floatSats).toBe(2_000_000);
   });
 
   it("fails closed without a live rate: undefined, zero, negative and NaN all refuse", () => {
@@ -36,15 +44,15 @@ describe("quoteArchive — a flat £1 at the live rate", () => {
     }
   });
 
-  it("refuses when the £1 no longer covers the miner fee plus dust — money is never taken for an uninscribable job", () => {
-    // 1,000,000 archive bytes → ~100,024 sats fee. A rate above ~£994/coin
-    // pushes £1 below fee + dust; use £2,000/coin to be unambiguous.
-    expect(quoteArchive(1_000_000, 2000)).toEqual({ kind: "price-below-fee" });
+  it("refuses when the £2 float leg falls to dust — money is never taken for a float the worker could not pay on-chain", () => {
+    // £2 is 546 satoshis or fewer only above roughly £366,300 per coin;
+    // £400,000 per coin gives a 500-satoshi float leg, unambiguously dust.
+    expect(quoteArchive(1000, 400_000)).toEqual({ kind: "price-below-fee" });
   });
 
   it("prices garbage byte counts as zero-byte archives rather than emitting unrepresentable satoshis", () => {
     const q = quoted(quoteArchive(Number.NaN, RATE));
     expect(q.feeSats).toBe(0);
-    expect(q.priceSats).toBe(Math.ceil(100_000_000 / RATE));
+    expect(q.priceSats).toBe(floatSatsAt(RATE));
   });
 });

@@ -72,6 +72,40 @@ export function revenueAddressError(address) {
   }
 }
 
+/**
+ * Why a job's £2 kudos float leg cannot be paid: the float pool address
+ * (XTEXT_FLOAT_POOL_ADDRESS in the runner's environment) is unset or not a
+ * valid address. Unlike the revenue address this is NOT a startup gate — a
+ * worker with no pool configured runs fine until a float-leg job arrives,
+ * and then that one job refuses per tick and refunds, never paying the leg
+ * to nowhere. Pure, callable by the guard, the runner, and tests alike.
+ */
+export function floatPoolAddressError(address) {
+  if (typeof address !== "string" || address.length === 0) {
+    return "the float pool address is unset — set XTEXT_FLOAT_POOL_ADDRESS before kudos-float jobs can inscribe";
+  }
+  try {
+    new P2PKH().lock(address);
+    return null;
+  } catch {
+    return `the float pool address is not a valid address: ${address}`;
+  }
+}
+
+/**
+ * The £2 leg derived from the untouched record schema: price minus fee minus
+ * premium. Exactly zero for a £1-era record (fee plus premium was the whole
+ * price, and older records never stored feeSats at all), exactly the float
+ * leg for a £2-era one; anything corrupt reads as no leg rather than a
+ * negative or NaN output amount.
+ */
+export function floatLegSats(job) {
+  const { feeSats, premiumSats, priceSats } = job;
+  if (![feeSats, premiumSats, priceSats].every(Number.isSafeInteger)) return 0;
+  const leg = priceSats - feeSats - premiumSats;
+  return leg > 0 ? leg : 0;
+}
+
 /** Run one job's step, swallowing any throw so a single failure cannot abort
  * the tick. The task-7 review flagged that advance can throw; this is the net. */
 async function guarded(label, jobId, step) {
@@ -102,13 +136,23 @@ async function publishKeys({ listJobsInState, advance, wrapKey, jobsDir, nowMs }
  * (underfunded) or a spent broadcast budget routes to broadcast-failed, which
  * the state machine turns into sweeping. The key is deliberately NOT deleted
  * here — a sweeping job still needs it to refund. */
-async function inscribeFunded({ listJobsInState, advance, getPayload, wrapKey, jobsDir, revenueAddress, feeRate, fetchFn, taalApiKey, nowMs }) {
+async function inscribeFunded({ listJobsInState, advance, getPayload, wrapKey, jobsDir, revenueAddress, floatPoolAddress, feeRate, fetchFn, taalApiKey, nowMs }) {
   const funded = await listJobsInState("funded");
   for (const job of funded) {
     await guarded("inscribe", job.jobId, async () => {
       const archiveJson = await getPayload(job.jobId);
       if (!archiveJson) {
         await advance(job.jobId, { kind: "broadcast-failed", reason: "payload-missing" }, nowMs);
+        return;
+      }
+
+      // The £2 leg needs a destination before anything is signed or spent: a
+      // float-leg job on a worker with no valid pool address refuses here and
+      // routes to the refund path — the visitor's money goes home rather than
+      // the float leg going nowhere.
+      const floatSats = floatLegSats(job);
+      if (floatSats > 0 && floatPoolAddressError(floatPoolAddress)) {
+        await advance(job.jobId, { kind: "broadcast-failed", reason: "float-pool-unconfigured" }, nowMs);
         return;
       }
 
@@ -124,6 +168,8 @@ async function inscribeFunded({ listJobsInState, advance, getPayload, wrapKey, j
         archiveJson,
         premiumSats: job.premiumSats,
         revenueAddress,
+        floatSats,
+        floatPoolAddress,
         feeRate,
       });
       if (!built.ok) {
@@ -336,6 +382,19 @@ export function main() {
     process.exit(1);
   }
   console.log("xtext-worker: REVENUE_ADDRESS configured — the launchd runner wires the store and schedules ticks.");
+
+  // The float pool is softer than the revenue address: unset only means
+  // kudos-float jobs refuse and refund (said out loud here); set-but-invalid
+  // is a configuration lie and refuses to start like the revenue address.
+  const poolAddress = process.env.XTEXT_FLOAT_POOL_ADDRESS ?? "";
+  const poolError = floatPoolAddressError(poolAddress);
+  if (poolAddress.length > 0 && poolError) {
+    console.error(`xtext-worker refusing to start: ${poolError}`);
+    process.exit(1);
+  }
+  if (poolError) {
+    console.warn(`xtext-worker: ${poolError} — until then a job carrying a kudos float leg refuses to inscribe and refunds itself.`);
+  }
 }
 
 // Only when run directly (node worker.mjs), never on import — so a test that

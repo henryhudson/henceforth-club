@@ -14,7 +14,7 @@ import path from "node:path";
 import { register } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { wrappingKeyFromKeychain } from "./keystore.mjs";
-import { FEE_PER_KB, REVENUE_ADDRESS, revenueAddressError, runWorkerTick } from "./worker.mjs";
+import { FEE_PER_KB, REVENUE_ADDRESS, floatPoolAddressError, revenueAddressError, runWorkerTick } from "./worker.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(HERE, "../..");
@@ -34,6 +34,22 @@ if (startupError) {
   console.error(`xtext-worker refusing to start: ${startupError}`);
   console.error("Set REVENUE_ADDRESS in scripts/xtext-worker/worker.mjs (a task-10 gate item).");
   process.exit(1);
+}
+
+// The £2 kudos float leg's destination, read here (after .env.local loads —
+// a module-level constant in worker.mjs would evaluate before the file is
+// loaded). Unset is allowed: only kudos-float jobs need it, and each such job
+// refuses per tick and refunds until it is set. Set-but-invalid refuses to
+// start, exactly like the revenue address — a configured lie is worse than a
+// gap.
+const FLOAT_POOL_ADDRESS = process.env.XTEXT_FLOAT_POOL_ADDRESS ?? "";
+const floatPoolError = floatPoolAddressError(FLOAT_POOL_ADDRESS);
+if (FLOAT_POOL_ADDRESS.length > 0 && floatPoolError) {
+  console.error(`xtext-worker refusing to start: ${floatPoolError}`);
+  process.exit(1);
+}
+if (floatPoolError) {
+  console.warn(`xtext-worker: ${floatPoolError} — until then a job carrying a kudos float leg refuses to inscribe and refunds itself.`);
 }
 
 let wrapKey;
@@ -72,6 +88,7 @@ async function tick() {
       wrapKey,
       jobsDir,
       revenueAddress: REVENUE_ADDRESS,
+      floatPoolAddress: FLOAT_POOL_ADDRESS,
       feeRate: FEE_PER_KB,
       fetchFn: fetch,
       taalApiKey: process.env.XTEXT_TAAL_API_KEY,

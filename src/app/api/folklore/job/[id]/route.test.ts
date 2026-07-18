@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockGetJob = vi.fn();
+const mockIssueFloatOnCompletion = vi.fn();
 
 vi.mock("@/lib/folkloreJob/jobStore", () => ({
   getJob: (...args: unknown[]) => mockGetJob(...args),
+}));
+vi.mock("@/lib/folkloreJob/floatFunding", () => ({
+  issueFloatOnCompletion: (...args: unknown[]) => mockIssueFloatOnCompletion(...args),
 }));
 
 import { GET } from "./route";
@@ -25,7 +29,10 @@ const BASE_JOB = {
 };
 
 beforeEach(() => {
+  vi.unstubAllEnvs();
   mockGetJob.mockReset();
+  mockIssueFloatOnCompletion.mockReset();
+  mockIssueFloatOnCompletion.mockResolvedValue({ kind: "issued", token: "recovery-1", kudos: 2000 });
 });
 
 describe("GET /api/folklore/job/[id]", () => {
@@ -86,5 +93,66 @@ describe("GET /api/folklore/job/[id]", () => {
     expect(body).not.toHaveProperty("archive");
     expect(body).not.toHaveProperty("posts");
     expect(body).not.toHaveProperty("contentHash");
+  });
+
+  describe("float funding on completion", () => {
+    const DONE_JOB = { ...BASE_JOB, state: "done" as const, premiumSats: 0, priceSats: 19_000, feeSats: 1_000 };
+
+    it("never issues while KUDOS_ENABLED is unset — the whole kudos surface stays unreachable", async () => {
+      mockGetJob.mockResolvedValue(DONE_JOB);
+      const res = await get(DONE_JOB.jobId);
+      const body = await res.json();
+      expect(mockIssueFloatOnCompletion).not.toHaveBeenCalled();
+      expect(body).not.toHaveProperty("kudosFloat");
+      expect(res.headers.get("set-cookie")).toBeNull();
+    });
+
+    it("never issues for any KUDOS_ENABLED value other than the exact string true", async () => {
+      vi.stubEnv("KUDOS_ENABLED", "1");
+      mockGetJob.mockResolvedValue(DONE_JOB);
+      await get(DONE_JOB.jobId);
+      expect(mockIssueFloatOnCompletion).not.toHaveBeenCalled();
+    });
+
+    it("never issues before the job is done, even with the flag on", async () => {
+      vi.stubEnv("KUDOS_ENABLED", "true");
+      mockGetJob.mockResolvedValue({ ...DONE_JOB, state: "inscribed" as const });
+      await get(DONE_JOB.jobId);
+      expect(mockIssueFloatOnCompletion).not.toHaveBeenCalled();
+    });
+
+    it("on the first done poll with the flag on: funds the float, returns the recovery string once, and sets the bearer cookie", async () => {
+      vi.stubEnv("KUDOS_ENABLED", "true");
+      mockGetJob.mockResolvedValue(DONE_JOB);
+      const res = await get(DONE_JOB.jobId);
+      const body = await res.json();
+
+      expect(mockIssueFloatOnCompletion).toHaveBeenCalledWith(DONE_JOB);
+      expect(body.kudosFloat).toEqual({ recoveryString: "recovery-1", kudos: 2000 });
+
+      const cookie = res.headers.get("set-cookie") ?? "";
+      expect(cookie).toContain("kudos_token=recovery-1");
+      expect(cookie.toLowerCase()).toContain("httponly");
+    });
+
+    it("a later poll finds the float already issued: no recovery string again, no cookie — the string renders exactly once", async () => {
+      vi.stubEnv("KUDOS_ENABLED", "true");
+      mockGetJob.mockResolvedValue(DONE_JOB);
+      mockIssueFloatOnCompletion.mockResolvedValue({ kind: "already-issued" });
+      const res = await get(DONE_JOB.jobId);
+      const body = await res.json();
+
+      expect(body).not.toHaveProperty("kudosFloat");
+      expect(res.headers.get("set-cookie")).toBeNull();
+    });
+
+    it("an unavailable store degrades to the plain status response", async () => {
+      vi.stubEnv("KUDOS_ENABLED", "true");
+      mockGetJob.mockResolvedValue(DONE_JOB);
+      mockIssueFloatOnCompletion.mockResolvedValue({ kind: "unavailable" });
+      const res = await get(DONE_JOB.jobId);
+      expect(res.status).toBe(200);
+      expect(await res.json()).not.toHaveProperty("kudosFloat");
+    });
   });
 });

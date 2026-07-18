@@ -33,7 +33,7 @@ export default function PaymentPanel({
       </a>
       <p className="mt-4 select-all break-all font-mono text-sm text-foreground">{address}</p>
       <p className="mt-1 select-all font-mono text-sm text-muted">
-        &pound;1 &middot; {amount} bitcoin SV &middot; {priceSats.toLocaleString("en-GB")} satoshis
+        &pound;2 + inscription fee &middot; {amount} bitcoin SV &middot; {priceSats.toLocaleString("en-GB")} satoshis
       </p>
       {/* One output, exactly: the watcher matches a single payment of the
           quoted amount — two half-pound legs read as short, forever. */}

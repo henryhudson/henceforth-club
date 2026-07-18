@@ -67,9 +67,10 @@ export async function POST(req: Request) {
     return refusal(parsed.reason, 422);
   }
 
-  // The £1 price converts at the LIVE rate; without it there is no honest
-  // number to charge, so the quote refuses rather than reach for a stale
-  // constant (the same fail-closed rule the pound display already follows).
+  // The price — inscription fee plus the £2 kudos float leg — converts at
+  // the LIVE rate; without it there is no honest number to charge, so the
+  // quote refuses rather than reach for a stale constant (the same
+  // fail-closed rule the pound display already follows).
   const quoted = quoteArchive(parsed.archiveBytes, await gbpPerBsv());
   if (quoted.kind === "rate-unavailable") {
     return refusal("price-unavailable", 503);
@@ -88,6 +89,10 @@ export async function POST(req: Request) {
     priceSats: created.job.priceSats,
     feeSats: created.job.feeSats,
     premiumSats: created.job.premiumSats,
+    floatSats: quoted.quote.floatSats,
+    // Read per request, exactly like the archive flag above: the client shows
+    // the kudos-float copy only when the kudos economy is actually on.
+    kudosEnabled: process.env.KUDOS_ENABLED === "true",
     expiresAtMs: created.job.expiresAtMs,
     claimedHandle: Boolean(owner),
     ...(owner

@@ -32,7 +32,19 @@ describe("ArchivePage — the mechanical gate", () => {
     const html = renderToStaticMarkup(await ArchivePage());
     expect(html).not.toContain("arrives shortly");
     expect(html).toContain("Choose or drop");
-    expect(html).toContain("£1 to inscribe your export");
+    expect(html).toContain("£2 + the inscription fee");
+    expect(html).not.toContain("£1");
+  });
+
+  it("names the kudos float in the header only when KUDOS_ENABLED is exactly \"true\"", async () => {
+    vi.stubEnv("XTEXT_WEB_ARCHIVE_ENABLED", "true");
+    vi.stubEnv("KUDOS_ENABLED", "true");
+    const withKudos = renderToStaticMarkup(await ArchivePage());
+    expect(withKudos).toContain("kudos float");
+
+    vi.stubEnv("KUDOS_ENABLED", "1");
+    const withoutKudos = renderToStaticMarkup(await ArchivePage());
+    expect(withoutKudos).not.toContain("kudos");
   });
 });
 

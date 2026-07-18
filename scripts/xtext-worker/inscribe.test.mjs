@@ -84,6 +84,99 @@ describe("buildInscriptionTx", () => {
   });
 });
 
+describe("buildInscriptionTx — the £2 kudos float leg", () => {
+  const floatPoolAddress = PrivateKey.fromRandom().toAddress();
+  const floatSats = 18_000;
+
+  it("pays the float pool exactly floatSats alongside the premium when both legs exist", async () => {
+    const built = await buildInscriptionTx({
+      jobKey,
+      funding,
+      archiveJson: archive,
+      premiumSats,
+      revenueAddress,
+      floatSats,
+      floatPoolAddress,
+      feeRate,
+    });
+    expect(built.ok).toBe(true);
+
+    const tx = Transaction.fromHex(built.hex);
+    expect(tx.outputs).toHaveLength(3); // archive OP_RETURN + premium-to-cold + the float leg
+
+    expect(tx.outputs[1].satoshis).toBe(premiumSats);
+    expect(tx.outputs[1].lockingScript.toHex()).toBe(new P2PKH().lock(revenueAddress).toHex());
+    expect(tx.outputs[2].satoshis).toBe(floatSats);
+    expect(tx.outputs[2].lockingScript.toHex()).toBe(new P2PKH().lock(floatPoolAddress).toHex());
+  });
+
+  it("a zero premium adds no premium output — the £2-era shape is archive plus float leg only", async () => {
+    const built = await buildInscriptionTx({
+      jobKey,
+      funding,
+      archiveJson: archive,
+      premiumSats: 0,
+      revenueAddress,
+      floatSats,
+      floatPoolAddress,
+      feeRate,
+    });
+    expect(built.ok).toBe(true);
+
+    const tx = Transaction.fromHex(built.hex);
+    expect(tx.outputs).toHaveLength(2);
+    expect(tx.outputs[1].satoshis).toBe(floatSats);
+    expect(tx.outputs[1].lockingScript.toHex()).toBe(new P2PKH().lock(floatPoolAddress).toHex());
+  });
+
+  it("fees stay covered with the float leg counted among the outputs", async () => {
+    const built = await buildInscriptionTx({
+      jobKey,
+      funding,
+      archiveJson: archive,
+      premiumSats: 0,
+      revenueAddress,
+      floatSats,
+      floatPoolAddress,
+      feeRate,
+    });
+    expect(built.ok).toBe(true);
+
+    const sizeBytes = built.hex.length / 2;
+    const impliedFee = funding.sats - floatSats; // archive output is 0 satoshis, no premium, no change
+    expect(impliedFee).toBeGreaterThanOrEqual(Math.ceil((sizeBytes * feeRate) / 1000));
+  });
+
+  it("a funding output below fee plus float leg refuses to build", async () => {
+    const built = await buildInscriptionTx({
+      jobKey,
+      funding: { txid: "44".repeat(32), vout: 0, sats: floatSats + 10 }, // float leg but not the fee
+      archiveJson: archive,
+      premiumSats: 0,
+      revenueAddress,
+      floatSats,
+      floatPoolAddress,
+      feeRate,
+    });
+    expect(built.ok).toBe(false);
+    expect(built.reason).toBe("underfunded");
+  });
+
+  it("a float leg with no float pool address refuses — money never broadcasts to nowhere", async () => {
+    const built = await buildInscriptionTx({
+      jobKey,
+      funding,
+      archiveJson: archive,
+      premiumSats: 0,
+      revenueAddress,
+      floatSats,
+      feeRate,
+    });
+    expect(built.ok).toBe(false);
+    expect(built.reason).toBe("float-pool-unconfigured");
+  });
+});
+
 // A minimal ARC accept response, mirroring the wire shape ARCService reads.
 const arcAccept = (txid) => ({
   ok: true,

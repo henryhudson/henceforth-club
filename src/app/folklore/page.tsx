@@ -143,8 +143,8 @@ export default async function FolklorePage() {
         </div>
         <p className="mt-3 text-xs text-muted">
           {webArchiveOpen
-            ? "Web: £1 per archive, text only. App: £9.99 once, includes photos and videos, keys stay yours."
-            : "The web flow — upload your X export, pay £1 by code — arrives shortly. The app archives today: photos and videos included, keys stay yours."}
+            ? "Web: £2 + inscription cost per archive, text only. App: £9.99 once, includes photos and videos, keys stay yours."
+            : "The web flow — upload your X export, pay £2 + inscription cost by code — arrives shortly. The app archives today: photos and videos included, keys stay yours."}
         </p>
         <p className="mt-4 text-xs text-muted">
           Everything on this page is read from Bitcoin; the site holds pointers, never the text.

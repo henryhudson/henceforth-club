@@ -62,14 +62,20 @@ export default async function ArchivePage() {
     return <ArchiveStub />;
   }
 
+  // Read at render like the archive flag above; every kudos-shaped element
+  // on this page stays invisible until the kudos economy is actually on.
+  const kudosEnabled = process.env.KUDOS_ENABLED === "true";
+
   return (
     <div className="min-h-screen bg-background pt-20">
       <header className="mx-auto max-w-2xl px-6 py-10 text-center">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Archive yours</p>
-        <h1 className="mt-3 text-3xl font-bold text-foreground">&pound;1 to inscribe your export</h1>
+        <h1 className="mt-3 text-3xl font-bold text-foreground">&pound;2 + the inscription fee</h1>
         <p className="mt-2 text-sm text-muted">
-          Drop the export X sent you. One pound of Bitcoin SV, paid once, and the archive lands on
-          the chain forever.
+          Drop the export X sent you. Two pounds plus the miner&rsquo;s fee, paid once, and the
+          archive lands on the chain forever.
+          {kudosEnabled &&
+            " The £2 comes straight back to you as your kudos float — 2,000 kudos to give to the writing you rate."}
         </p>
       </header>
 
