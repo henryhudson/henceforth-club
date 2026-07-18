@@ -1,30 +1,38 @@
 import { dateKey } from "@/lib/redis";
 import { listHandles } from "@/lib/xIndex";
 import { getArchivePage, PAGE_SIZE } from "@/lib/xArchiveCache";
+import type { XPost } from "@/app/folklore/parseArchive";
 import { readTipPriorities } from "@/lib/kudos/tips";
 import { authorRatings, type RatingTable } from "./elo";
 import { readRatingTable } from "./ledger";
 import type { DealCandidate } from "./dealer";
 
-// The dealer's candidate pool — which texts can be put on the table at all.
+// The dealer's candidate pool — which posts can be put on the table at all.
 // Version one keeps it deliberately small: each registered handle's first
-// archive page (its most recent PAGE_SIZE texts), so the pool tracks what
-// the showroom itself surfaces. Bare-media posts are skipped — the arena
-// deals texts. Priorities ride in from the tip module's bulk read, decayed
-// to the given day.
+// archive page (its most recent PAGE_SIZE posts), so the pool tracks what
+// the showroom itself surfaces. A post is eligible with text and/or media —
+// video-only and photo-only archives must be able to earn Elo. Priorities
+// ride in from the tip module's bulk read, decayed to the given day.
 
 /** How many registered handles feed the pool — the newest-stamped first,
  * same order the public directory shows. */
 const POOL_HANDLES = 50;
 
-/** A text on the table with its author — the pool before priorities. Shared
+/** A post on the table with its author — the pool before priorities. Shared
  * by the dealer (which adds tip priorities) and the directory's author
  * aggregate (which groups by author). */
 export type PoolText = { postId: string; author: string };
 
-/** The texts the arena can deal at all — each registered handle's first
- * archive page, bare-media posts skipped. Empty when nobody has registered
- * or Redis is not configured. */
+/** True when the arena can deal this post: any non-empty caption, or any
+ * media (photo / video). Pure — used by the pool and its tests. */
+export function isArenaEligible(post: Pick<XPost, "text" | "media">): boolean {
+  if (post.text.trim().length > 0) return true;
+  return (post.media?.length ?? 0) > 0;
+}
+
+/** The posts the arena can deal at all — each registered handle's first
+ * archive page, text and media posts included. Empty when nobody has
+ * registered or Redis is not configured. */
 export async function listPoolTexts(): Promise<PoolText[]> {
   const handles = await listHandles(POOL_HANDLES);
   const pages = await Promise.all(
@@ -35,7 +43,7 @@ export async function listPoolTexts(): Promise<PoolText[]> {
   );
   return pages.flatMap(({ handle, page }) =>
     (page?.posts ?? [])
-      .filter((post) => post.text.trim().length > 0)
+      .filter(isArenaEligible)
       .map((post) => ({ postId: post.id, author: handle })),
   );
 }

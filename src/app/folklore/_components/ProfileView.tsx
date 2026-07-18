@@ -141,8 +141,8 @@ export default function ProfileView({
           <>
             <p className="ledger-label mb-1">The ledger · ranked by duels won · tap a post to open it</p>
             <p className="mb-3 text-xs text-muted">
-              Texts rank by winning duels in the arena — giving kudos to the better of a dealt
-              pair crowns it, and a rating is earned against other texts, never bought.
+              Posts rank by winning duels in the arena — text, photo, or video. Giving kudos to the
+              better of a dealt pair crowns it; a rating is earned against other posts, never bought.
             </p>
           </>
         ) : (

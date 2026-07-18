@@ -27,10 +27,13 @@ function parsedAmount(value: unknown): number | null {
     : null;
 }
 
-/** One side as the arena renders it: the dealt side plus the text itself,
- * read from the archive cache — empty when the cache cannot say, so a deal
+/** Media the arena can render on a side — same shape as archive posts. */
+type WireMedia = { type: string; url: string; preview?: string };
+
+/** One side as the arena renders it: the dealt side plus text and optional
+ * media from the archive cache — empty when the cache cannot say, so a deal
  * never fails over display data. */
-type WireSide = DealtSide & { text: string };
+type WireSide = DealtSide & { text: string; media?: WireMedia[] };
 
 /** What a deal looks like on the wire: the single-use token and the two
  * dealt sides, in stack order. */
@@ -38,7 +41,12 @@ type WireDeal = { token: string; pair: [WireSide, WireSide] };
 
 async function hydratedSide(side: DealtSide): Promise<WireSide> {
   const post = await getArchivePost(side.author, side.postId);
-  return { ...side, text: post?.text ?? "" };
+  const media = post?.media?.filter((m) => m.url.length > 0);
+  return {
+    ...side,
+    text: post?.text ?? "",
+    ...(media && media.length > 0 ? { media } : {}),
+  };
 }
 
 type NextDeal =
@@ -49,7 +57,7 @@ type NextDeal =
 /**
  * Deal the bearer's next pair: fold the current table, assemble the pool,
  * let the dealer choose, and bind the pair to the bearer under a single-use
- * token. `none` when the pool cannot put up two texts — the arena shows its
+ * token. `none` when the pool cannot put up two posts — the arena shows its
  * empty state rather than an error.
  */
 async function dealNext(profile: string): Promise<NextDeal> {

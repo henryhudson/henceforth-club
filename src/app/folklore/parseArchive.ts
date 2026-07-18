@@ -48,15 +48,21 @@ export function unwrap(js: string): unknown {
  * arrive newest-first, so the kept copy is always the newest one. Doing this
  * once, before chunking or rendering, is what keeps a page offset meaning
  * the same thing every time it's read — re-deduplicating on every render
- * would silently shift indices as soon as reads were paged. Lives here (a
- * pure module with no side-effectful imports) rather than in `xArchiveCache`
- * so a component that only needs this can't accidentally pull in Redis,
- * on-chain fetching, or anything else that module depends on.
+ * would silently shift indices as soon as reads were paged.
+ *
+ * Bare-media posts (empty caption) key by post id so two distinct videos are
+ * not collapsed into one. Same-caption text still dedupes as before.
+ *
+ * Lives here (a pure module with no side-effectful imports) rather than in
+ * `xArchiveCache` so a component that only needs this can't accidentally pull
+ * in Redis, on-chain fetching, or anything else that module depends on.
  */
 export function dedupePosts(posts: XPost[]): XPost[] {
   const seen = new Set<string>();
   return posts.filter((p) => {
-    const key = p.text.trim();
+    const trimmed = p.text.trim();
+    // Empty captions are not a shared identity — each media post keeps its id.
+    const key = trimmed.length > 0 ? trimmed : `id:${p.id}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;

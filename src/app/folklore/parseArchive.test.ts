@@ -36,6 +36,12 @@ describe("dedupePosts", () => {
     const b = post("2", { text: "b" });
     expect(dedupePosts([a, b])).toEqual([a, b]);
   });
+
+  it("keeps two bare-media posts with empty captions — they key by id, not shared blank text", () => {
+    const v1 = post("10", { text: "", media: [{ type: "video", url: "https://x/1.mp4" }] });
+    const v2 = post("11", { text: "  ", media: [{ type: "video", url: "https://x/2.mp4" }] });
+    expect(dedupePosts([v1, v2])).toEqual([v1, v2]);
+  });
 });
 
 describe("parseArchive", () => {

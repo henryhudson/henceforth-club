@@ -7,7 +7,12 @@ const deal: WireDeal = {
   token: "tok-1",
   pair: [
     { postId: "p1", author: "ann", text: "The first text, dealt on top." },
-    { postId: "p2", author: "ben", text: "The second text, stacked beneath." },
+    {
+      postId: "p2",
+      author: "ben",
+      text: "",
+      media: [{ type: "video", url: "https://ordfs.example/clip.mp4" }],
+    },
   ],
 };
 
@@ -30,12 +35,13 @@ describe("/folklore/arena — the page gate", () => {
 });
 
 describe("ArenaView", () => {
-  it("stacks the dealt pair with the shared kudos control on each text and NO vote buttons", () => {
+  it("stacks the dealt pair with the shared kudos control on each post and NO vote buttons", () => {
     const html = renderToStaticMarkup(
       <ArenaView phase={{ kind: "live", deal, crownedPostId: null }} float={1997} />,
     );
     expect(html).toContain("The first text, dealt on top.");
-    expect(html).toContain("The second text, stacked beneath.");
+    expect(html).toContain("https://ordfs.example/clip.mp4");
+    expect(html).toMatch(/<video/);
     expect(html.match(/give kudos/g)?.length).toBe(2);
     expect(html).not.toMatch(/vote/i);
     expect(html).toContain("1,997");
@@ -56,8 +62,8 @@ describe("ArenaView", () => {
     expect(html).toMatchSnapshot();
   });
 
-  it("says plainly when the pool cannot put up two texts", () => {
+  it("says plainly when the pool cannot put up two posts", () => {
     const html = renderToStaticMarkup(<ArenaView phase={{ kind: "empty" }} float={null} />);
-    expect(html).toMatch(/two texts/i);
+    expect(html).toMatch(/two posts/i);
   });
 });

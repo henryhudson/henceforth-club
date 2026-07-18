@@ -86,6 +86,10 @@ beforeEach(() => {
     id: postId,
     at: "2026-07-18T00:00:00Z",
     text: `text of ${postId}`,
+    media:
+      postId === "p1"
+        ? [{ type: "video", url: "https://ordfs.example/p1.mp4" }]
+        : undefined,
   }));
   mockAuthenticateBearer.mockResolvedValue({
     kind: "authenticated",
@@ -143,7 +147,7 @@ describe("GET /api/folklore/duel — the deal", () => {
     expect(mockDealPair).not.toHaveBeenCalled();
   });
 
-  it("deals a pair and issues its single-use token, bound to the bearer — each side hydrated with its text for the arena", async () => {
+  it("deals a pair and issues its single-use token, bound to the bearer — each side hydrated with text and media for the arena", async () => {
     const res = await GET(getRequest());
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
@@ -151,7 +155,12 @@ describe("GET /api/folklore/duel — the deal", () => {
       deal: {
         token: "tok-next",
         pair: [
-          { postId: "p1", author: "ann", text: "text of p1" },
+          {
+            postId: "p1",
+            author: "ann",
+            text: "text of p1",
+            media: [{ type: "video", url: "https://ordfs.example/p1.mp4" }],
+          },
           { postId: "p2", author: "ben", text: "text of p2" },
         ],
       },
@@ -167,9 +176,12 @@ describe("GET /api/folklore/duel — the deal", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.deal.pair.map((side: { text: string }) => side.text)).toEqual(["", ""]);
+    expect(body.deal.pair.every((side: { media?: unknown }) => side.media === undefined)).toBe(
+      true,
+    );
   });
 
-  it("answers a null deal when the pool cannot put up two texts", async () => {
+  it("answers a null deal when the pool cannot put up two posts", async () => {
     mockDealPair.mockReturnValue({ kind: "insufficient" });
     const res = await GET(getRequest());
     expect(res.status).toBe(200);
@@ -239,7 +251,12 @@ describe("POST /api/folklore/duel — the resolution", () => {
       next: {
         token: "tok-next",
         pair: [
-          { postId: "p1", author: "ann", text: "text of p1" },
+          {
+            postId: "p1",
+            author: "ann",
+            text: "text of p1",
+            media: [{ type: "video", url: "https://ordfs.example/p1.mp4" }],
+          },
           { postId: "p2", author: "ben", text: "text of p2" },
         ],
       },

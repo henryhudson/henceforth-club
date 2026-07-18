@@ -5,15 +5,21 @@ import Link from "next/link";
 import KudosControl, { KUDOS_NUDGE, type KudosCommitResult } from "../_components/KudosControl";
 import { fetchKudosSession } from "../_components/kudosSession";
 
-// The arena — a dealt stacked pair with NO vote buttons: each text carries
+// The arena — a dealt stacked pair with NO vote buttons: each post carries
 // the same kudos control as every feed row, and the kudos gesture itself
-// crowns the duel. The first kudos crowns the pair (binary, whatever the
-// amount lands at); rapid further taps accumulate to the winner through the
-// commit beat; the resolution's response deals the next pair. Pairs are
-// server-dealt and single-use — this component never chooses a matchup.
+// crowns the duel. Text and/or media (photo, video) are first-class. The
+// first kudos crowns the pair (binary, whatever the amount lands at); rapid
+// further taps accumulate to the winner through the commit beat; the
+// resolution's response deals the next pair. Pairs are server-dealt and
+// single-use — this component never chooses a matchup.
 
 /** One dealt side, as the duel route hydrates it. */
-export type WireSide = { postId: string; author: string; text: string };
+export type WireSide = {
+  postId: string;
+  author: string;
+  text: string;
+  media?: Array<{ type: string; url: string; preview?: string }>;
+};
 
 /** A dealt pair on the wire: the single-use token and the two sides, in
  * stack order. */
@@ -135,11 +141,15 @@ export default function Arena() {
 
 const recordedCommit = () => async (): Promise<KudosCommitResult> => ({ kind: "recorded" });
 
+function isVideoMedia(type: string): boolean {
+  return type.toLowerCase().startsWith("video") || type === "animated_gif";
+}
+
 /**
  * The arena's markup, pure of fetching — the stacked pair, the shared kudos
- * control on each text, the crowned state, and the float sitting quietly in
- * a corner. Exported on its own so the snapshot tests render each phase
- * without a network.
+ * control on each post (text and/or media), the crowned state, and the float
+ * sitting quietly in a corner. Exported on its own so the snapshot tests
+ * render each phase without a network.
  */
 export function ArenaView({
   phase,
@@ -154,10 +164,10 @@ export function ArenaView({
 }) {
   return (
     <div className="mx-auto max-w-[68ch] px-6 py-10">
-      <p className="ledger-label mb-1">the arena · two texts, dealt</p>
+      <p className="ledger-label mb-1">the arena · two posts, dealt</p>
       <p className="mb-6 text-xs text-muted">
-        Give kudos to the one you prefer — the first kudos crowns it, and every further tap in
-        the beat goes to the winner.
+        Give kudos to the one you prefer — text, photo, or video. The first kudos crowns it, and
+        every further tap in the beat goes to the winner.
       </p>
 
       {phase.kind === "loading" && <p className="font-mono text-sm text-muted">dealing…</p>}
@@ -179,7 +189,7 @@ export function ArenaView({
 
       {phase.kind === "empty" && (
         <p className="text-sm text-muted">
-          The pool cannot put up two texts yet — more archives are on their way.
+          The pool cannot put up two posts yet — more archives are on their way.
         </p>
       )}
 
@@ -192,6 +202,8 @@ export function ArenaView({
           {phase.deal.pair.map((side) => {
             const crowned = phase.crownedPostId === side.postId;
             const open = phase.crownedPostId === null;
+            const caption = side.text.trim();
+            const media = side.media ?? [];
             return (
               <article
                 key={`${phase.deal.token}:${side.postId}`}
@@ -209,9 +221,51 @@ export function ArenaView({
                   </Link>
                   {crowned && <span className="ml-2 font-mono text-accent">crowned</span>}
                 </p>
-                <p className="whitespace-pre-wrap text-base leading-loose text-foreground">
-                  {side.text}
-                </p>
+                {caption.length > 0 && (
+                  <p className="whitespace-pre-wrap text-base leading-loose text-foreground">
+                    {side.text}
+                  </p>
+                )}
+                {media.length > 0 && (
+                  <div
+                    className={`grid gap-2 ${caption.length > 0 ? "mt-3" : ""} ${
+                      media.length > 1 ? "grid-cols-2" : "grid-cols-1"
+                    }`}
+                  >
+                    {media.map((m, i) =>
+                      isVideoMedia(m.type) ? (
+                        <video
+                          key={`${m.url}:${i}`}
+                          src={m.url}
+                          poster={m.preview}
+                          controls
+                          playsInline
+                          preload="metadata"
+                          className="w-full rounded-lg border border-card-border"
+                        />
+                      ) : (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          key={`${m.url}:${i}`}
+                          src={m.url}
+                          alt=""
+                          loading="lazy"
+                          className="aspect-[4/3] w-full rounded-lg border border-card-border object-cover"
+                        />
+                      ),
+                    )}
+                  </div>
+                )}
+                {caption.length === 0 && media.length === 0 && (
+                  <p className="font-mono text-sm text-muted">
+                    <Link
+                      href={`/folklore/${side.author}/${side.postId}`}
+                      className="hover:text-accent"
+                    >
+                      open post →
+                    </Link>
+                  </p>
+                )}
                 <div className="mt-3">
                   <KudosControl
                     gesture={open || crowned ? { kind: "ready" } : { kind: "quiet" }}

@@ -19,12 +19,16 @@ vi.mock("@/lib/kudos/ledger", () => ({
   readRatingTable: (...args: unknown[]) => mockReadRatingTable(...args),
 }));
 
-import { listDealCandidates, readAuthorRatings } from "./candidates";
+import { isArenaEligible, listDealCandidates, readAuthorRatings } from "./candidates";
 
 const DAY = "2026-07-18";
 
-function post(id: string, text = `text of ${id}`) {
-  return { id, at: "2026-01-01T00:00:00Z", text };
+function post(
+  id: string,
+  text = `text of ${id}`,
+  media?: Array<{ type: string; url: string }>,
+) {
+  return { id, at: "2026-01-01T00:00:00Z", text, ...(media ? { media } : {}) };
 }
 
 function page(posts: ReturnType<typeof post>[]) {
@@ -62,14 +66,34 @@ describe("listDealCandidates — the dealer's pool", () => {
     expect(mockReadTipPriorities).toHaveBeenCalledWith(["a1", "a2", "b1"], DAY);
   });
 
-  it("skips textless posts — the arena deals texts, not bare media", async () => {
+  it("includes bare-media posts so videos and photos can earn Elo", async () => {
     mockListHandles.mockResolvedValue([{ handle: "ann", latestMs: 1 }]);
-    mockGetArchivePage.mockResolvedValue(page([post("a1"), post("a2", "   "), post("a3", "")]));
+    mockGetArchivePage.mockResolvedValue(
+      page([
+        post("a1"),
+        post("a2", "   "),
+        post("a3", ""),
+        post("a4", "", [{ type: "video", url: "https://ordfs.example/v.mp4" }]),
+        post("a5", "  ", [{ type: "photo", url: "https://ordfs.example/p.jpg" }]),
+      ]),
+    );
 
     const pool = await listDealCandidates(DAY);
-    expect(pool.map((c) => c.postId)).toEqual(["a1"]);
+    expect(pool.map((c) => c.postId)).toEqual(["a1", "a4", "a5"]);
   });
+});
 
+describe("isArenaEligible", () => {
+  it("accepts caption text, media, or both — rejects empty shells", () => {
+    expect(isArenaEligible({ text: "hi", media: undefined })).toBe(true);
+    expect(isArenaEligible({ text: "", media: [{ type: "video", url: "u" }] })).toBe(true);
+    expect(isArenaEligible({ text: "  ", media: [{ type: "photo", url: "u" }] })).toBe(true);
+    expect(isArenaEligible({ text: "", media: undefined })).toBe(false);
+    expect(isArenaEligible({ text: "   ", media: [] })).toBe(false);
+  });
+});
+
+describe("listDealCandidates — empty and missing archives", () => {
   it("contributes nothing for a handle whose archive cannot be read", async () => {
     mockListHandles.mockResolvedValue([
       { handle: "ann", latestMs: 2 },

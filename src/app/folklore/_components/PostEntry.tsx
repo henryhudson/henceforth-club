@@ -203,7 +203,7 @@ export default function PostEntry({
               <span aria-hidden>·</span>
               <span
                 className="font-mono"
-                title={`Unranked — a text is rated after ${PROVISIONAL_DUELS} arena duels; this one has fought ${elo.duels}`}
+                title={`Unranked — a post is rated after ${PROVISIONAL_DUELS} arena duels; this one has fought ${elo.duels}`}
               >
                 unranked
               </span>
@@ -213,7 +213,7 @@ export default function PostEntry({
               <span aria-hidden>·</span>
               <span
                 className="font-mono"
-                title={`Elo rating over ${elo.duels} arena duels — earned against other texts, never bought`}
+                title={`Elo rating over ${elo.duels} arena duels — earned against other posts, never bought`}
               >
                 ⚔ <span className="text-accent">{Math.round(elo.rating).toLocaleString("en-GB")}</span>
               </span>
