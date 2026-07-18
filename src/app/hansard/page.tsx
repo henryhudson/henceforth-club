@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import FadeIn from "@/components/FadeIn";
 import ConstituencyMorph from "@/components/ConstituencyMorph";
 import Accordion from "@/components/Accordion";
 import TechModal from "@/components/TechModal";
+import HansardLatestWeek from "@/components/HansardLatestWeek";
 
 const accordionSections = [
   {
@@ -91,7 +93,7 @@ const jsonLd = {
   downloadUrl: "https://apps.apple.com/app/the-hansard/id6762037651",
   offers: {
     "@type": "Offer",
-    price: "0",
+    price: "0.99",
     priceCurrency: "GBP",
   },
   publisher: {
@@ -320,6 +322,43 @@ export default function HansardPage() {
           </FadeIn>
         </div>
 
+        {/* Latest weekly digest */}
+        <div className="mt-24">
+          <div className="section-line" />
+          <FadeIn>
+            <p className="mt-12 text-xs tracking-widest text-muted/50 uppercase">
+              On the web
+            </p>
+            <p className="mt-4 mb-8 max-w-2xl text-sm leading-relaxed text-muted">
+              Every week we publish a digest of Commons divisions and written
+              questions — free to read, no app required.
+            </p>
+            <HansardLatestWeek />
+            <p className="mt-6 text-sm text-muted/60">
+              <Link
+                href="/hansard/this-week"
+                className="transition-colors hover:text-accent-green"
+              >
+                Browse every issue →
+              </Link>
+              {" · "}
+              <Link
+                href="/articles/hansard-is-live"
+                className="transition-colors hover:text-accent-green"
+              >
+                Launch note
+              </Link>
+              {" · "}
+              <Link
+                href="/hansard/privacy"
+                className="transition-colors hover:text-accent-green"
+              >
+                Privacy
+              </Link>
+            </p>
+          </FadeIn>
+        </div>
+
         {/* CTA */}
         <FadeIn>
           <div className="mt-24 text-center">
@@ -331,8 +370,11 @@ export default function HansardPage() {
               height={80}
               className="mx-auto mb-6 rounded-2xl shadow-lg shadow-accent-green/10"
             />
-            <p className="text-xs text-muted/50 mb-6 tracking-wider uppercase">
-              Available now — Free
+            <p className="text-xs text-muted/50 mb-2 tracking-wider uppercase">
+              Available now
+            </p>
+            <p className="mb-6 text-sm text-foreground/80">
+              One purchase · 99p · everything unlocked, no subscription
             </p>
             <a
               href="https://apps.apple.com/app/the-hansard/id6762037651"

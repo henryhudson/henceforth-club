@@ -10,6 +10,11 @@ type WordProps = {
    * to a single FORTH word (e.g. op_dup ≈ dup, op_add ≈ +).
    */
   forth?: string;
+  /**
+   * When true, marks a non-standard extension (not Forth-2012 CORE).
+   * Prefer this over burying "Henceforth extension" only in prose.
+   */
+  ext?: boolean;
   children: ReactNode;
 };
 
@@ -18,7 +23,7 @@ type WordProps = {
 // optional Henceforth FORTH equivalent in green, and the definition
 // prose below. Mirrors the WordView layout in the iOS app but reveals
 // everything inline because the web has the space.
-export function Word({ name, stack, forth, children }: WordProps) {
+export function Word({ name, stack, forth, ext, children }: WordProps) {
   return (
     <div className="my-4 border-l-2 border-accent-warm/40 pl-4 py-1">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
@@ -32,6 +37,11 @@ export function Word({ name, stack, forth, children }: WordProps) {
           <code className="font-mono text-xs italic text-terminal-green/90">
             <span className="not-italic text-muted/60">≈</span> {forth}
           </code>
+        )}
+        {ext && (
+          <span className="rounded-full border border-accent-warm/30 bg-accent-warm/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-accent-warm/90">
+            Extension
+          </span>
         )}
       </div>
       <div className="mt-1.5 text-sm leading-relaxed text-foreground/80 [&>p]:my-1 [&>p:first-child]:mt-0 [&>p:last-child]:mb-0">

@@ -5,6 +5,7 @@ import EpisodePlayer from "@/components/learn/EpisodePlayer";
 import CodeAlong from "@/components/learn/CodeAlong";
 import GetHenceforth from "@/components/learn/GetHenceforth";
 import Transcript from "@/components/learn/Transcript";
+import EpisodeProgress from "@/components/learn/EpisodeProgress";
 import { getEpisode, publishedEpisodes, adjacentEpisodes, formatDuration } from "@/lib/episodes";
 
 export function generateStaticParams() {
@@ -60,6 +61,10 @@ export default async function EpisodePage({
           ← Starting Henceforth
         </Link>
 
+        <div className="mt-4">
+          <EpisodeProgress current={ep.number} />
+        </div>
+
         {/* Theater video — full content width */}
         <div className="mt-6">
           <EpisodePlayer src={ep.video.mp4} poster={poster} title={ep.title} />
@@ -90,6 +95,16 @@ export default async function EpisodePage({
             <div className="mt-4">
               <CodeAlong commands={ep.codeAlong ?? []} />
             </div>
+            <p className="mt-4 text-xs text-muted/50">
+              <a
+                href={`/learn/${slug}/code-along.fs`}
+                download={`${slug}.fs`}
+                className="transition-colors hover:text-accent-warm"
+              >
+                Download code-along.fs
+              </a>
+              {" — drop it in Henceforth's Files tab or INCLUDE it."}
+            </p>
           </div>
           <div>
             <h2 className="text-xs uppercase tracking-widest text-accent-warm/70">
@@ -126,10 +141,22 @@ export default async function EpisodePage({
             </p>
             <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
               <Link
-                href="/folklore"
-                className="font-mono text-accent-orange transition-opacity hover:opacity-75"
+                href="/henceforth"
+                className="font-mono text-accent-warm transition-opacity hover:opacity-75"
               >
-                Put words on the chain for real — Folklore →
+                Open Henceforth on the App Store path →
+              </Link>
+              <Link
+                href="/docs/reference"
+                className="font-mono text-muted/70 transition-colors hover:text-accent-warm"
+              >
+                Word reference
+              </Link>
+              <Link
+                href="/docs/wallet"
+                className="font-mono text-muted/70 transition-colors hover:text-accent-warm"
+              >
+                Wallet docs
               </Link>
               <Link
                 href="/learn/what-is-henceforth"

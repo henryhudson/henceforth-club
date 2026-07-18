@@ -3,10 +3,10 @@ import Link from "next/link";
 import FadeIn from "@/components/FadeIn";
 
 export const metadata: Metadata = {
-  title: "Hansard — Privacy Policy",
+  title: "Henceforth — Privacy Policy",
   description:
-    "The privacy policy for The Hansard, the UK Parliament browser. No accounts, no advertising, offline-first data.",
-  alternates: { canonical: "/hansard/privacy" },
+    "The privacy policy for Henceforth, the FORTH interpreter and Bitcoin SV wallet. Keys stay on your device.",
+  alternates: { canonical: "/henceforth/privacy" },
 };
 
 const EFFECTIVE_DATE = "19 July 2026";
@@ -31,13 +31,13 @@ function Section({
   );
 }
 
-export default function HansardPrivacyPage() {
+export default function HenceforthPrivacyPage() {
   return (
     <div className="py-20 sm:py-28">
       <div className="mx-auto max-w-3xl px-6">
         <FadeIn>
-          <p className="text-xs tracking-widest text-accent-green/70 uppercase">
-            Hansard · Legal
+          <p className="text-xs tracking-widest text-accent-warm/70 uppercase">
+            Henceforth · Legal
           </p>
           <h1 className="mt-6 text-5xl sm:text-6xl text-foreground font-bold">
             Privacy Policy
@@ -48,25 +48,25 @@ export default function HansardPrivacyPage() {
         </FadeIn>
 
         <FadeIn delay={0.1}>
-          <div className="card-glow card-glow-green mt-10 rounded-2xl border border-card-border bg-card-bg/50 p-6">
-            <p className="text-sm font-semibold uppercase tracking-widest text-accent-green/80">
+          <div className="card-glow card-glow-warm mt-10 rounded-2xl border border-card-border bg-card-bg/50 p-6">
+            <p className="text-sm font-semibold uppercase tracking-widest text-accent-warm/80">
               Short version
             </p>
             <p className="mt-3 text-muted leading-relaxed">
               <strong className="text-foreground font-medium">
-                The Hansard has no account system and no advertising.
+                Private keys and seed phrases never leave your device.
               </strong>{" "}
-              Parliamentary data ships bundled for offline use and refreshes
-              from official Parliament sources when online. Optional
-              notifications use Apple frameworks. Purchases are handled by
-              Apple.
+              Henceforth does not run advertising or third-party analytics
+              SDKs. Wallet state lives in the Keychain and local storage;
+              blockchain network calls go to the services needed to send and
+              verify transactions. Purchases are handled by Apple.
             </p>
           </div>
         </FadeIn>
 
         <Section title="Who we are">
           <p>
-            The Hansard is an iOS app published by{" "}
+            Henceforth is an iOS and macOS app published by{" "}
             <strong className="text-foreground font-medium">
               Henceforth Bitcoin Limited
             </strong>{" "}
@@ -77,41 +77,46 @@ export default function HansardPrivacyPage() {
 
         <Section title="Data we collect">
           <p>
-            We do not create user accounts. We do not sell personal data. We do
-            not run advertising networks or third-party analytics SDKs inside
-            the app.
+            We do not operate user accounts for Henceforth. We do not sell
+            personal data. We do not run advertising networks or third-party
+            analytics SDKs inside the app.
+          </p>
+          <p>
+            Aggregate, non-identifying App Store sales reporting is provided by
+            Apple. Optional site visitor counting on henceforth.club is separate
+            from the app and is described only as far as this site is concerned.
           </p>
         </Section>
 
         <Section title="Data on your device">
           <p>
-            Bundled parliamentary snapshots, cached refreshes, preferences, and
-            any members you choose to follow for notifications are stored on
-            your device. Delete the app to remove that local data.
+            Seed phrases, private keys, and wallet secrets are stored in the
+            device Keychain, protected by the Secure Enclave where available.
+            Transaction history, UTXO caches, preferences, and user-defined
+            FORTH files may be stored on device and, if you enable it, in your
+            iCloud Drive for backup across your own devices.
+          </p>
+          <p>
+            Deleting the app removes local app data. Keychain items follow Apple
+            Keychain rules for that device and account.
           </p>
         </Section>
 
         <Section title="Network services">
           <p>
-            When online, the app may refresh against official UK Parliament data
-            services so rosters, votes, and related records stay current. Those
-            requests are for public parliamentary data, not for building an
-            advertising profile.
-          </p>
-        </Section>
-
-        <Section title="Notifications">
-          <p>
-            Optional per-member notifications use Apple notification frameworks.
-            You can revoke notification permission in iOS Settings at any time.
+            To send and receive Bitcoin SV, the app contacts blockchain
+            infrastructure — for example chain indexers for history and unspent
+            outputs, miner-facing broadcast endpoints, and related APIs. Those
+            requests carry the addresses and transaction data required for the
+            operation you initiated. We do not control those third-party
+            operators; their own policies apply to traffic they receive.
           </p>
         </Section>
 
         <Section title="Purchases (Apple StoreKit)">
           <p>
-            The Hansard is sold through the App Store as a one-time purchase.
-            Apple processes payment via StoreKit. We never receive or store your
-            payment card details.
+            Henceforth is sold through the App Store. Apple processes payment
+            via StoreKit. We never receive or store your payment card details.
           </p>
           <p>
             Purchases are covered by{" "}
@@ -119,7 +124,7 @@ export default function HansardPrivacyPage() {
               href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-accent-green hover:underline"
+              className="text-accent-warm hover:underline"
             >
               Apple&apos;s standard Terms of Use (EULA)
             </a>
@@ -146,7 +151,7 @@ export default function HansardPrivacyPage() {
             Questions about this policy or the app? Email{" "}
             <a
               href="mailto:henry@henceforth.club"
-              className="text-accent-green hover:underline"
+              className="text-accent-warm hover:underline"
             >
               henry@henceforth.club
             </a>
@@ -154,10 +159,10 @@ export default function HansardPrivacyPage() {
           </p>
           <p className="pt-2">
             <Link
-              href="/hansard"
+              href="/henceforth"
               className="text-sm text-muted/60 hover:text-foreground transition-colors"
             >
-              ← Back to Hansard
+              ← Back to Henceforth
             </Link>
           </p>
         </Section>

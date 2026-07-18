@@ -1,45 +1,6 @@
-# Documentation
+# Word reference
 
-Bitcoin meets Forth. Henceforth is a native iOS app that combines a Forth-2012 compliant interpreter with an integrated Bitcoin SV wallet — one stack-based language for arithmetic, scripting, and payments.
-
-<a id="about" />
-
-## About
-
-Henceforth is built and maintained by Henry Hudson at Henceforth Bitcoin Limited.
-
-### Source code
-
-[github.com/henryhudson/FORTHapp](https://github.com/henryhudson/FORTHapp)
-
-Running the project requires Xcode 26 and a device on iOS 26 or macOS 26 (Tahoe). macOS, iPadOS, and iOS are all supported. The repository is private at the time of writing — get in touch if you would like access.
-
-### Support
-
-[Follow `@henceforth_app` on Twitter](https://x.com/henceforth_app)
-
-<a id="goals" />
-
-## Goals
-
-### Achieved
-
-- **Bitcoin (BSV) integration** — full wallet with HD key derivation (BIP-44 and Type42), transaction building, ARC broadcasting with failover, SPV verification, Paymail support, and 140+ Bitcoin Script opcodes including the Chronicle upgrade.
-- **Block headers** — locally chain-linked header store anchored to a hardcoded checkpoint, auto-synced from chain tip on every launch via a WebSocket history stream. SPV Merkle proof verification is bounded to the chain-validated range — no silent network fallback for missing headers.
-- **SwiftBSV** — fully integrated for transactions, Script building, BIP-32/39 key management, and ECDSA signing.
-- **OPCodes** — all standard and Chronicle-restored opcodes available as FORTH words. Script Recording mode assembles Bitcoin Scripts from the terminal.
-- **Files** — full CRUD for `.fs` and `.forth` files with iCloud backup. Script files identified by `SCRIPT-BEGIN` / `SCRIPT-END` markers.
-- **Colour customisation** — foreground and background colour pickers, keyboard selection, and Dynamic Type support throughout.
-- **Forth-2012 compliance** — 133 / 133 CORE words implemented, verified by the Hayes test suite.
-
-### Get people coding
-
-Provide a simple interface for the FORTH programming language, making it easy for people to learn to code.
-
-### Future
-
-- CRDT (Conflict-free Replicated Data Type) system using the timestamp server for user-defined words.
-- Trigonometry and calculus extensions.
+Complete FORTH vocabulary and Bitcoin Script opcodes for Henceforth.
 
 <a id="reference" />
 
@@ -135,15 +96,15 @@ Arithmetic is done using reverse Polish notation, so the numbers are required on
 
 <Word name="1-" stack="(n -- n-1)">Decrements the top item.</Word>
 
-<Word name="2+" stack="(n -- n+2)">Adds 2 to the top of the stack. Henceforth extension — equivalent to `2 +`.</Word>
+<Word name="2+" stack="(n -- n+2)" ext>Adds 2 to the top of the stack. Henceforth extension — equivalent to `2 +`.</Word>
 
-<Word name="2-" stack="(n -- n-2)">Subtracts 2 from the top of the stack. Henceforth extension.</Word>
+<Word name="2-" stack="(n -- n-2)" ext>Subtracts 2 from the top of the stack. Henceforth extension.</Word>
 
 <Word name="2*" stack="(n -- n*2)">Doubles the top item.</Word>
 
 <Word name="2/" stack="(n -- n/2)">Halves the top item.</Word>
 
-<Word name="sumStack" stack="(n1 ... n -- sum)">Sums every value on the stack into a single result. Henceforth extension — not in Forth-2012.</Word>
+<Word name="sumStack" stack="(n1 ... n -- sum)" ext>Sums every value on the stack into a single result. Henceforth extension — not in Forth-2012.</Word>
 
 <Word name="*/mod" stack="(n1 n2 n3 -- remainder quotient)">Multiplies n1 by n2, then divides by n3. Returns both the remainder and the quotient.</Word>
 
@@ -201,9 +162,9 @@ Double-cell words operate on 64-bit values represented as two stack items (high 
 
 <Word name=">" stack="(n1 n2 -- f)">True if n1 is greater than n2.</Word>
 
-<Word name="&&" stack="(n1 n2 -- f)">Logical AND — Henceforth extension. Returns -1 if both values are non-zero, 0 otherwise.</Word>
+<Word name="&&" stack="(n1 n2 -- f)" ext>Logical AND — Henceforth extension. Returns -1 if both values are non-zero, 0 otherwise.</Word>
 
-<Word name="||" stack="(n1 n2 -- f)">Logical OR — Henceforth extension. Returns -1 if either value is non-zero, 0 otherwise.</Word>
+<Word name="||" stack="(n1 n2 -- f)" ext>Logical OR — Henceforth extension. Returns -1 if either value is non-zero, 0 otherwise.</Word>
 
 <Word name="0=" stack="(n -- f)">True if n is zero.</Word>
 
@@ -265,7 +226,7 @@ Double-cell words operate on 64-bit values represented as two stack items (high 
 
 <Word name="2over" stack="(n1 n2 n3 n4 -- n1 n2 n3 n4 n1 n2)">Copies items 3 and 4 deep onto the top.</Word>
 
-<Word name="reverseStack" stack="(n1 n2 ... nlast -- nlast ... n2 n1)">Reverses the order of every item on the stack. Henceforth extension — not in Forth-2012.</Word>
+<Word name="reverseStack" stack="(n1 n2 ... nlast -- nlast ... n2 n1)" ext>Reverses the order of every item on the stack. Henceforth extension — not in Forth-2012.</Word>
 
 <Word name="depth" stack="( -- n)">Returns the number of items currently on the data stack before DEPTH was executed.</Word>
 
@@ -289,7 +250,7 @@ Double-cell words operate on 64-bit values represented as two stack items (high 
 
 <Word name="j" stack="( -- x)">The next-outer loop's index in nested DO LOOPs (Forth-2012 6.1.1730).</Word>
 
-<Word name="nth" stack="(u -- x)">Pops u and pushes the u-th item from the return stack (0-indexed from top). Henceforth extension.</Word>
+<Word name="nth" stack="(u -- x)" ext>Pops u and pushes the u-th item from the return stack (0-indexed from top). Henceforth extension.</Word>
 
 <a id="ref-decision" />
 
@@ -335,7 +296,7 @@ Double-cell words operate on 64-bit values represented as two stack items (high 
 
 <Word name="every" stack="(n1 -- )">Performs the following word every n1 seconds until STOP is called. Henceforth scheduling extension.</Word>
 
-<Word name="stop" stack="( -- )">Stops the EVERY loop. Henceforth extension — pairs with EVERY only.</Word>
+<Word name="stop" stack="( -- )" ext>Stops the EVERY loop. Henceforth extension — pairs with EVERY only.</Word>
 
 <Word name="begin" stack="( -- )">Marks the start of a BEGIN...UNTIL or BEGIN...WHILE...REPEAT loop.</Word>
 
@@ -363,9 +324,9 @@ Henceforth accepts integers as binary, octal, decimal and hexadecimal. Just chan
 
 <Word name="decimal" stack="(--)">Sets BASE to 10. Forth-2012 6.1.1170.</Word>
 
-<Word name="binary" stack="(--)">Sets BASE to 2. Henceforth extension. Equivalent to `2 BASE !`.</Word>
+<Word name="binary" stack="(--)" ext>Sets BASE to 2. Henceforth extension. Equivalent to `2 BASE !`.</Word>
 
-<Word name="octal" stack="(--)">Sets BASE to 8. Henceforth extension. Equivalent to `8 BASE !`.</Word>
+<Word name="octal" stack="(--)" ext>Sets BASE to 8. Henceforth extension. Equivalent to `8 BASE !`.</Word>
 
 <Word name="hex" stack="(--)">Sets BASE to 16. Forth-2012 6.2.1660.</Word>
 
@@ -460,9 +421,9 @@ Henceforth accepts integers as binary, octal, decimal and hexadecimal. Just chan
 <Word name="\\" stack="(--)">Line comment. Everything after `\` to the end of the line is ignored. Supported in `.fs` files.</Word>
 
 
-<Word name=".rs" stack="(--)">Displays the return stack on the terminal. Henceforth extension — Forth-2012 only specifies `.s` for the data stack.</Word>
+<Word name=".rs" stack="(--)" ext>Displays the return stack on the terminal. Henceforth extension — Forth-2012 only specifies `.s` for the data stack.</Word>
 
-<Word name="clear" stack="(i*x --)">Empties the data stack, return stack, and terminal screen. Henceforth extension — non-standard. For just the screen use `page`; for stacks alone use `abort`.</Word>
+<Word name="clear" stack="(i*x --)" ext>Empties the data stack, return stack, and terminal screen. Henceforth extension — non-standard. For just the screen use `page`; for stacks alone use `abort`.</Word>
 
 <Word name="bye" stack="(--)">Clears everything, resets to default settings.</Word>
 
@@ -494,13 +455,13 @@ Henceforth accepts integers as binary, octal, decimal and hexadecimal. Just chan
 
 <Word name="sessionInput" stack="(--)">Displays session input.</Word>
 
-<Word name="dictionary" stack="(--)">Shows the user's defined words, constants, and variables. Henceforth extension. For all words (built-in plus user-defined) use `words` or `vlist`.</Word>
+<Word name="dictionary" stack="(--)" ext>Shows the user's defined words, constants, and variables. Henceforth extension. For all words (built-in plus user-defined) use `words` or `vlist`.</Word>
 
 <Word name="vlist" stack="(--)">Displays a list of every built-in word Henceforth offers. The Forth-2012 standard name is `words` (TOOLS 15.6.1.2465); both spellings dispatch to the same handler.</Word>
 
 <Word name="see" stack='( "<spaces>name" --)'>Shows what a word does: user-defined words print their source; built-in words print their stack diagram and description (TOOLS 15.6.1.2194). Usage: `see pay-rent`.</Word>
 
-<Word name="help" stack='( "<spaces>name" --)'>Prints a word's stack diagram and description. Bare `help` opens the vocabulary browser. Henceforth extension.</Word>
+<Word name="help" stack='( "<spaces ext>name" --)'>Prints a word's stack diagram and description. Bare `help` opens the vocabulary browser. Henceforth extension.</Word>
 
 <Word name="forth" stack="(--)">Resets vocabulary to standard built-in words, removing all user definitions.</Word>
 
@@ -879,300 +840,3 @@ All 140+ Bitcoin Script opcodes are exposed as FORTH words. Below are the catego
 <Word name="op_nop1, op_nop4..6, op_nop9, op_nop10" stack="( - )">Reserved NOPs.</Word>
 
 > **Chronicle upgrade (block 943,816).** NOP4–8 (0xb3–0xb7) were repurposed as `op_substr`, `op_left`, `op_right`, `op_lshiftnum`, and `op_rshiftnum`. The transaction version (`op_ver`) auto-switches from 1 to 2 at the activation block.
-
-<a id="wallet" />
-
-## Bitcoin Wallet
-
-Henceforth includes a full Bitcoin SV (BSV) wallet, enabling users to create wallets, receive and send transactions, and interact with the blockchain — all from the same app that runs FORTH programs.
-
-<a id="wallet-architecture" />
-
-### Wallet Architecture
-
-The wallet is built on a hierarchical deterministic (HD) key structure, meaning a single seed phrase generates an unlimited number of addresses.
-
-- **Seed Phrase** — a 12-word BIP-39 mnemonic generated when creating a new wallet. The master backup.
-- **Key Derivation** — two derivation methods are supported. **Type42 (BRC-42)** is the default for new wallets, using elliptic curve key tweaking for more flexible derivation paths. **BIP-44** is the legacy standard, retained for restoring wallets created by other software; path `m/44'/236'/0'/0/n`.
-- **Address Rotation** — after each transaction, a new receiving address is derived automatically.
-
-> **Security.** Private keys and seed phrases are stored exclusively in the iOS Keychain, protected by the device's Secure Enclave. They never leave the device.
-
-#### Trust-domain separation (Swift code organisation)
-
-The Swift code that runs the wallet is partitioned into three independent trust domains, each owned by its own `@MainActor @Observable` type. A façade type, `FORTH`, holds one instance of each and is the only place that orchestrates across them.
-
-- **`ForthInterpreter`** — the Forth-2012 execution surface: two stacks, the user vocabulary, control flow, terminal text, KEY/ACCEPT, memory blocks, script recording.
-- **`WalletState`** — the wallet/payment surface: UTXO and transaction caches, payment-approval cache, PayView / MultiPaySheet / FeeRetry coordination, fee quotes, WoC viewmodels, the ARC service seam.
-- **`SPVHeaderStore`** — the SPV header chain: `blockHeaders`, `validatedTipHeight`, `latestBlockHeight`, the `txVersion` activation gate, the header-fetch viewmodel.
-
-`WalletState` and `SPVHeaderStore` each hold a peer-reference to `ForthInterpreter` for legitimate terminal-IO reach (emitting an error, reading a stack value, writing to the terminal buffer). Deliberately there is **no peer-reference between `WalletState` and `SPVHeaderStore`** — payment code that tries to read `blockHeaders` directly is refused by the compiler, because the property simply isn't reachable from a `WalletState` extension. The handful of legitimate cross-domain reads (the wallet's transaction builder needs `latestBlockHeight` for the OP_VER gate) route through an explicit `FORTH.shared?.headers.latestBlockHeight` bridge, visible at every call site and reviewable by audit.
-
-Three invariants previously honoured by policy are now enforced by the type system:
-
-- `SPVHeaderStore.blockHeaders` and `validatedTipHeight` are `private(set)`. The four legitimate writers each have a named mutator: `commitValidatedRun` (chain-validated runs, atomic with tip advance), `recordDisplayHeader` (display-only WoC fetches, never advances the trust tip), `bootstrapFromPersistence` (atomic load on launch), `resetToCheckpoint` (wipe + reseed on checkpoint upgrade or `forceResync`).
-- `WalletState.lastPaymentApproval` is `private(set)`. The only setter is `setLastPaymentApproval`, called by the biometric gate after a successful Face ID prompt or by `recordPaymentApproval` for upstream-stamped approvals.
-- `BlockchainDataProvider` is an `actor` rather than a `@MainActor class`. The cross-source verifier's `async let primary / secondary` for WhatsOnChain and JungleBus history fetches now runs in genuine parallel on the cooperative thread pool rather than serialised through the main thread.
-
-The motivation is straightforward: the three domains have very different blast radii on compromise. A bug in interpreter code is a UX glitch. A bug in wallet code is potentially lost funds. A bug in SPV code is silent acceptance of fake "confirmed" status. Partitioning them so the compiler refuses cross-domain reach makes each domain's invariants reviewable in isolation and removes the entire class of "interpreter code accidentally mutating wallet state" failures that the prior single-class shape allowed.
-
-#### Address Discovery
-
-The wallet discovers addresses with funds using a shared Type42 scanner (`scanType42Addresses`). The scanner is *derivationType-independent* — it always tries Type42 first if the master key exists in Keychain, regardless of what `derivationType` says on the wallet card.
-
-- **Dynamic scan range** — scans at least 20 addresses (gap limit) past the last address with activity, with a minimum floor of 50 addresses.
-- **Receive and change chains** — scans both `1-wallet-{N}` (receive) and `0-change-{N}` (change) invoice numbers.
-- **BIP-44 fallback** — after Type42, scans standard BIP-44 paths. A wallet can have funds on both derivation paths.
-- **Auto-repair** — if Type42 addresses are discovered but `derivationType` is wrong, the scanner automatically corrects it.
-
-<a id="wallet-cards" />
-
-### Wallet Cards
-
-Each wallet is represented by a *Wallet Card* in the app interface. A card stores wallet title, main address, derived addresses, balance, and derivation type. Multiple wallets can be managed simultaneously; biometric authentication is required to access sensitive details.
-
-One wallet can be marked as the *default wallet*, indicated by a star on the wallet card. The default wallet is used by the terminal `send` word and other non-UI operations.
-
-<a id="wallet-transactions" />
-
-### Transactions
-
-#### Receiving
-
-To receive BSV, share your wallet's receiving address or scan its QR code. Monitoring uses **JungleBus REST polling** every 30 seconds via `GET /v1/address/get/{address}`, plus a periodic sync as safety net.
-
-Notifications use a UTXO-based deposit detection system tracking known outpoints per wallet — immune to confirmation state changes and mid-sync transient balances. First-launch outpoints are seeded silently.
-
-#### Sending
-
-Transactions are built locally on the device:
-
-1. **UTXO Selection** — avoiding ordinal-protected UTXOs.
-2. **Fee Calculation** — current rate from GorillaPool or TAAL via ARC policy endpoints.
-3. **Change Output** — returned to a fresh change address.
-4. **Signing** — each input signed with the correct private key.
-5. **Anti-Fee-Sniping** — `nLockTime` set to current block height.
-6. **Broadcasting** — submitted via ARC with automatic failover.
-
-The `pay` word opens the transaction builder with three tabs: OP_RETURN, Script, Upload (B:// protocol).
-
-> **Mandatory pre-signing review.** Neither `send` nor `send-many` broadcasts directly. `send` pre-fills PayView; `send-many` presents a MultiPaySheet with a scrollable grid showing each (recipient, amount) row plus the total. The user sees the exact output set before the long-press triggers signature.
-
-#### Fragmentation-Aware Selection
-
-UTXO selection switches to a fragmentation-aware policy when the wallet has more than 100 UTXOs OR average UTXO value is below 5000 satoshis with more than 40 UTXOs. Dust-input cap rises from 10 to 50, sort flips to smallest-first, smart-change splitting disabled. A 100 KB ceiling refuses oversize transactions before biometric prompts.
-
-> **Trust Local State.** Per the white paper (§2), we built the transaction and signed it with our private keys — we know exactly what it contains. ARC confirms the network saw it; the rest we already know.
-
-#### Paymail
-
-Paymail allows sending BSV to human-readable addresses (e.g., `user@example.com`) instead of raw Bitcoin addresses. Implements BRC-30 receive-transaction callbacks via `.well-known/bsvalias` discovery, and automatic resolution when a paymail address is entered in the pay view.
-
-<a id="wallet-utxo-sync" />
-
-### UTXO Sync
-
-The wallet's UTXO set is reconstructed from locally-held transactions, not queried from a network endpoint. White paper §8 says SPV clients should derive ownership from chain-validated proofs they hold themselves; treating an external `/unspent` index as authoritative inverts that model. Henceforth follows the white paper.
-
-- **History authoritative** — every confirmed transaction in the local store contributes its outputs to the reconstructed UTXO set. WhatsOnChain `/unspent` corroborates and surfaces deposits we haven't fetched yet; it is never the source of truth.
-- **Canonical address set** — the wallet's master address, every derived address, and the currently-rotated receive address are unioned into a single set used by both history sync and UTXO reconstruction.
-- **Strict removal policy** — a UTXO disappears only on positive evidence of spend: the user broadcast a transaction that consumes it; a confirmed foreign transaction spending it lands in the local history; or the producing transaction fails SPV verification. Absence from an external endpoint is never a removal trigger.
-- **Outpoint-consumption index** — a derived set of "txid:vout" strings recording every consumed output, rebuilt from the local transaction store on every wallet open and updated incrementally as new transactions arrive.
-- **Reconciliation** — every full sync partitions outpoints into *corroborated*, *provisional*, and *wallet-unknown*. Wallet-unknown outpoints trigger a background fetch of the producing transaction.
-
-<a id="wallet-recovery" />
-
-### Recovery Tools
-
-- **Add address** — paste any BSV address into the wallet's edit sheet; the app searches the wallet's seed across both Type42 and BIP-44 chains for a derivation path that produces it. Pure local computation.
-- **Auto-rediscovery** — when an incoming transaction pays an address the wallet doesn't yet know about, the app silently attempts the same rederivation in the background.
-- **Advanced sync toggle** — Settings → Bitcoin → Advanced Sync exposes the active UTXO sync model. Either side is safe; the toggle exists so users can self-recover if either path surfaces an anomaly.
-
-<a id="wallet-spv" />
-
-### SPV Architecture
-
-The wallet implements Simplified Payment Verification per Section 8 of the Bitcoin white paper: clients trust a locally maintained chain of block headers and verify individual transactions against it using Merkle proofs.
-
-> **SPV trust boundary.** Every header in the local store is either the hardcoded checkpoint or transitively chain-links back to it via a series of PoW-validated, chain-linked intermediate headers. There is no silent network fallback in the verification path — if Henceforth doesn't have the header locally, it refuses to verify the transaction and reports a pending-sync state instead.
-
-#### Trust Anchor
-
-The wallet ships with a hardcoded checkpoint in `SPVCheckpoint.mainnet` — `(height, hash, previousblockhash, merkleroot, version, time, nonce, bits)` for a recent mainnet block roughly 500 confirmations below the then-tip. The checkpoint hash doubles as its own migration version marker: bumping it triggers a wipe of every user's local header store on next launch.
-
-#### Header Store
-
-`FORTH.blockHeaders: [Int: WOCGetHeadersModel]`. Every entry must satisfy:
-
-1. **Non-empty merkleroot** — pre-Phase-1 placeholder rows are dropped on load.
-2. **Individual PoW validates** — double-SHA256 of the serialized header must be below the target encoded in `bits`.
-3. **Chain-linked to parent** — `previousblockhash` must equal the hash of the header at `height - 1`.
-4. **Transitively anchored to the checkpoint**.
-
-#### Validated Tip
-
-`FORTH.validatedTipHeight` is the highest block height whose header transitively chain-links back to the checkpoint via a contiguous run. SPV verification uses `validatedTipHeight` as the trust upper bound.
-
-> **`validatedTipHeight` vs `latestBlockHeight`.** `latestBlockHeight` is the live chain tip (driven by `wocGetHeaders` tip-10 fetch) used for `txVersion` activation gates and UI display. `validatedTipHeight` is "highest height I can prove SPV for right now". Never conflate them.
-
-#### Commit Path
-
-`FORTH.commitValidatedHeaderRun(_:)` is the single entry point. It requires: (1) the run's first header has a local anchor at `firstHeight - 1`; (2) the anchor's hash equals the run's first `previousblockhash`; (3) the full batch passes `SPVService.validateBlockHeaderChain`.
-
-#### Auto-Sync
-
-`HeaderSyncService` opens a WebSocket to `wss://socket.whatsonchain.com/websocket/history?from=<validatedTipHeight+1>`, buffers decoded headers, flushes runs of 500 via `commitValidatedHeaderRun`, with idle detection via cancellable `Task.sleep(for: 3s)` and exponential backoff 1s → 60s cap.
-
-#### Verification
-
-`SPVService.verifyTransaction(...)` fetches the TSC (BRC-74) Merkle proof from WhatsOnChain, looks up the containing header via `findBoundedBlockHeader` (returns the header only when its height falls in `[checkpointHeight ... validatedTipHeight]`), PoW-validates the local header, and verifies the proof against the local merkleroot. If the bounded lookup returns nil, verification returns `blockHeaderNotFound` — *without* fetching from WoC.
-
-#### Checkpoint Maintenance
-
-Bumping the checkpoint is deliberate: pick a target at least 500 confirmations below current tip; fetch from a primary source and **cross-verify** every field against a second independent source; commit the updated `SPVCheckpoint.mainnet`. The next launch detects the new hash and wipes/re-syncs.
-
-> **Never bump without cross-verification.** A compromised response at bump time would silently become the new trust anchor baked into the binary.
-
-<a id="wallet-cold-mode" />
-
-### Cold Mode & Air-Gap Bundles
-
-Cold Mode (`WalletCard.coldModeEnabled`) defers broadcast: a transaction the user has approved with Face ID is signed and stored locally as a *pending action* rather than submitted to ARC. The user releases it later from the **Pending Broadcasts** view.
-
-Three serialisable JSON formats carry data across the air-gap, exchanged via AirDrop and validated on import:
-
-- **`.hfheaders`** — a contiguous run of validated block headers anchored to a checkpoint hash. The importer hands the run to `commitValidatedHeaderRun` so chain-link, PoW, and checkpoint-anchor invariants self-enforce.
-- **`.hfreceipt`** — proof that a specific transaction was included in the blockchain. Carries (txid, raw tx hex, block height, block hash, TSC Merkle proof, containing header). `verifyTransaction(fromBundle:)` validates inclusion against the importer's own local header with no network call. After SPV passes, the importer re-derives output ownership and refuses receipts that don't pay this wallet.
-- **`.hfaddrpack`** — pre-derived receive addresses pushed signer → watcher. Each entry has the address, derivation scheme, and the scheme-specific derivation reference. Signed by the wallet's hardened identity key at `m/13'/0'` with DER ECDSA — deliberately isolated from the receive/change derivation tree to avoid ECDSA nonce-reuse leakage.
-
-**Settings → Bitcoin → Air-Gap Tools** exposes three exporters and a single import button (routed by file extension). In v1.0, `.hfaddrpack` import validates the signature; persistence into a watch-only store is a follow-up in a later release.
-
-<a id="wallet-data-mgmt" />
-
-### Wallet Data Management
-
-UTXO and transaction persistence is the most security-critical layer of the wallet. The rules below are invariants, not preferences.
-
-- **Never overwrite UTXO files with partial data.** Saved only when *all* addresses queried successfully.
-- **Conservative merge.** A UTXO is removed only when its owning address was queried *and* the UTXO was not in the response.
-- **Never persist a smaller transaction set than what's on disk.** `persistTransactionsToDisk` refuses the write if the in-memory snapshot has fewer entries.
-- **Per-wallet file scoping.** Transactions, UTXOs, and pending broadcast amounts live in wallet-scoped files. On wallet open, in-memory state is cleared and reloaded from that wallet's files only.
-- **Trust the per-wallet file on load.** Load-time `byOwnership` filtering has been removed — it dropped Type42 change and paymail receives, then silently wrote the smaller set back.
-
-<a id="wallet-utxos" />
-
-### UTXOs & Balance
-
-A UTXO represents a discrete amount of Bitcoin that can be spent.
-
-> **Balance from UTXOs.** Displayed balance is computed solely from the UTXO set:
-> ```
-> confirmed   = sum of UTXOs with block height > 0
-> unconfirmed = sum of UTXOs with block height = 0
-> total       = confirmed + unconfirmed
-> ```
-> Satoshi conversions use `satoshisPerBSV` (100,000,000). Price conversions use `priceCentsDivisor` (100.0). Raw magic numbers are never used.
-
-#### Ordinal Protection
-
-1Sat Ordinals are NFTs inscribed on single-satoshi UTXOs. Protected at three levels:
-
-1. **Transaction builder** — 1-satoshi UTXOs are excluded from UTXO selection.
-2. **Inscription scanner** — for display, 1-sat UTXOs are scanned by fetching the raw transaction and detecting the `OP_FALSE OP_IF ... OP_ENDIF` inscription pattern. Results are cached per outpoint.
-3. **1Sat indexer fallback** — 1-sat UTXOs with no detectable current-output inscription are checked against `ordinals.gorillapool.io`. Tri-state: is-ordinal, not-ordinal, or fails closed on HTTP 5xx (protect the UTXO).
-
-#### UTXO Split
-
-From the UTXO detail view, a single UTXO can be split into up to 240 separate outputs across fresh derived addresses.
-
-<a id="wallet-api" />
-
-### API Providers
-
-| Capability             | WhatsOnChain | GorillaPool | TAAL     | JungleBus |
-|------------------------|:------------:|:-----------:|:--------:|:---------:|
-| UTXOs (balance)        | ✓            |             |          |           |
-| Transaction history    | ✓            |             |          | ✓         |
-| SPV Merkle proofs      | ✓            |             |          |           |
-| BSV price              | ✓            |             |          |           |
-| Fee quotes             |              | ✓           | ✓        |           |
-| Broadcast (ARC)        |              | ✓           | ✓*       |           |
-| Real-time monitoring   |              |             |          | ✓         |
-
-*TAAL requires a user-configured API key. GorillaPool is primary; TAAL is failover. API keys are stored in the iOS Keychain and configured in Settings → API & Miners.
-
-<a id="wallet-security" />
-
-### Security
-
-- **Biometric authentication** — Face ID or Touch ID required to view private keys, seed phrases, and wallet details. Sessions expire after 120 seconds of inactivity. The same window is used by the *payment approval cache*.
-- **Keychain storage** — all sensitive material stored with `.whenUnlockedThisDeviceOnly` accessibility.
-- **Seed verification** — after creating a wallet, users verify their seed phrase via a 3-word quiz.
-- **No server dependency** — fully self-custodial. No account, no registration, no server holds your keys.
-- **Message encryption (BRC-2)** — Electrum ECIES (ECDH + AES-CBC + HMAC-SHA256). Wire-compatible with `@bsv/sdk`. Format: `"BIE1" || pubkey || ciphertext || HMAC`.
-- **Wallet file encryption** — AES-256-GCM with a Keychain-backed key before syncing to iCloud.
-
-#### Payment Approval Cache
-
-A successful biometric approval stamps the cache with `(surface, amountSats, outputsDigest, timestamp)`. A subsequent broadcast within the 120-second window can skip the prompt when all three scoping axes match. The `outputsDigest` is a SHA-256 over a canonical encoding of the sorted output set: `UInt32-LE(recipientKey.utf8.count) || recipientKey.utf8 || Int64-LE(satoshis)` per output. Length-prefixing defeats engineered concatenation collisions.
-
-> **The `recipientKey` must be the final resolved destination, never an alias.** For paymail, the resolved P2PKH address, never `alice@example.com`. A paymail server could change resolution between approval and broadcast — binding to the resolved key forces a re-prompt whenever the destination changes.
-
-#### Encrypted Off-Device Backup
-
-`.bep` files produced by `BackupService`: a portable, password-encrypted blob restorable on any device.
-
-- **Key derivation** — PBKDF2-HMAC-SHA256 with 16-byte salt, 600,000 iterations.
-- **Encryption** — AES-256-GCM (authenticated; tampering yields `.invalidPassword`).
-- **Wire format** — magic prefix `"HFBK1"`, salt (16), iteration count (4 BE), nonce (12), AES-GCM ciphertext + 16-byte tag.
-- **Forward compatibility** — version byte in the magic prefix allows future format bumps.
-
-> `.bep` protects only the seed phrase. UTXO cache, transaction history, and user preferences regenerate from the blockchain after restore.
-
-#### QR Code Scanner
-
-Unified QR scanner in Settings, routed by content: `hfauth:` prefix → BRC-103 auth; Base58Check `0x80` → WIF import; `0x00` → Bitcoin address → pay view.
-
-#### BRC-103 Authentication
-
-Passwordless authentication: web service displays `hfauth:` QR with challenge + callback. Wallet displays the requesting domain, asks for approval, signs the challenge with the wallet's identity key, sends the signature to the callback. No passwords, no accounts.
-
-#### BRC-100 Wallet Interface
-
-`henceforth://wallet/{method}?params=...` URL scheme exposes key derivation, signing, encryption, and certificate management (BRC-52/53). All sensitive operations require user approval via on-screen confirmation + biometric.
-
-*Status: the URL scheme and signing infrastructure are implemented, but the full BRC-100 sign-in workflow is still in development and not yet available for general use.*
-
-##### Certificate Proofs (BRC-52/53)
-
-- **Per-field HMAC keyring, ECDH-bound** — each field's HMAC key is encrypted with an ECDH shared secret derived between the prover's and verifier's BRC-42 identity keys. A leaked proof is useless against any other party.
-- **Issuer signature verification** — `verifyProof` checks the issuer's BSM signature over the certificate's canonical field set before accepting any field as authentic.
-- **Serial number carried in the proof** — for correlation with revocation or re-issuance records.
-
-<a id="credits" />
-
-## Credits
-
-### Starting Forth — Leo Brodie
-
-Leo Brodie, author of *Starting Forth* — a great textbook, suitable for both novices and professionals.
-
-[Starting FORTH (PDF)](https://1scyem2bunjw1ghzsf1cjwwn-wpengine.netdna-ssl.com/wp-content/uploads/2018/01/Starting-FORTH.pdf)
-
-### BITSRFR
-
-Fellow surfer of the binary ocean who has made FORTH tutorials and built a Swift command line FORTH application.
-
-[YouTube](https://www.youtube.com/user/JoeKreydt) · [cruxFORTH on GitHub](https://github.com/josephkreydt/cruxForth)
-
-### Bitcoin
-
-The greatest monetary system ever created. Invented by Satoshi Nakamoto — please read the white paper.
-
-[Bitcoin White Paper](https://craigwright.net/bitcoin-white-paper.pdf)
-
-### SwiftBSV
-
-The Swift SDK that powers every cryptographic operation in the Henceforth wallet. Originally written by Will Townsend at [wtsnz/SwiftBSV](https://github.com/wtsnz/SwiftBSV); the fork at [henryhudson/SwiftBSV](https://github.com/henryhudson/SwiftBSV) continues that foundation with Swift 6 strict concurrency, modern Apple platform targets, and a 41-page LaTeX book of its own.
-
-[SwiftBSV Book (PDF)](https://github.com/henryhudson/SwiftBSV/blob/main/Documentation/swiftbsv.pdf)

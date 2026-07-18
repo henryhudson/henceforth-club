@@ -67,10 +67,10 @@ export default function TocSidebar({
       <div className="mb-4">
         <input
           type="search"
-          placeholder="Filter sections…"
+          placeholder="Filter sections or words…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          aria-label="Filter table of contents"
+          aria-label="Filter table of contents by section or word name"
           className={`w-full rounded border border-card-border/40 bg-card-bg/40 px-3 py-1.5 text-xs text-foreground placeholder:text-muted/50 outline-none transition-colors ${styles.focus}`}
         />
       </div>

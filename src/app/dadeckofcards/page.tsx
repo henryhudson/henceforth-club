@@ -348,8 +348,17 @@ export default function DaDeckOfCardsPage() {
               height={80}
               className="mx-auto mb-6 rounded-2xl shadow-lg shadow-accent/10"
             />
-            <p className="text-xs text-muted/50 mb-6 tracking-wider uppercase">
-              Available now — Free to play
+            <p className="text-xs text-muted/50 mb-2 tracking-wider uppercase">
+              Available now
+            </p>
+            <p className="mb-6 text-sm text-foreground/80">
+              Free to play · multiplayer from $0.99/month or $9.99/year ·{" "}
+              <a
+                href="/dadeckofcards/privacy"
+                className="text-muted/70 underline decoration-card-border underline-offset-2 hover:text-accent"
+              >
+                Privacy
+              </a>
             </p>
             <a
               href="https://apps.apple.com/app/deck-of-cards/id1520654142"

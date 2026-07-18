@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import FadeIn from "@/components/FadeIn";
 
 export const metadata: Metadata = {
@@ -70,34 +71,41 @@ export default function ContactPage() {
 
         <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           <FadeIn>
-            <a
-              href="mailto:henry@henceforth.club"
-              className="card-glow card-glow-warm block rounded-2xl border border-card-border bg-card-bg p-8 hover:border-card-border-hover transition-all group h-full"
-            >
-              <EmailIcon className="h-5 w-5 text-muted/50 group-hover:text-foreground transition-colors" />
+            <div className="card-glow card-glow-warm flex h-full flex-col rounded-2xl border border-card-border bg-card-bg p-8 transition-all hover:border-card-border-hover">
+              <EmailIcon className="h-5 w-5 text-muted/50" />
               <h2 className="mt-4 text-xl font-bold text-accent-warm">
                 Email
               </h2>
               <p className="mt-1 text-sm text-muted/50 break-all">
                 henry@henceforth.club
               </p>
-              <p className="mt-4 text-sm leading-relaxed text-muted">
-                Direct contact for Henceforth, ScriptedSupply, and anything
-                that needs more than 280 characters.
+              <p className="mt-4 flex-1 text-sm leading-relaxed text-muted">
+                Direct contact for Henceforth,{" "}
+                <Link
+                  href="/scriptedsupply"
+                  className="text-foreground/80 underline decoration-card-border underline-offset-2 hover:text-accent-warm"
+                >
+                  Scripted Supply
+                </Link>
+                , and anything that needs more than 280 characters.
               </p>
-              <span className="mt-6 inline-flex items-center gap-2 text-sm text-muted/50 group-hover:text-foreground transition-colors">
+              <a
+                href="mailto:henry@henceforth.club"
+                className="mt-6 inline-flex items-center gap-2 text-sm text-muted/50 transition-colors hover:text-foreground"
+              >
                 Send an email
                 <svg
-                  className="h-4 w-4 transition-transform group-hover:translate-x-1"
+                  className="h-4 w-4"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
                   strokeWidth={2}
+                  aria-hidden="true"
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
-              </span>
-            </a>
+              </a>
+            </div>
           </FadeIn>
 
           {profiles.map((profile, i) => (

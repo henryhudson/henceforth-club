@@ -12,8 +12,16 @@ const noopSubscribe = () => () => {};
 const readSignedIn = () =>
   document.cookie.split("; ").some((c) => c === "board_signed_in=1");
 
+type NavLink = {
+  href: string;
+  label: string;
+  hoverColor: string;
+  match?: (pathname: string) => boolean;
+};
+
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const [appsOpen, setAppsOpen] = useState(false);
   const pathname = usePathname();
   // Re-evaluated on each render (incl. route changes via usePathname), so a
   // login/logout reflects here — no setState-in-effect.
@@ -32,13 +40,33 @@ export default function Navbar() {
 
   if (pathname?.startsWith("/provenance")) return null;
 
-  const links = [
+  const apps: NavLink[] = [
     { href: "/henceforth", label: "Henceforth", hoverColor: "hover:text-accent-warm" },
     { href: "/dadeckofcards", label: "Deck of Cards", hoverColor: "hover:text-accent" },
     { href: "/hansard", label: "Hansard", hoverColor: "hover:text-accent-green" },
+  ];
+
+  const links: NavLink[] = [
+    { href: "/learn", label: "Learn", hoverColor: "hover:text-accent-warm" },
+    {
+      href: "/docs",
+      label: "Docs",
+      hoverColor: "hover:text-accent-warm",
+      match: (p) => p === "/docs" || p.startsWith("/docs/"),
+    },
+    {
+      href: "/articles",
+      label: "Articles",
+      hoverColor: "hover:text-accent-warm",
+      match: (p) => p === "/articles" || p.startsWith("/articles/"),
+    },
     { href: "/folklore", label: "Folklore", hoverColor: "hover:text-accent-orange" },
     { href: "/contact", label: "Contact", hoverColor: "hover:text-foreground" },
   ];
+
+  const appsActive = apps.some(
+    (a) => pathname === a.href || pathname?.startsWith(a.href + "/"),
+  );
 
   // Liquid-glass pill, mirroring the henceforth CTA (rounded-full + translucent
   // tint + backdrop-blur + accent glow). Green = signed out (sign in); red =
@@ -68,6 +96,18 @@ export default function Navbar() {
       </Link>
     );
 
+  const linkClass = (link: NavLink) => {
+    const active = link.match
+      ? link.match(pathname ?? "")
+      : pathname === link.href || pathname?.startsWith(link.href + "/");
+    if (link.href === "/folklore") {
+      return "text-accent-orange transition-opacity hover:opacity-75";
+    }
+    return `transition-colors ${link.hoverColor} ${
+      active ? "text-foreground" : "text-muted"
+    }`;
+  };
+
   return (
     <nav className="animate-slide-down sticky top-0 z-50 border-b border-card-border/50 bg-background/70 backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
@@ -80,21 +120,46 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop links */}
-        <div className="hidden sm:flex items-center gap-6 lg:gap-8 text-sm">
-          {links.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={
-                link.href === "/folklore"
-                  ? "text-accent-orange transition-opacity hover:opacity-75"
-                  : `transition-colors ${link.hoverColor} ${
-                      pathname === link.href ? "text-foreground" : "text-muted"
-                    }`
-              }
+        <div className="hidden sm:flex items-center gap-5 lg:gap-7 text-sm">
+          <div
+            className="relative"
+            onMouseEnter={() => setAppsOpen(true)}
+            onMouseLeave={() => setAppsOpen(false)}
+          >
+            <button
+              type="button"
+              className={`transition-colors hover:text-foreground ${
+                appsActive ? "text-foreground" : "text-muted"
+              }`}
+              aria-expanded={appsOpen}
+              aria-haspopup="true"
+              onClick={() => setAppsOpen((v) => !v)}
             >
-              {/* Folklore is the one nav item that is a mark, not a word — the
-                  carved wordmark at text height, in its brand orange. */}
+              Apps
+            </button>
+            {appsOpen && (
+              <div className="absolute left-0 top-full z-50 pt-2">
+                <div className="min-w-[11rem] rounded-xl border border-card-border bg-background/95 py-2 shadow-xl backdrop-blur-xl">
+                  {apps.map((app) => (
+                    <Link
+                      key={app.href}
+                      href={app.href}
+                      className={`block px-4 py-2 text-sm transition-colors ${app.hoverColor} ${
+                        pathname === app.href || pathname?.startsWith(app.href + "/")
+                          ? "text-foreground"
+                          : "text-muted"
+                      }`}
+                    >
+                      {app.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {links.map((link) => (
+            <Link key={link.href} href={link.href} className={linkClass(link)}>
               {link.href === "/folklore" ? (
                 <FolkloreWordmark className="h-3.5 w-auto" />
               ) : (
@@ -110,6 +175,7 @@ export default function Navbar() {
           onClick={() => setOpen(!open)}
           className="sm:hidden relative w-6 h-5 flex flex-col justify-between"
           aria-label={open ? "Close menu" : "Open menu"}
+          aria-expanded={open}
         >
           <span
             className={`block h-px w-full bg-foreground transition-all duration-300 origin-center ${
@@ -132,10 +198,26 @@ export default function Navbar() {
       {/* Mobile menu */}
       <div
         className={`sm:hidden overflow-hidden transition-all duration-300 ease-out ${
-          open ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
+          open ? "max-h-[32rem] opacity-100" : "max-h-0 opacity-0"
         }`}
       >
         <div className="border-t border-card-border/30 px-6 py-4 flex flex-col gap-4">
+          <p className="text-[10px] uppercase tracking-widest text-muted/40">Apps</p>
+          {apps.map((app) => (
+            <Link
+              key={app.href}
+              href={app.href}
+              onClick={() => setOpen(false)}
+              className={`text-sm transition-colors ${app.hoverColor} ${
+                pathname === app.href || pathname?.startsWith(app.href + "/")
+                  ? "text-foreground"
+                  : "text-muted"
+              }`}
+            >
+              {app.label}
+            </Link>
+          ))}
+          <div className="section-line my-1" />
           {links.map((link) => (
             <Link
               key={link.href}
@@ -144,9 +226,7 @@ export default function Navbar() {
               className={
                 link.href === "/folklore"
                   ? "text-accent-orange transition-opacity hover:opacity-75"
-                  : `text-sm transition-colors ${link.hoverColor} ${
-                      pathname === link.href ? "text-foreground" : "text-muted"
-                    }`
+                  : `text-sm ${linkClass(link)}`
               }
             >
               {link.href === "/folklore" ? (

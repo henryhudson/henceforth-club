@@ -99,7 +99,7 @@ const jsonLd = {
   downloadUrl: "https://apps.apple.com/app/henceforth/id1602896145",
   offers: {
     "@type": "Offer",
-    price: "0",
+    price: "9.99",
     priceCurrency: "USD",
   },
   publisher: {
@@ -410,19 +410,61 @@ export default function HenceforthPage() {
           </FadeIn>
         </div>
 
-        {/* Documentation */}
+        {/* Documentation & deep dives */}
         <div className="mt-24">
           <div className="section-line" />
           <FadeIn>
             <p className="mt-12 text-xs tracking-widest text-muted/50 uppercase">
-              Documentation
+              Go deeper
             </p>
             <p className="mt-4 text-sm leading-relaxed text-muted max-w-2xl">
-              Complete reference for all FORTH words and Bitcoin Script opcodes,
-              plus long-form articles and video tutorials. All on the web — use
-              the navigation above to jump between docs, articles, and learn.
+              Word reference, wallet architecture notes, and a ten-episode video
+              series — the proof behind the product page.
             </p>
           </FadeIn>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              {
+                href: "/learn",
+                title: "Learn",
+                blurb: "Starting Henceforth — ten short episodes from the stack to Bitcoin Script.",
+              },
+              {
+                href: "/docs/reference",
+                title: "Word reference",
+                blurb: "Every FORTH word and Bitcoin Script opcode as implemented in the app.",
+              },
+              {
+                href: "/docs/wallet",
+                title: "Wallet docs",
+                blurb: "Trust domains, SPV headers, cold mode, and UTXO sync.",
+              },
+              {
+                href: "/articles/trust-local-but-verify",
+                title: "Trust Local, But Verify",
+                blurb: "Why verified local state never shrinks from network silence.",
+              },
+              {
+                href: "/articles/transactions-in-henceforth",
+                title: "Transactions in Henceforth",
+                blurb: "PayView, send / send-many, raw hex, and air-gap receipts.",
+              },
+              {
+                href: "/henceforth/privacy",
+                title: "Privacy",
+                blurb: "Keys stay on device. No advertising SDKs.",
+              },
+            ].map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                className="rounded-xl border border-card-border bg-card-bg/40 p-5 transition-colors hover:border-accent-warm"
+              >
+                <h3 className="text-sm font-semibold text-accent-warm">{item.title}</h3>
+                <p className="mt-2 text-xs leading-relaxed text-muted">{item.blurb}</p>
+              </a>
+            ))}
+          </div>
         </div>
 
         {/* CTA */}
@@ -436,8 +478,11 @@ export default function HenceforthPage() {
               height={80}
               className="mx-auto mb-6 rounded-2xl shadow-lg shadow-accent-warm/10"
             />
-            <p className="text-xs text-muted/50 mb-6 tracking-wider uppercase">
+            <p className="text-xs text-muted/50 mb-2 tracking-wider uppercase">
               Available now
+            </p>
+            <p className="mb-6 text-sm text-foreground/80">
+              One purchase · $9.99 · iPhone, iPad, and Mac
             </p>
             <a
               href="https://apps.apple.com/app/henceforth/id1602896145"
