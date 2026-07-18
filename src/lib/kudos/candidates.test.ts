@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mockListHandles = vi.fn();
 const mockGetArchivePage = vi.fn();
 const mockReadTipPriorities = vi.fn();
+const mockReadRatingTable = vi.fn();
 
 vi.mock("@/lib/xIndex", () => ({
   listHandles: (...args: unknown[]) => mockListHandles(...args),
@@ -14,8 +15,11 @@ vi.mock("@/lib/xArchiveCache", () => ({
 vi.mock("@/lib/kudos/tips", () => ({
   readTipPriorities: (...args: unknown[]) => mockReadTipPriorities(...args),
 }));
+vi.mock("@/lib/kudos/ledger", () => ({
+  readRatingTable: (...args: unknown[]) => mockReadRatingTable(...args),
+}));
 
-import { listDealCandidates } from "./candidates";
+import { listDealCandidates, readAuthorRatings } from "./candidates";
 
 const DAY = "2026-07-18";
 
@@ -31,7 +35,9 @@ beforeEach(() => {
   mockListHandles.mockReset();
   mockGetArchivePage.mockReset();
   mockReadTipPriorities.mockReset();
+  mockReadRatingTable.mockReset();
   mockReadTipPriorities.mockResolvedValue({});
+  mockReadRatingTable.mockResolvedValue({});
 });
 
 describe("listDealCandidates — the dealer's pool", () => {
@@ -81,5 +87,52 @@ describe("listDealCandidates — the dealer's pool", () => {
     mockListHandles.mockResolvedValue([]);
     expect(await listDealCandidates(DAY)).toEqual([]);
     expect(mockGetArchivePage).not.toHaveBeenCalled();
+  });
+});
+
+describe("readAuthorRatings — the directory's author aggregate", () => {
+  it("aggregates each author's rated texts through the fold's mean-of-top rule", async () => {
+    mockListHandles.mockResolvedValue([
+      { handle: "ann", latestMs: 2 },
+      { handle: "ben", latestMs: 1 },
+    ]);
+    mockGetArchivePage.mockImplementation(async (handle: string) =>
+      handle === "ann" ? page([post("a1"), post("a2")]) : page([post("b1")]),
+    );
+    mockReadRatingTable.mockResolvedValue({
+      a1: { rating: 1600, duels: 25 },
+      a2: { rating: 1400, duels: 5 },
+      b1: { rating: 1550, duels: 21 },
+    });
+
+    expect(await readAuthorRatings()).toEqual({ ann: 1500, ben: 1550 });
+  });
+
+  it("leaves an author with no rated texts absent, never defaulted", async () => {
+    mockListHandles.mockResolvedValue([
+      { handle: "ann", latestMs: 2 },
+      { handle: "ben", latestMs: 1 },
+    ]);
+    mockGetArchivePage.mockImplementation(async (handle: string) =>
+      handle === "ann" ? page([post("a1")]) : page([post("b1")]),
+    );
+    mockReadRatingTable.mockResolvedValue({ a1: { rating: 1520, duels: 20 } });
+
+    expect(await readAuthorRatings()).toEqual({ ann: 1520 });
+  });
+
+  it("uses a given rating table without a second ledger read", async () => {
+    mockListHandles.mockResolvedValue([{ handle: "ann", latestMs: 1 }]);
+    mockGetArchivePage.mockResolvedValue(page([post("a1")]));
+
+    const ratings = await readAuthorRatings({ a1: { rating: 1510, duels: 22 } });
+
+    expect(ratings).toEqual({ ann: 1510 });
+    expect(mockReadRatingTable).not.toHaveBeenCalled();
+  });
+
+  it("is empty when Redis is not configured — the directory then keeps its given order", async () => {
+    mockListHandles.mockResolvedValue([]);
+    expect(await readAuthorRatings()).toEqual({});
   });
 });

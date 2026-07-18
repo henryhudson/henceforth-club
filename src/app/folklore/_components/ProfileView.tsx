@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { ScoreWindow } from "@/lib/xScore";
+import type { RatingTable } from "@/lib/kudos/elo";
 import { dedupePosts, type XArchive } from "../parseArchive";
 import { Avatar, computeShowParent, formatDate, formatUnixSeconds } from "./PostCard";
 import { buildThreadContext } from "./threadContext";
@@ -32,6 +33,7 @@ export default function ProfileView({
   verified,
   kudosEnabled = false,
   tipsByPost,
+  eloByPost,
   header = "profile",
 }: {
   archive: XArchive;
@@ -61,6 +63,11 @@ export default function ProfileView({
   kudosEnabled?: boolean;
   /** Public tip counts by post id, from the server's bulk read. */
   tipsByPost?: Record<string, number>;
+  /** The duel-rating table, threaded only while the kudos flag is on — the
+   * Best tab then sorts by Elo (the decayed-fold windows retire from the
+   * sort) and each row wears its rating or the unranked badge. Absent, the
+   * decayed-fold sort stands unchanged. */
+  eloByPost?: RatingTable;
   /** "profile" (default) opens with the identity card — the profile page's
    * whole point. "ledger" skips it: on the landing every entry is signed by
    * its author (picture + name linking to the profile), so a card up top
@@ -130,11 +137,23 @@ export default function ProfileView({
           tabs switch the order), hairline rules between entries, each
           opening in place to reveal its thread and on-chain record. */}
       <div className="mx-auto mt-8 max-w-[68ch] px-6">
-        <p className="ledger-label mb-1">The ledger · ranked by committed sats · tap a post to open it</p>
-        <p className="mb-3 text-xs text-muted">
-          Posts earn sats through paid votes from the Henceforth app — a post&rsquo;s worth here is
-          what people committed to it, not applause it can&rsquo;t keep.
-        </p>
+        {eloByPost !== undefined ? (
+          <>
+            <p className="ledger-label mb-1">The ledger · ranked by duels won · tap a post to open it</p>
+            <p className="mb-3 text-xs text-muted">
+              Texts rank by winning duels in the arena — giving kudos to the better of a dealt
+              pair crowns it, and a rating is earned against other texts, never bought.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="ledger-label mb-1">The ledger · ranked by committed sats · tap a post to open it</p>
+            <p className="mb-3 text-xs text-muted">
+              Posts earn sats through paid votes from the Henceforth app — a post&rsquo;s worth here is
+              what people committed to it, not applause it can&rsquo;t keep.
+            </p>
+          </>
+        )}
         <FeedControls
           posts={posts}
           showParent={showParent}
@@ -148,6 +167,7 @@ export default function ProfileView({
           scoresByWindow={scoresByWindow}
           kudosEnabled={kudosEnabled}
           tipsByPost={tipsByPost}
+          eloByPost={eloByPost}
           footer={footer}
         />
       </div>

@@ -5,6 +5,9 @@ import { listHandles } from "@/lib/xIndex";
 import { gbpPerBsv } from "@/lib/xPrice";
 import { readFoundingTotal, readLedgerRollup } from "@/lib/xVotes";
 import { readTipCounts } from "@/lib/kudos/tips";
+import { readRatingTable } from "@/lib/kudos/ledger";
+import { readAuthorRatings } from "@/lib/kudos/candidates";
+import { sortHandlesByAuthorElo } from "./sortPosts";
 import FolkloreWordmark from "./_components/FolkloreWordmark";
 import FolkloreForest from "./_components/FolkloreForest";
 import ProfileView from "./_components/ProfileView";
@@ -50,6 +53,14 @@ export default async function FolklorePage() {
     kudosEnabled && witness
       ? await readTipCounts(witness.posts.map((post) => post.id))
       : undefined;
+  // Behind the flag the duel fold sorts the folklore: the witness feed's Best
+  // tab by each text's rating, the directory by the author aggregate. Without
+  // it neither table is read and both orders stand exactly as they are.
+  const eloByPost = kudosEnabled ? await readRatingTable() : undefined;
+  const directoryHandles =
+    eloByPost !== undefined
+      ? sortHandlesByAuthorElo(handles, await readAuthorRatings(eloByPost))
+      : handles;
 
   return (
     // A <div>, not a <main>: the root layout already provides the single <main>
@@ -97,6 +108,7 @@ export default async function FolklorePage() {
           foundingByPost={foundingByPost}
           kudosEnabled={kudosEnabled}
           tipsByPost={tipsByPost}
+          eloByPost={eloByPost}
           header="ledger"
         />
       ) : (
@@ -165,12 +177,16 @@ export default async function FolklorePage() {
           registration gate */}
       <section className="mx-auto max-w-2xl px-6 pb-24">
         <div className="flex items-baseline justify-between">
-          <h2 className="ledger-label">The ledger · who has archived</h2>
+          <h2 className="ledger-label">
+            {eloByPost !== undefined
+              ? "The ledger · who has archived · ranked by duels won"
+              : "The ledger · who has archived"}
+          </h2>
           <span className="font-mono text-[11px] text-muted">{handles.length} on chain</span>
         </div>
-        {handles.length > 0 ? (
+        {directoryHandles.length > 0 ? (
           <div className="mt-3 divide-y divide-card-border border-y border-card-border">
-            {handles.map(({ handle, latestMs }) => (
+            {directoryHandles.map(({ handle, latestMs }) => (
               <DirectoryRow key={handle} handle={handle} latestMs={latestMs} />
             ))}
           </div>

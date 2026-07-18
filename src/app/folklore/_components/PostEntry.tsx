@@ -2,6 +2,8 @@
 
 import { useId, useState } from "react";
 import Link from "next/link";
+import { PROVISIONAL_DUELS } from "@/lib/kudos/constants";
+import type { Rating } from "@/lib/kudos/elo";
 import type { XPost } from "../parseArchive";
 import type { ThreadContext } from "./threadContext";
 import { Avatar, formatDate, formatUnixSeconds, shortTxid } from "./PostCard";
@@ -31,6 +33,7 @@ export default function PostEntry({
   foundingSats,
   kudosEnabled = false,
   tipCount,
+  elo,
   defaultOpen = false,
 }: {
   post: XPost;
@@ -57,6 +60,10 @@ export default function PostEntry({
   kudosEnabled?: boolean;
   /** The post's public tip count, threaded from the server's bulk read. */
   tipCount?: number;
+  /** The text's duel rating, threaded only while the kudos flag is on —
+   * under PROVISIONAL_DUELS duels it renders as the unranked badge instead
+   * of a number. Absent (the flag off), the row carries no rating markup. */
+  elo?: Rating;
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -185,6 +192,33 @@ export default function PostEntry({
           post's worth is the sats it has earned, not applause it can't keep. */}
       <p className="mt-3 flex flex-wrap items-center gap-x-2 text-xs text-muted">
         <span>{formatDate(post.at)}</span>
+        {/* The duel rating — the ranking under the kudos flag. Under
+            PROVISIONAL_DUELS duels a text is still finding its level, so it
+            wears the unranked badge rather than a number that would move by
+            forty points a duel. The economics chips below stay exactly as
+            they are: money and quality are two separate visible axes. */}
+        {elo &&
+          (elo.duels < PROVISIONAL_DUELS ? (
+            <>
+              <span aria-hidden>·</span>
+              <span
+                className="font-mono"
+                title={`Unranked — a text is rated after ${PROVISIONAL_DUELS} arena duels; this one has fought ${elo.duels}`}
+              >
+                unranked
+              </span>
+            </>
+          ) : (
+            <>
+              <span aria-hidden>·</span>
+              <span
+                className="font-mono"
+                title={`Elo rating over ${elo.duels} arena duels — earned against other texts, never bought`}
+              >
+                ⚔ <span className="text-accent">{Math.round(elo.rating).toLocaleString("en-GB")}</span>
+              </span>
+            </>
+          ))}
         {/* The ranking, shown as its two components: what the post cost to
             inscribe (its founding entry) plus what it has earned in paid
             votes since — Best sorts by their sum. Earned renders from zero

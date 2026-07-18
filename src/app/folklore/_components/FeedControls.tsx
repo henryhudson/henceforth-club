@@ -2,9 +2,10 @@
 
 import { useState, type ReactNode } from "react";
 import { DEFAULT_WINDOW, type ScoreWindow } from "@/lib/xScore";
+import { ratingOf, type RatingTable } from "@/lib/kudos/elo";
 import type { XPost } from "../parseArchive";
 import type { ThreadContext } from "./threadContext";
-import { sortPostsByScore } from "../sortPosts";
+import { sortPostsByElo, sortPostsByScore } from "../sortPosts";
 import PostEntry from "./PostEntry";
 
 type Mode = "latest" | "best";
@@ -34,6 +35,12 @@ const WINDOWS: ReadonlyArray<{ value: ScoreWindow; label: string }> = [
  * — a caller with a single score table gets a working Best tab but NOT five
  * buttons that would all show the same order (a no-op that misleads).
  *
+ * `eloByPost` is threaded only while the kudos flag is on: Best then ranks
+ * by Elo rating and the decayed-fold windows retire from the sort (their
+ * buttons don't render), while the economics chips keep rendering exactly
+ * as before beside each row's rating. Without it — the flag off — the
+ * decayed-fold sort above stands unchanged.
+ *
  * `showParent`/`threads` stay index-aligned to `posts`' given (unsorted)
  * order — the same shape `ProfileView` already computes — and are looked up
  * here by post id once Best puts posts in a different order. A function
@@ -53,6 +60,7 @@ export default function FeedControls({
   scoresByWindow,
   kudosEnabled = false,
   tipsByPost,
+  eloByPost,
   footer,
 }: {
   posts: readonly XPost[];
@@ -70,6 +78,9 @@ export default function FeedControls({
   kudosEnabled?: boolean;
   /** Public tip counts by post id, from the server's bulk read. */
   tipsByPost?: Record<string, number>;
+  /** The duel-rating table, threaded only while the kudos flag is on — Best
+   * then sorts by Elo and the window buttons retire. */
+  eloByPost?: RatingTable;
   /** The scroll loader, when the caller has one. Rendered ONLY in Latest
    * mode: the loader always appends chronological pages, so under Best it
    * quietly degraded the ranking at post 31 — sat-ranked rows, then an
@@ -80,7 +91,12 @@ export default function FeedControls({
   const [mode, setMode] = useState<Mode>("best");
   const [selectedWindow, setSelectedWindow] = useState<ScoreWindow>(DEFAULT_WINDOW);
   const windowScores = scoresByWindow?.[selectedWindow] ?? scores;
-  const ordered = mode === "best" ? sortPostsByScore(posts, windowScores) : posts;
+  const ordered =
+    mode === "best"
+      ? eloByPost !== undefined
+        ? sortPostsByElo(posts, eloByPost)
+        : sortPostsByScore(posts, windowScores)
+      : posts;
   const showParentById = new Map(posts.map((p, i) => [p.id, showParent[i]]));
   const threadById = new Map(posts.map((p, i) => [p.id, threads[i]]));
 
@@ -114,7 +130,7 @@ export default function FeedControls({
           Best
         </button>
       </div>
-      {mode === "best" && scoresByWindow && (
+      {mode === "best" && eloByPost === undefined && scoresByWindow && (
         <div role="group" aria-label="Ranking window" className="mb-4 flex flex-wrap gap-2 font-mono text-xs">
           {WINDOWS.map(({ value, label }) => {
             const active = value === selectedWindow;
@@ -151,6 +167,7 @@ export default function FeedControls({
             foundingSats={foundingByPost[post.id]}
             kudosEnabled={kudosEnabled}
             tipCount={tipsByPost?.[post.id]}
+            elo={eloByPost !== undefined ? ratingOf(eloByPost, post.id) : undefined}
           />
         ))}
       </div>

@@ -1,5 +1,6 @@
 import type { XArchive } from "../parseArchive";
 import type { ScoreWindow } from "@/lib/xScore";
+import type { RatingTable } from "@/lib/kudos/elo";
 import ProfileView from "./ProfileView";
 import PostsScrollLoader from "./PostsScrollLoader";
 import ReaderKeys from "./ReaderKeys";
@@ -30,6 +31,7 @@ export default function ProfilePage({
   verified,
   kudosEnabled = false,
   tipsByPost,
+  eloByPost,
 }: {
   archive: XArchive;
   txid?: string | null;
@@ -49,6 +51,9 @@ export default function ProfilePage({
   kudosEnabled?: boolean;
   /** Public tip counts by post id, from the server's bulk read. */
   tipsByPost?: Record<string, number>;
+  /** The duel-rating table, threaded only while the kudos flag is on — the
+   * Best tab then sorts by Elo instead of the decayed fold. */
+  eloByPost?: RatingTable;
 }) {
   const scrollLoader =
     handle !== undefined && postCount !== undefined && postCount > archive.posts.length ? (
@@ -114,6 +119,7 @@ export default function ProfilePage({
         verified={verified}
         kudosEnabled={kudosEnabled}
         tipsByPost={tipsByPost}
+        eloByPost={eloByPost}
       />
       <ReaderKeys handle={handle} />
     </main>

@@ -4,6 +4,7 @@ import { getArchivePage, PAGE_SIZE } from "@/lib/xArchiveCache";
 import { getOwner } from "@/lib/xOwner";
 import { readFoundingTotal, readLedgerRollup } from "@/lib/xVotes";
 import { readTipCounts } from "@/lib/kudos/tips";
+import { readRatingTable } from "@/lib/kudos/ledger";
 import { DEFAULT_WINDOW } from "@/lib/xScore";
 import ProfilePage from "../_components/ProfilePage";
 
@@ -47,12 +48,16 @@ export default async function HandlePage(
   // The kudos flag is read per request, exactly like the routes — without it
   // the page renders no kudos markup and reads no tip counts.
   const kudosEnabled = process.env.KUDOS_ENABLED === "true";
-  const [owner, { scoresByWindow, foundingByPost }, archiveSats, tipsByPost] = await Promise.all([
-    getOwner(handle),
-    readLedgerRollup(handle),
-    readFoundingTotal(handle),
-    kudosEnabled ? readTipCounts(page.posts.map((post) => post.id)) : undefined,
-  ]);
+  const [owner, { scoresByWindow, foundingByPost }, archiveSats, tipsByPost, eloByPost] =
+    await Promise.all([
+      getOwner(handle),
+      readLedgerRollup(handle),
+      readFoundingTotal(handle),
+      kudosEnabled ? readTipCounts(page.posts.map((post) => post.id)) : undefined,
+      // Behind the flag the Best tab sorts by the duel fold, not the decayed
+      // windows — without it no table is read and the sort stands unchanged.
+      kudosEnabled ? readRatingTable() : undefined,
+    ]);
 
   return (
     <ProfilePage
@@ -71,6 +76,7 @@ export default async function HandlePage(
       verified={owner ? { bindingPostId: owner.bindingPostId } : undefined}
       kudosEnabled={kudosEnabled}
       tipsByPost={tipsByPost}
+      eloByPost={eloByPost}
     />
   );
 }
