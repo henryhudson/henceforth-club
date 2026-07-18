@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { PlanDay } from "@/lib/board-data";
+import "./morning-board.css";
 
 export type Card = {
   id: string;
@@ -17,49 +19,63 @@ export type Card = {
   doneAt?: string;
 };
 
+export type WeekSlice = {
+  weekEnd: string;
+  generatedAt?: string;
+  stateOfUnion?: string;
+  weekPlan: PlanDay[];
+};
+
 const COLUMNS = [
   { id: "backlog", name: "Backlog" },
-  { id: "todo", name: "To Do" },
-  { id: "inprogress", name: "In Progress" },
+  { id: "todo", name: "To do" },
+  { id: "inprogress", name: "In progress" },
   { id: "review", name: "Review" },
-  { id: "done", name: "Done" },
-];
-const COL_IDS = COLUMNS.map((c) => c.id);
+] as const;
+
+const COL_IDS = [...COLUMNS.map((c) => c.id), "done"];
 
 const APP_FILTERS = [
   { id: "all", name: "Overall" },
-  { id: "deck", name: "Deck of Cards" },
+  { id: "deck", name: "Deck" },
   { id: "henceforth", name: "Henceforth" },
   { id: "hansard", name: "Hansard" },
-  { id: "provenance", name: "Provenance" },
-  { id: "site", name: "Website / Infra" },
+  { id: "site", name: "Site" },
 ];
-const APP_NAME: Record<string, string> = {
-  deck: "Deck of Cards",
-  henceforth: "Henceforth",
-  hansard: "Hansard",
-  provenance: "Provenance",
-  site: "Website / Infra",
+
+const APP_HUE: Record<string, string> = {
+  henceforth: "var(--mb-henceforth)",
+  deck: "var(--mb-deck)",
+  hansard: "var(--mb-hansard)",
+  site: "var(--mb-site)",
+  "*": "var(--mb-any)",
+  provenance: "var(--mb-any)",
 };
 
 const STORE = "henceforth-board-web-v1";
+const THEME_KEY = "henceforth-board-theme";
 
-function kindBorder(kind: string): string {
+function kindClass(kind: string): string {
+  if (kind === "gate") return "gate";
+  if (kind === "finding") return "finding";
+  return "";
+}
+
+function kindMark(kind: string): string {
   switch (kind) {
     case "finding":
-      return "border-l-[#3da87a]";
+      return "▲";
     case "gate":
-      return "border-l-accent";
+      return "◆";
+    case "feature":
+      return "●";
     case "dep":
-      return "border-l-accent-warm";
+      return "⇣";
     default:
-      return "border-l-card-border-hover";
+      return "—";
   }
 }
 
-// Per-card last-writer-wins: keep the locally-saved column only when the saved
-// rev is >= the data-file rev (i.e. /hh hasn't touched the card since you moved
-// it); otherwise the data file wins. Mirrors the local kanban.
 function reconcile(
   data: Card[],
   saved: Record<string, { col: string; rev: number; movedAt?: string; doneAt?: string }>,
@@ -68,7 +84,6 @@ function reconcile(
     const prev = saved[c.id];
     const dRev = c.rev ?? 0;
     if (prev && COL_IDS.includes(prev.col) && prev.rev >= dRev) {
-      // Pre-stamp localStorage entries carry no movedAt — keep the data file's stamps.
       if (!prev.movedAt) return { ...c, col: prev.col };
       return { ...c, col: prev.col, movedAt: prev.movedAt, doneAt: prev.doneAt };
     }
@@ -76,19 +91,36 @@ function reconcile(
   });
 }
 
+function shortTitle(t: string): string {
+  const words = t.split(/\s+/);
+  return words.length <= 8 ? t : words.slice(0, 8).join(" ") + " …";
+}
+
+function taskLabel(t: string | { label: string; done?: boolean }): string {
+  return typeof t === "string" ? t : t.label;
+}
+
+function taskDone(t: string | { label: string; done?: boolean }): boolean {
+  return typeof t !== "string" && t.done === true;
+}
+
 export default function BoardClient({
   generated,
   initialCards,
+  week,
 }: {
   generated: string;
   initialCards: Card[];
+  week: WeekSlice | null;
 }) {
-  // First render uses the server data verbatim (no hydration mismatch); local
-  // placements are merged in after mount.
   const [cards, setCards] = useState<Card[]>(initialCards);
   const [filter, setFilter] = useState("all");
-  const [mobileCol, setMobileCol] = useState("backlog");
   const [dragId, setDragId] = useState<string | null>(null);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const todayISO = useMemo(() => new Date().toLocaleDateString("en-CA"), []);
+  const todayRef = useRef<HTMLDivElement | null>(null);
+  const weekRef = useRef<HTMLElement | null>(null);
+  const meridianRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     try {
@@ -97,8 +129,54 @@ export default function BoardClient({
     } catch {
       /* ignore */
     }
+    try {
+      const t = localStorage.getItem(THEME_KEY);
+      if (t === "dark" || t === "light") setTheme(t);
+    } catch {
+      /* ignore */
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch {
+      /* ignore */
+    }
+  }, [theme]);
+
+  useEffect(() => {
+    if (todayRef.current) {
+      todayRef.current.scrollIntoView({ inline: "center", block: "nearest" });
+    }
+  }, [week]);
+
+  useEffect(() => {
+    function lightBand() {
+      const m = meridianRef.current;
+      const day = todayRef.current;
+      const rail = weekRef.current;
+      if (!m || !day || !rail) {
+        if (m) m.style.background = "transparent";
+        return;
+      }
+      const r = day.getBoundingClientRect();
+      const rr = rail.getBoundingClientRect();
+      const a = r.left - rr.left;
+      const b = a + r.width;
+      const mid = a + r.width / 2;
+      m.style.background = `linear-gradient(90deg, transparent ${Math.max(0, a - 24)}px, color-mix(in srgb, var(--mb-amber) 20%, transparent) ${a}px, var(--mb-amber) ${mid}px, color-mix(in srgb, var(--mb-amber) 20%, transparent) ${b}px, transparent ${b + 24}px)`;
+    }
+    lightBand();
+    window.addEventListener("resize", lightBand);
+    const rail = weekRef.current;
+    rail?.addEventListener("scroll", lightBand, { passive: true });
+    return () => {
+      window.removeEventListener("resize", lightBand);
+      rail?.removeEventListener("scroll", lightBand);
+    };
+  }, [week, cards, theme]);
 
   function persist(next: Card[]) {
     const map: Record<string, { col: string; rev: number; movedAt?: string; doneAt?: string }> = {};
@@ -116,7 +194,12 @@ export default function BoardClient({
     setCards((prev) => {
       const next = prev.map((c) =>
         c.id === id
-          ? { ...c, col: targetCol, movedAt: now, doneAt: targetCol === "done" ? now : undefined }
+          ? {
+              ...c,
+              col: targetCol,
+              movedAt: now,
+              doneAt: targetCol === "done" ? now : undefined,
+            }
           : c,
       );
       persist(next);
@@ -127,187 +210,313 @@ export default function BoardClient({
   const inScope = (c: Card) =>
     filter === "all" || c.apps.includes("*") || c.apps.includes(filter);
   const shown = cards.filter(inScope);
-  const count = (col: string) => shown.filter((c) => c.col === col).length;
-  const done = shown.filter((c) => c.col === "done").length;
-  const byDoneAt = (a: Card, b: Card) => (b.doneAt ?? "").localeCompare(a.doneAt ?? "");
-  const inCol = (colId: string) => {
-    const cs = shown.filter((c) => c.col === colId);
-    return colId === "done" ? [...cs].sort(byDoneAt) : cs;
-  };
+
+  const weekDates = new Set((week?.weekPlan ?? []).map((d) => d.date));
+  const doneCards = shown.filter((c) => c.col === "done");
+  const shippedByDay: Record<string, Card[]> = {};
+  const doneArchive: Card[] = [];
+  for (const c of doneCards) {
+    const d = (c.doneAt || c.movedAt || "").slice(0, 10);
+    if (weekDates.has(d)) (shippedByDay[d] = shippedByDay[d] || []).push(c);
+    else doneArchive.push(c);
+  }
+  doneArchive.sort((a, b) =>
+    (b.doneAt || b.movedAt || "").localeCompare(a.doneAt || a.movedAt || ""),
+  );
+
+  const todayLong = new Date().toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 
   return (
-    <main className="w-full px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Morning Board</h1>
-        <div className="flex flex-wrap items-center gap-3 text-sm text-muted">
-          <span>
-            {done}/{shown.length} done · updated {generated}
-          </span>
-          <Link href="/board/reports" className="text-accent-green underline">
-            Reports →
-          </Link>
-          <Link href="/board/docs" className="text-accent-green underline">
-            Plans &amp; specs →
-          </Link>
-          <Link href="/board/week" className="text-accent-green underline">This week →</Link>
-        </div>
-      </div>
-
-      {/* Per-app filter */}
-      <div className="mb-6 flex flex-wrap gap-2">
-        {APP_FILTERS.map((f) => {
-          const active = f.id === filter;
-          const n =
-            f.id === "all"
-              ? cards.length
-              : cards.filter((c) => c.apps.includes("*") || c.apps.includes(f.id)).length;
-          return (
-            <button
-              key={f.id}
-              onClick={() => setFilter(f.id)}
-              className={`rounded-full border px-3.5 py-1.5 text-sm transition-colors ${
-                active
-                  ? "border-accent-green bg-accent-green/10 text-accent-green"
-                  : "border-card-border bg-card-bg/60 text-muted hover:text-foreground"
-              }`}
-            >
-              {f.name} <span className="opacity-60">{n}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Mobile: one column at a time, switched by tabs */}
-      <div className="md:hidden">
-        <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
-          {COLUMNS.map((col) => (
-            <button
-              key={col.id}
-              onClick={() => setMobileCol(col.id)}
-              className={`shrink-0 rounded-full border px-3.5 py-1.5 text-sm transition-colors ${
-                mobileCol === col.id
-                  ? "border-foreground bg-foreground/5 text-foreground"
-                  : "border-card-border bg-card-bg/60 text-muted"
-              }`}
-            >
-              {col.name} <span className="opacity-60">{count(col.id)}</span>
-            </button>
-          ))}
-        </div>
-        <div className="flex flex-col gap-3">
-          {inCol(mobileCol).map((c) => (
-            <CardView key={c.id} card={c} onMove={move} />
-          ))}
-          {count(mobileCol) === 0 && <p className="py-6 text-center text-sm text-muted/50">Nothing here.</p>}
-        </div>
-      </div>
-
-      {/* Desktop: all columns side by side, draggable */}
-      <div className="hidden gap-4 overflow-x-auto pb-4 md:flex">
-        {COLUMNS.map((col) => (
-          <section
-            key={col.id}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={() => dragId && move(dragId, col.id)}
-            className="flex min-w-[300px] flex-1 flex-col rounded-2xl border border-card-border bg-card-bg/40 p-3"
-          >
-            <h2 className="mb-3 flex items-center justify-between px-1 text-sm font-bold uppercase tracking-wide text-muted">
-              {col.name}
-              <span className="rounded-full bg-card-border px-2 text-xs text-foreground">
-                {count(col.id)}
-              </span>
-            </h2>
-            <div className="flex flex-col gap-3">
-              {inCol(col.id).map((c) => (
-                <CardView
-                  key={c.id}
-                  card={c}
-                  onMove={move}
-                  draggable
-                  onDragStart={() => setDragId(c.id)}
-                  onDragEnd={() => setDragId(null)}
-                />
-              ))}
-              {count(col.id) === 0 && <p className="px-1 py-3 text-sm text-muted/40">—</p>}
+    <div className="morning-board" data-theme={theme}>
+      <div className="mb-shell">
+        <header className="mb-header">
+          <div className="mb-brand">
+            <span className="mb-eyebrow">Henceforth Bitcoin Limited</span>
+            <h1 className="mb-title">
+              The <em>Morning</em> Board
+            </h1>
+          </div>
+          <div className="mb-dateline">
+            <div className="mb-today-long">{todayLong}</div>
+            <div className="mb-stamps">
+              board {generated.split(" · ")[0]}
+              {week?.generatedAt ? ` · week ${week.generatedAt.slice(0, 10)}` : ""}
             </div>
-          </section>
-        ))}
+            <div className="mb-header-actions">
+              <button
+                type="button"
+                className="mb-chip-btn"
+                onClick={() => setTheme((t) => (t === "light" ? "dark" : "light"))}
+                aria-label="Toggle light and dark theme"
+              >
+                theme · {theme}
+              </button>
+              <Link href="/board/week" className="mb-chip-btn">
+                week planner
+              </Link>
+              <Link href="/board/reports" className="mb-chip-btn">
+                reports
+              </Link>
+              <Link href="/board/docs" className="mb-chip-btn">
+                plans
+              </Link>
+            </div>
+          </div>
+        </header>
+
+        {week?.stateOfUnion ? (
+          <div className="mb-strap-block">
+            <div className="mb-strap-label">State of the union</div>
+            <div className="mb-strap" title={week.stateOfUnion}>
+              {week.stateOfUnion}
+            </div>
+          </div>
+        ) : null}
+
+        <div className="mb-legend" aria-label="App colours">
+          <span className="l-henceforth">henceforth</span>
+          <span className="l-deck">deck</span>
+          <span className="l-hansard">hansard</span>
+          <span className="l-site">site</span>
+        </div>
+
+        {week?.weekPlan && week.weekPlan.length > 0 && (
+          <>
+            <p className="mb-section-label">Week</p>
+            <section className="mb-week" ref={weekRef} aria-label="Week planner">
+              {week.weekPlan.map((day) => {
+                const isToday = day.date === todayISO;
+                const isPast = day.date < todayISO;
+                const tasks = day.tasks ?? [];
+                const doneCount = tasks.filter(taskDone).length;
+                const total = tasks.length;
+                const pct = total ? Math.round((doneCount / total) * 100) : 0;
+                const shipped = shippedByDay[day.date] ?? [];
+                return (
+                  <div
+                    key={day.date}
+                    ref={isToday ? todayRef : undefined}
+                    className={`mb-day${isToday ? " today" : isPast ? " past" : ""}`}
+                  >
+                    <div className="mb-day-head">
+                      <span className="wd">{day.weekday}</span>
+                      <span className="dn">{day.date.slice(5).replace("-", "·")}</span>
+                      {isToday ? (
+                        <span className="mb-tag">today</span>
+                      ) : day.isReviewDay ? (
+                        <span className="mb-tag review">review</span>
+                      ) : null}
+                      <span className="progress">
+                        {total > 0 ? `${doneCount}/${total}` : "—"}
+                      </span>
+                    </div>
+                    <div className="mb-bar" aria-hidden>
+                      <i style={{ width: `${pct}%` }} />
+                    </div>
+                    {shipped.length > 0 && (
+                      <details open={isToday}>
+                        <summary style={{ color: "var(--mb-muted)", fontSize: 10.5, cursor: "pointer" }}>
+                          <span style={{ color: "var(--mb-site)" }}>✓</span> {shipped.length} shipped
+                        </summary>
+                        <div className="mb-cards" style={{ marginTop: 8 }}>
+                          {shipped.map((c) => (
+                            <MiniCard key={c.id} card={c} />
+                          ))}
+                        </div>
+                      </details>
+                    )}
+                    {tasks.length === 0 ? (
+                      <div className="none">clear</div>
+                    ) : (
+                      <ul>
+                        {tasks.map((t, i) => {
+                          const done = taskDone(t);
+                          return (
+                            <li key={i} className={done ? "done" : undefined}>
+                              <span className={`box ${done ? "" : "open"}`} aria-hidden>
+                                {done ? "✓" : "□"}
+                              </span>
+                              <span>{taskLabel(t)}</span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                );
+              })}
+            </section>
+            <div className="mb-meridian" ref={meridianRef} aria-hidden />
+          </>
+        )}
+
+        <p className="mb-section-label">Board</p>
+        <div className="mb-filters">
+          {APP_FILTERS.map((f) => {
+            const n =
+              f.id === "all"
+                ? cards.length
+                : cards.filter((c) => c.apps.includes("*") || c.apps.includes(f.id)).length;
+            return (
+              <button
+                key={f.id}
+                type="button"
+                className={`mb-chip-btn${filter === f.id ? " active" : ""}`}
+                onClick={() => setFilter(f.id)}
+              >
+                {f.name} {n}
+              </button>
+            );
+          })}
+        </div>
+
+        <section className="mb-board" aria-label="Kanban board">
+          {COLUMNS.map((col) => {
+            const list = shown
+              .filter((c) => c.col === col.id)
+              .sort((a, b) => (b.movedAt || "").localeCompare(a.movedAt || ""));
+            return (
+              <div
+                key={col.id}
+                className="mb-col"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => dragId && move(dragId, col.id)}
+              >
+                <div className="mb-col-head">
+                  <span className="name">{col.name}</span>
+                  <span className="n">{list.length}</span>
+                </div>
+                <div className="mb-cards">
+                  {list.map((c) => (
+                    <CardView
+                      key={c.id}
+                      card={c}
+                      onMove={move}
+                      onDragStart={() => setDragId(c.id)}
+                      onDragEnd={() => setDragId(null)}
+                    />
+                  ))}
+                  {list.length === 0 && <p className="mb-empty">—</p>}
+                </div>
+              </div>
+            );
+          })}
+        </section>
+
+        <details className="mb-archive">
+          <summary>
+            done archive · {doneArchive.length}
+            {doneCards.length - doneArchive.length > 0
+              ? ` · ${doneCards.length - doneArchive.length} in this week`
+              : ""}
+          </summary>
+          <div className="mb-cards">
+            {doneArchive.map((c) => (
+              <CardView
+                key={c.id}
+                card={c}
+                onMove={move}
+                onDragStart={() => setDragId(c.id)}
+                onDragEnd={() => setDragId(null)}
+              />
+            ))}
+            {doneArchive.length === 0 && <p className="mb-empty">No earlier done cards.</p>}
+          </div>
+        </details>
       </div>
-    </main>
+    </div>
+  );
+}
+
+function MiniCard({ card }: { card: Card }) {
+  const hue = APP_HUE[card.apps[0] ?? "*"] ?? APP_HUE["*"];
+  return (
+    <div className="mb-card done-col" style={{ borderLeftColor: hue, cursor: "default" }}>
+      <div className="title">✓ {shortTitle(card.title)}</div>
+    </div>
   );
 }
 
 function CardView({
   card,
   onMove,
-  draggable,
   onDragStart,
   onDragEnd,
 }: {
   card: Card;
   onMove: (id: string, col: string) => void;
-  draggable?: boolean;
   onDragStart?: () => void;
   onDragEnd?: () => void;
 }) {
   const ci = COL_IDS.indexOf(card.col);
-  const left = ci > 0 ? COLUMNS[ci - 1] : null;
-  const right = ci < COLUMNS.length - 1 ? COLUMNS[ci + 1] : null;
-  const apps = card.apps.includes("*")
-    ? ["All apps"]
-    : card.apps.map((a) => APP_NAME[a] ?? a);
+  const left = ci > 0 ? { id: COL_IDS[ci - 1], name: COLUMNS.find((c) => c.id === COL_IDS[ci - 1])?.name ?? "←" } : null;
+  const right =
+    ci >= 0 && ci < COL_IDS.length - 1
+      ? {
+          id: COL_IDS[ci + 1],
+          name:
+            COL_IDS[ci + 1] === "done"
+              ? "Done"
+              : (COLUMNS.find((c) => c.id === COL_IDS[ci + 1])?.name ?? "→"),
+        }
+      : null;
+  const hue = APP_HUE[card.apps[0] ?? "*"] ?? APP_HUE["*"];
+  const apps = card.apps.includes("*") ? ["all"] : card.apps;
+  const multi = apps.length > 1;
 
   return (
     <article
-      draggable={draggable}
+      draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
-      className={`rounded-xl border border-card-border border-l-4 bg-card-bg/80 p-4 shadow-sm transition-shadow ${kindBorder(
-        card.kind,
-      )} ${draggable ? "cursor-grab active:cursor-grabbing hover:shadow-md" : ""} ${
-        card.col === "done" ? "opacity-70" : ""
-      }`}
+      className={`mb-card${card.col === "done" ? " done-col" : ""}`}
+      style={{ borderLeftColor: hue }}
     >
-      <div className="mb-1.5 flex items-center gap-2">
-        <span className="rounded bg-card-border px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-muted">
-          {card.phase || card.kind}
+      {multi && (
+        <span className="mb-dots" aria-hidden>
+          {apps.map((a) => (
+            <i
+              key={a}
+              style={{
+                background: APP_HUE[a] ?? APP_HUE["*"],
+                color: APP_HUE[a] ?? APP_HUE["*"],
+              }}
+            />
+          ))}
         </span>
-        <span className="text-[11px] uppercase tracking-wide text-muted">{card.kind}</span>
-      </div>
-      <p className="text-base font-semibold leading-snug text-foreground">{card.title}</p>
-      {card.col === "done" && card.doneAt && (
-        <p className="mt-1 text-xs font-semibold text-accent-green">✓ {card.doneAt.slice(0, 10)}</p>
       )}
-      {card.source && <p className="mt-1 text-xs italic text-muted">from {card.source}</p>}
-      <div className="mt-2 flex flex-wrap gap-1.5">
-        {apps.map((label) => (
-          <span
-            key={label}
-            className="rounded border border-card-border px-1.5 text-xs text-muted"
-          >
-            {label}
-          </span>
+      <div className="title">{shortTitle(card.title)}</div>
+      <div className="meta">
+        <span className={`kind-pill ${kindClass(card.kind)}`}>
+          {kindMark(card.kind)} {card.kind || "task"}
+        </span>
+        {card.phase ? <span>{card.phase}</span> : null}
+        {card.movedAt ? <span>{card.movedAt.slice(5, 10).replace("-", "·")}</span> : null}
+        {card.col === "done" && card.doneAt ? (
+          <span style={{ color: "var(--mb-site)" }}>✓ {card.doneAt.slice(0, 10)}</span>
+        ) : null}
+      </div>
+      <div className="apps">
+        {apps.map((a) => (
+          <span key={a}>{a}</span>
         ))}
       </div>
       {card.desc && (
-        <details className="mt-2.5">
-          <summary className="cursor-pointer text-xs text-muted hover:text-foreground">details</summary>
-          <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-muted">{card.desc}</p>
+        <details>
+          <summary>details</summary>
+          <p className="notes">{card.desc}</p>
         </details>
       )}
-      <div className="mt-3 flex items-center justify-between">
-        <button
-          onClick={() => left && onMove(card.id, left.id)}
-          disabled={!left}
-          className="rounded-md border border-card-border px-2 py-0.5 text-xs text-muted transition-colors hover:text-foreground disabled:opacity-0"
-        >
+      <div className="move-row">
+        <button type="button" disabled={!left} onClick={() => left && onMove(card.id, left.id)}>
           ← {left?.name}
         </button>
-        <button
-          onClick={() => right && onMove(card.id, right.id)}
-          disabled={!right}
-          className="rounded-md border border-card-border px-2 py-0.5 text-xs text-muted transition-colors hover:text-foreground disabled:opacity-0"
-        >
+        <button type="button" disabled={!right} onClick={() => right && onMove(card.id, right.id)}>
           {right?.name} →
         </button>
       </div>

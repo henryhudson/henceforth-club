@@ -1,15 +1,9 @@
 import type { ReactNode } from "react";
 
-// Light "paper" theme for the private board (login + board), matching
-// /articles and /docs. The `.paper` class redefines the surface tokens
-// (--background, --foreground, --card-bg, --card-border, --muted) in
-// globals.css, so the board's token-based classes resolve to the parchment
-// palette. The sticky nav lives in the root layout — outside this wrapper —
-// so it keeps the dark glass, exactly like articles/docs.
+// Board paints its own light/dark morning-board theme (see BoardClient +
+// morning-board.css). No forced .paper wrapper — the client sets data-theme
+// and scopes all surfaces so light is the default parchment look and dark
+// matches the local Superpowers board.
 export default function BoardLayout({ children }: { children: ReactNode }) {
-  return (
-    <div className="paper min-h-screen bg-background text-foreground">
-      {children}
-    </div>
-  );
+  return <div className="min-h-screen">{children}</div>;
 }
