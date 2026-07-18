@@ -100,8 +100,8 @@
 <div class="task"><span class="tasknum">Task 2 · duel ledger + checkpoint</span> <span class="badge">redis edge</span>
 <div class="files">src/lib/kudos/ledger.ts · ledger.test.ts</div>
 <ul class="steps">
-<li><input type="checkbox"> Append-only <code>kudos:duels</code> with monotone <code>seq</code>; read-since; checkpoint write/read; null-Redis safe like <code>xVotes.ts</code>.</li>
-<li><input type="checkbox"> Strike-and-replay: <code>strikeDuels(duelIds)</code> removes entries and invalidates the checkpoint — corrections are replays.</li>
+<li><input type="checkbox" checked> Append-only <code>kudos:duels</code> with monotone <code>seq</code>; read-since; checkpoint write/read; null-Redis safe like <code>xVotes.ts</code>.</li>
+<li><input type="checkbox" checked> Strike-and-replay: <code>strikeDuels(duelIds)</code> removes entries and invalidates the checkpoint — corrections are replays.</li>
 </ul></div>
 
 <div class="task"><span class="tasknum">Task 3 · float accounting</span> <span class="badge">money core</span>
