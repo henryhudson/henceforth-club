@@ -47,6 +47,15 @@ export const DAILY_DUEL_CAP = 200;
  * sweep. */
 export const SETTLE_DUST_SATS = 546;
 
+/** A tip's dealer-priority bump halves every this many days — tips buy a
+ * burst of duel exposure, not a permanent seat at the table. */
+export const TIP_PRIORITY_HALF_LIFE_DAYS = 7;
+
+/** A decayed priority below one kudos reads as exactly zero, so an old tip
+ * eventually leaves the dealer's tipped pool instead of haunting it as an
+ * ever-smaller fraction. */
+export const TIP_PRIORITY_FLOOR = 1;
+
 // MARGIN_POUNDS, TAX_RESERVE_RATE, STRIPE_FEE_RATE and STRIPE_FEE_FIXED_PENCE
 // are set with the accountant's numbers in the taxes session on 2026-07-19
 // and land here with the pricing module (task 13).
