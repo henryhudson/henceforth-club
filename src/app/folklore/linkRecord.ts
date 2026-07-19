@@ -65,13 +65,10 @@ export function recordFromScripts(scriptHexes: string[]): FolkloreRecord | null 
   return null;
 }
 
-function tryParse(bytes: Uint8Array): FolkloreRecord | null {
-  let j: unknown;
-  try {
-    j = JSON.parse(new TextDecoder().decode(bytes));
-  } catch {
-    return null;
-  }
+/** The object-level shape gate the byte parser funnels through — exported so
+ * the worker can classify a stored job payload with the same validators the
+ * submit route used, never a second shape check. */
+export function recordFromValue(j: unknown): FolkloreRecord | null {
   if (typeof j !== "object" || j === null) return null;
   const o = j as Record<string, unknown>;
   if (o.v !== 1 || o.app !== "folklore") return null;
@@ -82,4 +79,12 @@ function tryParse(bytes: Uint8Array): FolkloreRecord | null {
     return validateComment(o.parent, o.text, typeof o.by === "string" ? o.by : undefined);
   }
   return null;
+}
+
+function tryParse(bytes: Uint8Array): FolkloreRecord | null {
+  try {
+    return recordFromValue(JSON.parse(new TextDecoder().decode(bytes)));
+  } catch {
+    return null;
+  }
 }

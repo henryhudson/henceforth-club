@@ -8,6 +8,10 @@
 // funded jobs are inscribed and broadcast; inscribed jobs are registered and
 // their key deleted. Each job's step is wrapped so one thrown error — an
 // advance that rejects, a store that blips — cannot abort the rest of the tick.
+// Since the folklore link board, a job whose payload is a folklore record
+// (deps.folklore classifies it) rides the same rails end to end, but its
+// OP_RETURN is A1's encodeRecord bytes and its completion is a board index
+// write instead of handle registration.
 //
 // The store operations (listJobsInState, advance, getPayload) and every
 // network call are injected: the pure orchestration is testable end to end
@@ -48,6 +52,7 @@ const LATE_WATCH_MS = LATE_WATCH_DAYS * 24 * 60 * 60 * 1000;
 const warnedRefundless = new Set();
 const warnedMissingKey = new Set();
 const warnedLateStraggler = new Set();
+const warnedFolklorePayload = new Set();
 
 function warnOnce(seen, jobId, message) {
   if (seen.has(jobId)) return;
@@ -116,6 +121,17 @@ async function guarded(label, jobId, step) {
   }
 }
 
+/**
+ * A folklore link or comment job's payload carries the record's own app tag
+ * (the route stores the validated record verbatim); an archive payload never
+ * does. This one-field sniff only routes — full classification is
+ * deps.folklore.recordFromValue, A1's own validators injected by the runner,
+ * so the worker never grows a second shape check.
+ */
+function isFolkloreTagged(payload) {
+  return typeof payload === "object" && payload !== null && payload.app === "folklore";
+}
+
 /** quoted -> awaiting-payment: mint a per-job custody key and publish its
  * address. Expiry is the payment watch's job, so an already-expired quote is
  * left for it rather than given a key it would never use. */
@@ -136,14 +152,32 @@ async function publishKeys({ listJobsInState, advance, wrapKey, jobsDir, nowMs }
  * (underfunded) or a spent broadcast budget routes to broadcast-failed, which
  * the state machine turns into sweeping. The key is deliberately NOT deleted
  * here — a sweeping job still needs it to refund. */
-async function inscribeFunded({ listJobsInState, advance, getPayload, wrapKey, jobsDir, revenueAddress, floatPoolAddress, feeRate, fetchFn, taalApiKey, nowMs }) {
+async function inscribeFunded({ listJobsInState, advance, getPayload, wrapKey, jobsDir, revenueAddress, floatPoolAddress, feeRate, fetchFn, taalApiKey, folklore, nowMs }) {
   const funded = await listJobsInState("funded");
   for (const job of funded) {
     await guarded("inscribe", job.jobId, async () => {
-      const archiveJson = await getPayload(job.jobId);
-      if (!archiveJson) {
+      const payload = await getPayload(job.jobId);
+      if (!payload) {
         await advance(job.jobId, { kind: "broadcast-failed", reason: "payload-missing" }, nowMs);
         return;
+      }
+
+      // A folklore job's OP_RETURN is A1's encodeRecord bytes, re-validated
+      // here at the spend moment: a payload that no longer validates (or a
+      // worker missing the folklore wiring) refuses BEFORE anything is signed
+      // or broadcast, and the visitor's money routes home through the sweep.
+      let archiveJson = payload;
+      if (isFolkloreTagged(payload)) {
+        const record = folklore ? folklore.recordFromValue(payload) : null;
+        if (!record) {
+          await advance(
+            job.jobId,
+            { kind: "broadcast-failed", reason: folklore ? "record-invalid" : "folklore-unwired" },
+            nowMs,
+          );
+          return;
+        }
+        archiveJson = new TextDecoder().decode(folklore.encodeRecord(record));
       }
 
       // The £2 leg needs a destination before anything is signed or spent: a
@@ -195,10 +229,42 @@ async function inscribeFunded({ listJobsInState, advance, getPayload, wrapKey, j
  * job's address is late-watched for stragglers exactly as a swept job's is,
  * and only the reaper (in the late watch) deletes the key once the window has
  * closed. Deleting here would strand any second leg on the address forever. */
-async function registerInscribed({ listJobsInState, advance, registerBaseUrl, fetchFn, nowMs }) {
+async function registerInscribed({ listJobsInState, advance, getPayload, registerBaseUrl, fetchFn, folklore, nowMs }) {
   const inscribed = await listJobsInState("inscribed");
   for (const job of inscribed) {
     await guarded("register", job.jobId, async () => {
+      // A folklore job completes by feeding the board index, not the handle
+      // registry. The payload outlives the inscribed state (the store deletes
+      // it only at done or swept), so the same record that went on chain is
+      // still here to classify and index by.
+      const payload = await getPayload(job.jobId);
+      if (isFolkloreTagged(payload)) {
+        const record = folklore ? folklore.recordFromValue(payload) : null;
+        if (!record) {
+          // Can't-happen in a wired worker (the inscribe phase validated the
+          // same payload one state earlier) — flagged, never advanced blind.
+          warnOnce(warnedFolklorePayload, job.jobId, `xtext-worker: inscribed folklore job ${job.jobId} has no usable record payload — flagged for ops, will retry`);
+          return;
+        }
+
+        // The chain is truth and already carries the record; the index write
+        // must eventually follow it. Index first, advance second: a write
+        // that fails — or an advance that fails after it — replays next tick,
+        // and every writer in folkloreBoard is idempotent, so the replay is
+        // harmless. A miss is loud, never silently dropped.
+        const indexed =
+          record.kind === "comment"
+            ? await folklore.addCommentToIndex(record.parent, job.inscriptionTxid, nowMs)
+            : await folklore.addLinkToBoard(job.inscriptionTxid, record, nowMs);
+        if (!indexed) {
+          console.error(`xtext-worker: folklore index write failed for job ${job.jobId} (txid ${job.inscriptionTxid}) — the inscription is on chain and the board is behind; retrying next tick`);
+          return;
+        }
+
+        await advance(job.jobId, { kind: "registered" }, nowMs);
+        return;
+      }
+
       const registered = await registerHandle({
         handle: job.handle,
         txid: job.inscriptionTxid,

@@ -72,6 +72,18 @@ const { listJobsInState, advance, getPayload } = await import(
   pathToFileURL(path.join(REPO_ROOT, "src/lib/folkloreJob/jobStore.ts")).href
 );
 
+// The folklore board wiring: A1's codec (the one shape check and the one
+// encoder) and A2's idempotent index writers, injected so worker.mjs can
+// carry link and comment jobs on the same rails without a second formula
+// for either the record bytes or the board writes.
+const { encodeRecord, recordFromValue } = await import(
+  pathToFileURL(path.join(REPO_ROOT, "src/app/folklore/linkRecord.ts")).href
+);
+const { addCommentToIndex, addLinkToBoard } = await import(
+  pathToFileURL(path.join(REPO_ROOT, "src/lib/folkloreBoard.ts")).href
+);
+const folklore = { encodeRecord, recordFromValue, addLinkToBoard, addCommentToIndex };
+
 const jobsDir = path.join(HERE, "jobs");
 const registerBaseUrl = process.env.XTEXT_REGISTER_BASE_URL ?? "https://www.henceforth.club";
 
@@ -93,6 +105,7 @@ async function tick() {
       fetchFn: fetch,
       taalApiKey: process.env.XTEXT_TAAL_API_KEY,
       registerBaseUrl,
+      folklore,
       nowMs: Date.now(),
     });
   } catch (err) {
