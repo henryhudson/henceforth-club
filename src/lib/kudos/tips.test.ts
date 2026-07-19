@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import type { Redis } from "@upstash/redis";
 import { TIP_PRIORITY_FLOOR, TIP_PRIORITY_HALF_LIFE_DAYS } from "./constants";
 import { readProfileAccount, readHandleAccount, fundFloat } from "./float";
+import { readKudosReceived } from "./received";
 import {
   decayedPriority,
   readTipCount,
@@ -15,7 +16,8 @@ import {
 const DAY = "2026-07-18";
 
 /** A minimal in-memory stand-in for the Upstash client — only the calls the
- * tip path actually makes: `incrby`, `decrby`, `get`, `set`. An optional
+ * tip path actually makes: `incrby`, `decrby`, `get`, `set`, plus the
+ * `rpush`/`lrange` pair behind the day's received stream. An optional
  * trace records every command and key, which is how the no-Elo-write test
  * watches the path's entire Redis footprint. */
 function fakeRedis(trace?: (command: string, key: string) => void): Redis {
@@ -26,6 +28,18 @@ function fakeRedis(trace?: (command: string, key: string) => void): Redis {
     return next;
   };
   return {
+    rpush: async (key: string, ...values: unknown[]) => {
+      trace?.("rpush", key);
+      const list = (store.get(key) as unknown[] | undefined) ?? [];
+      list.push(...values);
+      store.set(key, list);
+      return list.length;
+    },
+    lrange: async (key: string, start: number, stop: number) => {
+      trace?.("lrange", key);
+      const list = (store.get(key) as unknown[] | undefined) ?? [];
+      return list.slice(start, stop === -1 ? undefined : stop + 1);
+    },
     incrby: async (key: string, by: number) => {
       trace?.("incrby", key);
       return bump(key, by);
@@ -96,6 +110,17 @@ describe("recordTip", () => {
     expect(await readTipPriority("post-1", DAY, redis)).toBe(30);
   });
 
+  it("lands the day's received entry — the Top chart's input, giver never recorded", async () => {
+    const redis = fakeRedis();
+    await fundFloat("alice", 2000, redis);
+
+    await recordTip("alice", "post-1", "bob", 30, DAY, redis);
+
+    expect(await readKudosReceived(DAY, redis)).toEqual([
+      { postId: "post-1", author: "bob", amount: 30, kind: "tip" },
+    ]);
+  });
+
   it("accumulates across tips, decaying the standing priority before adding the new bump", async () => {
     const redis = fakeRedis();
     await fundFloat("alice", 2000, redis);
@@ -132,6 +157,7 @@ describe("recordTip", () => {
     expect(await readHandleAccount("bob", redis)).toEqual({ earned: 0, settled: 0 });
     expect(await readTipCount("post-1", redis)).toBe(0);
     expect(await readTipPriority("post-1", DAY, redis)).toBe(0);
+    expect(await readKudosReceived(DAY, redis)).toEqual([]);
   });
 
   it("rejects non-positive and non-integer amounts, touching nothing", async () => {
@@ -212,9 +238,10 @@ describe("no Elo write anywhere in the tip path", () => {
     "kudos:earned:",
     "kudos:tips:",
     "kudos:priority:",
+    "kudos:received:",
   ];
 
-  it("touches only float, spend, earned, tip-count and priority keys", async () => {
+  it("touches only float, spend, earned, tip-count, priority and received keys", async () => {
     const touched: { command: string; key: string }[] = [];
     const redis = fakeRedis((command, key) => touched.push({ command, key }));
     await fundFloat("alice", 100, redis);

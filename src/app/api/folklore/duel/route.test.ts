@@ -13,6 +13,7 @@ const mockDebitForDuel = vi.fn();
 const mockAccrueEarned = vi.fn();
 const mockRecordTip = vi.fn();
 const mockGetArchivePost = vi.fn();
+const mockRecordKudosReceived = vi.fn();
 
 vi.mock("@/lib/kudos/auth", () => ({
   authenticateBearer: (...args: unknown[]) => mockAuthenticateBearer(...args),
@@ -40,6 +41,9 @@ vi.mock("@/lib/kudos/tips", () => ({
 }));
 vi.mock("@/lib/xArchiveCache", () => ({
   getArchivePost: (...args: unknown[]) => mockGetArchivePost(...args),
+}));
+vi.mock("@/lib/kudos/received", () => ({
+  recordKudosReceived: (...args: unknown[]) => mockRecordKudosReceived(...args),
 }));
 
 import { GET, POST } from "./route";
@@ -79,9 +83,11 @@ beforeEach(() => {
     mockAccrueEarned,
     mockRecordTip,
     mockGetArchivePost,
+    mockRecordKudosReceived,
   ]) {
     mock.mockReset();
   }
+  mockRecordKudosReceived.mockResolvedValue("recorded");
   mockGetArchivePost.mockImplementation(async (_handle: string, postId: string) => ({
     id: postId,
     at: "2026-07-18T00:00:00Z",
@@ -274,6 +280,13 @@ describe("POST /api/folklore/duel — the resolution", () => {
       day: expect.any(String),
     });
     expect(mockAccrueEarned).toHaveBeenCalledWith("ben", 7);
+    // The winner's day entry for the Top chart — the full amount, no giver.
+    expect(mockRecordKudosReceived).toHaveBeenCalledWith(expect.any(String), {
+      postId: "p2",
+      author: "ben",
+      amount: 7,
+      kind: "duel",
+    });
     expect(mockMarkPairResolved).toHaveBeenCalledWith("tok-1", PAIR);
     expect(mockRecordTip).not.toHaveBeenCalled();
   });
@@ -333,6 +346,7 @@ describe("POST /api/folklore/duel — the resolution", () => {
       expect(mockAccrueEarned).not.toHaveBeenCalled();
       expect(mockMarkPairResolved).not.toHaveBeenCalled();
       expect(mockRecordTip).not.toHaveBeenCalled();
+      expect(mockRecordKudosReceived).not.toHaveBeenCalled();
     });
 
     it("still lets the bearer crown the opponent — a duel their own text loses", async () => {
@@ -364,6 +378,7 @@ describe("POST /api/folklore/duel — the resolution", () => {
     expect(await res.json()).toEqual({ ok: false, reason: "insufficient-float", float: 1 });
     expect(mockAppendDuel).not.toHaveBeenCalled();
     expect(mockAccrueEarned).not.toHaveBeenCalled();
+    expect(mockRecordKudosReceived).not.toHaveBeenCalled();
   });
 
   it("reports unavailable when the money path has no Redis", async () => {

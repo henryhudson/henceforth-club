@@ -2,14 +2,16 @@ import type { Redis } from "@upstash/redis";
 import { dateKey, getRedis } from "../redis";
 import { TIP_PRIORITY_FLOOR, TIP_PRIORITY_HALF_LIFE_DAYS } from "./constants";
 import { accrueEarned, debitForTip } from "./float";
+import { recordKudosReceived } from "./received";
 
-// The tip path — in-feed kudos on any text as you browse. A tip is four
+// The tip path — in-feed kudos on any text as you browse. A tip is five
 // movements and nothing else:
 //
 //   float debit        the giver's money out (float.ts, debit then record)
 //   kudos:tips:<postId>     the public count ticks — a tally, never decayed
 //   earned accrual     the author's money in (float.ts)
 //   kudos:priority:<postId> the decaying dealer-priority bump
+//   kudos:received:<day>    the day's chart entry (received.ts) — no giver on it
 //
 // Tips never move Elo — a proper Elo cannot ingest single-sided applause —
 // so this module imports nothing from elo.ts or ledger.ts and touches none
@@ -72,6 +74,7 @@ export async function recordTip(
 
   const tipped = await redis.incrby(tipCountKey(postId), amount);
   await accrueEarned(author, amount, redis);
+  await recordKudosReceived(day, { postId, author, amount, kind: "tip" }, redis);
 
   const standing = await redis.get<TipPriorityRecord>(priorityKey(postId));
   const priority = (standing ? decayedPriority(standing, day) : 0) + amount;

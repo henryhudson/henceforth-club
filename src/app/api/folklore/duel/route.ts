@@ -13,6 +13,7 @@ import {
   type DealtSide,
 } from "@/lib/kudos/dealer";
 import { accrueEarned, debitForDuel } from "@/lib/kudos/float";
+import { recordKudosReceived } from "@/lib/kudos/received";
 import { recordTip } from "@/lib/kudos/tips";
 import { getArchivePost } from "@/lib/xArchiveCache";
 import { dateKey } from "@/lib/redis";
@@ -196,8 +197,8 @@ export async function POST(req: Request) {
   // Debit then record, per the float module's contract: the money is out,
   // now the bookkeeping — one binary duel entry (the token doubles as the
   // duel id, so a correction can name it), the amount to the winner's
-  // author, and the resolved-pair marker that lets follow-up taps degrade
-  // to tips.
+  // author, the winner's day entry for the Top chart, and the resolved-pair
+  // marker that lets follow-up taps degrade to tips.
   await appendDuel({
     duelId: token,
     winnerPostId: winner.postId,
@@ -205,6 +206,12 @@ export async function POST(req: Request) {
     day,
   });
   await accrueEarned(winner.author, kudos);
+  await recordKudosReceived(day, {
+    postId: winner.postId,
+    author: winner.author,
+    amount: kudos,
+    kind: "duel",
+  });
   await markPairResolved(token, pair);
 
   const next = await dealNext(auth.profile);
