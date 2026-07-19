@@ -7,7 +7,6 @@ import type { Rating } from "@/lib/kudos/elo";
 import type { XPost } from "../parseArchive";
 import type { ThreadContext } from "./threadContext";
 import { Avatar, formatDate, formatUnixSeconds, shortTxid } from "./PostCard";
-import FeedKudos from "./FeedKudos";
 
 /**
  * One archived post as a ledger entry. At rest it is a plain row on a hairline
@@ -32,7 +31,7 @@ export default function PostEntry({
   displayName,
   foundingSats,
   kudosEnabled = false,
-  tipCount,
+  tipCount: _tipCount,
   elo,
   defaultOpen = false,
 }: {
@@ -52,8 +51,8 @@ export default function PostEntry({
   displayName?: string;
   /** Upload cost — not shown on the ranking chip (kept for call-site compat). */
   foundingSats?: number;
-  /** When true, Elo markup may also appear. The kudos (like) control shows
-   * whenever `handle` is set — the tip is the in-feed like. */
+  /** Elo markup only. Giving kudos is app-only (Henceforth); the site never
+   * renders a tip control. */
   kudosEnabled?: boolean;
   /** The post's public tip count, threaded from the server's bulk read. */
   tipCount?: number;
@@ -228,12 +227,7 @@ export default function PostEntry({
             </span>
           </>
         )}
-        {handle && (
-          <>
-            <span aria-hidden>·</span>
-            <FeedKudos handle={handle} postId={post.id} count={tipCount} />
-          </>
-        )}
+        {/* Giving kudos is Henceforth-only — no tip control on the website. */}
         {!open && post.txid && (
           <>
             <span aria-hidden>·</span>

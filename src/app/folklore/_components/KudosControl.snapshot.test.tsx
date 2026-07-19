@@ -48,35 +48,26 @@ describe("KudosControl", () => {
   });
 });
 
-describe("the control on text rows and single-post pages", () => {
-  it("sits on every text row — the in-feed like is always on", () => {
+describe("giving kudos is app-only — the website never mounts a tip control", () => {
+  it("ProfileView rows carry no give-kudos control", () => {
     const html = renderToStaticMarkup(
-      <ProfileView archive={archive} isPreview={false} tipsByPost={{ "1": 3 }} />,
+      <ProfileView archive={archive} isPreview={false} kudosEnabled tipsByPost={{ "1": 3 }} />,
     );
-    const rows = html.match(/<article/g)?.length ?? 0;
-    const controls = html.match(/give kudos/g)?.length ?? 0;
-    expect(rows).toBeGreaterThan(0);
-    expect(controls).toBe(rows);
+    expect(html).not.toContain("give kudos");
+    expect(html).not.toContain("✦ kudos");
   });
 
-  it("shows the public count on a single post row", () => {
+  it("PostEntry never mounts a tip control, even with a handle and count", () => {
     const html = renderToStaticMarkup(
       <PostEntry
         post={archive.posts[0]}
         showParent={false}
         handle="someone"
+        kudosEnabled
         tipCount={7}
       />,
     );
-    expect(html).toContain("kudos");
-    expect(html).toContain("7");
-    expect(html).toMatchSnapshot();
-  });
-
-  it("needs a handle — no orphan like control without one", () => {
-    const html = renderToStaticMarkup(
-      <PostEntry post={archive.posts[0]} showParent={false} tipCount={7} />,
-    );
     expect(html).not.toContain("give kudos");
+    expect(html).not.toContain("✦ kudos");
   });
 });
