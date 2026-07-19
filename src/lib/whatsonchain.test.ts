@@ -3,6 +3,7 @@ import {
   fetchTxArchive,
   fetchTxArchiveWithTime,
   fetchTxFeeSats,
+  fetchTxScripts,
   txFeeSatsFromJson,
 } from "@/lib/whatsonchain";
 
@@ -48,6 +49,24 @@ function rawTx(outputScriptsHex: string[]): string {
 }
 
 afterEach(() => vi.restoreAllMocks());
+
+describe("fetchTxScripts", () => {
+  it("returns every output script of the raw transaction, in vout order", async () => {
+    const p2pkh = "76a914aaaaaaaaaaaaaaaaaaaa88ac";
+    const opret = opReturnScript("hello");
+    const fetchFn = vi.fn(async () => new Response(rawTx([p2pkh, opret]), { status: 200 }));
+    expect(await fetchTxScripts("a".repeat(64), fetchFn)).toEqual([p2pkh, opret]);
+  });
+
+  it("rejects an invalid txid without calling the network, and reads null on a non-OK response", async () => {
+    const f = vi.fn();
+    expect(await fetchTxScripts("not-a-txid", f)).toBeNull();
+    expect(f).not.toHaveBeenCalled();
+
+    const notFound = vi.fn(async () => new Response("nope", { status: 404 }));
+    expect(await fetchTxScripts("b".repeat(64), notFound)).toBeNull();
+  });
+});
 
 describe("fetchTxArchive", () => {
   it("extracts the archive from a WhatsOnChain raw transaction", async () => {

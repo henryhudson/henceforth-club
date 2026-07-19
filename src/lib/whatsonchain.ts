@@ -45,19 +45,18 @@ export async function fetchTxFeeSats(txid: string, fetchFn: typeof fetch = fetch
 }
 
 /**
- * Fetch a transaction by id from WhatsOnChain and extract the SocialArchive from
- * its OP_RETURN data. Uses the RAW hex endpoint and parses the output scripts
- * locally — the JSON endpoint truncates `scriptPubKey.hex` at ~100,000 hex
+ * A transaction's output locking scripts (hex, vout order), from the RAW hex
+ * endpoint — the JSON endpoint truncates `scriptPubKey.hex` at ~100,000 hex
  * characters, which silently cut off whole-profile archives (a 1,439-post
- * OP_RETURN is ~500,000). On-chain data is immutable, so the response is cached
- * for an hour. Returns null for a malformed txid, a failed fetch, or a tx with
- * no archive. `fetchFn` is a test seam — `xArchiveCache` injects a fake one so
- * its own tests never hit the network.
+ * OP_RETURN is ~500,000). On-chain data is immutable, so the response is
+ * cached for an hour. Returns null for a malformed txid or a failed fetch.
+ * `fetchFn` is a test seam — callers inject a fake so their tests never hit
+ * the network.
  */
-export async function fetchTxArchive(
+export async function fetchTxScripts(
   txid: string,
   fetchFn: typeof fetch = fetch,
-): Promise<SocialArchive | null> {
+): Promise<string[] | null> {
   if (!/^[0-9a-fA-F]{64}$/.test(txid)) return null;
 
   let res: Response;
@@ -68,7 +67,20 @@ export async function fetchTxArchive(
   }
   if (!res.ok) return null;
 
-  return socialArchiveFromScripts(voutScriptsFromRawTx(await res.text()));
+  return voutScriptsFromRawTx(await res.text());
+}
+
+/**
+ * Fetch a transaction by id from WhatsOnChain and extract the SocialArchive
+ * from its OP_RETURN data. Returns null for a malformed txid, a failed fetch,
+ * or a tx with no archive.
+ */
+export async function fetchTxArchive(
+  txid: string,
+  fetchFn: typeof fetch = fetch,
+): Promise<SocialArchive | null> {
+  const scripts = await fetchTxScripts(txid, fetchFn);
+  return scripts ? socialArchiveFromScripts(scripts) : null;
 }
 
 // A hung WhatsOnChain response must never stall a cache rebuild — the time
