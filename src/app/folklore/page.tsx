@@ -7,12 +7,15 @@ import { readFoundingTotal, readLedgerRollup } from "@/lib/xVotes";
 import { readTipCounts } from "@/lib/kudos/tips";
 import { readRatingTable } from "@/lib/kudos/ledger";
 import { readAuthorRatings } from "@/lib/kudos/candidates";
+import { boardTop, commentCount, getLinkRecord } from "@/lib/folkloreBoard";
 import { sortHandlesByAuthorElo } from "./sortPosts";
+import { linkTxidsOf, mergeBoard, type LinkResolution } from "./boardMerge";
 import FolkloreWordmark from "./_components/FolkloreWordmark";
 import FolkloreForest from "./_components/FolkloreForest";
 import ProfileView from "./_components/ProfileView";
 import ArchiveDropZone from "./_components/ArchiveDropZone";
 import DirectoryRow from "./_components/DirectoryRow";
+import LinkCard from "./_components/LinkCard";
 import Proof from "./_components/Proof";
 import { WITNESS_HANDLE } from "./witness";
 
@@ -60,6 +63,21 @@ export default async function FolklorePage() {
     eloByPost !== undefined
       ? sortHandlesByAuthorElo(handles, await readAuthorRatings(eloByPost))
       : handles;
+  // The unified board: profile and link cards in one kudos ranking. While the
+  // board zset is empty (pre-seed production) `boardRows` is empty and the
+  // handle-only directory below renders exactly as it always has.
+  const boardEntries = await boardTop(100);
+  const linkRecords = new Map<string, LinkResolution>(
+    (
+      await Promise.all(
+        linkTxidsOf(boardEntries).map(async (txid) => {
+          const record = await getLinkRecord(txid);
+          return record ? ([txid, { record, comments: await commentCount(txid) }] as const) : null;
+        }),
+      )
+    ).flatMap((pair) => (pair ? [pair] : [])),
+  );
+  const boardRows = mergeBoard(boardEntries, handles, linkRecords);
 
   return (
     // A <div>, not a <main>: the root layout already provides the single <main>
@@ -164,27 +182,52 @@ export default async function FolklorePage() {
         </p>
       </section>
 
-      {/* The directory — who has archived, an on-chain ledger stamped by the
-          registration gate */}
-      <section className="mx-auto max-w-2xl px-6 pb-24">
-        <div className="flex items-baseline justify-between">
-          <h2 className="ledger-label">
-            {eloByPost !== undefined
-              ? "The ledger · who has archived · ranked by duels won"
-              : "The ledger · who has archived"}
-          </h2>
-          <span className="font-mono text-[11px] text-muted">{handles.length} on chain</span>
-        </div>
-        {directoryHandles.length > 0 ? (
-          <div className="mt-3 divide-y divide-card-border border-y border-card-border">
-            {directoryHandles.map(({ handle, latestMs }) => (
-              <DirectoryRow key={handle} handle={handle} latestMs={latestMs} />
-            ))}
+      {/* The board — profile and link cards in one kudos ranking; until the
+          board zset is seeded, the directory of who has archived renders
+          exactly as before */}
+      {boardRows.length > 0 ? (
+        <section className="mx-auto max-w-2xl px-6 pb-24">
+          <div className="flex items-baseline justify-between">
+            <h2 className="ledger-label">The board · archives and links · ranked by kudos</h2>
+            <span className="font-mono text-[11px] text-muted">{boardRows.length} on chain</span>
           </div>
-        ) : (
-          <p className="mt-3 text-sm text-muted">Nobody has archived yet. Be the first entry.</p>
-        )}
-      </section>
+          <div className="mt-3 divide-y divide-card-border border-y border-card-border">
+            {boardRows.map((row) =>
+              row.kind === "profile" ? (
+                <DirectoryRow key={`profile:${row.handle}`} handle={row.handle} latestMs={row.latestMs} />
+              ) : (
+                <LinkCard
+                  key={`link:${row.txid}`}
+                  txid={row.txid}
+                  record={row.record}
+                  kudos={row.score}
+                  comments={row.comments}
+                />
+              ),
+            )}
+          </div>
+        </section>
+      ) : (
+        <section className="mx-auto max-w-2xl px-6 pb-24">
+          <div className="flex items-baseline justify-between">
+            <h2 className="ledger-label">
+              {eloByPost !== undefined
+                ? "The ledger · who has archived · ranked by duels won"
+                : "The ledger · who has archived"}
+            </h2>
+            <span className="font-mono text-[11px] text-muted">{handles.length} on chain</span>
+          </div>
+          {directoryHandles.length > 0 ? (
+            <div className="mt-3 divide-y divide-card-border border-y border-card-border">
+              {directoryHandles.map(({ handle, latestMs }) => (
+                <DirectoryRow key={handle} handle={handle} latestMs={latestMs} />
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-muted">Nobody has archived yet. Be the first entry.</p>
+          )}
+        </section>
+      )}
     </div>
   );
 }
