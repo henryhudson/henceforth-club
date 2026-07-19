@@ -4,11 +4,9 @@ import KudosControl, { type KudosCommitResult, type KudosGesture } from "./Kudos
 import { useKudosSession } from "./kudosSession";
 
 /**
- * The kudos control as it sits on a text row or single-post page. An
- * in-feed kudos is a tip — float debit, public count tick, earned accrual,
- * dealer-priority bump — never a duel and never an Elo write. The server
- * renders this only behind KUDOS_ENABLED; without the flag a row carries no
- * kudos markup at all.
+ * The in-feed like — kudos as a tip. Float debit, public count, earned
+ * accrual, dealer-priority bump; never a duel and never an Elo write.
+ * Always on the row when a handle is known so the gesture is visible.
  */
 export default function FeedKudos({
   handle,

@@ -52,9 +52,8 @@ export default function PostEntry({
   displayName?: string;
   /** Upload cost — not shown on the ranking chip (kept for call-site compat). */
   foundingSats?: number;
-  /** True only when the server read KUDOS_ENABLED for this request — the
-   * kudos control renders solely behind it, so without the flag a row
-   * carries no kudos markup at all. */
+  /** When true, Elo markup may also appear. The kudos (like) control shows
+   * whenever `handle` is set — the tip is the in-feed like. */
   kudosEnabled?: boolean;
   /** The post's public tip count, threaded from the server's bulk read. */
   tipCount?: number;
@@ -229,7 +228,7 @@ export default function PostEntry({
             </span>
           </>
         )}
-        {kudosEnabled && handle && (
+        {handle && (
           <>
             <span aria-hidden>·</span>
             <FeedKudos handle={handle} postId={post.id} count={tipCount} />

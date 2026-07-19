@@ -45,15 +45,14 @@ export default async function HandlePage(
   // profile shipped with one window has a Best tab that can go silently
   // inert (2026-07-12). With scoresByWindow present, FeedControls renders
   // the day/week/month/year/all toggle here too.
-  // The kudos flag is read per request, exactly like the routes — without it
-  // the page renders no kudos markup and reads no tip counts.
+  // Elo stays behind the flag; tip counts always load for the in-feed like.
   const kudosEnabled = process.env.KUDOS_ENABLED === "true";
   const [owner, { scoresByWindow, foundingByPost }, archiveSats, tipsByPost, eloByPost] =
     await Promise.all([
       getOwner(handle),
       readLedgerRollup(handle),
       readFoundingTotal(handle),
-      kudosEnabled ? readTipCounts(page.posts.map((post) => post.id)) : undefined,
+      readTipCounts(page.posts.map((post) => post.id)),
       // Behind the flag the Best tab sorts by the duel fold, not the decayed
       // windows — without it no table is read and the sort stands unchanged.
       kudosEnabled ? readRatingTable() : undefined,

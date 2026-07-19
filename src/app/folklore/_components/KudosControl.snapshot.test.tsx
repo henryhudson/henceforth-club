@@ -49,20 +49,14 @@ describe("KudosControl", () => {
 });
 
 describe("the control on text rows and single-post pages", () => {
-  it("sits on every text row when the server threads the flag through", () => {
+  it("sits on every text row — the in-feed like is always on", () => {
     const html = renderToStaticMarkup(
-      <ProfileView archive={archive} isPreview={false} kudosEnabled tipsByPost={{ "1": 3 }} />,
+      <ProfileView archive={archive} isPreview={false} tipsByPost={{ "1": 3 }} />,
     );
     const rows = html.match(/<article/g)?.length ?? 0;
     const controls = html.match(/give kudos/g)?.length ?? 0;
     expect(rows).toBeGreaterThan(0);
     expect(controls).toBe(rows);
-  });
-
-  it("is invisible without the flag — no give-kudos control on the rows", () => {
-    const html = renderToStaticMarkup(<ProfileView archive={archive} isPreview={false} />);
-    expect(html).not.toContain("give kudos");
-    expect(html).not.toContain("✦ kudos");
   });
 
   it("shows the public count on a single post row", () => {
@@ -71,7 +65,6 @@ describe("the control on text rows and single-post pages", () => {
         post={archive.posts[0]}
         showParent={false}
         handle="someone"
-        kudosEnabled
         tipCount={7}
       />,
     );
@@ -80,10 +73,10 @@ describe("the control on text rows and single-post pages", () => {
     expect(html).toMatchSnapshot();
   });
 
-  it("never renders on a row without the flag, even with a count present", () => {
+  it("needs a handle — no orphan like control without one", () => {
     const html = renderToStaticMarkup(
-      <PostEntry post={archive.posts[0]} showParent={false} handle="someone" tipCount={7} />,
+      <PostEntry post={archive.posts[0]} showParent={false} tipCount={7} />,
     );
-    expect(html).not.toContain("kudos");
+    expect(html).not.toContain("give kudos");
   });
 });

@@ -46,13 +46,12 @@ export default async function FolklorePage() {
   // page still shows, so reading fifty ledgers to use one of them was pure
   // cost. Restore the fan-out only if a site-wide figure comes back.
   const witnessSats = await readFoundingTotal(WITNESS_HANDLE);
-  // The kudos flag, read the same way as the web-archive flag above — the
-  // witness rows carry the kudos control only behind it.
+  // Elo / arena stay behind the flag; tip counts load so the in-feed like
+  // can show its tally either way.
   const kudosEnabled = process.env.KUDOS_ENABLED === "true";
-  const tipsByPost =
-    kudosEnabled && witness
-      ? await readTipCounts(witness.posts.map((post) => post.id))
-      : undefined;
+  const tipsByPost = witness
+    ? await readTipCounts(witness.posts.map((post) => post.id))
+    : undefined;
   // Behind the flag the duel fold sorts the folklore: the witness feed's Best
   // tab by each text's rating, the directory by the author aggregate. Without
   // it neither table is read and both orders stand exactly as they are.

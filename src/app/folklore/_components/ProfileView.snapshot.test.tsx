@@ -46,7 +46,8 @@ describe("ProfileView", () => {
     // One accessible name link per row — the avatar link is aria-hidden and
     // only exists when an avatar renders, which this fixture has none of.
     expect(nameLinks).toBe(rows);
-    expect(html.match(/@someone/g)?.length).toBe(rows + 1); // rows + the header card
+    // Header + name per row + kudos aria-label per row.
+    expect(html.match(/@someone/g)?.length).toBe(rows * 2 + 1);
   });
 
   it("shows kudos only — never upload cost — on the ranking chip", () => {
@@ -68,8 +69,8 @@ describe("ProfileView", () => {
       <ProfileView archive={archive} isPreview={false} header="ledger" />,
     );
     expect(html).not.toContain("Joined"); // the card's join date is gone
-    expect(html.match(/@someone/g)?.length).toBe(
-      html.match(/<article/g)?.length ?? 0, // rows only, no header card
-    );
+    const rows = html.match(/<article/g)?.length ?? 0;
+    // Name + kudos label per row; no header card.
+    expect(html.match(/@someone/g)?.length).toBe(rows * 2);
   });
 });
