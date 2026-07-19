@@ -305,6 +305,49 @@ describe("POST /api/folklore/duel — the resolution", () => {
     expect(mockAppendDuel).not.toHaveBeenCalled();
   });
 
+  describe("self-kudos — crowning your own text is refused", () => {
+    // The bearer ben is dealt a pair containing ben's own text (the dealer
+    // never sees the viewer, so that happens). Kudos on his own side must
+    // refuse; kudos on the opponent still stands.
+    beforeEach(() => {
+      mockAuthenticateBearer.mockResolvedValue({
+        kind: "authenticated",
+        profile: "ben",
+        token: "bearer-ben",
+      });
+      mockConsumePairToken.mockResolvedValue({
+        kind: "consumed",
+        pair: { ...PAIR, profile: "ben" },
+      });
+    });
+
+    it("refuses crowning your own side — no debit, no duel, no accrual, and the burned token buys nothing", async () => {
+      const res = await POST(postRequest(RESOLVE)); // winner p2 — ben's own
+      expect(res.status).toBe(403);
+      const body = await res.json();
+      expect(body.ok).toBe(false);
+      expect(body.reason).toBe("own-work");
+      expect(typeof body.line).toBe("string");
+      expect(mockDebitForDuel).not.toHaveBeenCalled();
+      expect(mockAppendDuel).not.toHaveBeenCalled();
+      expect(mockAccrueEarned).not.toHaveBeenCalled();
+      expect(mockMarkPairResolved).not.toHaveBeenCalled();
+      expect(mockRecordTip).not.toHaveBeenCalled();
+    });
+
+    it("still lets the bearer crown the opponent — a duel their own text loses", async () => {
+      const res = await POST(postRequest({ ...RESOLVE, winnerPostId: "p1" }));
+      expect(res.status).toBe(200);
+      expect(mockAppendDuel).toHaveBeenCalledWith({
+        duelId: "tok-1",
+        winnerPostId: "p1",
+        loserPostId: "p2",
+        day: expect.any(String),
+      });
+      expect(mockAccrueEarned).toHaveBeenCalledWith("ann", 3);
+    });
+  });
+
   it("relays the daily duel cap from the debit — no entry, no accrual", async () => {
     mockDebitForDuel.mockResolvedValue({ kind: "capped" });
     const res = await POST(postRequest(RESOLVE));
@@ -351,6 +394,19 @@ describe("POST /api/folklore/duel — the resolution", () => {
       // Never a second duel, whatever the side.
       expect(mockAppendDuel).not.toHaveBeenCalled();
       expect(mockDebitForDuel).not.toHaveBeenCalled();
+    });
+
+    it("refuses a self-kudos in the follow-up window — no tip on your own side either", async () => {
+      mockAuthenticateBearer.mockResolvedValue({
+        kind: "authenticated",
+        profile: "ben",
+        token: "bearer-ben",
+      });
+      mockReadResolvedPair.mockResolvedValue({ ...PAIR, profile: "ben" });
+      const res = await POST(postRequest({ ...RESOLVE, winnerPostId: "p2" })); // ben's own
+      expect(res.status).toBe(403);
+      expect((await res.json()).reason).toBe("own-work");
+      expect(mockRecordTip).not.toHaveBeenCalled();
     });
 
     it("refuses a token with no resolved pair behind it — expired or forged, nothing to tip", async () => {

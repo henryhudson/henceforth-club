@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { authenticateBearer } from "@/lib/kudos/auth";
+import { isOwnWork, OWN_WORK_LINE } from "@/lib/kudos/ownWork";
 import { getArchivePost } from "@/lib/xArchiveCache";
 import { recordTip } from "@/lib/kudos/tips";
 import { dateKey } from "@/lib/redis";
@@ -50,6 +51,16 @@ export async function POST(req: Request) {
     kudos === null
   ) {
     return refusal("bad-input", 400);
+  }
+
+  // The handle names the receiving author; a payer tipping their own archive
+  // — root or continuation post alike — is refused before anything is read
+  // or debited.
+  if (isOwnWork(auth.profile, handle)) {
+    return NextResponse.json(
+      { ok: false, reason: "own-work", line: OWN_WORK_LINE },
+      { status: 403 },
+    );
   }
 
   const post = await getArchivePost(handle, postId);

@@ -92,6 +92,40 @@ describe("POST /api/folklore/tip", () => {
     expect(await res.json()).toEqual({ ok: false, reason: "bad-input" });
   });
 
+  it("refuses a self-kudos — a tip on the payer's own archive — before touching anything", async () => {
+    const res = await POST(request({ ...TIP, handle: "henry" }));
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.ok).toBe(false);
+    expect(body.reason).toBe("own-work");
+    expect(typeof body.line).toBe("string");
+    expect(mockGetArchivePost).not.toHaveBeenCalled();
+    expect(mockRecordTip).not.toHaveBeenCalled();
+  });
+
+  it("refuses a self-kudos whatever the handle's case", async () => {
+    const res = await POST(request({ ...TIP, handle: "Henry" }));
+    expect(res.status).toBe(403);
+    expect((await res.json()).reason).toBe("own-work");
+    expect(mockRecordTip).not.toHaveBeenCalled();
+  });
+
+  it("refuses a tip on the payer's own continuation post — the thread roll-up cannot be bought", async () => {
+    // A continuation post lives in the payer's own archive, so its author —
+    // and its thread root's author — is the payer; the one check covers the
+    // roll-up-gaming case.
+    mockGetArchivePost.mockResolvedValue({
+      id: "post-2",
+      at: "2026-01-02",
+      text: "part two",
+      replyToId: "post-1",
+    });
+    const res = await POST(request({ handle: "henry", postId: "post-2", amount: 5 }));
+    expect(res.status).toBe(403);
+    expect((await res.json()).reason).toBe("own-work");
+    expect(mockRecordTip).not.toHaveBeenCalled();
+  });
+
   it("refuses a tip on a post the handle's archive does not contain — kudos only reach real authors", async () => {
     mockGetArchivePost.mockResolvedValue(null);
     const res = await POST(request(TIP));

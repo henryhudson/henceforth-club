@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { authenticateBearer } from "@/lib/kudos/auth";
+import { isOwnWork, OWN_WORK_LINE } from "@/lib/kudos/ownWork";
 import { listDealCandidates } from "@/lib/kudos/candidates";
 import { appendDuel, readRatingTable } from "@/lib/kudos/ledger";
 import {
@@ -18,6 +19,14 @@ import { dateKey } from "@/lib/redis";
 
 function refusal(reason: string, status: number) {
   return NextResponse.json({ ok: false, reason }, { status });
+}
+
+/** The self-kudos arm: refused with the friendly line, and nothing moves. */
+function ownWorkRefusal() {
+  return NextResponse.json(
+    { ok: false, reason: "own-work", line: OWN_WORK_LINE },
+    { status: 403 },
+  );
 }
 
 /** A kudos amount from the wire: a positive safe integer or nothing. */
@@ -159,6 +168,14 @@ export async function POST(req: Request) {
   }
   const loser = winner === pair.a ? pair.b : pair.a;
 
+  // Crowning your own text is refused before any money moves. The token
+  // burned on consumption — the self-crown costs the bearer their deal, but
+  // never a kudos and never a duel entry. Crowning the OPPONENT of your own
+  // text stands: that duel pays someone else and your text loses it.
+  if (isOwnWork(auth.profile, winner.author)) {
+    return ownWorkRefusal();
+  }
+
   const debit = await debitForDuel(auth.profile, kudos, day);
   switch (debit.kind) {
     case "capped":
@@ -215,6 +232,7 @@ async function degradeToTip(
   }
   const side = [resolved.a, resolved.b].find((s) => s.postId === postId);
   if (side === undefined) return refusal("not-in-pair", 400);
+  if (isOwnWork(profile, side.author)) return ownWorkRefusal();
 
   const tip = await recordTip(profile, side.postId, side.author, kudos, day);
   switch (tip.kind) {
