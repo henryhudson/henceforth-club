@@ -10,8 +10,10 @@ import {
   commentTxids,
   getLinkRecord,
   indexSince,
+  isBoardLink,
   linkMember,
   profileMember,
+  seedProfileOnBoard,
 } from "./folkloreBoard";
 
 const TXID_A = "a".repeat(64);
@@ -59,6 +61,7 @@ function fakeRedis(): Redis {
       z.set(member, next);
       return next;
     },
+    zscore: async (key: string, member: string) => zset(key).get(member) ?? null,
     zrange: async (
       key: string,
       min: number | string,
@@ -178,6 +181,40 @@ describe("kudos on the board", () => {
   });
 });
 
+describe("isBoardLink — the kudos bump's classifier", () => {
+  it("answers true only for a txid ranking on the board as a link", async () => {
+    const redis = fakeRedis();
+    expect(await isBoardLink(TXID_A, redis)).toBe(false);
+
+    await addLinkToBoard(TXID_A, LINK, 1_000, redis);
+    expect(await isBoardLink(TXID_A, redis)).toBe(true);
+    expect(await isBoardLink(TXID_B, redis)).toBe(false);
+  });
+
+  it("never mistakes a profile card for a link — the member encodings differ", async () => {
+    const redis = fakeRedis();
+    await bumpBoardKudos(profileMember("henry"), 3, redis);
+    expect(await isBoardLink("henry", redis)).toBe(false);
+  });
+});
+
+describe("seedProfileOnBoard — the one-time directory seed", () => {
+  it("lands the profile card at the given score and reports it new", async () => {
+    const redis = fakeRedis();
+    expect(await seedProfileOnBoard("Henry", 42, redis)).toBe(true);
+    expect(await boardTop(10, redis)).toEqual([{ member: profileMember("Henry"), score: 42 }]);
+  });
+
+  it("is idempotent: a re-seed never resets a standing score — live kudos included", async () => {
+    const redis = fakeRedis();
+    await seedProfileOnBoard("henry", 42, redis);
+    await bumpBoardKudos(profileMember("henry"), 8, redis);
+
+    expect(await seedProfileOnBoard("henry", 0, redis)).toBe(false);
+    expect(await boardTop(10, redis)).toEqual([{ member: profileMember("henry"), score: 50 }]);
+  });
+});
+
 describe("comments", () => {
   it("preserves RPUSH order, counts match, and the log is stamped", async () => {
     const redis = fakeRedis();
@@ -211,10 +248,12 @@ describe("null redis — every function is a safe no-op or empty", () => {
     expect(await addLinkToBoard(TXID_A, LINK, 1_000, null)).toBe(false);
     expect(await addCommentToIndex(TXID_A, TXID_B, 1_000, null)).toBe(false);
     expect(await bumpBoardKudos(linkMember(TXID_A), 5, null)).toBeNull();
+    expect(await seedProfileOnBoard("henry", 42, null)).toBe(false);
   });
 
   it("readers report empty and indexSince still carries the clock", async () => {
     expect(await boardTop(10, null)).toEqual([]);
+    expect(await isBoardLink(TXID_A, null)).toBe(false);
     expect(await commentTxids(TXID_A, null)).toEqual([]);
     expect(await commentCount(TXID_A, null)).toBe(0);
     expect(await getLinkRecord(TXID_A, null)).toBeNull();

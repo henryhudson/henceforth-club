@@ -14,6 +14,7 @@ const mockAccrueEarned = vi.fn();
 const mockRecordTip = vi.fn();
 const mockGetArchivePost = vi.fn();
 const mockRecordKudosReceived = vi.fn();
+const mockBumpBoardKudos = vi.fn();
 
 vi.mock("@/lib/kudos/auth", () => ({
   authenticateBearer: (...args: unknown[]) => mockAuthenticateBearer(...args),
@@ -44,6 +45,12 @@ vi.mock("@/lib/xArchiveCache", () => ({
 }));
 vi.mock("@/lib/kudos/received", () => ({
   recordKudosReceived: (...args: unknown[]) => mockRecordKudosReceived(...args),
+}));
+// Only the bump is mocked — profileMember stays real, so the tests pin the
+// actual member encoding the route hands the board.
+vi.mock("@/lib/folkloreBoard", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/folkloreBoard")>()),
+  bumpBoardKudos: (...args: unknown[]) => mockBumpBoardKudos(...args),
 }));
 
 import { GET, POST } from "./route";
@@ -84,9 +91,11 @@ beforeEach(() => {
     mockRecordTip,
     mockGetArchivePost,
     mockRecordKudosReceived,
+    mockBumpBoardKudos,
   ]) {
     mock.mockReset();
   }
+  mockBumpBoardKudos.mockResolvedValue(3);
   mockRecordKudosReceived.mockResolvedValue("recorded");
   mockGetArchivePost.mockImplementation(async (_handle: string, postId: string) => ({
     id: postId,
