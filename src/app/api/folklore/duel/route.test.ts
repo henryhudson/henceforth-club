@@ -300,6 +300,18 @@ describe("POST /api/folklore/duel — the resolution", () => {
     expect(mockRecordTip).not.toHaveBeenCalled();
   });
 
+  it("marks the pair resolved BEFORE the board bump — a board failure never strands a burnt token", async () => {
+    // The token is consumed and the giver is already debited by this point.
+    // With the board bump ahead of the marker, a throw there left a resolved
+    // duel with no resolved-pair record: the payer's follow-up tap could not
+    // even degrade to a tip, having paid. The marker goes down first.
+    mockBumpBoardKudos.mockRejectedValue(new Error("board down"));
+
+    await expect(POST(postRequest(RESOLVE))).rejects.toThrow("board down");
+
+    expect(mockMarkPairResolved).toHaveBeenCalledWith("tok-1", PAIR);
+  });
+
   it("answers a null next deal when the pool has gone thin, without failing the resolved duel", async () => {
     mockDealPair.mockReturnValue({ kind: "insufficient" });
     const res = await POST(postRequest(RESOLVE));

@@ -8,7 +8,7 @@ import {
   bumpBoardKudos,
   commentCount,
   commentTxids,
-  getLinkRecord,
+  readLinkRecord,
   indexSince,
   isBoardLink,
   LINK_SCORE_OFFSET,
@@ -131,7 +131,7 @@ describe("addLinkToBoard", () => {
     expect(await boardTop(10, redis)).toEqual([
       { member: linkMember(TXID_A), score: LINK_SCORE_OFFSET },
     ]);
-    expect(await getLinkRecord(TXID_A, redis)).toEqual(LINK);
+    expect(await readLinkRecord(TXID_A, redis)).toEqual({ kind: "record", record: LINK });
     expect((await indexSince(0, redis)).txids).toEqual([TXID_A]);
   });
 
@@ -301,6 +301,20 @@ describe("seedProfileOnBoard — the one-time directory seed", () => {
   });
 });
 
+describe("readLinkRecord — absence and outage are different answers", () => {
+  it("reports absent for a txid the cache does not hold, with a live store", async () => {
+    const redis = fakeRedis();
+    expect(await readLinkRecord(TXID_A, redis)).toEqual({ kind: "absent" });
+  });
+
+  it("reports unavailable when there is no store to ask", async () => {
+    // The distinction the callers relay: absent is a verdict on the txid,
+    // unavailable is a verdict on us. Collapsing them told a client its
+    // request was wrong when the truth was "ask again in a moment".
+    expect(await readLinkRecord(TXID_A, null)).toEqual({ kind: "unavailable" });
+  });
+});
+
 describe("comments", () => {
   it("preserves RPUSH order, counts match, and the log is stamped", async () => {
     const redis = fakeRedis();
@@ -342,7 +356,7 @@ describe("null redis — every function is a safe no-op or empty", () => {
     expect(await isBoardLink(TXID_A, null)).toBe(false);
     expect(await commentTxids(TXID_A, null)).toEqual([]);
     expect(await commentCount(TXID_A, null)).toBe(0);
-    expect(await getLinkRecord(TXID_A, null)).toBeNull();
+    expect(await readLinkRecord(TXID_A, null)).toEqual({ kind: "unavailable" });
     expect(await indexSince(0, null, () => 41_000)).toEqual({ txids: [], now: 41_000 });
   });
 });
