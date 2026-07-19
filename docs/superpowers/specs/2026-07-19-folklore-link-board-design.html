@@ -73,9 +73,9 @@
 
 <h2>4 &middot; The site</h2>
 <div class="flow">
-<p><strong>Feed</strong> &mdash; <code>/folklore</code> renders the unified board from <code>folklore:board</code>. Archive entries keep their card; a link entry shows title, domain, submitter (when bound), kudos, and comment count.</p>
+<p><strong>Feed</strong> &mdash; <code>/folklore</code> renders the unified board from <code>folklore:board</code>. An archived profile appears as <strong>one card per profile</strong> (Henry, Q2) &mdash; the directory shape, linking through to its full archive feed &mdash; while a link entry shows title, domain, submitter (when bound), kudos, and comment count. Board seeding is therefore per-profile: one board entry per handle, scored by that profile's kudos total.</p>
 <p><strong>Link page</strong> &mdash; the existing per-transaction page grows a thread: the link, then its comments from <code>folklore:comments:&lt;txid&gt;</code>, each rendered from chain.</p>
-<p><strong>Submit</strong> &mdash; <code>/folklore/submit</code>, the <em>only</em> path for links and comments (Decision 4): url + title + optional comment, live sat/pound quote from the <code>folkloreJob</code> quote machinery, then the spec&nbsp;B rails verbatim &mdash; pay the quoted amount, the worker inscribes the record, broadcasts, writes the txid into <code>folklore:board</code> and <code>folklore:log</code>. Ships behind its own flag until the rails have carried Henry's own money end to end.</p>
+<p><strong>Submit</strong> &mdash; <code>/folklore/submit</code>, the <em>only</em> path for links and comments (Decision 4): url + title + optional comment, priced as the inscription quote plus a <strong>pence-level floor (~10p)</strong> so the fee genuinely deters spam while staying trivial for honest submitters (Henry, Q1) &mdash; then the spec&nbsp;B rails verbatim: pay the quoted amount, the worker inscribes the record, broadcasts, writes the txid into <code>folklore:board</code> and <code>folklore:log</code>. Ships <strong>dark behind its own flag until a funded end-to-end run</strong> (Henry, Q3).</p>
 <p><strong>Explorer</strong> &mdash; every board entry links out to BananaBlocks, GorillaPool's protocol-aware explorer (it labels B:// and ordinal records natively; the app already consumes its bulk headers, re-validated, via <code>BananaBlocksHeaderService</code>). Byte fetches stay on WhatsOnChain for v1; BananaBlocks is the candidate second source (open question Q4).</p>
 <p><strong>Sync endpoint</strong> &mdash; <code>GET /api/folklore/index?since=&lt;ms&gt;</code> &rarr; <code>{ "txids": [&hellip;], "now": &lt;ms&gt; }</code>: every txid whose log score exceeds <code>since</code>, ordered by insertion, plus the server's own clock for the client to store as its next watermark. <code>since=0</code> is the first sync and returns everything.</p>
 </div>
@@ -121,12 +121,12 @@
 <li>No app-side chain scanning &mdash; the app syncs from the index (Decision 2 keeps the trustless door open for anyone who wants to walk through it later).</li>
 </ul>
 
-<h2>11 &middot; Open questions for Henry</h2>
+<h2>11 &middot; Decisions (Henry, 2026-07-19 morning)</h2>
 <ul>
-<li><strong>Q1:</strong> the submit price &mdash; pure quote (size-based, pennies) or a deliberate floor (say 1,000 sats) so the fee actually deters spam?</li>
-<li><strong>Q2:</strong> should archived profiles appear on the board as one entry per <em>profile</em> (current directory shape) or per <em>post</em> (current feed shape)? The feed today ranks posts; a board of links probably wants profile-level cards. Recommendation: per profile.</li>
-<li><strong>Q3:</strong> does the web submit flag ship on with the feature, or stay dark until the first funded end-to-end run?</li>
-<li><strong>Q4:</strong> BananaBlocks as a byte-fetch source beside WhatsOnChain &mdash; adopt now (it is JungleBus-backed and protocol-aware) or keep it links-out only until it has a track record? Recommendation: links-out now, fetch source later.</li>
+<li><strong>Q1 &mdash; price:</strong> inscription quote plus a pence-level floor (~10p) &mdash; spam-deterrent, trivial for honest submitters, consistent with the &pound;1 archive ladder.</li>
+<li><strong>Q2 &mdash; board cards:</strong> one card per archived <em>profile</em> (directory shape), not per post.</li>
+<li><strong>Q3 &mdash; go-live:</strong> web submit ships dark behind its flag until a funded end-to-end run &mdash; the &pound;1 web-archive discipline.</li>
+<li><strong>Q4 &mdash; BananaBlocks:</strong> links-out only for now; byte fetches stay on WhatsOnChain; revisit as a second fetch source once it has a track record.</li>
 </ul>
 
 <p style="margin-top:40px;color:var(--muted);font-style:italic;">Next: Henry reviews this document; then the implementation plan (site and app halves, test-first, money-path tasks gated on adversarial review).</p>
