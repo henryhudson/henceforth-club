@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reddit for bitcoin links — the folklore board design</title>
+<style>
+  :root { --bg:#f4ecd8; --ink:#2a2318; --muted:#6b5d45; --rule:#c9b98f; --accent:#8b3a1a; --card:#faf4e4; --shadow:0 1px 3px rgba(60,40,10,0.15); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.68;}
+  .wrap{max-width:860px;margin:0 auto;padding:56px 32px;}
+  header.doc{margin-bottom:40px;border-bottom:3px double var(--rule);padding-bottom:26px;}
+  .eyebrow{font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:33px;line-height:1.16;margin:0 0 12px;font-weight:700;}
+  h2{font-size:24px;margin:46px 0 12px;padding-top:18px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 8px;}
+  .lede{font-size:19px;color:var(--muted);margin:0;font-style:italic;}
+  p{margin:13px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(120,90,30,0.12);padding:2px 6px;border-radius:4px;}
+  pre{background:#2a2318;color:#f0e6cf;padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;background:var(--card);}
+  th,td{text-align:left;padding:9px 12px;border:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .decision{background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 18px;margin:18px 0;box-shadow:var(--shadow);}
+  .decision strong{color:var(--accent);}
+  ul{margin:12px 0;padding-left:26px;} li{margin:6px 0;}
+  .flow{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px 20px;margin:16px 0;box-shadow:var(--shadow);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Design spec &middot; 2026-07-19 &middot; henceforth.club/folklore &middot; status: DRAFT for Henry's review</div>
+<h1>Reddit for bitcoin links</h1>
+<p class="lede">Folklore stops being an archive with a feed and becomes a board with an archive on it: anyone submits a link, the community gives kudos, the front page is whatever the kudos say it is &mdash; and every entry on the board is a Bitcoin transaction.</p>
+</header>
+
+<p><strong>What exists.</strong> Folklore reads archived X profiles from Bitcoin, ranks the feed by kudos alone (upload cost was dropped from the score on 2026-07-18), runs Elo duels for videos in the arena, and holds the spec&nbsp;B custodial rails behind their flag. The Upstash index (<code>x:handles</code>, per-handle txid lists, the score and vote families) tells the site which transactions to read; WhatsOnChain serves the bytes; the OP_RETURN JSON parser in <code>onchain.ts</code> turns them back into posts.</p>
+
+<p><strong>The ask.</strong> Henry, 2026-07-19: <em>&ldquo;with folklore it would be good if it was like reddit but for bitcoin links&rdquo;</em> &mdash; and, on the data: <em>&ldquo;it will be a list of txids as we do. i also think in the henceforth app we should create a file called folklore when we make an account &mdash; this can contain all the txids and should have the date of last sync so we dont need to fetch loads of data meaninglessly.&rdquo;</em></p>
+
+<h2>1 &middot; The reframe</h2>
+<p>Folklore <em>is</em> the board. An archived X profile is one kind of submission; a link is another; both live in the same kudos-ranked feed. Nothing about the archive changes &mdash; it simply stops being the whole product and becomes the founding content of a larger one.</p>
+
+<div class="decision"><strong>Decision 1 &mdash; one board, one ranking.</strong> Links and archives share a single feed ordered by kudos total, exactly the ranking that exists today. No hot algorithm, no time decay, no tabs. If old links pinning the front page becomes a real problem, that is a good problem, and a later spec.</div>
+
+<h2>2 &middot; What a submission is on-chain</h2>
+<p>Two new OP_RETURN JSON record kinds beside <code>SocialArchive</code>, written and parsed by the same pushdata machinery:</p>
+<pre><code>{ "v": 1, "app": "folklore", "kind": "link",
+  "url": "https://…", "title": "…", "by": "handle?" }
+
+{ "v": 1, "app": "folklore", "kind": "comment",
+  "parent": "&lt;txid of the link&gt;", "text": "…", "by": "handle?" }</code></pre>
+<table>
+<tr><th>Rule</th><th>Value</th><th>Why</th></tr>
+<tr><td>Title cap</td><td>300 characters</td><td>Reddit's own limit; long enough for any honest headline</td></tr>
+<tr><td>Comment cap</td><td>10,000 characters</td><td>An essay fits; a novel pays for its own archive instead</td></tr>
+<tr><td>URL scheme</td><td>http(s) only</td><td>Renderable in every client; no javascript:, no surprises</td></tr>
+<tr><td><code>by</code></td><td>Optional bound handle (spec&nbsp;C binding)</td><td>Attribution when claimed and verifiable; anonymous stays legal</td></tr>
+<tr><td>Duplicates</td><td>Allowed in v1</td><td>Resubmission costs sats again; the fee is the dedupe</td></tr>
+</table>
+<div class="decision"><strong>Decision 2 &mdash; the chain is the record, the index is an opinion.</strong> Any client can re-derive the whole board by scanning for these records. The Upstash index is how <em>our</em> site and app find them quickly; it is curation, not custody of truth.</div>
+
+<h2>3 &middot; The board index (Upstash)</h2>
+<table>
+<tr><th>Key</th><th>Shape</th><th>Purpose</th></tr>
+<tr><td><code>folklore:board</code></td><td>Sorted set: txid &rarr; kudos total</td><td>The front page is one <code>ZRANGE</code>. Seeded from the existing archive directory and its scores.</td></tr>
+<tr><td><code>folklore:comments:&lt;txid&gt;</code></td><td>List of comment txids, oldest first</td><td>Thread rendering on a link's page</td></tr>
+<tr><td><code>folklore:log</code></td><td>Sorted set: txid &rarr; index-insertion time (ms)</td><td>Delta sync for the app's folklore file &mdash; every board <em>and</em> comment txid lands here when the index learns of it</td></tr>
+</table>
+<p>Kudos keep the existing score and vote machinery unchanged; a kudos event additionally bumps the txid's score in <code>folklore:board</code> so ranking stays a read-time no-op.</p>
+<div class="decision"><strong>Decision 3 &mdash; the sync clock is index-insertion time, never block time.</strong> A transaction indexed late (a backfill, a re-scan, someone else's old inscription adopted onto the board) must still reach every client whose watermark postdates its block. The log records when <em>we learned of it</em>; that is the only clock a <code>since</code> query can be honest against. This is the since_id lesson of 2026-07-16, applied on purpose.</div>
+
+<h2>4 &middot; The site</h2>
+<div class="flow">
+<p><strong>Feed</strong> &mdash; <code>/folklore</code> renders the unified board from <code>folklore:board</code>. Archive entries keep their card; a link entry shows title, domain, submitter (when bound), kudos, and comment count.</p>
+<p><strong>Link page</strong> &mdash; the existing per-transaction page grows a thread: the link, then its comments from <code>folklore:comments:&lt;txid&gt;</code>, each rendered from chain.</p>
+<p><strong>Submit</strong> &mdash; <code>/folklore/submit</code>: url + title + optional comment, live sat/pound quote from the <code>folkloreJob</code> quote machinery, then the spec&nbsp;B rails verbatim &mdash; pay the quoted amount, the worker inscribes the record, broadcasts, writes the txid into <code>folklore:board</code> and <code>folklore:log</code>. Ships behind its own flag until the rails have carried Henry's own money end to end.</p>
+<p><strong>Sync endpoint</strong> &mdash; <code>GET /api/folklore/index?since=&lt;ms&gt;</code> &rarr; <code>{ "txids": [&hellip;], "now": &lt;ms&gt; }</code>: every txid whose log score exceeds <code>since</code>, ordered by insertion, plus the server's own clock for the client to store as its next watermark. <code>since=0</code> is the first sync and returns everything.</p>
+</div>
+<p>Giving kudos remains Henceforth-only (the 2026-07-18 call, unchanged): the web reads and submits; the app votes.</p>
+
+<h2>5 &middot; The Henceforth app</h2>
+<p>Two new words in the folklore vocabulary, paying from the user's own wallet, non-custodially, the way the archive already does:</p>
+<pre><code>s" https://…" s" title" folklore-post     \ inscribe a link, txid on the stack
+s" &lt;txid&gt;" s" text…" folklore-comment    \ inscribe a comment under a link</code></pre>
+<p><strong>The folklore file.</strong> Created alongside the account, one JSON document:</p>
+<pre><code>{ "v": 1, "lastSyncAt": 0, "txids": [] }</code></pre>
+<p>Opening the board runs one delta fetch &mdash; <code>/api/folklore/index?since=lastSyncAt</code> &mdash; appends the new txids, and stores the server's <code>now</code> as the new watermark. Transaction <em>content</em> is fetched per-txid only when a row scrolls into view, and cached; the file guarantees the app never re-downloads the list, and the lazy fetch guarantees it never downloads bodies nobody looked at. That is the &ldquo;no meaningless refetching&rdquo; requirement, made of two small parts.</p>
+<div class="decision"><strong>Decision 4 &mdash; the watermark is server-stamped.</strong> The client never derives <code>lastSyncAt</code> from its own clock or from the data; it stores exactly the <code>now</code> the server returned, the same clock the log is scored by. Device skew cannot open a gap. The merge (<code>file + delta &rarr; file</code>) is a pure function with its own tests.</div>
+
+<h2>6 &middot; Money and custody</h2>
+<p>Nothing new. The app path is non-custodial &mdash; the user's wallet signs and broadcasts, as with archives. The web path is the spec&nbsp;B posture verbatim: per-job key alive for minutes, holds one job's payment, sweeps to revenue. A link inscription is the smallest job the rails will ever carry. <strong>The adversarial money-path review gates any build task that touches payment code &mdash; this document is the thing to attack first.</strong></p>
+
+<h2>7 &middot; Moderation, honestly</h2>
+<p>The chain is immutable; the board is curated. Delisting removes a txid from <code>folklore:board</code> and from all future <code>folklore:log</code> deltas &mdash; the site stops showing it and new syncs never learn of it. Files that already hold the txid keep it forever; when such an app fetches the content the site simply serves nothing, and the row renders as unavailable. This is the only lever that exists if someone inscribes something unlawful, and the spec says so out loud rather than pretending otherwise.</p>
+
+<h2>8 &middot; Failure modes</h2>
+<table>
+<tr><th>Failure</th><th>Behaviour</th></tr>
+<tr><td>Paid on web, inscription fails</td><td>Spec&nbsp;B's existing retry/refund posture; the job page tells the truth</td></tr>
+<tr><td>Comment whose <code>parent</code> is not on the board</td><td>Indexed into the log (sync is complete) but rendered nowhere until its parent exists; never an error</td></tr>
+<tr><td>Malformed or hostile record on-chain</td><td>Fails the shape check in the parser and is invisible, exactly as a garbage <code>SocialArchive</code> is today</td></tr>
+<tr><td>Oversized title/comment at submit</td><td>Refused before payment, both app and web; caps live in one shared constants module per side</td></tr>
+<tr><td>Sync response lost mid-flight</td><td>Watermark unchanged, next sync refetches the same delta; merge is idempotent (txid set union)</td></tr>
+<tr><td>Duplicate submission of the same URL</td><td>Two board entries, each having paid; v1 accepts this</td></tr>
+</table>
+
+<h2>9 &middot; Testing</h2>
+<ul>
+<li><strong>Site (vitest, test-first):</strong> link/comment record encode and parse beside the <code>onchain.ts</code> suite; <code>since</code> filtering and ordering of the log; board seeding from the existing directory.</li>
+<li><strong>App (Swift Testing, test-first):</strong> the folklore file's read/write round-trip; <code>merge(file, delta) &rarr; file</code> as a pure function &mdash; union, watermark adoption, idempotence under replayed deltas; word-level submit builders against fixtures, key-free as always.</li>
+<li><strong>Behaviour isn't shipped until asserted;</strong> the one genuinely manual step is the first real-money submit on each path, which follows the funded-run standard (fresh build on Henry's phone, live monitoring).</li>
+</ul>
+
+<h2>10 &middot; What v1 is NOT</h2>
+<ul>
+<li>No hot/new/top tabs &mdash; kudos total only (Decision 1).</li>
+<li>No kudos on comments &mdash; kudos rank board entries; threads are flat and chronological.</li>
+<li>No URL dedupe, no media on links, no notifications, no subreddit-style sections &mdash; one board.</li>
+<li>No app-side chain scanning &mdash; the app syncs from the index (Decision 2 keeps the trustless door open for anyone who wants to walk through it later).</li>
+</ul>
+
+<h2>11 &middot; Open questions for Henry</h2>
+<ul>
+<li><strong>Q1:</strong> the submit price &mdash; pure quote (size-based, pennies) or a deliberate floor (say 1,000 sats) so the fee actually deters spam?</li>
+<li><strong>Q2:</strong> should archived profiles appear on the board as one entry per <em>profile</em> (current directory shape) or per <em>post</em> (current feed shape)? The feed today ranks posts; a board of links probably wants profile-level cards. Recommendation: per profile.</li>
+<li><strong>Q3:</strong> does the web submit flag ship on with the feature, or stay dark until the first funded end-to-end run?</li>
+</ul>
+
+<p style="margin-top:40px;color:var(--muted);font-style:italic;">Next: Henry reviews this document; then the implementation plan (site and app halves, test-first, money-path tasks gated on adversarial review).</p>
+
+</div>
+</body>
+</html>
