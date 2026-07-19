@@ -40,8 +40,9 @@ export type QuoteResult =
   | { kind: "price-below-fee" };
 
 /** The sweep's own dust floor (scripts/xtext-worker/sweep.mjs): a float leg at
- * or below this is unpayable to the pool, so the quote refuses. */
-const DUST_SATS = 546;
+ * or below this is unpayable to the pool, so the quote refuses. Exported for
+ * the link quote (linkQuote.ts), which holds its pence floor to the same bar. */
+export const DUST_SATS = 546;
 
 /** A negative or non-finite byte count is not an archive; price it as zero
  * bytes rather than let it produce an unrepresentable quote (NaN, or

@@ -4,6 +4,7 @@
 // value — nothing throws.
 
 import { getRedis } from "@/lib/redis";
+import type { FolkloreRecord } from "@/app/folklore/linkRecord";
 import { applyEvent, type JobEvent, type JobState, type TextJob } from "./jobs";
 import type { ParsedExport } from "./parseExport";
 import type { Quote } from "./quote";
@@ -12,7 +13,10 @@ import { MAX_CONCURRENT_JOBS, QUOTE_EXPIRY_MINUTES } from "./constants";
 type Redis = NonNullable<ReturnType<typeof getRedis>>;
 type Ok = { ok: true; job: TextJob };
 type Refused = { ok: false; refused: string };
-type Archive = Extract<ParsedExport, { ok: true }>["archive"];
+// A job's stashed payload: an archive from the export path, or — since the
+// link board — a single validated folklore record. Same rails either way;
+// the worker classifies by the payload's own shape.
+type Archive = Extract<ParsedExport, { ok: true }>["archive"] | FolkloreRecord;
 
 const JOB_PREFIX = "x:job:";
 const PAYLOAD_PREFIX = "x:job:payload:";
@@ -72,7 +76,7 @@ async function allStoredJobs(redis: Redis): Promise<StoredJob[]> {
 }
 
 export async function createJob(
-  parsed: Extract<ParsedExport, { ok: true }>,
+  parsed: { handle: string; contentHash: string; archive: Archive },
   quote: Quote,
   nowMs: number,
 ): Promise<Ok | { ok: false; refused: "at-capacity" | "store-unavailable" }> {
