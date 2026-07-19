@@ -3,6 +3,7 @@ import { dateKey, getRedis } from "../redis";
 import { TIP_PRIORITY_FLOOR, TIP_PRIORITY_HALF_LIFE_DAYS } from "./constants";
 import { accrueEarned, debitForTip } from "./float";
 import { recordKudosReceived } from "./received";
+import { bumpBoardKudos, isBoardLink, linkMember, profileMember } from "../folkloreBoard";
 
 // The tip path — in-feed kudos on any text as you browse. A tip is five
 // movements and nothing else:
@@ -75,6 +76,12 @@ export async function recordTip(
   const tipped = await redis.incrby(tipCountKey(postId), amount);
   await accrueEarned(author, amount, redis);
   await recordKudosReceived(day, { postId, author, amount, kind: "tip" }, redis);
+  // The board card moves only after the accrual: a link's own card when the
+  // tipped id ranks on the board as a link, else the author's profile card.
+  const boardMember = (await isBoardLink(postId, redis))
+    ? linkMember(postId)
+    : profileMember(author);
+  await bumpBoardKudos(boardMember, amount, redis);
 
   const standing = await redis.get<TipPriorityRecord>(priorityKey(postId));
   const priority = (standing ? decayedPriority(standing, day) : 0) + amount;

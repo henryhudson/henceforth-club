@@ -13,6 +13,7 @@ import {
   type DealtSide,
 } from "@/lib/kudos/dealer";
 import { accrueEarned, debitForDuel } from "@/lib/kudos/float";
+import { bumpBoardKudos, profileMember } from "@/lib/folkloreBoard";
 import { recordKudosReceived } from "@/lib/kudos/received";
 import { recordTip } from "@/lib/kudos/tips";
 import { getArchivePost } from "@/lib/xArchiveCache";
@@ -212,6 +213,10 @@ export async function POST(req: Request) {
     amount: kudos,
     kind: "duel",
   });
+  // The crowned author's profile card moves with the duel's kudos — after
+  // the accrual, never before. Duels deal archived posts, so the target is
+  // always a profile card, never a link's.
+  await bumpBoardKudos(profileMember(winner.author), kudos);
   await markPairResolved(token, pair);
 
   const next = await dealNext(auth.profile);

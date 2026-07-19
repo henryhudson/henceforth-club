@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { Redis } from "@upstash/redis";
+import { validateLink } from "@/app/folklore/linkRecord";
+import { addLinkToBoard, linkMember, profileMember } from "../folkloreBoard";
 import { TIP_PRIORITY_FLOOR, TIP_PRIORITY_HALF_LIFE_DAYS } from "./constants";
 import { readProfileAccount, readHandleAccount, fundFloat } from "./float";
 import { readKudosReceived } from "./received";
@@ -15,11 +17,14 @@ import {
 
 const DAY = "2026-07-18";
 
+type ZaddArg = { nx?: boolean } | { score: number; member: string };
+
 /** A minimal in-memory stand-in for the Upstash client — only the calls the
- * tip path actually makes: `incrby`, `decrby`, `get`, `set`, plus the
- * `rpush`/`lrange` pair behind the day's received stream. An optional
- * trace records every command and key, which is how the no-Elo-write test
- * watches the path's entire Redis footprint. */
+ * tip path actually makes: `incrby`, `decrby`, `get`, `set`, the
+ * `rpush`/`lrange` pair behind the day's received stream, and the zset trio
+ * behind the folklore board bump. An optional trace records every command
+ * and key, which is how the no-Elo-write test watches the path's entire
+ * Redis footprint. */
 function fakeRedis(trace?: (command: string, key: string) => void): Redis {
   const store = new Map<string, unknown>();
   const bump = (key: string, by: number) => {
@@ -27,7 +32,38 @@ function fakeRedis(trace?: (command: string, key: string) => void): Redis {
     store.set(key, next);
     return next;
   };
+  const zset = (key: string) => {
+    const existing = store.get(key) as Map<string, number> | undefined;
+    if (existing) return existing;
+    const fresh = new Map<string, number>();
+    store.set(key, fresh);
+    return fresh;
+  };
   return {
+    zadd: async (key: string, ...args: ZaddArg[]) => {
+      trace?.("zadd", key);
+      const first = args[0];
+      const opts = first && !("member" in first) ? (args.shift() as { nx?: boolean }) : {};
+      const z = zset(key);
+      let added = 0;
+      for (const arg of args as { score: number; member: string }[]) {
+        if (opts.nx && z.has(arg.member)) continue;
+        if (!z.has(arg.member)) added += 1;
+        z.set(arg.member, arg.score);
+      }
+      return added;
+    },
+    zincrby: async (key: string, by: number, member: string) => {
+      trace?.("zincrby", key);
+      const z = zset(key);
+      const next = (z.get(member) ?? 0) + by;
+      z.set(member, next);
+      return next;
+    },
+    zscore: async (key: string, member: string) => {
+      trace?.("zscore", key);
+      return zset(key).get(member) ?? null;
+    },
     rpush: async (key: string, ...values: unknown[]) => {
       trace?.("rpush", key);
       const list = (store.get(key) as unknown[] | undefined) ?? [];
@@ -178,6 +214,53 @@ describe("recordTip", () => {
   });
 });
 
+describe("the folklore board bump — a recorded tip moves the board card", () => {
+  const TXID = "a".repeat(64);
+  const LINK = validateLink("https://example.com/a", "A title", "henry");
+  if (!LINK) throw new Error("fixture link must validate");
+
+  it("a tip on an archived post bumps the author's profile card by the amount", async () => {
+    const redis = fakeRedis();
+    await fundFloat("alice", 100, redis);
+
+    await recordTip("alice", "post-1", "Bob", 30, DAY, redis);
+
+    expect(await redis.zscore("folklore:board", profileMember("Bob"))).toBe(30);
+    expect(await redis.zscore("folklore:board", linkMember("post-1"))).toBeNull();
+  });
+
+  it("a tip on a board link's txid bumps the link's own card, never a profile", async () => {
+    const redis = fakeRedis();
+    await addLinkToBoard(TXID, LINK, 1_000, redis);
+    await fundFloat("alice", 100, redis);
+
+    await recordTip("alice", TXID, "henry", 30, DAY, redis);
+
+    expect(await redis.zscore("folklore:board", linkMember(TXID))).toBe(30);
+    expect(await redis.zscore("folklore:board", profileMember("henry"))).toBeNull();
+  });
+
+  it("accumulates across tips like any kudos total", async () => {
+    const redis = fakeRedis();
+    await fundFloat("alice", 100, redis);
+
+    await recordTip("alice", "post-1", "bob", 30, DAY, redis);
+    await recordTip("alice", "post-2", "bob", 12, DAY, redis);
+
+    expect(await redis.zscore("folklore:board", profileMember("bob"))).toBe(42);
+  });
+
+  it("a refused tip bumps nothing — the board moves only after the accrual", async () => {
+    const redis = fakeRedis();
+    await fundFloat("alice", 20, redis);
+
+    await recordTip("alice", "post-1", "bob", 30, DAY, redis); // insufficient
+    await recordTip("alice", "post-1", "bob", 0.5, DAY, redis); // invalid
+
+    expect(await redis.zscore("folklore:board", profileMember("bob"))).toBeNull();
+  });
+});
+
 describe("readers", () => {
   it("read zero for a post nobody has tipped", async () => {
     const redis = fakeRedis();
@@ -239,9 +322,12 @@ describe("no Elo write anywhere in the tip path", () => {
     "kudos:tips:",
     "kudos:priority:",
     "kudos:received:",
+    // The one key the folklore board wiring added: the classify-and-bump
+    // pair reads and writes the board zset itself, nothing else.
+    "folklore:board",
   ];
 
-  it("touches only float, spend, earned, tip-count, priority and received keys", async () => {
+  it("touches only float, spend, earned, tip-count, priority, received and board keys", async () => {
     const touched: { command: string; key: string }[] = [];
     const redis = fakeRedis((command, key) => touched.push({ command, key }));
     await fundFloat("alice", 100, redis);

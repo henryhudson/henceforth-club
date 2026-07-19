@@ -66,6 +66,32 @@ export async function addCommentToIndex(
   return true;
 }
 
+/** True when a txid ranks on the board as a link — the kudos bump's
+ * classifier. A profile card can never collide: the member encodings differ
+ * by prefix. Null-Redis safe: false. */
+export async function isBoardLink(
+  txid: string,
+  redis: Redis | null = getRedis(),
+): Promise<boolean> {
+  if (!redis) return false;
+  return (await redis.zscore(BOARD_KEY, linkMember(txid))) !== null;
+}
+
+/** Seed a profile card at a starting score — `nx`-guarded, so re-seeding
+ * never resets a total that kudos have since moved. Null-Redis safe. */
+export async function seedProfileOnBoard(
+  handle: string,
+  score: number,
+  redis: Redis | null = getRedis(),
+): Promise<boolean> {
+  if (!redis) return false;
+  const added = await redis.zadd(BOARD_KEY, { nx: true }, {
+    score,
+    member: profileMember(handle),
+  });
+  return (added ?? 0) > 0;
+}
+
 /** Add kudos to a board member's total. Returns the new score, or null when
  * Redis isn't configured. */
 export async function bumpBoardKudos(
