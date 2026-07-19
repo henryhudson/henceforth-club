@@ -14,7 +14,6 @@ import ProfileView from "./_components/ProfileView";
 import ArchiveDropZone from "./_components/ArchiveDropZone";
 import DirectoryRow from "./_components/DirectoryRow";
 import Proof from "./_components/Proof";
-import PinnedPost from "./_components/PinnedPost";
 import { WITNESS_HANDLE } from "./witness";
 
 export const revalidate = 3600;
@@ -67,11 +66,10 @@ export default async function FolklorePage() {
     // A <div>, not a <main>: the root layout already provides the single <main>
     // landmark for every page (see app/layout.tsx).
     <div className="min-h-screen bg-background">
-      {/* The mark and the pinned founding tweet — not a tagline. The archive
-          below is the argument: real posts read from the chain. */}
+      {/* Wordmark, then straight into the live archive — the posts are the pitch. */}
       <header className="relative overflow-hidden">
         <FolkloreForest />
-        <div className="relative z-10 mx-auto max-w-2xl px-6 pb-16 pt-16 text-center">
+        <div className="relative z-10 mx-auto max-w-2xl px-6 pb-10 pt-16 text-center">
           {/* The wordmark IS the heading — the thesis <h1> that used to carry
               that job left with the banner, and a page with no <h1> strands
               anyone navigating by headings. The mark's aria-label supplies the
@@ -80,7 +78,6 @@ export default async function FolklorePage() {
             <FolkloreWordmark className="mx-auto h-auto w-full max-w-[220px] text-accent sm:max-w-[280px]" />
           </h1>
           <p className="ledger-label mt-5">content secured</p>
-          <PinnedPost />
         </div>
       </header>
 
