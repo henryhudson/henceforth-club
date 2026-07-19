@@ -194,8 +194,9 @@ describe("readLedgerRollup", () => {
     const { scoresByWindow, foundingByPost } = await readLedgerRollup("bob", "2026-07-10", counting);
 
     expect(foundingByPost).toEqual({ p1: 3412 });
-    expect(scoresByWindow.week).toEqual({ p1: 3412 + 900 }); // founding never ages out
-    expect(scoresByWindow.all).toEqual({ p1: 3412 + 900 });
+    // Ranking is kudos only (161fbb6): founding lives in foundingByPost, never the score.
+    expect(scoresByWindow.week).toEqual({ p1: 900 });
+    expect(scoresByWindow.all).toEqual({ p1: 900 });
     expect(Object.keys(scoresByWindow).sort()).toEqual([...SCORE_WINDOWS].sort());
     expect(reads).toBe(1);
   });
