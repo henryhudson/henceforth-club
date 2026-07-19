@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { linkMember, profileMember } from "@/lib/folkloreBoard";
+import { LINK_SCORE_OFFSET, linkMember, profileMember } from "@/lib/folkloreBoard";
 import { validateComment, validateLink } from "./linkRecord";
 import { linkTxidsOf, mergeBoard, type LinkResolution } from "./boardMerge";
 
@@ -16,7 +16,7 @@ describe("mergeBoard", () => {
     const rows = mergeBoard(
       [
         { member: profileMember("henry"), score: 12 },
-        { member: linkMember(TXID_A), score: 7 },
+        { member: linkMember(TXID_A), score: 7 + LINK_SCORE_OFFSET },
         { member: profileMember("ada"), score: 3 },
       ],
       [
@@ -27,7 +27,18 @@ describe("mergeBoard", () => {
     );
 
     expect(rows.map((r) => r.kind)).toEqual(["profile", "link", "profile"]);
+    // The link's tie-break offset is dropped: 7.5 on the board is 7 kudos.
     expect(rows.map((r) => r.score)).toEqual([12, 7, 3]);
+  });
+
+  it("renders a freshly-entered link as zero kudos, never half of one", () => {
+    const rows = mergeBoard(
+      [{ member: linkMember(TXID_A), score: LINK_SCORE_OFFSET }],
+      [],
+      resolutions([[TXID_A, { record: LINK, comments: 0 }]]),
+    );
+
+    expect(rows.map((r) => r.score)).toEqual([0]);
   });
 
   it("resolves a profile member to its handle card, case-blind", () => {
@@ -42,7 +53,7 @@ describe("mergeBoard", () => {
 
   it("resolves a link member to its record and comment count", () => {
     const rows = mergeBoard(
-      [{ member: linkMember(TXID_A), score: 9 }],
+      [{ member: linkMember(TXID_A), score: 9 + LINK_SCORE_OFFSET }],
       [],
       resolutions([[TXID_A, { record: LINK, comments: 3 }]]),
     );

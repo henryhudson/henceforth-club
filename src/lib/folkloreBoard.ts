@@ -23,6 +23,33 @@ const LOG_KEY = "folklore:log";
 const commentsKey = (txid: string) => `folklore:comments:${txid}`;
 const linkKey = (txid: string) => `folklore:link:${txid}`;
 
+/**
+ * The score a link enters the board at, and carries for life — kudos add
+ * whole numbers on top of it.
+ *
+ * Redis breaks an equal-score tie by comparing MEMBER strings: ascending
+ * bytewise under ZRANGE, and `rev` reverses that comparison too. `profile:`
+ * begins 0x70, `link:` 0x6c — so with every entry at score zero the reversed
+ * order put the ENTIRE seeded directory ahead of every link, and a paid link
+ * was born beneath it (invisible outright once the directory outgrew
+ * boardTop's window).
+ *
+ * Half a kudos defeats that tie-break everywhere rather than only at the
+ * floor: link scores are whole kudos plus a half, profile scores are whole
+ * kudos, so the two families can never hold the same score and the
+ * lexicographic rule never runs at all. At equal kudos the link — which paid
+ * to be on the board — edges the profile; a profile with one more kudos
+ * still outranks it, so the board remains exactly the kudos ranking the spec
+ * asks for (Decision 1).
+ *
+ * The offset rides the LINK side because a link has exactly one creation
+ * door (addLinkToBoard) while a profile card has two (the directory seed and
+ * a bare zincrby from the kudos path) — the invariant is total where it can
+ * only be written in one place. mergeBoard subtracts it again for display,
+ * so no card ever shows half a kudos.
+ */
+export const LINK_SCORE_OFFSET = 0.5;
+
 /** The board member a link txid ranks under. */
 export const linkMember = (txid: string): string => `link:${txid}`;
 
@@ -43,7 +70,7 @@ export async function addLinkToBoard(
 ): Promise<boolean> {
   if (!redis) return false;
   await redis.set(linkKey(txid), record);
-  await redis.zadd(BOARD_KEY, { nx: true }, { score: 0, member: linkMember(txid) });
+  await redis.zadd(BOARD_KEY, { nx: true }, { score: LINK_SCORE_OFFSET, member: linkMember(txid) });
   await redis.zadd(LOG_KEY, { nx: true }, { score: nowMs, member: txid });
   return true;
 }

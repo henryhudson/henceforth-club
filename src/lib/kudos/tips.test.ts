@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { Redis } from "@upstash/redis";
 import { validateLink } from "@/app/folklore/linkRecord";
-import { addLinkToBoard, linkMember, profileMember } from "../folkloreBoard";
+import { addLinkToBoard, LINK_SCORE_OFFSET, linkMember, profileMember } from "../folkloreBoard";
 import { TIP_PRIORITY_FLOOR, TIP_PRIORITY_HALF_LIFE_DAYS } from "./constants";
 import { readProfileAccount, readHandleAccount, fundFloat } from "./float";
 import { readKudosReceived } from "./received";
@@ -236,7 +236,8 @@ describe("the folklore board bump — a recorded tip moves the board card", () =
 
     await recordTip("alice", TXID, "henry", 30, DAY, redis);
 
-    expect(await redis.zscore("folklore:board", linkMember(TXID))).toBe(30);
+    // 30 kudos on top of the entry floor the link was born at.
+    expect(await redis.zscore("folklore:board", linkMember(TXID))).toBe(30 + LINK_SCORE_OFFSET);
     expect(await redis.zscore("folklore:board", profileMember("henry"))).toBeNull();
   });
 

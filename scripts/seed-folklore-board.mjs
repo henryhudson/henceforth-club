@@ -12,10 +12,29 @@
 // does not exist. A deliberate narrow reading of plan task A8, recorded
 // here so the adversarial review can object.
 //
+// Zero is the profile floor and links enter half a kudos above it
+// (LINK_SCORE_OFFSET) so that a freshly-paid link is never buried under the
+// whole directory by the zset's equal-score member tie-break. That number
+// lives in src/lib/folkloreBoard.ts and nowhere else — which is why this
+// script imports seedProfileOnBoard rather than re-deriving the board key
+// and the member encoding: one formula for the member encoding, per that
+// module's own doctrine.
+//
 // Run against production only after the feed (task A4) is deployed:
 //   node --env-file=.env.local scripts/seed-folklore-board.mjs
 
+import path from "node:path";
+import { register } from "node:module";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { Redis } from "@upstash/redis";
+
+// The same bridge run.mjs uses to import TypeScript from src/ in plain Node:
+// it resolves the "@/" alias and extensionless relative specifiers, then
+// hands back to Node's own TypeScript support. See aliasLoader.mjs's header.
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+register(pathToFileURL(path.join(HERE, "xtext-worker/aliasLoader.mjs")).href, import.meta.url);
+
+const { seedProfileOnBoard } = await import("@/lib/folkloreBoard");
 
 const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -26,8 +45,6 @@ if (!url || !token) {
 const redis = new Redis({ url, token });
 
 const HANDLES_KEY = "x:handles";
-const BOARD_KEY = "folklore:board";
-const profileMember = (handle) => `profile:${handle.toLowerCase()}`;
 
 const handles = await redis.zrange(HANDLES_KEY, 0, -1);
 if (!Array.isArray(handles) || handles.length === 0) {
@@ -37,11 +54,6 @@ if (!Array.isArray(handles) || handles.length === 0) {
 
 let seeded = 0;
 for (const handle of handles) {
-  const added = await redis.zadd(
-    BOARD_KEY,
-    { nx: true },
-    { score: 0, member: profileMember(String(handle)) },
-  );
-  if (added) seeded += 1;
+  if (await seedProfileOnBoard(String(handle), 0, redis)) seeded += 1;
 }
 console.log(`board seeded: ${seeded} new profile cards of ${handles.length} handles (nx — existing scores untouched)`);

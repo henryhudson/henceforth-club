@@ -11,6 +11,7 @@ import {
   getLinkRecord,
   indexSince,
   isBoardLink,
+  LINK_SCORE_OFFSET,
   linkMember,
   profileMember,
   seedProfileOnBoard,
@@ -26,6 +27,21 @@ const COMMENT = validateComment(TXID_A, "worth reading");
 if (!COMMENT) throw new Error("fixture comment must validate");
 
 type ZaddArg = { nx?: boolean } | { score: number; member: string };
+
+/**
+ * Redis's own sorted-set order: ascending by score, and — this is the part a
+ * score-only fake cannot express — equal scores broken by comparing the
+ * MEMBER strings bytewise. Members here are ASCII (hex txids, X handles), so
+ * JavaScript's code-unit comparison is the byte comparison.
+ *
+ * The board's whole ordering defect lived in this tie-break: with every entry
+ * at score zero, `profile:` (0x70) sorts after `link:` (0x6c) ascending, so
+ * under `rev` — an exact reversal of this order, members included — every
+ * profile card came out ahead of every link. A fake that tied by Map
+ * insertion order reported the opposite and could never have caught it.
+ */
+const byScoreThenMember = (a: [string, number], b: [string, number]): number =>
+  a[1] - b[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0);
 
 /** A minimal in-memory stand-in for the Upstash client — only the calls the
  * board path makes: the zset trio (`zadd`, `zincrby`, `zrange`), the comment
@@ -68,16 +84,15 @@ function fakeRedis(): Redis {
       max: number | string,
       opts: { byScore?: boolean; rev?: boolean; withScores?: boolean } = {},
     ) => {
-      const entries = [...zset(key).entries()];
+      const entries = [...zset(key).entries()].sort(byScoreThenMember);
       if (opts.byScore) {
         const lo = min === "-inf" ? -Infinity : Number(min);
         const hi = max === "+inf" ? Infinity : Number(max);
-        const rows = entries
-          .filter(([, score]) => score >= lo && score <= hi)
-          .sort((a, b) => a[1] - b[1]);
+        const rows = entries.filter(([, score]) => score >= lo && score <= hi);
         return opts.withScores ? rows.flat() : rows.map(([member]) => member);
       }
-      const sorted = entries.sort((a, b) => (opts.rev ? b[1] - a[1] : a[1] - b[1]));
+      // `rev` is an exact reversal of the ascending order — score AND member.
+      const sorted = opts.rev ? entries.reverse() : entries;
       const stop = Number(max) === -1 ? undefined : Number(max) + 1;
       const rows = sorted.slice(Number(min), stop);
       return opts.withScores ? rows.flat() : rows.map(([member]) => member);
@@ -109,11 +124,13 @@ describe("board members", () => {
 });
 
 describe("addLinkToBoard", () => {
-  it("lands a zero-score board entry, caches the record, and stamps the log", async () => {
+  it("lands the entry-floor board score, caches the record, and stamps the log", async () => {
     const redis = fakeRedis();
     await addLinkToBoard(TXID_A, LINK, 1_000, redis);
 
-    expect(await boardTop(10, redis)).toEqual([{ member: linkMember(TXID_A), score: 0 }]);
+    expect(await boardTop(10, redis)).toEqual([
+      { member: linkMember(TXID_A), score: LINK_SCORE_OFFSET },
+    ]);
     expect(await getLinkRecord(TXID_A, redis)).toEqual(LINK);
     expect((await indexSince(0, redis)).txids).toEqual([TXID_A]);
   });
@@ -125,7 +142,9 @@ describe("addLinkToBoard", () => {
 
     await addLinkToBoard(TXID_A, LINK, 9_000, redis);
 
-    expect(await boardTop(10, redis)).toEqual([{ member: linkMember(TXID_A), score: 5 }]);
+    expect(await boardTop(10, redis)).toEqual([
+      { member: linkMember(TXID_A), score: 5 + LINK_SCORE_OFFSET },
+    ]);
     // The log keeps the FIRST insertion time — a client synced at 5000 must
     // not be handed the txid again as if it were news.
     expect((await indexSince(5_000, redis)).txids).toEqual([]);
@@ -173,11 +192,78 @@ describe("kudos on the board", () => {
     await bumpBoardKudos(linkMember(TXID_A), 5, redis);
 
     expect(await boardTop(10, redis)).toEqual([
-      { member: linkMember(TXID_A), score: 12 },
+      { member: linkMember(TXID_A), score: 12 + LINK_SCORE_OFFSET },
       { member: profileMember("henry"), score: 3 },
-      { member: linkMember(TXID_B), score: 0 },
+      { member: linkMember(TXID_B), score: LINK_SCORE_OFFSET },
     ]);
-    expect(await boardTop(1, redis)).toEqual([{ member: linkMember(TXID_A), score: 12 }]);
+    expect(await boardTop(1, redis)).toEqual([
+      { member: linkMember(TXID_A), score: 12 + LINK_SCORE_OFFSET },
+    ]);
+  });
+});
+
+describe("the entry floor — a paid link is never born beneath the directory", () => {
+  /** The reported shape: a seeded directory of 120 handles, all unkudosed,
+   * and one freshly-inscribed link. */
+  async function seededBoard(redis: Redis, handles: number) {
+    for (let i = 0; i < handles; i += 1) {
+      await seedProfileOnBoard(`handle${String(i).padStart(3, "0")}`, 0, redis);
+    }
+  }
+
+  it("puts a freshly-entered link at the top of a board of unkudosed profiles", async () => {
+    const redis = fakeRedis();
+    await seededBoard(redis, 120);
+    await addLinkToBoard(TXID_A, LINK, 1_000, redis);
+
+    expect((await boardTop(1, redis))[0]).toEqual({
+      member: linkMember(TXID_A),
+      score: LINK_SCORE_OFFSET,
+    });
+  });
+
+  it("keeps the link inside the rendered window — boardTop(100) over 120 handles", async () => {
+    const redis = fakeRedis();
+    await seededBoard(redis, 120);
+    await addLinkToBoard(TXID_A, LINK, 1_000, redis);
+
+    const window = await boardTop(100, redis);
+    expect(window.map((row) => row.member)).toContain(linkMember(TXID_A));
+  });
+
+  it("still ranks by kudos: a profile with more kudos than a link outranks it", async () => {
+    const redis = fakeRedis();
+    await seedProfileOnBoard("ada", 0, redis);
+    await addLinkToBoard(TXID_A, LINK, 1_000, redis);
+    await bumpBoardKudos(profileMember("ada"), 1, redis);
+
+    expect((await boardTop(2, redis)).map((row) => row.member)).toEqual([
+      profileMember("ada"),
+      linkMember(TXID_A),
+    ]);
+  });
+
+  it("cannot tie: at equal kudos the link — which paid to be here — edges the profile", async () => {
+    const redis = fakeRedis();
+    await seedProfileOnBoard("ada", 0, redis);
+    await addLinkToBoard(TXID_A, LINK, 1_000, redis);
+    await bumpBoardKudos(profileMember("ada"), 3, redis);
+    await bumpBoardKudos(linkMember(TXID_A), 3, redis);
+
+    expect((await boardTop(2, redis)).map((row) => row.member)).toEqual([
+      linkMember(TXID_A),
+      profileMember("ada"),
+    ]);
+  });
+
+  it("holds the offset across kudos: a link's score stays a whole kudos above the floor", async () => {
+    const redis = fakeRedis();
+    await addLinkToBoard(TXID_A, LINK, 1_000, redis);
+    await bumpBoardKudos(linkMember(TXID_A), 7, redis);
+
+    expect(await boardTop(1, redis)).toEqual([
+      { member: linkMember(TXID_A), score: 7 + LINK_SCORE_OFFSET },
+    ]);
   });
 });
 
