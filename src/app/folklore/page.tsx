@@ -7,7 +7,7 @@ import { readFoundingTotal, readLedgerRollup } from "@/lib/xVotes";
 import { readTipCounts } from "@/lib/kudos/tips";
 import { readRatingTable } from "@/lib/kudos/ledger";
 import { readAuthorRatings } from "@/lib/kudos/candidates";
-import { boardTop, commentCount, getLinkRecord } from "@/lib/folkloreBoard";
+import { boardTop, commentCount, readLinkRecord } from "@/lib/folkloreBoard";
 import { sortHandlesByAuthorElo } from "./sortPosts";
 import { linkTxidsOf, mergeBoard, type LinkResolution } from "./boardMerge";
 import FolkloreWordmark from "./_components/FolkloreWordmark";
@@ -71,8 +71,13 @@ export default async function FolklorePage() {
     (
       await Promise.all(
         linkTxidsOf(boardEntries).map(async (txid) => {
-          const record = await getLinkRecord(txid);
-          return record ? ([txid, { record, comments: await commentCount(txid) }] as const) : null;
+          // A card the store cannot resolve — absent, delisted, or a brief
+          // outage — simply does not render, exactly as before: the feed
+          // drops what it cannot show rather than failing the whole page.
+          const read = await readLinkRecord(txid);
+          return read.kind === "record"
+            ? ([txid, { record: read.record, comments: await commentCount(txid) }] as const)
+            : null;
         }),
       )
     ).flatMap((pair) => (pair ? [pair] : [])),

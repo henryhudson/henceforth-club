@@ -166,14 +166,29 @@ export async function commentCount(
   return await redis.llen(commentsKey(parent));
 }
 
-/** The cached validated record for a board link, or null when uncached (or
- * delisted — the moderation lever removes the cache and the board entry). */
-export async function getLinkRecord(
+/**
+ * The cached validated record for a board link.
+ *
+ * Three answers, not two: a record, a genuine absence (never cached, or
+ * delisted — the moderation lever removes the cache and the board entry),
+ * and a store we cannot reach. Collapsing the last two into `null` made an
+ * outage indistinguishable from "no such parent", so a caller had to answer
+ * a well-behaved client "that parent does not exist, do not retry" while the
+ * truth was "ask again in a moment". The distinction is the caller's to
+ * relay; this function's job is only to stop losing it.
+ */
+export type LinkRecordRead =
+  | { kind: "record"; record: FolkloreRecord }
+  | { kind: "absent" }
+  | { kind: "unavailable" };
+
+export async function readLinkRecord(
   txid: string,
   redis: Redis | null = getRedis(),
-): Promise<FolkloreRecord | null> {
-  if (!redis) return null;
-  return (await redis.get<FolkloreRecord>(linkKey(txid))) ?? null;
+): Promise<LinkRecordRead> {
+  if (!redis) return { kind: "unavailable" };
+  const record = await redis.get<FolkloreRecord>(linkKey(txid));
+  return record ? { kind: "record", record } : { kind: "absent" };
 }
 
 /**

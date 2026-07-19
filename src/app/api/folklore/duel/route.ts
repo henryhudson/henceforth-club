@@ -213,11 +213,15 @@ export async function POST(req: Request) {
     amount: kudos,
     kind: "duel",
   });
-  // The crowned author's profile card moves with the duel's kudos — after
-  // the accrual, never before. Duels deal archived posts, so the target is
-  // always a profile card, never a link's.
-  await bumpBoardKudos(profileMember(winner.author), kudos);
   await markPairResolved(token, pair);
+  // The crowned author's profile card moves with the duel's kudos — last of
+  // all. Everything above is money and the records that account for it; the
+  // board is a ranking opinion over them (spec Decision 2), so it goes after
+  // the resolved-pair marker rather than between the accrual and it. A throw
+  // here used to leave a debited giver and a credited winner with no marker
+  // and the token already burnt — the payer could not even degrade to a tip.
+  // Duels deal archived posts, so the target is always a profile card.
+  await bumpBoardKudos(profileMember(winner.author), kudos);
 
   const next = await dealNext(auth.profile);
   return NextResponse.json({

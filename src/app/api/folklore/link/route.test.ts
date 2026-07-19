@@ -4,7 +4,7 @@ import { TITLE_MAX, COMMENT_MAX } from "@/app/folklore/linkRecord";
 const mockQuoteLink = vi.fn();
 const mockGbpPerBsv = vi.fn();
 const mockCreateJob = vi.fn();
-const mockGetLinkRecord = vi.fn();
+const mockReadLinkRecord = vi.fn();
 
 vi.mock("@/lib/folkloreJob/linkQuote", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/folkloreJob/linkQuote")>()),
@@ -17,7 +17,7 @@ vi.mock("@/lib/folkloreJob/jobStore", () => ({
   createJob: (...args: unknown[]) => mockCreateJob(...args),
 }));
 vi.mock("@/lib/folkloreBoard", () => ({
-  getLinkRecord: (...args: unknown[]) => mockGetLinkRecord(...args),
+  readLinkRecord: (...args: unknown[]) => mockReadLinkRecord(...args),
 }));
 
 import { POST } from "./route";
@@ -50,16 +50,19 @@ beforeEach(() => {
   mockQuoteLink.mockReset();
   mockGbpPerBsv.mockReset();
   mockCreateJob.mockReset();
-  mockGetLinkRecord.mockReset();
+  mockReadLinkRecord.mockReset();
   mockGbpPerBsv.mockResolvedValue(10.76375);
   mockQuoteLink.mockReturnValue(QUOTE);
   mockCreateJob.mockResolvedValue({ ok: true, job: JOB });
-  mockGetLinkRecord.mockResolvedValue({
-    v: 1,
-    app: "folklore",
-    kind: "link",
-    url: "https://example.com",
-    title: "parent",
+  mockReadLinkRecord.mockResolvedValue({
+    kind: "record",
+    record: {
+      v: 1,
+      app: "folklore",
+      kind: "link",
+      url: "https://example.com",
+      title: "parent",
+    },
   });
 });
 
@@ -162,11 +165,22 @@ describe("POST /api/folklore/link — refusals", () => {
   });
 
   it("refuses a comment whose parent is not on the board as unknown-parent — no job, no money", async () => {
-    mockGetLinkRecord.mockResolvedValue(null);
+    mockReadLinkRecord.mockResolvedValue({ kind: "absent" });
     const res = await POST(jsonRequest({ kind: "comment", parent: PARENT, text: "hello" }));
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ ok: false, reason: "unknown-parent" });
-    expect(mockGetLinkRecord).toHaveBeenCalledWith(PARENT);
+    expect(mockReadLinkRecord).toHaveBeenCalledWith(PARENT);
+    expect(mockCreateJob).not.toHaveBeenCalled();
+  });
+
+  it("relays a store outage on the parent lookup as store-unavailable, never unknown-parent", async () => {
+    // The refusal a client is told to act on: 400 unknown-parent says "your
+    // request is wrong, do not retry". An unreachable store has said nothing
+    // about the parent at all, so it must answer 503 instead.
+    mockReadLinkRecord.mockResolvedValue({ kind: "unavailable" });
+    const res = await POST(jsonRequest({ kind: "comment", parent: PARENT, text: "hello" }));
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ ok: false, reason: "store-unavailable" });
     expect(mockCreateJob).not.toHaveBeenCalled();
   });
 
@@ -213,7 +227,7 @@ describe("POST /api/folklore/link — accepted submissions", () => {
       expect.any(Number),
     );
     // A link needs no parent lookup.
-    expect(mockGetLinkRecord).not.toHaveBeenCalled();
+    expect(mockReadLinkRecord).not.toHaveBeenCalled();
   });
 
   it("creates a comment job when the parent is a link on the board", async () => {
@@ -228,12 +242,15 @@ describe("POST /api/folklore/link — accepted submissions", () => {
   });
 
   it("refuses a comment whose cached parent record is itself a comment — threads stay flat", async () => {
-    mockGetLinkRecord.mockResolvedValue({
-      v: 1,
-      app: "folklore",
-      kind: "comment",
-      parent: "cd".repeat(32),
-      text: "not a link",
+    mockReadLinkRecord.mockResolvedValue({
+      kind: "record",
+      record: {
+        v: 1,
+        app: "folklore",
+        kind: "comment",
+        parent: "cd".repeat(32),
+        text: "not a link",
+      },
     });
     const res = await POST(jsonRequest({ kind: "comment", parent: PARENT, text: "hello" }));
     expect(res.status).toBe(400);

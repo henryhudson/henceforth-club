@@ -8,7 +8,7 @@ import {
   validateLink,
   type FolkloreRecord,
 } from "@/app/folklore/linkRecord";
-import { getLinkRecord } from "@/lib/folkloreBoard";
+import { readLinkRecord } from "@/lib/folkloreBoard";
 import { createJob } from "@/lib/folkloreJob/jobStore";
 import { quoteLink } from "@/lib/folkloreJob/linkQuote";
 import { gbpPerBsv } from "@/lib/xPrice";
@@ -114,8 +114,16 @@ export async function POST(req: Request) {
   // record is also the moderation lever: a delisted link loses its cache, so
   // new comments on it refuse here too.
   if (record.kind === "comment") {
-    const parentRecord = await getLinkRecord(record.parent);
-    if (!parentRecord || parentRecord.kind !== "link") {
+    const parent = await readLinkRecord(record.parent);
+    // An unreachable store is not a verdict on the parent. Answering 400
+    // unknown-parent for an outage tells a well-behaved client its request
+    // was wrong and not to retry, when the honest answer is "ask again" —
+    // the same store-unavailable 503 the job creation three lines below
+    // already relays.
+    if (parent.kind === "unavailable") {
+      return refusal("store-unavailable", 503);
+    }
+    if (parent.kind === "absent" || parent.record.kind !== "link") {
       return refusal("unknown-parent", 400);
     }
   }
