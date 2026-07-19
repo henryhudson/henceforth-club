@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Folklore link board — implementation plan</title>
+<style>
+  :root { --bg:#f4f1ea; --ink:#1c1a16; --muted:#6b6358; --rule:#d8d0c0; --accent:#a8431f; --accent-soft:#c4a572; --card:#fbf9f4; --code-bg:#1e1e1e; --code-ink:#e8e8e8; --ok:#2f6f3e; --warn:#a8431f; --shadow:0 1px 3px rgba(0,0,0,0.08); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.65;}
+  .wrap{max-width:880px;margin:0 auto;padding:56px 32px;} header.doc{margin-bottom:40px;border-bottom:2px solid var(--rule);padding-bottom:24px;}
+  .eyebrow{font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:34px;line-height:1.15;margin:0 0 12px;font-weight:700;} h2{font-size:24px;margin:48px 0 14px;padding-top:20px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 10px;} .lede{font-size:19px;color:var(--muted);margin:0;} p{margin:14px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(0,0,0,0.06);padding:2px 6px;border-radius:4px;}
+  pre{background:var(--code-bg);color:var(--code-ink);padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;} th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .task{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:8px 22px 18px;margin:22px 0;box-shadow:var(--shadow);}
+  .task .tasknum{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);}
+  .files{font-size:14px;background:#efe9dc;border-radius:6px;padding:10px 14px;margin:10px 0;}
+  .note{background:#f6efe0;border-left:4px solid var(--accent-soft);padding:10px 16px;border-radius:0 6px 6px 0;margin:14px 0;}
+  ul{margin:12px 0;padding-left:24px;} li{margin:5px 0;}
+  ul.steps{list-style:none;padding-left:4px;} ul.steps>li{margin:12px 0;padding-left:30px;position:relative;}
+  ul.steps>li input[type=checkbox]{position:absolute;left:0;top:5px;width:18px;height:18px;}
+  .badge{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:2px 8px;border-radius:999px;white-space:nowrap;background:#f3dcd2;color:var(--accent);}
+  .effort{font-size:13px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Implementation plan &middot; 2026-07-19 &middot; folklore link board &middot; site + worker + app</div>
+<h1>Reddit for bitcoin links — the build</h1>
+<p class="lede">From the settled spec (<code>docs/superpowers/specs/2026-07-19-folklore-link-board-design.html</code>): folklore becomes a kudos-ranked board of on-chain links; archives appear one card per profile; single posts submit through the website's custodial rails behind a dark flag; the Henceforth app gains a per-account folklore file with a server-stamped sync watermark. Eleven tasks — eight on the site and worker, three in the app — each test-first with its own commit.</p>
+</header>
+
+<div class="note"><strong>For agentic workers:</strong> execute with superpowers:subagent-driven-development (recommended) or superpowers:executing-plans, task by task, checkboxes tracked. Each task's implementer sees only their task — the Interfaces block is how neighbouring names reach you.</div>
+
+<h2>Global constraints (every task inherits these)</h2>
+<ul>
+<li><strong>Flags dark:</strong> <code>FOLKLORE_SUBMIT_ENABLED</code> stays unset in production until Henry's funded end-to-end run (spec Q3). Read it per-request, exactly like <code>src/app/api/folklore/job/route.ts</code> reads its gate — never at module scope.</li>
+<li><strong>Money paths get an adversarial review before merge</strong> (repo CLAUDE.md): tasks A6, A7 and A8 do not merge on green tests alone.</li>
+<li><strong>Never touch</strong> the existing <code>/api/folklore/job</code> gating, kudos authentication, or any 503 fail-closed arm.</li>
+<li><strong>Caps (spec §2):</strong> title 300 characters, comment 10,000, url http(s) only, parent must match <code>/^[0-9a-fA-F]{64}$/</code>. Enforced at submit AND re-checked at parse (hostile chain records are invisible, not errors).</li>
+<li><strong>Clocks (spec Decisions 3 &amp; 5):</strong> <code>folklore:log</code> is scored by index-insertion time in milliseconds, never block time; the sync response's <code>now</code> is the server's clock, captured before the log read; the app stores that <code>now</code> verbatim as its watermark.</li>
+<li><strong>Board member encoding:</strong> <code>link:&lt;txid&gt;</code> and <code>profile:&lt;handle-lowercase&gt;</code> in one sorted set <code>folklore:board</code> scored by kudos total.</li>
+<li><strong>The <code>x*</code> libraries stay x-named</strong> (platform, not product); new board code is folklore-named.</li>
+<li><strong>Site gate:</strong> vitest suite + <code>npm run build</code> green before every push (a push deploys). <strong>App gate:</strong> named Swift Testing tests green + iOS simulator build; the vocabulary seven-location checklist applies to any new word.</li>
+<li><strong>App requests target <code>https://www.henceforth.club</code></strong> (the apex 307-redirects; ledger 2026-07-19).</li>
+<li>No acronyms in user-facing copy; no force unwraps in Swift production paths.</li>
+</ul>
+
+<h2>Part A — site and worker (henceforth-club)</h2>
+
+<div class="task"><span class="tasknum">Task A1</span> <span class="badge">pure</span> <span class="effort">records — encode, validate, parse</span>
+<div class="files"><strong>Create:</strong> <code>src/app/folklore/linkRecord.ts</code>, <code>src/app/folklore/linkRecord.test.ts</code></div>
+<p><strong>Interfaces — produces:</strong> <code>TITLE_MAX=300</code>, <code>COMMENT_MAX=10_000</code>, <code>TXID_RE</code>, types <code>FolkloreLink</code>/<code>FolkloreComment</code>/<code>FolkloreRecord</code>, <code>validateLink(url,title,by?)</code>, <code>validateComment(parent,text,by?)</code> (both return the record or <code>null</code>), <code>encodeRecord(r): Uint8Array</code>, <code>recordFromScripts(scriptHexes: string[]): FolkloreRecord | null</code>. Consumes <code>extractPushdata</code> from <code>src/app/folklore/onchain.ts</code>.</p>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Failing tests first</strong> — shape round-trips, caps, hostile input:
+<pre><code>import { validateLink, validateComment, encodeRecord, recordFromScripts,
+         TITLE_MAX, COMMENT_MAX } from "./linkRecord";
+
+test("a valid link round-trips through script pushdata", () =&gt; {
+  const rec = validateLink("https://example.com/a", "A title", "henry")!;
+  const hex = "6a" + pushdataHex(encodeRecord(rec)); // OP_RETURN + push
+  expect(recordFromScripts([hex])).toEqual(rec);
+});
+test("caps: 301-char title refused at validate AND at parse", () =&gt; {
+  expect(validateLink("https://x.com", "t".repeat(TITLE_MAX + 1))).toBeNull();
+  const hostile = JSON.stringify({ v:1, app:"folklore", kind:"link",
+    url:"https://x.com", title:"t".repeat(TITLE_MAX + 1) });
+  expect(recordFromScripts(["6a" + pushdataHex(utf8(hostile))])).toBeNull();
+});
+test("url scheme: javascript: and ftp: refused", () =&gt; { /* both null */ });
+test("comment parent must be a 64-hex txid", () =&gt; { /* bad parent null */ });
+test("garbage json and a SocialArchive are not records", () =&gt; { /* null */ });</code></pre>
+Write a tiny local <code>pushdataHex</code>/<code>utf8</code> helper in the test file (PUSHDATA2 length prefix — mirror the byte layout <code>extractPushdata</code> walks).</li>
+<li><input type="checkbox"> <strong>Run:</strong> <code>npx vitest run src/app/folklore/linkRecord.test.ts</code> — expect every test to fail (module missing).</li>
+<li><input type="checkbox"> <strong>Implement.</strong> Validation is total functions returning <code>null</code>, never throwing:
+<pre><code>export const TITLE_MAX = 300;
+export const COMMENT_MAX = 10_000;
+export const TXID_RE = /^[0-9a-fA-F]{64}$/;
+
+export type FolkloreLink = { v: 1; app: "folklore"; kind: "link";
+  url: string; title: string; by?: string };
+export type FolkloreComment = { v: 1; app: "folklore"; kind: "comment";
+  parent: string; text: string; by?: string };
+export type FolkloreRecord = FolkloreLink | FolkloreComment;
+
+const httpUrl = (u: string): boolean =&gt; {
+  try { const p = new URL(u).protocol; return p === "http:" || p === "https:"; }
+  catch { return false; }
+};
+
+export function validateLink(url: string, title: string, by?: string): FolkloreLink | null {
+  const t = title.trim();
+  if (!httpUrl(url) || t.length === 0 || t.length &gt; TITLE_MAX) return null;
+  return { v: 1, app: "folklore", kind: "link", url, title: t, ...(by ? { by } : {}) };
+}
+export function validateComment(parent: string, text: string, by?: string): FolkloreComment | null {
+  const t = text.trim();
+  if (!TXID_RE.test(parent) || t.length === 0 || t.length &gt; COMMENT_MAX) return null;
+  return { v: 1, app: "folklore", kind: "comment", parent, text: t, ...(by ? { by } : {}) };
+}
+export const encodeRecord = (r: FolkloreRecord): Uint8Array =&gt;
+  new TextEncoder().encode(JSON.stringify(r));
+
+export function recordFromScripts(scriptHexes: string[]): FolkloreRecord | null {
+  for (const hex of scriptHexes)
+    for (const chunk of extractPushdata(hex)) {
+      const rec = tryParse(chunk);
+      if (rec) return rec;
+    }
+  return null;
+}
+function tryParse(bytes: Uint8Array): FolkloreRecord | null {
+  let j: unknown;
+  try { j = JSON.parse(new TextDecoder().decode(bytes)); } catch { return null; }
+  if (typeof j !== "object" || j === null) return null;
+  const o = j as Record&lt;string, unknown&gt;;
+  if (o.v !== 1 || o.app !== "folklore") return null;
+  if (o.kind === "link" &amp;&amp; typeof o.url === "string" &amp;&amp; typeof o.title === "string")
+    return validateLink(o.url, o.title, typeof o.by === "string" ? o.by : undefined);
+  if (o.kind === "comment" &amp;&amp; typeof o.parent === "string" &amp;&amp; typeof o.text === "string")
+    return validateComment(o.parent, o.text, typeof o.by === "string" ? o.by : undefined);
+  return null;
+}</code></pre>
+Note how parse funnels through the same validators — the caps hold on read by construction.</li>
+<li><input type="checkbox"> <strong>Run the file green</strong>, then the full suite: <code>npm test</code>.</li>
+<li><input type="checkbox"> <strong>Commit:</strong> <code>git add src/app/folklore/linkRecord.ts src/app/folklore/linkRecord.test.ts &amp;&amp; git commit -m "Folklore board: link and comment record types — validate, encode, parse"</code></li>
+</ul>
+</div>
+
+<div class="task"><span class="tasknum">Task A2</span> <span class="badge">index</span> <span class="effort">the board in Upstash — one sorted set, a comment list, the insertion-time log</span>
+<div class="files"><strong>Create:</strong> <code>src/lib/folkloreBoard.ts</code>, <code>src/lib/folkloreBoard.test.ts</code></div>
+<p><strong>Interfaces — produces:</strong> <code>linkMember(txid)</code> / <code>profileMember(handle)</code>, <code>addLinkToBoard(txid, record, nowMs)</code>, <code>addCommentToIndex(parent, txid, nowMs)</code>, <code>bumpBoardKudos(member, by)</code>, <code>boardTop(n): Promise&lt;{member,score}[]&gt;</code>, <code>commentTxids(parent)</code>, <code>commentCount(parent)</code>, <code>getLinkRecord(txid)</code>, <code>indexSince(sinceMs): Promise&lt;{txids: string[]; now: number}&gt;</code>. Consumes <code>getRedis</code> from <code>src/lib/redis.ts</code> (nullable — every function no-ops or returns empty on null) and <code>FolkloreRecord</code> from A1.</p>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Failing tests first</strong> (mock <code>getRedis</code> with <code>vi.mock</code>, an in-memory zset/list fake — follow the pattern the existing kudos tests use):
+<pre><code>test("addLinkToBoard: zero-score board entry, record cached, log stamped", …);
+test("indexSince returns only txids logged after since, oldest first,
+      and now is captured BEFORE the read", …);   // fake clock injected
+test("bumpBoardKudos increments the member score; boardTop orders by score", …);
+test("comments: RPUSH order preserved; commentCount matches; log stamped", …);
+test("null redis: every function is a safe no-op / empty", …);</code></pre></li>
+<li><input type="checkbox"> <strong>Implement.</strong> Keys: <code>folklore:board</code> (zset), <code>folklore:comments:&lt;txid&gt;</code> (list), <code>folklore:log</code> (zset, score = insertion ms), <code>folklore:link:&lt;txid&gt;</code> (the validated record JSON — a read cache; the chain stays the truth). <code>addLinkToBoard</code> uses <code>zadd(..., { nx: true })</code> so a retry never resets a score. <code>indexSince(sinceMs)</code>: <code>const now = Date.now()</code> FIRST, then <code>zrange(log, sinceMs, "+inf", { byScore: true })</code> exclusive of <code>sinceMs</code> itself is wrong — use inclusive read and let the client's set-union dedupe (spec: merge is idempotent); return <code>{ txids, now }</code>.</li>
+<li><input type="checkbox"> <strong>Green file, full suite, build</strong>: <code>npm test &amp;&amp; npm run build</code>.</li>
+<li><input type="checkbox"> <strong>Commit:</strong> <code>"Folklore board: Upstash index — board zset, comment lists, insertion-time log"</code></li>
+</ul>
+</div>
+
+<div class="task"><span class="tasknum">Task A3</span> <span class="badge">api</span> <span class="effort">the sync endpoint the app's folklore file calls</span>
+<div class="files"><strong>Create:</strong> <code>src/app/api/folklore/index/route.ts</code>, <code>src/app/api/folklore/index/route.test.ts</code></div>
+<p><strong>Interfaces — produces:</strong> <code>GET /api/folklore/index?since=&lt;ms&gt;</code> → <code>200 { txids: string[], now: number }</code>. Consumes <code>indexSince</code> from A2. Read-only, public, no flag (it serves txids — already-public data, same posture as the showroom reads).</p>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Failing tests:</strong> default <code>since=0</code> returns everything; a garbage or negative <code>since</code> is treated as 0 (never a 500); response carries <code>now</code>; <code>Cache-Control: no-store</code> (a cached delta would freeze a watermark).</li>
+<li><input type="checkbox"> <strong>Implement</strong> — thin: parse <code>since</code> with <code>Number.parseInt</code>, clamp to <code>&gt;= 0</code>, call <code>indexSince</code>, <code>NextResponse.json(result, { headers: { "Cache-Control": "no-store" } })</code>. <code>export const dynamic = "force-dynamic"</code>.</li>
+<li><input type="checkbox"> <strong>Green + build + commit:</strong> <code>"Folklore board: /api/folklore/index — the since-watermark delta feed"</code></li>
+</ul>
+</div>
+
+<div class="task"><span class="tasknum">Task A4</span> <span class="badge">feed</span> <span class="effort">the unified board on /folklore — profile cards and link cards, one ranking</span>
+<div class="files"><strong>Create:</strong> <code>src/lib/explorer.ts</code>, <code>src/app/folklore/_components/LinkCard.tsx</code>, <code>src/app/folklore/boardMerge.ts</code>, <code>src/app/folklore/boardMerge.test.ts</code> &nbsp;<strong>Modify:</strong> <code>src/app/folklore/page.tsx</code></div>
+<p><strong>Interfaces — produces:</strong> <code>txExplorerUrl(txid)</code>; <code>mergeBoard(entries, handleCards, linkRecords): BoardRow[]</code> (pure — resolves board members against loaded data, drops unresolvable members). Consumes <code>boardTop</code>/<code>getLinkRecord</code>/<code>commentCount</code> (A2) and the page's existing handle-card data.</p>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Verify the BananaBlocks transaction-page URL format live</strong> (fetch the explorer's site and open a known txid) before writing <code>explorer.ts</code>; if it cannot be confirmed today, point <code>txExplorerUrl</code> at WhatsOnChain (<code>https://whatsonchain.com/tx/&lt;txid&gt;</code>) with a one-line comment naming the swap — never guess a domain into production.</li>
+<li><input type="checkbox"> <strong>Failing tests for <code>mergeBoard</code></strong>: score order preserved; a <code>profile:</code> member resolves to its handle card; a <code>link:</code> member to its record; an unresolvable member (delisted cache, unknown handle) is dropped silently — the moderation lever from spec §7.</li>
+<li><input type="checkbox"> <strong>Implement</strong> the pure merge + <code>LinkCard</code> (title → the url; domain via <code>new URL(url).hostname</code>; <code>by</code> when present; kudos count; comment count; explorer link-out). Wire <code>page.tsx</code>: read <code>boardTop(100)</code>, resolve, render — profile members reuse the existing handle card component untouched. Keep the current handle-only rendering as the fallback when the board zset is empty (pre-seed production).</li>
+<li><input type="checkbox"> <strong>Green + build + commit:</strong> <code>"Folklore board: unified feed — profile and link cards ranked together"</code></li>
+</ul>
+</div>
+
+<div class="task"><span class="tasknum">Task A5</span> <span class="badge">thread</span> <span class="effort">a link's page — the record plus its comments</span>
+<div class="files"><strong>Modify:</strong> the transaction page under <code>src/app/folklore/tx/</code> (read its current shape first) &nbsp;<strong>Create:</strong> <code>src/app/folklore/tx/thread.test.ts</code></div>
+<p><strong>Interfaces — consumes:</strong> <code>recordFromScripts</code> (A1), <code>commentTxids</code> (A2), the existing WhatsOnChain fetch in <code>src/lib/whatsonchain.ts</code>.</p>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Failing test</strong> for the pure thread assembly: given a link record and comment records fetched by txid, render order is chronological (list order — the RPUSH order IS submission order), a comment whose parent is missing renders nowhere (spec §8), a hostile record among the comments is skipped.</li>
+<li><input type="checkbox"> <strong>Implement:</strong> when the transaction's scripts parse as a <code>FolkloreLink</code>, render the link header (title, url, by, explorer link) then the thread — <code>commentTxids(txid)</code>, fetch each transaction's scripts, <code>recordFromScripts</code>, render text + by. Non-link transactions keep their existing rendering exactly.</li>
+<li><input type="checkbox"> <strong>Green + build + commit:</strong> <code>"Folklore board: link pages render their comment thread from chain"</code></li>
+</ul>
+</div>
+
+<div class="task"><span class="tasknum">Task A6</span> <span class="badge">money</span> <span class="effort">submit — quote with the pence floor, refusals, job creation (flag-dark)</span>
+<div class="files"><strong>Create:</strong> <code>src/lib/folkloreJob/linkQuote.ts</code>, <code>src/lib/folkloreJob/linkQuote.test.ts</code>, <code>src/app/api/folklore/link/route.ts</code>, <code>src/app/api/folklore/link/route.test.ts</code></div>
+<p><strong>Interfaces — produces:</strong> <code>LINK_FLOOR_PENCE = 10</code>; <code>quoteLinkSats(recordBytes: number, gbpPerBsv: number): number | null</code> (inscription fee via <code>estimateSingleOpReturn</code> + the floor converted at the live rate; null on no rate — fail closed, the <code>quote.ts</code> posture); <code>POST /api/folklore/link</code> — flag off → 503; invalid record → 400 with reason; valid → a job via the A7 contract. Consumes A1 validators, <code>createJob</code> from <code>src/lib/folkloreJob/jobStore.ts</code>, <code>gbpPerBsv</code> from <code>src/lib/xPrice.ts</code>.</p>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Failing quote tests:</strong> floor dominates for a tiny record (fee pennies, floor 10p); no live rate → null; the fee half delegates to <code>estimateSingleOpReturn</code> (assert against its own output, never a re-derived formula — the quote.ts comment explains why).</li>
+<li><input type="checkbox"> <strong>Failing route tests:</strong> flag unset → 503 before ANY body read; oversized title → 400 <code>reason:"title-too-long"</code>; bad url scheme → 400; valid link → 200 with <code>{ jobId, priceSats, address }</code>-shaped job from the existing <code>createJob</code>; comment with a parent not on the board → 400 <code>reason:"unknown-parent"</code> (submit-side courtesy; chain-side orphans stay legal per spec §8).</li>
+<li><input type="checkbox"> <strong>Implement</strong> both. The route mirrors <code>job/route.ts</code>'s per-request flag read and refusal helper verbatim in shape.</li>
+<li><input type="checkbox"> <strong>Green + build.</strong> <strong>Do not merge yet</strong> — this and A7 merge together after the adversarial money review (A8's step).</li>
+</ul>
+</div>
+
+<div class="task"><span class="tasknum">Task A7</span> <span class="badge">money</span> <span class="effort">the worker inscribes link jobs and feeds the index</span>
+<div class="files"><strong>Modify:</strong> <code>scripts/xtext-worker/</code> (read <code>run.mjs</code> and the job store first — follow its existing job-kind dispatch and key-custody shape exactly) &nbsp;<strong>Create:</strong> worker-side test beside the worker's existing tests</div>
+<p><strong>Interfaces — consumes:</strong> the A6 job payload (<code>kind:"link"</code>, the validated record); <code>encodeRecord</code> (A1); <code>addLinkToBoard</code>/<code>addCommentToIndex</code> (A2). <strong>Produces:</strong> on payment: one OP_RETURN transaction carrying the record, broadcast on the worker's existing rails; on confirmation: board + log + cache writes; sweep-to-revenue unchanged.</p>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Read first:</strong> <code>scripts/xtext-worker/run.mjs</code> end to end. The per-job key lifecycle (mint → watch → inscribe → sweep) is the spec B posture and MUST NOT change — a link is just the smallest payload the rails carry.</li>
+<li><input type="checkbox"> <strong>Failing test</strong> for the new pure piece: job payload → OP_RETURN script bytes (record from A1's <code>encodeRecord</code>, script prefix matching what <code>extractPushdata</code>/<code>recordFromScripts</code> can walk — assert the round-trip through A1's parser).</li>
+<li><input type="checkbox"> <strong>Implement</strong> the link branch in the worker's dispatch: build, broadcast, then <code>addLinkToBoard(txid, record, Date.now())</code> (or <code>addCommentToIndex</code> for comments). A failed index write after a successful broadcast retries on the worker's next tick — the chain is truth, the index self-heals (log the miss loudly).</li>
+<li><input type="checkbox"> <strong>Green.</strong> Hold with A6 for the review gate in A8.</li>
+</ul>
+</div>
+
+<div class="task"><span class="tasknum">Task A8</span> <span class="badge">gate</span> <span class="effort">kudos wiring, board seed, and the adversarial money review</span>
+<div class="files"><strong>Modify:</strong> <code>src/lib/kudos/tips.ts</code> (<code>recordTip</code>) and the duel route's accrual site &nbsp;<strong>Create:</strong> <code>scripts/seed-folklore-board.mjs</code></div>
+<p><strong>Interfaces — consumes:</strong> <code>bumpBoardKudos</code> (A2); the two accrual sites the kudos work of 2026-07-19 already single-homed (<code>recordTip</code> and the duel resolution).</p>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Failing test:</strong> a tip on a board link's txid bumps <code>link:&lt;txid&gt;</code> in <code>folklore:board</code>; a tip on an archived post bumps its <code>profile:&lt;handle&gt;</code>; the tips-footprint whitelist test gains exactly the board key.</li>
+<li><input type="checkbox"> <strong>Implement</strong> the bump at both accrual sites (after accrual succeeds, never before).</li>
+<li><input type="checkbox"> <strong>Seed script</strong> (idempotent, <code>zadd nx</code>): every handle in the directory → <code>profile:&lt;handle&gt;</code> scored by that handle's existing kudos total, read through the same rollup the feed ranks by today. Run locally with <code>node --env-file=.env.local scripts/seed-folklore-board.mjs</code> against production only after A4 deploys.</li>
+<li><input type="checkbox"> <strong>Adversarial money review</strong> of A6+A7+A8 together (workflow: independent refuters on the quote floor, the job custody, the index-write failure arm, the kudos bump ordering). Findings block merge; SHIP verdict merges all three in one push.</li>
+<li><input type="checkbox"> <strong>Commit + push</strong> after the review: <code>"Folklore board: submit rails, worker inscription, kudos wiring, seed (adversarially reviewed)"</code></li>
+</ul>
+</div>
+
+<h2>Part B — the Henceforth app</h2>
+
+<div class="task"><span class="tasknum">Task B1</span> <span class="badge">pure</span> <span class="effort">the folklore file — model and idempotent merge</span>
+<div class="files"><strong>Create:</strong> <code>FORTH/FORTH/Terminal MVVM/Model/FolkloreFile.swift</code>, <code>FORTH/Henceforth_Tests/FolkloreFile_Tests.swift</code> (register in pbxproj, four places)</div>
+<p><strong>Interfaces — produces:</strong>
+<pre><code>struct FolkloreFile: Codable, Equatable {
+    var v: Int = 1
+    var lastSyncAt: Int      // server milliseconds, stored verbatim
+    var txids: [String]      // insertion order preserved
+}
+struct FolkloreDelta: Codable { let txids: [String]; let now: Int }
+extension FolkloreFile {
+    /// Pure. Union preserving existing order, unknown txids appended in
+    /// delta order; watermark adopts the server's now. Idempotent.
+    func merging(_ delta: FolkloreDelta) -&gt; FolkloreFile
+}</code></pre></p>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Failing tests</strong> (Swift Testing, <code>@Test</code>/<code>#expect</code>): fresh file + full delta = delta order; replayed delta is a no-op except the watermark; overlapping delta appends only the unknown txids; watermark always becomes <code>delta.now</code> even on an empty delta; decode of the on-disk JSON shape <code>{"v":1,"lastSyncAt":0,"txids":[]}</code> round-trips.</li>
+<li><input type="checkbox"> <strong>Run scoped, expect fail:</strong> <code>xcodebuild test … -only-testing:Henceforth_Tests/FolkloreFile_Tests</code>.</li>
+<li><input type="checkbox"> <strong>Implement</strong> — <code>merging</code> is a Set-membership fold, no mutation of the receiver (<code>let</code> + value semantics):
+<pre><code>func merging(_ delta: FolkloreDelta) -&gt; FolkloreFile {
+    let known = Set(txids)
+    let fresh = delta.txids.filter { !known.contains($0) }
+    return FolkloreFile(v: v, lastSyncAt: delta.now, txids: txids + fresh)
+}</code></pre></li>
+<li><input type="checkbox"> <strong>Green scoped run, then commit:</strong> <code>"Folklore file: per-account board index with a server-stamped watermark"</code></li>
+</ul>
+</div>
+
+<div class="task"><span class="tasknum">Task B2</span> <span class="badge">sync</span> <span class="effort">the delta sync — one fetch, file on disk, seam for tests</span>
+<div class="files"><strong>Create:</strong> <code>FORTH/FORTH/Terminal MVVM/View Model/Functions/Bitcoin/FolkloreSync.swift</code>, <code>FORTH/Henceforth_Tests/FolkloreSync_Tests.swift</code> &nbsp;<strong>Modify:</strong> the wallet-card creation path in <code>UserSettings</code> (create the file alongside the account) — read how <code>transactionDetails_&lt;walletTitle&gt;</code> files are created and mirror the convention: <code>folklore_&lt;walletTitle&gt;.json</code> via <code>LocalFileManager</code>.</p></div>
+<p><strong>Interfaces — produces:</strong> <code>extension WalletState { func syncFolkloreFile() async -&gt; FolkloreSyncOutcome }</code> where <code>enum FolkloreSyncOutcome { case synced(new: Int, total: Int); case offline; case corrupt }</code>; a <code>static var testFolkloreTransport: ((Int) async throws -&gt; FolkloreDelta)?</code> seam exactly like <code>ChainQueryService.testChainQueryStub</code>. Consumes B1. Endpoint: <code>https://www.henceforth.club/api/folklore/index?since=&lt;lastSyncAt&gt;</code>.</p>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Failing tests</strong> through the seam: first sync (since 0) writes the file with the delta and the server now; second sync passes the stored watermark and appends only fresh txids; transport error → <code>.offline</code>, file untouched; corrupt file on disk → <code>.corrupt</code>, file quarantined not overwritten (never lose a good watermark to a bad write — atomic write per repo convention).</li>
+<li><input type="checkbox"> <strong>Implement</strong> — the fetch is one <code>URLSession</code> get decoded to <code>FolkloreDelta</code>, then B1's pure merge, then an atomic write. Domain owner: <code>WalletState</code> (spec: the file is account-scoped).</li>
+<li><input type="checkbox"> <strong>Green scoped + iOS simulator build + commit:</strong> <code>"Folklore sync: delta fetch against the server watermark, file created with the account"</code></li>
+</ul>
+</div>
+
+<div class="task"><span class="tasknum">Task B3</span> <span class="badge">word</span> <span class="effort">folklore-sync — the surface that proves it works</span>
+<div class="files"><strong>Modify (the seven-location vocabulary checklist):</strong> <code>VocabularyEnum.swift</code>, <code>VocabularyWords.swift</code>, <code>VocabularyDefinitions.swift</code>, <code>VocabularyStackDiagrams.swift</code>, <code>VocabularyCategories.swift</code>, <code>WordDispatch.swift</code>, implementation in <code>FolkloreSync.swift</code> &nbsp;<strong>Test:</strong> extend <code>FolkloreSync_Tests</code></p></div>
+<p><strong>Interfaces — produces:</strong> the word <code>folklore-sync</code> ( -- ), printing <code>folklore: N new, M total &middot; synced &lt;date&gt;</code> on success, <code>folklore: offline — file unchanged (M total)</code> otherwise. Consumes B2.</p>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Failing test:</strong> through the transport seam, executing the word in test mode prints the success line with the right counts; the offline line leaves the file byte-identical.</li>
+<li><input type="checkbox"> <strong>Implement</strong> across the seven locations (context-aware not needed — a simple word with a dispatch closure; async via the existing awaitable/Task pattern the chain-query words use if a suspension is needed, else fire-and-report like <code>receive</code>).</li>
+<li><input type="checkbox"> <strong>Green scoped + build + commit:</strong> <code>"folklore-sync: the board index syncs on demand, watermark honest"</code>. Push (the pre-push suite is the repo's gate).</li>
+</ul>
+</div>
+
+<h2>Sequencing and dependencies</h2>
+<table>
+<tr><th>Order</th><th>Task</th><th>Depends on</th><th>Merges</th></tr>
+<tr><td>1</td><td>A1 records</td><td>—</td><td>on green</td></tr>
+<tr><td>2</td><td>A2 board index</td><td>A1</td><td>on green</td></tr>
+<tr><td>3</td><td>A3 sync endpoint</td><td>A2</td><td>on green</td></tr>
+<tr><td>4</td><td>A4 feed &middot; A5 thread</td><td>A1+A2</td><td>on green</td></tr>
+<tr><td>5</td><td>A6 submit &middot; A7 worker</td><td>A1+A2</td><td><strong>held for A8's review</strong></td></tr>
+<tr><td>6</td><td>A8 kudos + seed + review</td><td>A6+A7</td><td>after SHIP verdict</td></tr>
+<tr><td>7</td><td>B1 → B2 → B3 (app)</td><td>A3 live</td><td>on green, per repo gate</td></tr>
+</table>
+<p class="effort">A1–A5 are shippable ahead of the money half: the board renders and syncs read-only while submit stays dark. The app half needs only A3 in production.</p>
+
+</div>
+</body>
+</html>
