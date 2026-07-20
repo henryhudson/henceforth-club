@@ -77,7 +77,7 @@ export default function WeekPlanner({
               isToday
                 ? "min-w-[148px] flex-[1.55_1_140px] border-accent-warm/50"
                 : "min-w-[118px] flex-[1_1_0] border-card-border bg-card-bg/40 text-[11.5px]"
-            } ${isPast ? "opacity-[0.55] saturate-[0.85] print:opacity-100" : ""}`}
+            } ${isPast ? "border-card-border/50 bg-card-bg/20 saturate-[0.85]" : ""}`}
             style={isToday ? TODAY_SURFACE : undefined}
           >
             <div className="flex flex-wrap items-baseline gap-1.5">
@@ -136,7 +136,7 @@ export default function WeekPlanner({
                         style={{ accentColor: "var(--accent-green)" }}
                       />
                       <span
-                        className={`break-words ${isToday ? "" : "line-clamp-3"} ${
+                        className={`break-words ${
                           done[i] ? "text-muted line-through" : "text-foreground"
                         }`}
                       >
