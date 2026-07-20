@@ -14,10 +14,16 @@ func loadEnv(_ path: String) -> [String: String] {
     guard let text = try? String(contentsOfFile: path, encoding: .utf8) else { return [:] }
     var out: [String: String] = [:]
     for line in text.split(separator: "\n") {
-        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        // .whitespacesAndNewlines, not .whitespaces, so a trailing carriage
+        // return left behind by a Windows line ending is trimmed along with
+        // the surrounding spaces rather than becoming part of the value.
+        var trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.hasPrefix("export"), let afterExport = trimmed.dropFirst(6).first, afterExport.isWhitespace {
+            trimmed = trimmed.dropFirst(6).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
         guard !trimmed.hasPrefix("#"), let equals = trimmed.firstIndex(of: "=") else { continue }
-        let key = String(trimmed[trimmed.startIndex..<equals])
-        var value = String(trimmed[trimmed.index(after: equals)...])
+        let key = trimmed[trimmed.startIndex..<equals].trimmingCharacters(in: .whitespaces)
+        var value = trimmed[trimmed.index(after: equals)...].trimmingCharacters(in: .whitespaces)
         if value.hasPrefix("\"") && value.hasSuffix("\"") && value.count >= 2 {
             value = String(value.dropFirst().dropLast())
         }
@@ -105,11 +111,19 @@ func run() async {
     // An empty read is an error, never a deletion. See spec decision four.
     guard !weekKeys.isEmpty else { fail("no week records found. Refusing to touch the calendar.") }
 
+    // The store's key listing order is not contractual. plannedDays overwrites
+    // by date unconditionally when the same date appears in two week records,
+    // so whichever record is decoded last wins that date. The keys embed an
+    // ISO date, so sorting them ascending makes the newest record the one
+    // decoded last, and therefore the one that deterministically wins,
+    // instead of leaving the winner to whatever order the store returns.
+    let sortedWeekKeys = weekKeys.sorted()
+
     let weeks: [WeekRecord]
     let cards: [BoardCard]
     do {
         var found: [WeekRecord] = []
-        for key in weekKeys {
+        for key in sortedWeekKeys {
             if let document = try await store.document(at: key) {
                 found.append(try decode(WeekRecord.self, from: document))
             }
@@ -170,9 +184,16 @@ func run() async {
     if let found = events.calendars(for: .event).first(where: { $0.title == calendarName }) {
         target = found
     } else {
-        guard let source = events.sources.first(where: { $0.sourceType == .calDAV && $0.title == "iCloud" })
-                ?? events.sources.first(where: { $0.sourceType == .calDAV }) else {
+        let calDAVSources = events.sources.filter { $0.sourceType == .calDAV }
+        guard !calDAVSources.isEmpty else {
             fail("no iCloud calendar account was found, so a new calendar would not reach the phone.")
+        }
+        guard let source = calDAVSources.first(where: { $0.title == "iCloud" }) else {
+            let candidates = calDAVSources.map(\.title).joined(separator: ", ")
+            fail("""
+            no calendar account titled iCloud was found. Candidate accounts seen: \(candidates). \
+            Refusing to guess which one to create the calendar in.
+            """)
         }
         let made = EKCalendar(for: .event, eventStore: events)
         made.title = calendarName
@@ -206,6 +227,10 @@ func run() async {
     let desired = days.map {
         DesiredEvent(date: $0.date, title: eventTitle(for: $0), notes: eventNotes(for: $0))
     }
+    // Known limitation: a recurring event manually placed in the Morning
+    // Board calendar shares one identifier across every occurrence, so this
+    // reconciliation can never converge on it. Nothing here detects or works
+    // around that case.
     let plan = reconcile(desired: desired, existing: existing)
 
     // ---- apply ---------------------------------------------------------
@@ -232,10 +257,19 @@ func run() async {
     for want in plan.create where !apply(EKEvent(eventStore: events), want) { failures += 1 }
     for change in plan.update {
         guard let event = events.event(withIdentifier: change.id) else { failures += 1; continue }
+        // EventKit identifiers are not unique across calendars, so the same
+        // identifier resolved here could belong to an event on a calendar
+        // Henry never asked this tool to touch. Refuse rather than relocate
+        // or overwrite it.
+        guard event.calendar == target else { failures += 1; continue }
         if !apply(event, change.event) { failures += 1 }
     }
     for identifier in plan.delete {
         guard let event = events.event(withIdentifier: identifier) else { continue }
+        // Same identifier collision risk as the update branch above: never
+        // remove an event that did not resolve into the Morning Board
+        // calendar.
+        guard event.calendar == target else { failures += 1; continue }
         do { try events.remove(event, span: .thisEvent, commit: false) } catch { failures += 1 }
     }
     do { try events.commit() }
