@@ -204,6 +204,51 @@ describe("runWorkerTick — link jobs on the existing rails", () => {
     }
   });
 
+  it("an inscribed folklore job whose payload has gone is flagged and retried — never registered as an archive", async () => {
+    // The misroute this closes: a null payload is not folklore-tagged, so the
+    // old sniff sent the job to registerHandle carrying the empty handle every
+    // link job has. That 400s, so the job retried forever in the ACTIVE
+    // `inscribed` state and held one of the four custody slots for good.
+    // `kind` is on the job record, which the payload's deletion cannot touch.
+    const jobsDir = mkdtempSync(path.join(tmpdir(), "xtext-worker-nullpayload-"));
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const store = makeStore(
+        [
+          {
+            ...fundedJob("orphan-job"),
+            kind: "folklore",
+            state: "inscribed",
+            inscriptionTxid: "cd".repeat(32),
+          },
+        ],
+        {}, // no payload at all
+      );
+      const registerCalls = [];
+      const fetchFn = vi.fn(async (url) => {
+        if (url.includes("/api/x/register")) {
+          registerCalls.push(url);
+          return { ok: false, status: 400, json: async () => ({ ok: false }) };
+        }
+        if (url.includes("/unspent")) return { ok: true, json: async () => [] };
+        throw new Error(`unexpected fetch: ${url}`);
+      });
+      const folklore = makeFolklore();
+
+      await runWorkerTick(deps(store, fetchFn, jobsDir, folklore));
+
+      // It stays inscribed to retry, it is loud, and it never touches the
+      // handle registry or the board index.
+      expect(store.jobs.get("orphan-job").state).toBe("inscribed");
+      expect(registerCalls).toHaveLength(0);
+      expect(folklore.addLinkToBoard).not.toHaveBeenCalled();
+      expect(warnSpy.mock.calls.filter((c) => String(c[0]).includes("orphan-job")).length).toBeGreaterThan(0);
+    } finally {
+      warnSpy.mockRestore();
+      rmSync(jobsDir, { recursive: true, force: true });
+    }
+  });
+
   it("a corrupt folklore-tagged payload refuses BEFORE broadcast and routes to the refund path", async () => {
     const jobsDir = mkdtempSync(path.join(tmpdir(), "xtext-worker-corrupt-"));
     try {

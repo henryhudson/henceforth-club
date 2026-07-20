@@ -79,7 +79,7 @@ export async function POST(req: Request) {
     return refusal("price-below-fee", 503);
   }
   const owner = await getOwner(parsed.handle);
-  const created = await createJob(parsed, quoted.quote, Date.now());
+  const created = await createJob({ ...parsed, kind: "archive" }, quoted.quote, Date.now());
   if (!created.ok) {
     return refusal(created.refused, 503);
   }

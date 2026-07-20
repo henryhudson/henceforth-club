@@ -149,7 +149,14 @@ describe("POST /api/folklore/job", () => {
     });
     expect(mockQuoteArchive).toHaveBeenCalledWith(PARSED_OK.archiveBytes, 10.76375);
     expect(mockGetOwner).toHaveBeenCalledWith("henry");
-    expect(mockCreateJob).toHaveBeenCalledWith(PARSED_OK, QUOTE, expect.any(Number));
+    // The archive route stamps its own kind, so the worker classifies a job
+    // from the record itself and never by reading the payload the store is
+    // built to delete.
+    expect(mockCreateJob).toHaveBeenCalledWith(
+      { ...PARSED_OK, kind: "archive" },
+      QUOTE,
+      expect.any(Number),
+    );
   });
 
   it("reports kudosEnabled true only when KUDOS_ENABLED is exactly \"true\" — checked server-side per request", async () => {

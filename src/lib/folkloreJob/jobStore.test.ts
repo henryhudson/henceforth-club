@@ -66,12 +66,18 @@ function parsedFixture(handle = "henry"): Extract<ParsedExport, { ok: true }> {
   };
 }
 
+/** What a route hands createJob: the parsed export plus the durable `kind`
+ * the worker will classify by. */
+function archiveInput(handle = "henry") {
+  return { ...parsedFixture(handle), kind: "archive" as const };
+}
+
 const quoteFixture: Quote = { feeSats: 500, premiumSats: 9_290_000, priceSats: 9_290_500 };
 const NOW = 1_700_000_000_000;
 
 describe("createJob", () => {
   it("creates a job in the quoted state with expiry from constants, and stores the archive payload", async () => {
-    const result = await createJob(parsedFixture(), quoteFixture, NOW);
+    const result = await createJob(archiveInput(), quoteFixture, NOW);
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("expected ok");
     expect(result.job.state).toBe("quoted");
@@ -93,16 +99,16 @@ describe("createJob", () => {
 
   it("refuses at MAX_CONCURRENT_JOBS active jobs (quoted/awaiting-payment/funded/inscribed)", async () => {
     for (let i = 0; i < MAX_CONCURRENT_JOBS; i++) {
-      const r = await createJob(parsedFixture(), quoteFixture, NOW);
+      const r = await createJob(archiveInput(), quoteFixture, NOW);
       expect(r.ok).toBe(true);
     }
-    const result = await createJob(parsedFixture(), quoteFixture, NOW);
+    const result = await createJob(archiveInput(), quoteFixture, NOW);
     expect(result).toEqual({ ok: false, refused: "at-capacity" });
   });
 
   it("does not count sweeping jobs toward capacity", async () => {
     for (let i = 0; i < MAX_CONCURRENT_JOBS; i++) {
-      const created = await createJob(parsedFixture(), quoteFixture, NOW);
+      const created = await createJob(archiveInput(), quoteFixture, NOW);
       if (!created.ok) throw new Error("expected ok");
       const published = await advance(created.job.jobId, { kind: "key-published", address: "1Addr" }, NOW);
       if (!published.ok) throw new Error("expected ok");
@@ -110,7 +116,7 @@ describe("createJob", () => {
       if (!expired.ok) throw new Error("expected ok");
       expect(expired.job.state).toBe("sweeping");
     }
-    const result = await createJob(parsedFixture(), quoteFixture, NOW);
+    const result = await createJob(archiveInput(), quoteFixture, NOW);
     expect(result.ok).toBe(true);
   });
 });
@@ -123,7 +129,7 @@ describe("getJob", () => {
 
 describe("getPayload", () => {
   it("returns the archive stored at createJob", async () => {
-    const created = await createJob(parsedFixture(), quoteFixture, NOW);
+    const created = await createJob(archiveInput(), quoteFixture, NOW);
     if (!created.ok) throw new Error("expected ok");
     expect(await getPayload(created.job.jobId)).toEqual(parsedFixture().archive);
   });
@@ -133,7 +139,7 @@ describe("getPayload", () => {
   });
 
   it("returns null once the job's payload has been deleted (reaches done)", async () => {
-    const created = await createJob(parsedFixture(), quoteFixture, NOW);
+    const created = await createJob(archiveInput(), quoteFixture, NOW);
     if (!created.ok) throw new Error("expected ok");
     const id = created.job.jobId;
 
@@ -153,7 +159,7 @@ describe("getPayload", () => {
 
 describe("advance", () => {
   it("applies the event and persists the transition", async () => {
-    const created = await createJob(parsedFixture(), quoteFixture, NOW);
+    const created = await createJob(archiveInput(), quoteFixture, NOW);
     if (!created.ok) throw new Error("expected ok");
 
     const result = await advance(created.job.jobId, { kind: "key-published", address: "1Addr" }, NOW);
@@ -172,7 +178,7 @@ describe("advance", () => {
   });
 
   it("refuses an invalid transition without mutating the stored job", async () => {
-    const created = await createJob(parsedFixture(), quoteFixture, NOW);
+    const created = await createJob(archiveInput(), quoteFixture, NOW);
     if (!created.ok) throw new Error("expected ok");
 
     const rejected = await advance(created.job.jobId, { kind: "registered" }, NOW);
@@ -185,7 +191,7 @@ describe("advance", () => {
   });
 
   it("deletes the archive payload once the job reaches done", async () => {
-    const created = await createJob(parsedFixture(), quoteFixture, NOW);
+    const created = await createJob(archiveInput(), quoteFixture, NOW);
     if (!created.ok) throw new Error("expected ok");
     const id = created.job.jobId;
 
@@ -200,7 +206,7 @@ describe("advance", () => {
   });
 
   it("deletes the archive payload once the job reaches swept", async () => {
-    const created = await createJob(parsedFixture(), quoteFixture, NOW);
+    const created = await createJob(archiveInput(), quoteFixture, NOW);
     if (!created.ok) throw new Error("expected ok");
     const id = created.job.jobId;
 
@@ -211,7 +217,7 @@ describe("advance", () => {
   });
 
   it("guards two interleaved advances with the version field — the second is refused, and a re-read shows only the first's transition", async () => {
-    const created = await createJob(parsedFixture(), quoteFixture, NOW);
+    const created = await createJob(archiveInput(), quoteFixture, NOW);
     if (!created.ok) throw new Error("expected ok");
     const id = created.job.jobId;
 
@@ -240,8 +246,8 @@ describe("advance", () => {
 
 describe("listJobsInState", () => {
   it("lists only jobs currently in the given state", async () => {
-    const a = await createJob(parsedFixture("alice"), quoteFixture, NOW);
-    const b = await createJob(parsedFixture("bob"), quoteFixture, NOW);
+    const a = await createJob(archiveInput("alice"), quoteFixture, NOW);
+    const b = await createJob(archiveInput("bob"), quoteFixture, NOW);
     if (!a.ok || !b.ok) throw new Error("expected ok");
     await advance(a.job.jobId, { kind: "key-published", address: "1Addr" }, NOW);
 
@@ -262,7 +268,7 @@ describe("when Redis isn't configured", () => {
   });
 
   it("refuses to create, and read/list calls answer empty rather than throw", async () => {
-    const created = await createJob(parsedFixture(), quoteFixture, NOW);
+    const created = await createJob(archiveInput(), quoteFixture, NOW);
     expect(created).toEqual({ ok: false, refused: "store-unavailable" });
     expect(await getJob("any")).toBeNull();
     expect(await listJobsInState("quoted")).toEqual([]);

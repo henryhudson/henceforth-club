@@ -132,6 +132,26 @@ function isFolkloreTagged(payload) {
   return typeof payload === "object" && payload !== null && payload.app === "folklore";
 }
 
+/**
+ * What a job IS, read from the job record rather than from its payload.
+ *
+ * The payload is not a durable classifier: jobStore deletes it at done and
+ * swept, and any read can answer null. Sniffing it meant a null payload was
+ * "not folklore" — so a folklore job whose payload had gone fell through to
+ * handle registration carrying the empty handle every link job has, was
+ * refused, and retried forever in the ACTIVE `inscribed` state, holding one
+ * of the four custody slots for good. `kind` is written once at creation and
+ * outlives the payload.
+ *
+ * The sniff survives only as the fallback for a job stored before the field
+ * existed, and can go once none can remain.
+ */
+function isFolkloreJob(job, payload) {
+  if (job.kind === "folklore") return true;
+  if (job.kind === "archive") return false;
+  return isFolkloreTagged(payload);
+}
+
 /** quoted -> awaiting-payment: mint a per-job custody key and publish its
  * address. Expiry is the payment watch's job, so an already-expired quote is
  * left for it rather than given a key it would never use. */
@@ -167,7 +187,7 @@ async function inscribeFunded({ listJobsInState, advance, getPayload, wrapKey, j
       // worker missing the folklore wiring) refuses BEFORE anything is signed
       // or broadcast, and the visitor's money routes home through the sweep.
       let archiveJson = payload;
-      if (isFolkloreTagged(payload)) {
+      if (isFolkloreJob(job, payload)) {
         const record = folklore ? folklore.recordFromValue(payload) : null;
         if (!record) {
           await advance(
@@ -234,12 +254,13 @@ async function registerInscribed({ listJobsInState, advance, getPayload, registe
   for (const job of inscribed) {
     await guarded("register", job.jobId, async () => {
       // A folklore job completes by feeding the board index, not the handle
-      // registry. The payload outlives the inscribed state (the store deletes
-      // it only at done or swept), so the same record that went on chain is
-      // still here to classify and index by.
+      // registry — and it knows which it is from its own `kind`, so a payload
+      // that has gone missing can no longer misroute it into registration.
       const payload = await getPayload(job.jobId);
-      if (isFolkloreTagged(payload)) {
-        const record = folklore ? folklore.recordFromValue(payload) : null;
+      if (isFolkloreJob(job, payload)) {
+        // Where a null actually lands: an absent payload cannot be validated,
+        // so it is flagged and retried rather than sniffed as "not folklore".
+        const record = payload && folklore ? folklore.recordFromValue(payload) : null;
         if (!record) {
           // Can't-happen in a wired worker (the inscribe phase validated the
           // same payload one state earlier) — flagged, never advanced blind.

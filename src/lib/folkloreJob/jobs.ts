@@ -16,8 +16,19 @@ export type JobState =
   | "sweeping"
   | "swept";
 
+/** What a job will inscribe, and therefore how it completes: an archive
+ * registers against its handle, a folklore record lands on the board index. */
+export type JobKind = "archive" | "folklore";
+
 export type TextJob = {
   jobId: string;
+  /** Written once at creation and never changed. The worker classifies by
+   * this, NOT by reading the payload — the payload is deliberately deleted at
+   * done and swept, and a job that has lost it must still know what it was.
+   * Optional only because a job stored before this field existed carries no
+   * `kind`; the worker falls back to the payload sniff for those, which is
+   * exactly what it did before. */
+  kind?: JobKind;
   handle: string;
   contentHash: string;
   feeSats: number;

@@ -10,6 +10,7 @@ import {
 } from "@/app/folklore/linkRecord";
 import { readLinkRecord } from "@/lib/folkloreBoard";
 import { createJob } from "@/lib/folkloreJob/jobStore";
+import { claimSubmitSlot, clientAddress } from "@/lib/folkloreJob/submitThrottle";
 import { quoteLink } from "@/lib/folkloreJob/linkQuote";
 import { gbpPerBsv } from "@/lib/xPrice";
 
@@ -128,6 +129,23 @@ export async function POST(req: Request) {
     }
   }
 
+  // Opening a job costs the visitor nothing but occupies one of the four
+  // concurrent custody slots — a ceiling shared with the paid archive route
+  // — for a full quote expiry. Without a bound, a handful of tiny posts
+  // could hold the whole pipeline at capacity indefinitely and deny every
+  // genuine submission for free. The allowance is claimed here, after every
+  // validation and before the price is fetched: only a request that would
+  // really open a job spends one, and a refused request costs no upstream
+  // call. Nothing in jobStore's capacity accounting changes, so the archive
+  // path keeps exactly the protections it had.
+  const slot = await claimSubmitSlot(clientAddress(req), Date.now());
+  if (slot.kind === "throttled") {
+    return NextResponse.json(
+      { ok: false, reason: "too-many-submissions" },
+      { status: 429, headers: { "retry-after": String(slot.retryAfterSeconds) } },
+    );
+  }
+
   // The exact bytes the worker will inscribe — encodeRecord is the one
   // encoder (A1), so the priced bytes, the content hash, and the eventual
   // OP_RETURN can never disagree.
@@ -138,7 +156,11 @@ export async function POST(req: Request) {
   }
 
   const contentHash = Utils.toHex(Hash.sha256(Array.from(recordBytes)));
-  const created = await createJob({ handle: "", contentHash, archive: record }, quoted, Date.now());
+  const created = await createJob(
+    { kind: "folklore", handle: "", contentHash, archive: record },
+    quoted,
+    Date.now(),
+  );
   if (!created.ok) {
     return refusal(created.refused, 503);
   }
