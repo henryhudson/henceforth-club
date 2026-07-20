@@ -32,13 +32,12 @@ public struct WeekRecord: Decodable, Sendable {
 }
 
 public struct BoardCard: Decodable, Sendable {
-    public let id: String
     public let title: String
     public let col: String
     public let doneAt: String?
     public let movedAt: String?
-    public init(id: String, title: String, col: String, doneAt: String?, movedAt: String?) {
-        self.id = id; self.title = title; self.col = col; self.doneAt = doneAt; self.movedAt = movedAt
+    public init(title: String, col: String, doneAt: String?, movedAt: String?) {
+        self.title = title; self.col = col; self.doneAt = doneAt; self.movedAt = movedAt
     }
 }
 

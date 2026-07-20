@@ -46,9 +46,9 @@ struct BoardDecodingTests {
     @Test("done cards attach to the day they were finished")
     func shippedAttaches() throws {
         let cards = [
-            BoardCard(id: "a", title: "VoiceOver fix", col: "done", doneAt: "2026-07-22T10:45:00+01:00", movedAt: nil),
-            BoardCard(id: "b", title: "Still open", col: "review", doneAt: nil, movedAt: nil),
-            BoardCard(id: "c", title: "Older card", col: "done", doneAt: nil, movedAt: "2026-07-22T09:00:00+01:00"),
+            BoardCard(title: "VoiceOver fix", col: "done", doneAt: "2026-07-22T10:45:00+01:00", movedAt: nil),
+            BoardCard(title: "Still open", col: "review", doneAt: nil, movedAt: nil),
+            BoardCard(title: "Older card", col: "done", doneAt: nil, movedAt: "2026-07-22T09:00:00+01:00"),
         ]
         let days = plannedDays(weeks: [try decodeWeek(weekJSON)], cards: cards)
         #expect(days[0].shipped == ["VoiceOver fix", "Older card"])

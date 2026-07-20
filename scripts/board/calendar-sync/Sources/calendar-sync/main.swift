@@ -124,9 +124,16 @@ func run() async {
     do {
         var found: [WeekRecord] = []
         for key in sortedWeekKeys {
-            if let document = try await store.document(at: key) {
-                found.append(try decode(WeekRecord.self, from: document))
+            // A listed key that fetches to nothing must fail loudly, not be
+            // skipped. The days below are derived only from weeks that did
+            // load, so the partial-loss guard further down never sees a week
+            // that vanished between the listing and the fetch: it would read
+            // as a week with no plan at all, and every date that belonged to
+            // it would sync as no longer planned and have its events deleted.
+            guard let document = try await store.document(at: key) else {
+                fail("week record \(key) was listed but fetched to nothing.")
             }
+            found.append(try decode(WeekRecord.self, from: document))
         }
         weeks = found
         struct Board: Decodable, Sendable { let cards: [BoardCard]? }
