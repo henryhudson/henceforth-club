@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ParsedExport } from "./parseExport";
 import type { Quote } from "./quote";
-import { MAX_CONCURRENT_JOBS, QUOTE_EXPIRY_MINUTES } from "./constants";
+import { MAX_CONCURRENT_JOBS, QUOTE_EXPIRY_MINUTES, RESERVED_ARCHIVE_JOBS } from "./constants";
 import { createJob, getJob, getPayload, advance, listJobsInState } from "./jobStore";
 
 // A fake Redis good enough to exercise jobStore's real logic: get/set/del,
@@ -118,6 +118,78 @@ describe("createJob", () => {
     }
     const result = await createJob(archiveInput(), quoteFixture, NOW);
     expect(result.ok).toBe(true);
+  });
+});
+
+describe("the free submit path can never take the last slot", () => {
+  /** What the link route hands createJob: a validated folklore record, opened
+   * with no auth, no payment and no artifact behind it. */
+  const folkloreInput = () => ({
+    kind: "folklore" as const,
+    handle: "",
+    contentHash: "hash-link",
+    archive: {
+      v: 1 as const,
+      app: "folklore" as const,
+      kind: "link" as const,
+      url: "https://example.com/a",
+      title: "A title",
+    },
+  });
+
+  it("holds RESERVED_ARCHIVE_JOBS slots back however hard the free path floods", async () => {
+    // THE PROPERTY. Not "an allowance is smaller than the ceiling" — that is
+    // arithmetic against an unknown number of addresses, and two addresses
+    // exhaust the ceiling exactly. This is a guarantee: whatever the free path
+    // does, from any number of buckets, the archive path still has slots.
+    let admitted = 0;
+    for (let i = 0; i < MAX_CONCURRENT_JOBS * 3; i += 1) {
+      if ((await createJob(folkloreInput(), quoteFixture, NOW)).ok) admitted += 1;
+    }
+    expect(admitted).toBe(MAX_CONCURRENT_JOBS - RESERVED_ARCHIVE_JOBS);
+
+    // The paid submission this pipeline exists for is quoted as if the flood
+    // had never happened — and so is the next one.
+    for (let i = 0; i < RESERVED_ARCHIVE_JOBS; i += 1) {
+      expect((await createJob(archiveInput(), quoteFixture, NOW)).ok).toBe(true);
+    }
+  });
+
+  it("refuses the free submit as at-capacity, the refusal its route already relays", async () => {
+    for (let i = 0; i < MAX_CONCURRENT_JOBS - RESERVED_ARCHIVE_JOBS; i += 1) {
+      expect((await createJob(folkloreInput(), quoteFixture, NOW)).ok).toBe(true);
+    }
+    expect(await createJob(folkloreInput(), quoteFixture, NOW)).toEqual({
+      ok: false,
+      refused: "at-capacity",
+    });
+  });
+
+  it("leaves the archive path's own ceiling exactly where it was", async () => {
+    // The reserve is one-directional: it holds slots back FROM the free path,
+    // and never takes any from the paid one.
+    for (let i = 0; i < MAX_CONCURRENT_JOBS; i += 1) {
+      expect((await createJob(archiveInput(), quoteFixture, NOW)).ok).toBe(true);
+    }
+    expect(await createJob(archiveInput(), quoteFixture, NOW)).toEqual({
+      ok: false,
+      refused: "at-capacity",
+    });
+  });
+
+  it("releases a free slot when its job finishes, like any other", async () => {
+    const created = await createJob(folkloreInput(), quoteFixture, NOW);
+    if (!created.ok) throw new Error("expected ok");
+    await createJob(folkloreInput(), quoteFixture, NOW);
+    expect((await createJob(folkloreInput(), quoteFixture, NOW)).ok).toBe(false);
+
+    const published = await advance(created.job.jobId, { kind: "key-published", address: "1Addr" }, NOW);
+    if (!published.ok) throw new Error("expected ok");
+    const expired = await advance(created.job.jobId, { kind: "expired", residueSats: 100 }, NOW);
+    if (!expired.ok) throw new Error("expected ok");
+    expect(expired.job.state).toBe("sweeping");
+
+    expect((await createJob(folkloreInput(), quoteFixture, NOW)).ok).toBe(true);
   });
 });
 

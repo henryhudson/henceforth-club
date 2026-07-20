@@ -16,6 +16,23 @@ export const QUOTE_EXPIRY_MINUTES = 15;
 /** How many ephemeral jobs may be funded and unswept at the same time. */
 export const MAX_CONCURRENT_JOBS = 4;
 
+/**
+ * Custody slots the free submit path may never occupy — held for the archive
+ * route, whose jobs arrive with a real X export behind them.
+ *
+ * Opening a folklore link job costs nothing: no auth, no payment, no artifact.
+ * A per-address allowance bounds one flooder, but an allowance is arithmetic
+ * against an unknown number of addresses, and arithmetic is a hope. This is a
+ * guarantee instead: whatever the free path does, `MAX_CONCURRENT_JOBS` minus
+ * this many slots is the most of the shared pipeline it can ever hold, so the
+ * archive path always has this many left.
+ *
+ * Two, not one, for a stated reason: createJob's count-then-write is
+ * deliberately non-atomic and documented as able to overshoot by one, so a
+ * reserve of one could be eaten by the very race the ceiling already tolerates.
+ */
+export const RESERVED_ARCHIVE_JOBS = 2;
+
 /** The archive byte ceiling every task in this plan enforces. */
 export const MAX_ARCHIVE_BYTES = 1_000_000;
 

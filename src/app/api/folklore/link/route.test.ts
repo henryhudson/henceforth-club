@@ -47,6 +47,10 @@ vi.mock("@/lib/redis", () => ({
       return next;
     },
     expire: async () => 1,
+    // The throttle reads the previous window's counter too, so the boundary
+    // cannot be straddled — these route tests never move the clock, so the
+    // previous window is simply absent.
+    get: async (key: string) => throttleCounters.get(key) ?? null,
   }),
 }));
 
@@ -252,8 +256,10 @@ describe("POST /api/folklore/link — the free-submission allowance", () => {
 
     expect(flood.filter((res) => res.status === 200)).toHaveLength(SUBMIT_QUOTES_PER_ADDRESS);
     expect(flood.filter((res) => res.status === 429).length).toBeGreaterThan(0);
-    // Only the allowed ones ever reached job creation, so the flood is
-    // holding strictly fewer than all four slots.
+    // Only the allowed ones ever reached job creation. What this bounds is
+    // ONE bucket; the guarantee that no number of buckets can take the last
+    // slot from a paid submission is the reservation in jobStore, asserted
+    // there ("the free submit path can never take the last slot").
     expect(mockCreateJob).toHaveBeenCalledTimes(SUBMIT_QUOTES_PER_ADDRESS);
     expect(SUBMIT_QUOTES_PER_ADDRESS).toBeLessThan(MAX_CONCURRENT_JOBS);
 
