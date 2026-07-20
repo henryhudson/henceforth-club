@@ -42,7 +42,9 @@ struct EventTitleTests {
         let t = eventTitle(for: day(22, tasks: [PlannedTask(label: long, done: false)]))
         #expect(t.count <= 61)                       // 60 plus the ellipsis
         #expect(t.hasSuffix("\u{2026}"))
-        #expect(!t.contains("fun\u{2026}"))           // did not split a word
-        #expect(long.hasPrefix(t.dropLast()))         // it is a genuine prefix
+        let body = String(t.dropLast())              // remove the ellipsis
+        #expect(long.hasPrefix(body))                // a genuine prefix
+        let next = long.dropFirst(body.count).first
+        #expect(next == nil || next == " ", "cut mid-word: the original continues with \(next.map(String.init) ?? "nothing")")
     }
 }

@@ -70,5 +70,3 @@ scripts/this-week/preview/
 ledger-backup-*.json
 plan-founding-*.json
 
-# Swift package build artifacts (scripts/board/calendar-sync)
-.build/
