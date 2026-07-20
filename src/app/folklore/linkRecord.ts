@@ -53,6 +53,21 @@ export function validateComment(parent: string, text: string, by?: string): Folk
 export const encodeRecord = (r: FolkloreRecord): Uint8Array =>
   new TextEncoder().encode(JSON.stringify(r));
 
+/**
+ * The exact line a submitter signs to prove the `by` handle is theirs.
+ *
+ * Derived from encodeRecord and nothing else, so the signature commits to the
+ * very bytes that will be inscribed — the same one-encoder doctrine that keeps
+ * the priced bytes, the content hash and the OP_RETURN from disagreeing. A
+ * signature therefore cannot be lifted onto a different url, title, parent,
+ * text, or handle: change any field and this string changes with it.
+ *
+ * The prefix namespaces it away from registrationMessage, so neither
+ * signature is ever valid where the other is expected.
+ */
+export const submitMessage = (r: FolkloreRecord): string =>
+  `henceforth-folklore-submit:${new TextDecoder().decode(encodeRecord(r))}`;
+
 /** Scan every pushdata across the given output scripts and return the first
  * chunk that validates as a folklore record. */
 export function recordFromScripts(scriptHexes: string[]): FolkloreRecord | null {

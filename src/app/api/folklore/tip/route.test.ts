@@ -5,6 +5,7 @@ const mockGetArchivePost = vi.fn();
 const mockRecordTip = vi.fn();
 const mockIsBoardLink = vi.fn();
 const mockReadLinkRecord = vi.fn();
+const mockSameBoundIdentity = vi.fn();
 
 vi.mock("@/lib/kudos/auth", () => ({
   authenticateBearer: (...args: unknown[]) => mockAuthenticateBearer(...args),
@@ -18,6 +19,9 @@ vi.mock("@/lib/kudos/tips", () => ({
 vi.mock("@/lib/folkloreBoard", () => ({
   isBoardLink: (...args: unknown[]) => mockIsBoardLink(...args),
   readLinkRecord: (...args: unknown[]) => mockReadLinkRecord(...args),
+}));
+vi.mock("@/lib/xOwner", () => ({
+  sameBoundIdentity: (...args: unknown[]) => mockSameBoundIdentity(...args),
 }));
 
 import { POST } from "./route";
@@ -40,6 +44,9 @@ beforeEach(() => {
   mockRecordTip.mockReset();
   mockIsBoardLink.mockReset();
   mockReadLinkRecord.mockReset();
+  mockSameBoundIdentity.mockReset();
+  // Two strangers by default: no shared binding between payer and recipient.
+  mockSameBoundIdentity.mockResolvedValue(false);
   // The default world is the archive path: no postId is a board link.
   mockIsBoardLink.mockResolvedValue(false);
   mockReadLinkRecord.mockResolvedValue({ kind: "absent" });
@@ -137,6 +144,21 @@ describe("POST /api/folklore/tip", () => {
     expect(mockRecordTip).not.toHaveBeenCalled();
   });
 
+  it("refuses a tip between two handles bound to ONE identity — the alt-account round trip", async () => {
+    // The self-dealing route that survives the submit-side binding gate: an
+    // operator who genuinely holds two X accounts could bind both, submit
+    // under the alt, and tip it from their own float — turning float they
+    // funded into a settleable accrual under a name isOwnWork cannot see.
+    // Proved sameness is refused; unprovable sameness is not (the test above).
+    mockSameBoundIdentity.mockResolvedValue(true);
+    const res = await POST(request(TIP));
+    expect(res.status).toBe(403);
+    expect((await res.json()).reason).toBe("own-work");
+    expect(mockSameBoundIdentity).toHaveBeenCalledWith("henry", "ben");
+    expect(mockGetArchivePost).not.toHaveBeenCalled();
+    expect(mockRecordTip).not.toHaveBeenCalled();
+  });
+
   it("refuses a tip on a post the handle's archive does not contain — kudos only reach real authors", async () => {
     mockGetArchivePost.mockResolvedValue(null);
     const res = await POST(request(TIP));
@@ -195,6 +217,17 @@ describe("POST /api/folklore/tip — kudos on a board link", () => {
 
   it("refuses a self-kudos on the payer's own link before anything is read or debited", async () => {
     const res = await POST(request({ ...LINK_TIP, handle: "henry" }));
+    expect(res.status).toBe(403);
+    expect((await res.json()).reason).toBe("own-work");
+    expect(mockReadLinkRecord).not.toHaveBeenCalled();
+    expect(mockRecordTip).not.toHaveBeenCalled();
+  });
+
+  it("refuses a link tip between two handles bound to one identity", async () => {
+    // Same rule on the link half: the submit gate proves `by` is a real bound
+    // handle, and this proves the payer is not that handle wearing a hat.
+    mockSameBoundIdentity.mockResolvedValue(true);
+    const res = await POST(request(LINK_TIP));
     expect(res.status).toBe(403);
     expect((await res.json()).reason).toBe("own-work");
     expect(mockReadLinkRecord).not.toHaveBeenCalled();
