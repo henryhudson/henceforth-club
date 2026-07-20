@@ -8,7 +8,7 @@ import type { FolkloreRecord } from "@/app/folklore/linkRecord";
 import { applyEvent, type JobEvent, type JobKind, type JobState, type TextJob } from "./jobs";
 import type { ParsedExport } from "./parseExport";
 import type { Quote } from "./quote";
-import { MAX_CONCURRENT_JOBS, QUOTE_EXPIRY_MINUTES } from "./constants";
+import { MAX_CONCURRENT_JOBS, QUOTE_EXPIRY_MINUTES, RESERVED_ARCHIVE_JOBS } from "./constants";
 
 type Redis = NonNullable<ReturnType<typeof getRedis>>;
 type Ok = { ok: true; job: TextJob };
@@ -89,9 +89,21 @@ export async function createJob(
   // both pass here and briefly overshoot MAX_CONCURRENT_JOBS. That is an
   // accepted exposure bound (a soft ceiling on live custody), not a consistency
   // invariant worth a lock — the worst case is one extra ephemeral job.
-  const activeCount = jobs.filter((j) => ACTIVE_STATES.includes(j.state)).length;
-  if (activeCount >= MAX_CONCURRENT_JOBS) {
+  const active = jobs.filter((j) => ACTIVE_STATES.includes(j.state));
+  if (active.length >= MAX_CONCURRENT_JOBS) {
     return { ok: false, refused: "at-capacity" };
+  }
+
+  // The reservation, and the whole reason it is here rather than in the
+  // route's allowance: a free submit can never take the last slot from a paid
+  // one, whatever the number of addresses behind the flood. Free jobs are
+  // counted against their own lower ceiling; the archive path's ceiling is
+  // untouched, so it keeps exactly the capacity it always had.
+  if (parsed.kind === "folklore") {
+    const freeActive = active.filter((j) => j.kind === "folklore").length;
+    if (freeActive >= MAX_CONCURRENT_JOBS - RESERVED_ARCHIVE_JOBS) {
+      return { ok: false, refused: "at-capacity" };
+    }
   }
 
   const job: TextJob = {
