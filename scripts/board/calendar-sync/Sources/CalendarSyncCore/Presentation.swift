@@ -23,3 +23,18 @@ public func eventTitle(for day: PlannedDay) -> String {
     if rest > 0 { title += ", plus \(spelled(rest)) more" }
     return title
 }
+
+public func eventNotes(for day: PlannedDay) -> String {
+    var lines: [String] = ["PLAN"]
+    for task in day.tasks {
+        lines.append("  \(task.done ? "done    " : "to do   ")\(task.label)")
+    }
+    if !day.shipped.isEmpty {
+        lines.append("")
+        lines.append("SHIPPED TODAY")
+        for title in day.shipped { lines.append("  \(title)") }
+    }
+    lines.append("")
+    lines.append("https://henceforth.club/board/week")
+    return lines.joined(separator: "\n")
+}
