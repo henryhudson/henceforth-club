@@ -4,11 +4,14 @@ import {
   COMMENT_MAX,
   TITLE_MAX,
   encodeRecord,
+  submitMessage,
   validateComment,
   validateLink,
   type FolkloreRecord,
 } from "@/app/folklore/linkRecord";
 import { readLinkRecord } from "@/lib/folkloreBoard";
+import { readOwner } from "@/lib/xOwner";
+import { verifyClaim } from "@/lib/xBinding";
 import { createJob } from "@/lib/folkloreJob/jobStore";
 import { claimSubmitSlot, clientAddress } from "@/lib/folkloreJob/submitThrottle";
 import { quoteLink } from "@/lib/folkloreJob/linkQuote";
@@ -21,10 +24,71 @@ const MAX_REQUEST_BYTES = 64 * 1024;
 
 // The same handle rule the export parser and register route enforce — `by`
 // is a claimed X handle, so anything that could not be one refuses here.
+// Shape is the FIRST gate, never the whole one: see proveSubmitter.
 const BY_PATTERN = /^[A-Za-z0-9_]{1,15}$/;
 
 function refusal(reason: string, status: number) {
   return NextResponse.json({ ok: false, reason }, { status });
+}
+
+/**
+ * Is this record's `by` really the submitter's handle?
+ *
+ * `by` is an OPTIONAL BOUND HANDLE (spec §2), not a free string — and until
+ * this gate existed it was pure self-declaration, which the tip path then
+ * read as proof of authorship. Two things followed, both real: a payer could
+ * submit under an alt handle and tip it from their own float, accruing
+ * settleable kudos to a name they controlled; and anyone could submit under a
+ * STRANGER's handle, routing every honest tipper's kudos to someone who never
+ * wrote the thing and never consented.
+ *
+ * The proof is the spec C binding, verbatim and re-used rather than
+ * re-invented: the handle must have an owner record, and the request must
+ * carry a signature over submitMessage(record) by the key whose address that
+ * owner committed to on chain. The committed address comes from the STORED
+ * record, never from the request, so a claimant cannot nominate the address
+ * their own key happens to derive to.
+ *
+ * Anonymous stays legal, exactly as the spec says: no `by` is no claim and
+ * needs no proof. What it cannot do is earn — the tip route refuses a tip on
+ * an anonymous link, because debiting a giver with nobody to accrue against
+ * would put a kudos outside the float module's conservation invariant. So
+ * kudos accrue only where authorship is proved, and anonymity costs the
+ * submitter their attribution rather than costing the ledger its integrity.
+ *
+ * An unbound or unverifiable claim is refused outright, never quietly
+ * stripped: a submitter who is about to pay for an inscription must not
+ * discover afterwards that their attribution was silently dropped.
+ *
+ * Not closed here, and small: a signature is per-request and never published,
+ * so replaying a captured one can only re-submit the IDENTICAL record under
+ * the handle that really signed it — the attacker pays again, and the kudos
+ * still reach the true author.
+ */
+async function proveSubmitter(
+  record: FolkloreRecord,
+  body: Record<string, unknown>,
+): Promise<{ ok: true } | { reason: string; status: number }> {
+  if (record.by === undefined) return { ok: true };
+
+  const { pubkey, signature } = body;
+  if (typeof pubkey !== "string" || typeof signature !== "string") {
+    return { reason: "unsigned-by", status: 403 };
+  }
+
+  const owner = await readOwner(record.by);
+  // An unreachable store is not a verdict on the handle — the same 503 the
+  // parent lookup relays, for the same reason.
+  if (owner.kind === "unavailable") return { reason: "store-unavailable", status: 503 };
+  if (owner.kind === "absent") return { reason: "unbound-by", status: 403 };
+
+  const verified = verifyClaim({
+    message: submitMessage(record),
+    signatureBase64: signature,
+    pubkeyHex: pubkey,
+    committedAddress: owner.owner.address,
+  });
+  return verified ? { ok: true } : { reason: "bad-signature", status: 403 };
 }
 
 /** The named refusal, or the validated record. Reason-naming never replaces
@@ -61,6 +125,10 @@ function recordFromBody(body: Record<string, unknown>): { record: FolkloreRecord
  *
  *   { "kind": "link",    "url": "https://…", "title": "…", "by"?: "handle" }
  *   { "kind": "comment", "parent": "<txid>", "text": "…",  "by"?: "handle" }
+ *
+ * `by` is optional; when present it must come with `pubkey` and `signature`
+ * proving the handle's binding (see proveSubmitter). Anonymous submission
+ * needs neither and stays open.
  *
  * The only submit path for single links and comments (spec Decision 4): the
  * record is validated, quoted at the inscription fee plus the ten-pence
@@ -108,6 +176,14 @@ export async function POST(req: Request) {
     return refusal(validated.reason, 400);
   }
   const { record } = validated;
+
+  // Attribution is proved before anything else costs anything — before the
+  // parent lookup, the allowance, the price, the job. A claim on a handle the
+  // claimant cannot sign for never reaches the money path at all.
+  const submitter = await proveSubmitter(record, body as Record<string, unknown>);
+  if (!("ok" in submitter)) {
+    return refusal(submitter.reason, submitter.status);
+  }
 
   // Submit-side courtesy (spec §8): a comment's parent must be a link the
   // board knows, so nobody pays to comment into the void. Chain-side orphans

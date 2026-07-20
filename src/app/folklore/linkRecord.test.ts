@@ -5,6 +5,7 @@ import {
   TXID_RE,
   encodeRecord,
   recordFromScripts,
+  submitMessage,
   validateComment,
   validateLink,
 } from "./linkRecord";
@@ -157,5 +158,35 @@ describe("hostile chain records are invisible, not errors", () => {
 
   it("an empty script list is not a record", () => {
     expect(recordFromScripts([])).toBeNull();
+  });
+});
+
+describe("submitMessage — what a bound submitter signs", () => {
+  it("commits to the exact bytes that will be inscribed", () => {
+    const link = validateLink("https://example.com/a", "A title", "henry");
+    if (!link) throw new Error("fixture must validate");
+    expect(submitMessage(link)).toBe(
+      `henceforth-folklore-submit:${new TextDecoder().decode(encodeRecord(link))}`,
+    );
+  });
+
+  it("changes with every field, so a signature cannot be lifted onto another submission", () => {
+    const base = validateLink("https://example.com/a", "A title", "henry");
+    const otherUrl = validateLink("https://example.com/b", "A title", "henry");
+    const otherTitle = validateLink("https://example.com/a", "Another title", "henry");
+    const otherBy = validateLink("https://example.com/a", "A title", "mallory");
+    const anonymous = validateLink("https://example.com/a", "A title");
+    if (!base || !otherUrl || !otherTitle || !otherBy || !anonymous) {
+      throw new Error("fixtures must validate");
+    }
+    const messages = [base, otherUrl, otherTitle, otherBy, anonymous].map(submitMessage);
+    expect(new Set(messages).size).toBe(messages.length);
+  });
+
+  it("is namespaced away from the registration claim", () => {
+    const comment = validateComment("ab".repeat(32), "well said", "henry");
+    if (!comment) throw new Error("fixture must validate");
+    expect(submitMessage(comment).startsWith("henceforth-folklore-submit:")).toBe(true);
+    expect(submitMessage(comment).includes("henceforth-x-register:")).toBe(false);
   });
 });

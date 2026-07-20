@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { TITLE_MAX, COMMENT_MAX } from "@/app/folklore/linkRecord";
+import { BSM, PrivateKey, Utils } from "@bsv/sdk";
+import {
+  TITLE_MAX,
+  COMMENT_MAX,
+  submitMessage,
+  validateLink,
+  type FolkloreRecord,
+} from "@/app/folklore/linkRecord";
 import { MAX_CONCURRENT_JOBS } from "@/lib/folkloreJob/constants";
 import { SUBMIT_QUOTES_PER_ADDRESS } from "@/lib/folkloreJob/submitThrottle";
 
@@ -7,6 +14,7 @@ const mockQuoteLink = vi.fn();
 const mockGbpPerBsv = vi.fn();
 const mockCreateJob = vi.fn();
 const mockReadLinkRecord = vi.fn();
+const mockReadOwner = vi.fn();
 
 vi.mock("@/lib/folkloreJob/linkQuote", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/folkloreJob/linkQuote")>()),
@@ -20,6 +28,12 @@ vi.mock("@/lib/folkloreJob/jobStore", () => ({
 }));
 vi.mock("@/lib/folkloreBoard", () => ({
   readLinkRecord: (...args: unknown[]) => mockReadLinkRecord(...args),
+}));
+// The binding store is faked; the SIGNATURE CHECK is the real verifyClaim
+// over real secp256k1 keys, so the ownership property is proved against the
+// cryptography rather than against a stub of it.
+vi.mock("@/lib/xOwner", () => ({
+  readOwner: (...args: unknown[]) => mockReadOwner(...args),
 }));
 // The throttle itself is NOT mocked — these tests exercise the real one
 // against an in-memory counter, so the capacity property is asserted end to
@@ -68,6 +82,8 @@ beforeEach(() => {
   mockGbpPerBsv.mockReset();
   mockCreateJob.mockReset();
   mockReadLinkRecord.mockReset();
+  mockReadOwner.mockReset();
+  mockReadOwner.mockResolvedValue({ kind: "absent" });
   mockGbpPerBsv.mockResolvedValue(10.76375);
   mockQuoteLink.mockReturnValue(QUOTE);
   mockCreateJob.mockResolvedValue({ ok: true, job: JOB });
@@ -275,10 +291,216 @@ describe("POST /api/folklore/link — the free-submission allowance", () => {
   });
 });
 
+/** A real key pair standing in for an account's committed identity. */
+function identity() {
+  const priv = PrivateKey.fromRandom();
+  const pub = priv.toPublicKey();
+  return { priv, pubkey: pub.toString(), address: pub.toAddress() };
+}
+
+/** The signature that key makes over the exact record being submitted. */
+function signRecord(id: ReturnType<typeof identity>, record: FolkloreRecord): string {
+  return BSM.sign(Utils.toArray(submitMessage(record), "utf8"), id.priv, "base64") as string;
+}
+
+const linkFor = (by?: string, title = "A title"): FolkloreRecord => {
+  const record = validateLink("https://example.com/a", title, by);
+  if (!record) throw new Error("fixture must validate");
+  return record;
+};
+
+describe("POST /api/folklore/link — `by` must be a proven bound handle", () => {
+  it("refuses a claimed handle carrying no signature at all — the self-declaration hole", async () => {
+    // What the whole gate exists for: before it, this exact request stored
+    // `by` verbatim and the tip path read it as proof of authorship.
+    const res = await POST(jsonRequest({ kind: "link", url: "https://example.com/a", title: "A title", by: "henry" }));
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ ok: false, reason: "unsigned-by" });
+    expect(mockCreateJob).not.toHaveBeenCalled();
+    expect(mockGbpPerBsv).not.toHaveBeenCalled();
+  });
+
+  it("refuses the SELF-DEALING route: a payer submitting under an alt handle they cannot sign for", async () => {
+    // alice, wanting kudos she can settle, submits as `alice_alt` and would
+    // then tip it from her own float. She holds no key bound to alice_alt, so
+    // the record never reaches the chain and nothing can ever accrue to it.
+    const alice = identity();
+    const record = linkFor("alice_alt");
+    const alt = identity();
+    mockReadOwner.mockResolvedValue({ kind: "owner", owner: { address: alt.address } });
+
+    const res = await POST(
+      jsonRequest({
+        kind: "link",
+        url: "https://example.com/a",
+        title: "A title",
+        by: "alice_alt",
+        pubkey: alice.pubkey,
+        signature: signRecord(alice, record),
+      }),
+    );
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ ok: false, reason: "bad-signature" });
+    expect(mockCreateJob).not.toHaveBeenCalled();
+  });
+
+  it("refuses the SQUATTING route: submitting under a stranger's bound handle", async () => {
+    // Pointed outward: a link attributed to someone who never wrote it would
+    // route every honest tipper's kudos to a name that never consented.
+    const stranger = identity();
+    const mallory = identity();
+    mockReadOwner.mockResolvedValue({ kind: "owner", owner: { address: stranger.address } });
+    const record = linkFor("victim");
+
+    const res = await POST(
+      jsonRequest({
+        kind: "link",
+        url: "https://example.com/a",
+        title: "A title",
+        by: "victim",
+        pubkey: mallory.pubkey,
+        signature: signRecord(mallory, record),
+      }),
+    );
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ ok: false, reason: "bad-signature" });
+    expect(mockCreateJob).not.toHaveBeenCalled();
+  });
+
+  it("refuses a handle nobody has bound — an unverifiable claim never lands quietly", async () => {
+    const someone = identity();
+    const record = linkFor("neverbound");
+    mockReadOwner.mockResolvedValue({ kind: "absent" });
+
+    const res = await POST(
+      jsonRequest({
+        kind: "link",
+        url: "https://example.com/a",
+        title: "A title",
+        by: "neverbound",
+        pubkey: someone.pubkey,
+        signature: signRecord(someone, record),
+      }),
+    );
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ ok: false, reason: "unbound-by" });
+    expect(mockCreateJob).not.toHaveBeenCalled();
+  });
+
+  it("refuses a signature lifted from a different submission by the same owner", async () => {
+    // The message is derived from the record's own bytes, so a signature over
+    // one title cannot be replayed onto another.
+    const owner = identity();
+    mockReadOwner.mockResolvedValue({ kind: "owner", owner: { address: owner.address } });
+    const signedOverSomethingElse = signRecord(owner, linkFor("henry", "Another title"));
+
+    const res = await POST(
+      jsonRequest({
+        kind: "link",
+        url: "https://example.com/a",
+        title: "A title",
+        by: "henry",
+        pubkey: owner.pubkey,
+        signature: signedOverSomethingElse,
+      }),
+    );
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ ok: false, reason: "bad-signature" });
+    expect(mockCreateJob).not.toHaveBeenCalled();
+  });
+
+  it("refuses a key that verifies but is not the address the owner committed to", async () => {
+    // The committed address comes from the stored owner record, never from
+    // the request — a claimant cannot nominate their own key's address.
+    const mallory = identity();
+    const realOwner = identity();
+    mockReadOwner.mockResolvedValue({ kind: "owner", owner: { address: realOwner.address } });
+    const record = linkFor("henry");
+
+    const res = await POST(
+      jsonRequest({
+        kind: "link",
+        url: "https://example.com/a",
+        title: "A title",
+        by: "henry",
+        pubkey: mallory.pubkey,
+        signature: signRecord(mallory, record),
+      }),
+    );
+    expect(res.status).toBe(403);
+    expect((await res.json()).reason).toBe("bad-signature");
+  });
+
+  it("relays a binding-store outage as 503, never as unbound", async () => {
+    const someone = identity();
+    mockReadOwner.mockResolvedValue({ kind: "unavailable" });
+    const res = await POST(
+      jsonRequest({
+        kind: "link",
+        url: "https://example.com/a",
+        title: "A title",
+        by: "henry",
+        pubkey: someone.pubkey,
+        signature: signRecord(someone, linkFor("henry")),
+      }),
+    );
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ ok: false, reason: "store-unavailable" });
+    expect(mockCreateJob).not.toHaveBeenCalled();
+  });
+
+  it("holds the same gate on comments — an attributed comment is a claim too", async () => {
+    const mallory = identity();
+    const victim = identity();
+    mockReadOwner.mockResolvedValue({ kind: "owner", owner: { address: victim.address } });
+    const res = await POST(
+      jsonRequest({ kind: "comment", parent: PARENT, text: "hi", by: "victim", pubkey: mallory.pubkey, signature: "not-a-signature" }),
+    );
+    expect(res.status).toBe(403);
+    expect(mockCreateJob).not.toHaveBeenCalled();
+  });
+
+  it("accepts an anonymous submission — no claim, no proof needed", async () => {
+    const res = await POST(jsonRequest({ kind: "link", url: "https://example.com/a", title: "A title" }));
+    expect(res.status).toBe(200);
+    expect(mockReadOwner).not.toHaveBeenCalled();
+    expect(mockCreateJob).toHaveBeenCalledTimes(1);
+    // Anonymous means anonymous: no `by` reaches the chain, and the tip route
+    // refuses kudos on a link that names nobody.
+    expect(mockCreateJob.mock.calls[0][0].archive).toEqual({
+      v: 1, app: "folklore", kind: "link", url: "https://example.com/a", title: "A title",
+    });
+  });
+
+  it("spends no allowance on a claim it refuses", async () => {
+    for (let i = 0; i < SUBMIT_QUOTES_PER_ADDRESS + 3; i += 1) {
+      const res = await POST(
+        jsonRequest({ kind: "link", url: "https://example.com/a", title: `t${i}`, by: "henry" }, { "x-forwarded-for": "10.0.0.9" }),
+      );
+      expect(res.status).toBe(403);
+    }
+    const honest = await POST(
+      jsonRequest({ kind: "link", url: "https://example.com/a", title: "honest" }, { "x-forwarded-for": "10.0.0.9" }),
+    );
+    expect(honest.status).toBe(200);
+  });
+});
+
 describe("POST /api/folklore/link — accepted submissions", () => {
   it("quotes and creates a job for a valid link; the record itself is the payload, the handle stays empty", async () => {
+    const owner = identity();
+    mockReadOwner.mockResolvedValue({ kind: "owner", owner: { address: owner.address } });
     const res = await POST(
-      jsonRequest({ kind: "link", url: "https://example.com/a", title: "  A title  ", by: "henry" }),
+      jsonRequest({
+        kind: "link",
+        url: "https://example.com/a",
+        title: "  A title  ",
+        by: "henry",
+        pubkey: owner.pubkey,
+        // The record the server will build from this body, trimmed title and
+        // all — the signature commits to those exact bytes.
+        signature: signRecord(owner, linkFor("henry")),
+      }),
     );
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
