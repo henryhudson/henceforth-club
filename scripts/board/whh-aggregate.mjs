@@ -43,7 +43,16 @@ export function aggregateTotals(reports) {
   return { ...totals, verdictsSurvived: survived, verdictsTotal: survivedTotal };
 }
 
-const VERDICTS = ["confirm", "reject", "abstain", "already-resolved"];
+// The daily reports write "agree"; older ones wrote "confirm". Both mean the same
+// verdict, so both fold onto the same counter — keeping the output key "confirm"
+// so the published week page needs no change.
+const VERDICT_KEY = {
+  agree: "confirm",
+  confirm: "confirm",
+  reject: "reject",
+  abstain: "abstain",
+  "already-resolved": "already-resolved",
+};
 
 /** Per-app verdict counts across the week. */
 export function perApp(reports) {
@@ -51,7 +60,10 @@ export function perApp(reports) {
   for (const r of reports) for (const a of r.apps ?? []) {
     const cur = byApp.get(a.app) ?? { app: a.app, name: a.name ?? a.app, reviews: 0, confirm: 0, reject: 0, abstain: 0, "already-resolved": 0 };
     if (a.reviewFound) cur.reviews += 1;
-    for (const f of a.findings ?? []) if (VERDICTS.includes(f.verdict)) cur[f.verdict] += 1;
+    for (const f of a.findings ?? []) {
+      const key = VERDICT_KEY[f.verdict];
+      if (key) cur[key] += 1;
+    }
     byApp.set(a.app, cur);
   }
   return [...byApp.values()];

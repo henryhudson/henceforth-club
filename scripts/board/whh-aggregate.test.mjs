@@ -57,6 +57,28 @@ describe("perApp", () => {
     const h = a.find((x) => x.app === "henceforth");
     expect(h.confirm).toBe(2); expect(h.reject).toBe(1); expect(h.reviews).toBe(1);
   });
+
+  // The daily reports write "agree", which is the vocabulary the /hh command
+  // specifies. Counting only "confirm" silently dropped every confirmation from
+  // the per-app table while the week total still counted them, so the published
+  // page showed zero confirmations for every app against a non-zero total.
+  it("counts the 'agree' verdict the daily reports actually write", () => {
+    const reports = [{ apps: [
+      { app: "deck", name: "DaDeckOfCards", reviewFound: true, findings: [
+        { verdict: "agree" }, { verdict: "agree" }, { verdict: "reject" }] },
+    ] }];
+    const d = perApp(reports).find((x) => x.app === "deck");
+    expect(d.confirm).toBe(2);
+    expect(d.reject).toBe(1);
+  });
+
+  it("still counts the legacy 'confirm' verdict from older reports", () => {
+    const reports = [{ apps: [
+      { app: "deck", name: "DaDeckOfCards", reviewFound: true, findings: [
+        { verdict: "agree" }, { verdict: "confirm" }] },
+    ] }];
+    expect(perApp(reports).find((x) => x.app === "deck").confirm).toBe(2);
+  });
 });
 
 describe("ratios", () => {
