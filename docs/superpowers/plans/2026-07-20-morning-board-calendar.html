@@ -310,7 +310,14 @@ struct EventNotesTests {
     func wordsOnly() {
         let n = eventNotes(for: sample) + eventTitle(for: sample)
         for scalar in n.unicodeScalars {
-            #expect(!scalar.properties.isEmoji, "found a pictographic character: \(scalar)")
+            // Deliberately NOT isEmoji: that property is true for the ASCII
+            // digits and for # and *, since they are emoji BASE characters
+            // forming keycap sequences, so a title holding "1.26" would fail.
+            // isEmojiPresentation means "renders as a picture by default"; the
+            // variation selector is checked separately because it is what
+            // turns a plain dingbat into its emoji form.
+            let isPicture = scalar.properties.isEmojiPresentation || scalar.value == 0xFE0F
+            #expect(!isPicture, "found a pictographic character: \(scalar)")
         }
     }
 }</code></pre>
