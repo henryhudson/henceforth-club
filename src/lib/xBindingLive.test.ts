@@ -120,7 +120,10 @@ describe("verifyBindingPost", () => {
   });
 
   it("asks X only for the post the claim names", async () => {
-    const fetchFn = vi.fn(async () => jsonResponse(oembed({ author: HANDLE, text: bindingLine })));
+    // Typed parameter: this is the one mock whose arguments are inspected below,
+    // and a zero-argument mock gives `calls[0]` an empty tuple type.
+    const fetchFn = vi.fn(async (_input: RequestInfo | URL) =>
+      jsonResponse(oembed({ author: HANDLE, text: bindingLine })));
 
     await verifyBindingPost({ handle: HANDLE, postId: POST_ID, address: ADDRESS }, fetchFn as unknown as typeof fetch);
 

@@ -66,7 +66,7 @@ function parsedFixture(handle = "henry"): Extract<ParsedExport, { ok: true }> {
   };
 }
 
-const quoteFixture: Quote = { feeSats: 500, premiumSats: 9_290_000, priceSats: 9_290_500 };
+const quoteFixture: Quote = { feeSats: 500, floatSats: 0, premiumSats: 9_290_000, priceSats: 9_290_500 };
 const NOW = 1_700_000_000_000;
 
 describe("createJob", () => {

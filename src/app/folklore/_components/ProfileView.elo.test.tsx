@@ -15,9 +15,13 @@ const postOrder = (html: string): string[] =>
 /** Every window carries the same table — enough to prove the buttons and the
  * decayed-fold ordering are present or retired. Decayed order: 3, 1, 2. */
 const decayedScores = { "3": 900, "1": 100 };
-const scoresByWindow = Object.fromEntries(
-  (["day", "week", "month", "year", "all"] as const).map((w) => [w, decayedScores]),
-) as Record<ScoreWindow, Record<string, number>>;
+const scoresByWindow: Record<ScoreWindow, Record<string, number>> = {
+  day: decayedScores,
+  week: decayedScores,
+  month: decayedScores,
+  year: decayedScores,
+  all: decayedScores,
+};
 
 /** Post 2 established at 1600, post 3 provisional at 1400, post 1 never
  * dueled (1500 by default). Elo order: 2, 1, 3 — the reverse of decayed. */
