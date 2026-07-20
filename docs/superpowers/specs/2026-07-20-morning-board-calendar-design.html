@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The week plan, in Apple Calendar — design</title>
+<style>
+  :root { --bg:#f4ecd8; --ink:#2a2318; --muted:#6b5d45; --rule:#c9b98f; --accent:#8b3a1a; --card:#faf4e4; --shadow:0 1px 3px rgba(60,40,10,0.15); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.68;}
+  .wrap{max-width:860px;margin:0 auto;padding:56px 32px;}
+  header.doc{margin-bottom:40px;border-bottom:3px double var(--rule);padding-bottom:26px;}
+  .eyebrow{font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:33px;line-height:1.16;margin:0 0 12px;font-weight:700;}
+  h2{font-size:24px;margin:46px 0 12px;padding-top:18px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 8px;}
+  .lede{font-size:19px;color:var(--muted);margin:0;font-style:italic;}
+  p{margin:13px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(120,90,30,0.12);padding:2px 6px;border-radius:4px;}
+  pre{background:#2a2318;color:#f0e6cf;padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;background:var(--card);}
+  th,td{text-align:left;padding:9px 12px;border:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .decision{background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 18px;margin:18px 0;box-shadow:var(--shadow);}
+  .decision strong{color:var(--accent);}
+  ul{margin:12px 0;padding-left:26px;} li{margin:6px 0;}
+  .flow{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px 20px;margin:16px 0;box-shadow:var(--shadow);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Design spec &middot; 2026-07-20 &middot; henceforth-club/scripts/board &middot; status: DRAFT for Henry's review</div>
+<h1>The week plan, in Apple Calendar</h1>
+<p class="lede">The week planner already knows what each day holds and what actually shipped on it. This puts that into a calendar Henry owns, so the plan is wherever he already looks &mdash; including his phone &mdash; without him opening the board at all.</p>
+</header>
+
+<p><strong>What exists.</strong> The weekly review writes a record per week to Upstash at <code>board:week:&lt;date&gt;</code>. Inside it, <code>retro.weekPlan</code> is an array of days, each carrying a date, a weekday name, an <code>isShipDay</code> or <code>isReviewDay</code> marker, and a list of tasks with a <code>done</code> flag. Separately <code>board:latest</code> holds every kanban card, and cards in the <code>done</code> column carry a <code>doneAt</code> (or <code>movedAt</code>) timestamp. The site renders both at <code>/board/week</code>, behind a cookie gate. As of today there are four week records, twenty-nine planned days, seventy-four tasks, and 115 done cards carrying a date.</p>
+
+<p><strong>The ask.</strong> Henry, 2026-07-20: <em>&ldquo;how about we integrate the board with my apple calendar too&hellip; so that i can see on my phone what the plan is etc.&rdquo;</em> And, when offered a read-only subscribed feed as the alternative: <em>&ldquo;add it to the calendar that would be best.&rdquo;</em></p>
+
+<h2>1 &middot; Why events, not a subscribed feed</h2>
+
+<p>The obvious mechanism is an iCalendar feed published from the site, which the phone subscribes to and refreshes on its own. It needs no permissions, no agent, and no machine to be awake. It was rejected for one reason: a subscribed calendar is <em>read-only on the device</em>. It arrives as something Henry cannot touch, sitting alongside calendars he owns. He asked for the plan to be added to his calendar, and that is a different thing.</p>
+
+<p>The cost of that choice is stated plainly rather than buried: nothing refreshes by itself. The calendar is accurate as of the last time the sync ran. A subscribed feed would have been self-updating; this is not.</p>
+
+<div class="decision"><strong>Decision 1 &mdash; a dedicated calendar named &ldquo;Morning Board&rdquo;, created in the iCloud account.</strong> This is the load-bearing choice and everything else leans on it. Because the sync owns that calendar completely, it may create, update and delete inside it without ever reasoning about whether an event is Henry's; visibility toggles with one tick when he wants a clean week; and iCloud carries it to the phone with no work from us. A sync that wrote into an existing shared calendar would have to distinguish its own events from real appointments on every run, and the first bug in that logic deletes something that matters.</div>
+
+<h2>2 &middot; Mechanism</h2>
+
+<p>A Swift script using EventKit, at <code>scripts/board/calendar-sync.swift</code>, run with <code>swift scripts/board/calendar-sync.swift</code>. It lives beside the existing board tooling (<code>publish.mjs</code>, <code>hh-plan-update.mjs</code>, <code>render-pdf.mjs</code>) because it is the same family of job: read the published board data, emit it somewhere Henry reads.</p>
+
+<table>
+<tr><th>Option</th><th>Verdict</th><th>Why</th></tr>
+<tr><td>Swift + EventKit</td><td><strong>Chosen</strong></td><td>The native path. Fast enough to reconcile a hundred events without noticing, gives real event identifiers for idempotency, and it is the language Henry reads.</td></tr>
+<tr><td>AppleScript via <code>osascript</code></td><td>Rejected</td><td>No dependencies, but Calendar automation is slow and unreliable at this event count, and it grows worse as history accumulates.</td></tr>
+<tr><td>Generate an iCalendar file and open it</td><td>Rejected</td><td>Prompts on every import and has no notion of updating an event that already exists, so re-running duplicates everything.</td></tr>
+<tr><td>Write to iCloud over CalDAV</td><td>Rejected</td><td>No machine dependency, but needs an app-specific password stored somewhere and the failure modes are hard to reason about.</td></tr>
+</table>
+
+<p>Swift in a Next.js repository is unusual, and worth one sentence of justification: the alternative is a Node process shelling out to <code>osascript</code>, which is the rejected option wearing a different hat. The script has no build step and no package to install.</p>
+
+<h2>3 &middot; Data flow</h2>
+
+<div class="flow">
+<p><code>board:week:*</code> (every week record) &nbsp;+&nbsp; <code>board:latest</code> (done cards)<br>
+&rarr; group tasks by date, group done cards by <code>doneAt</code> date<br>
+&rarr; one <code>PlannedDay</code> value per date<br>
+&rarr; reconcile against the Morning Board calendar<br>
+&rarr; create, update, or delete</p>
+</div>
+
+<p>The script reads Upstash over its REST interface using the <code>KV_REST_API_URL</code> and <code>KV_REST_API_TOKEN</code> already in <code>.env.local</code> &mdash; the same credentials <code>publish.mjs</code> uses. It reads the published records rather than the local <code>content/board/</code> files so it cannot drift from what the board is actually serving.</p>
+
+<p>Enumerating weeks is done by scanning for <code>board:week:*</code> keys rather than reading the <code>board:weeks</code> set. Both exist; the key scan is the one proven to return every record.</p>
+
+<h2>4 &middot; What an event looks like</h2>
+
+<p>One all-day event per planned day. All-day rather than timed, so it sits in the banner row above real appointments and never competes with them for a time slot.</p>
+
+<p><strong>Title</strong> &mdash; the first task, with a count of the rest. A ship day is prefixed so it is unmistakable at a glance in month view, where the title is all that shows.</p>
+
+<pre><code>Ship day, Deck of Cards 1.26, plus one more
+Review column cleared, plus two more
+Sci Fri, the weekly science film</code></pre>
+
+<p><strong>Notes</strong> &mdash; the full plan, then what shipped, then a link back. Rendered in words with no symbols or emoji, per Henry's standing preference.</p>
+
+<pre><code>PLAN
+  to do   Ship Deck of Cards 1.26, the free app is the
+          only real funnel this week
+  to do   Hold Hansard 1.3 as the fallback pick
+  done    Correct the store listing long-press line
+
+SHIPPED TODAY
+  Deck VoiceOver remaining-count fix
+  Register binding hole closed and deployed
+
+https://henceforth.club/board/week</code></pre>
+
+<div class="decision"><strong>Decision 2 &mdash; titles are derived, never stored.</strong> The title is computed from the task list on every run. If a task is reworded on the board, the next sync rewrites the title. There is no second copy of the wording to drift.</div>
+
+<p><strong>Title length.</strong> Real task labels run long &mdash; this week's are between 92 and 250 characters, because they are written for the board where they wrap. A month-view row shows perhaps forty. The first task is therefore truncated to 60 characters on a word boundary, with a trailing ellipsis, before the &ldquo;plus N more&rdquo; suffix is appended. The untruncated text is always present in the notes, so nothing is lost, only abbreviated at a glance.</p>
+
+<p><strong>The ship-day marker.</strong> Week records carry <code>isShipDay</code> on the day the routine marks for shipping; older records instead carry <code>isReviewDay</code>, which the week page renders with the same emphasis. The sync treats either flag as the ship marker so historical weeks read correctly, and prefixes the title with &ldquo;Ship day, &rdquo;.</p>
+
+<h2>5 &middot; Reconciliation</h2>
+
+<p>The property that matters: <em>running the sync twice must change nothing the second time.</em> Without it, running from the morning routine every day would multiply events.</p>
+
+<ul>
+<li>Fetch every event in the Morning Board calendar across the full span of known weeks.</li>
+<li>For each planned day, find the existing event whose start date matches. Update its title and notes in place if either differs; leave it entirely alone if they match.</li>
+<li>Create an event for a planned day that has none.</li>
+<li>Delete any event in the calendar whose date no longer appears in any week record.</li>
+</ul>
+
+<p>Matching is by date within the owned calendar, not by title or by a marker in the notes. One event per date is an invariant the script enforces: if it ever finds two events on one date, it keeps the first and deletes the rest, because that state can only arise from a bug or from manual editing, and silently tolerating it would hide the cause.</p>
+
+<div class="decision"><strong>Decision 5 &mdash; dates are resolved in the current local calendar, and all-day events are built from date components, never from a parsed instant.</strong> The plan stores plain dates such as <code>2026-07-22</code> with no time and no zone. Parsing that as an instant yields midnight in some zone, and an all-day event built from an instant lands on the previous day for anyone west of it &mdash; the single most common bug in this kind of integration. The script therefore constructs each event's start from year, month and day components in <code>Calendar.current</code>, sets <code>isAllDay</code>, and sets the end to the same day. Matching an existing event to a planned date compares those same components rather than comparing instants.</div>
+
+<div class="decision"><strong>Decision 3 &mdash; a day with no tasks gets no event.</strong> Saturdays are frequently empty by design. An event reading &ldquo;nothing planned&rdquo; is noise in a calendar, and deleting the event when a day empties is the same code path as deleting a day that left the plan.</div>
+
+<h2>6 &middot; Permission</h2>
+
+<p>EventKit requires calendar access, granted once, interactively, on first run. This cannot be automated and cannot be done on Henry's behalf. On macOS 26 the relevant entitlement is full access to events; write-only access is insufficient because reconciliation must read existing events to avoid duplicating them.</p>
+
+<p>If access is denied or not yet granted, the script exits with a clear message naming System Settings, and changes nothing. It never degrades to partial behaviour.</p>
+
+<h2>7 &middot; Where it runs</h2>
+
+<p>On the laptop, at the tail of the <code>/hh</code> and <code>/whh</code> routines, which is where those routines already execute and where the data is already in hand. It is also safe to run by hand at any time.</p>
+
+<p>The Mac mini was considered and rejected: it has roughly ten gigabytes free of four hundred and sixty, runs three continuous-integration workers competing for the machine, and a scheduled agent there would need its own calendar permission grant on a headless login.</p>
+
+<h2>8 &middot; Failure handling</h2>
+
+<table>
+<tr><th>Condition</th><th>Behaviour</th></tr>
+<tr><td>Calendar access denied</td><td>Exit non-zero naming System Settings. Change nothing.</td></tr>
+<tr><td>Upstash unreachable or credentials absent</td><td>Exit non-zero. Change nothing &mdash; an empty read must never be mistaken for an empty plan, which would delete every event.</td></tr>
+<tr><td>Zero week records returned</td><td>Treated as an error, not as an instruction to empty the calendar. Same reasoning.</td></tr>
+<tr><td>A single event fails to save</td><td>Report which date and continue with the rest, then exit non-zero so the failure is not silent.</td></tr>
+<tr><td>The Morning Board calendar is missing</td><td>Create it in the iCloud source. If no iCloud source exists, exit with a message rather than falling back to a local calendar that would not reach the phone.</td></tr>
+</table>
+
+<div class="decision"><strong>Decision 4 &mdash; an empty read is an error, never a deletion.</strong> The most damaging thing this script could do is delete a calendar's worth of events because a network call returned nothing. Deletion happens only for dates absent from a plan that was successfully read and contained at least one week.</div>
+
+<h2>9 &middot; Testing</h2>
+
+<p>The reconciliation decision is a pure function and is tested as one: given the set of planned days and the set of existing events, it returns the lists to create, update, and delete. That function has no EventKit types in its signature, so it runs with no calendar, no permission, and no network.</p>
+
+<ul>
+<li>A day present in the plan and absent from the calendar produces a create.</li>
+<li>A day whose title and notes match exactly produces neither an update nor anything else &mdash; this is the idempotency assertion, and it is the one that matters most.</li>
+<li>A day whose wording changed produces an update, not a delete and a create.</li>
+<li>An event whose date left the plan produces a delete.</li>
+<li>Two events on one date produce one delete and the first kept.</li>
+<li>An empty plan produces no deletions at all.</li>
+</ul>
+
+<p>The EventKit layer around it is a thin translation and is verified by running the sync twice against a real calendar and asserting the second run reports no changes.</p>
+
+<h2>10 &middot; Explicitly out of scope</h2>
+
+<ul>
+<li><strong>Two-way sync.</strong> Ticking a task in Calendar will not tick it on the board. Calendar has no notion of a checklist item, and inferring intent from an edited event is guesswork.</li>
+<li><strong>Alerts and reminders.</strong> None are set. An all-day event on a day Henry is already looking at does not need to buzz, and unrequested notifications are the fastest way to get a calendar turned off.</li>
+<li><strong>The kanban board itself.</strong> Only the week plan and the cards finished on a given day. The board is not calendar-shaped and 181 cards would overwhelm the view.</li>
+<li><strong>Invitations, attendees, travel time, recurrence.</strong> Not applicable.</li>
+</ul>
+
+</div>
+</body>
+</html>
