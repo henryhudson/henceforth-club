@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nightly screen capture on the Mac mini — design</title>
+<style>
+  :root { --bg:#f4ecd8; --ink:#2a2318; --muted:#6b5d45; --rule:#c9b98f; --accent:#8b3a1a; --card:#faf4e4; --shadow:0 1px 3px rgba(60,40,10,0.15); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.68;}
+  .wrap{max-width:860px;margin:0 auto;padding:56px 32px;}
+  header.doc{margin-bottom:40px;border-bottom:3px double var(--rule);padding-bottom:26px;}
+  .eyebrow{font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:33px;line-height:1.16;margin:0 0 12px;font-weight:700;}
+  h2{font-size:24px;margin:46px 0 12px;padding-top:18px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 8px;}
+  .lede{font-size:19px;color:var(--muted);margin:0;font-style:italic;}
+  p{margin:13px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(120,90,30,0.12);padding:2px 6px;border-radius:4px;}
+  pre{background:#2a2318;color:#f0e6cf;padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;background:var(--card);}
+  th,td{text-align:left;padding:9px 12px;border:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .decision{background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 18px;margin:18px 0;box-shadow:var(--shadow);}
+  .decision strong{color:var(--accent);}
+  ul{margin:12px 0;padding-left:26px;} li{margin:6px 0;}
+  .flow{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px 20px;margin:16px 0;box-shadow:var(--shadow);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Design spec &middot; 2026-07-20 &middot; Mac mini &middot; status: DRAFT for Henry's review</div>
+<h1>Nightly screen capture</h1>
+<p class="lede">Photograph every reachable screen of one app each night, keep only what changed, and put that in front of Henry each morning &mdash; without ever risking the three continuous-integration runners that share the machine.</p>
+</header>
+
+<p><strong>The ask.</strong> Henry, 2026-07-20: <em>&ldquo;can you ensure the screenshots are rerun on the mac mini each night? then we can review the state of the app properly.&rdquo;</em></p>
+
+<p><strong>Why it is worth building.</strong> The screenshots that exist are from 2026-06-01, seven weeks stale, and were only found to be stale because a back-button question forced someone to look. An app changes every day and nobody sees the accumulated drift until it is large. A nightly capture makes drift visible while it is still one screen wide.</p>
+
+<h2>1 &middot; What exists, and what it costs</h2>
+
+<table>
+<tr><th>App</th><th>Capture pipeline</th><th>On the mini?</th></tr>
+<tr><td>Henceforth</td><td><code>Scripts/regenerate-snapshots.sh</code> &mdash; 204 screens, every reachable one</td><td><strong>No</strong> &mdash; only inside the continuous-integration runner's workspace</td></tr>
+<tr><td>Deck of Cards</td><td><code>Scripts/regenerate-snapshots.sh</code> &mdash; every reachable screen, plus paired multiplayer</td><td>Yes, at <code>~/Programming/Main Projects/</code></td></tr>
+<tr><td>Hansard</td><td><strong>None.</strong> Two capture flows feeding the App Store listing, no design board</td><td>Yes</td></tr>
+</table>
+
+<p>The machine has roughly <strong>ten gigabytes free of four hundred and sixty</strong>, and three continuous-integration runners share it. Simulator devices hold nineteen gigabytes, but the five largest account for 17.7 of that and every one is in active use, so the space is not meaningfully reclaimable. A measured Deck capture consumed about 3.3 gigabytes.</p>
+
+<div class="decision"><strong>Decision 1 &mdash; one app per night, alternating, never all three.</strong> This is what makes the whole thing fit. Only one app's build artifacts exist at any moment, and they are deleted when that app finishes. Running three apps nightly against ten free gigabytes would eventually exhaust the disk, and the cost of that is not a missing screenshot &mdash; it is all three continuous-integration runners failing at once, which is strictly worse than having no nightly capture at all.</div>
+
+<div class="decision"><strong>Decision 2 &mdash; Henceforth and Deck only; Hansard gets a card, not a bolt-on.</strong> Hansard has no design board, so it cannot answer &ldquo;what does every screen look like&rdquo; at any price. Including it with its two App Store capture flows would produce a night that looks like coverage and is not &mdash; that night would never have surfaced the back-button drift, because those flows never open a settings, detail or modal screen. Building Hansard a proper board is its own piece of work. Noted honestly: Hansard is the app with zero ratings, so it is arguably the one most worth seeing, which is an argument for doing that work soon rather than for faking it now.</div>
+
+<h2>2 &middot; The schedule</h2>
+
+<div class="flow">
+<p>Monday, Wednesday, Friday &mdash; <strong>Henceforth</strong><br>
+Tuesday, Thursday, Saturday &mdash; <strong>Deck of Cards</strong><br>
+Sunday &mdash; nothing</p>
+</div>
+
+<p>Three nights each, at 03:00, which is when the runners are quiet and the daily review pipeline has not yet started (it pulls at 04:00). A launchd agent, matching the dozen already on that machine &mdash; the daily review pull and send, the text monitor, the xtext worker, the three runners. Nothing new is introduced mechanically.</p>
+
+<h2>3 &middot; The three guards</h2>
+
+<p>Most of this design is refusals. The capture itself is an existing script; what is new is everything that stops it doing harm.</p>
+
+<div class="decision"><strong>Decision 3 &mdash; a disk floor, checked before anything is built.</strong> If free space is below <strong>six gigabytes</strong>, the run does not start. It records that it skipped and why, and exits. Six is chosen because a measured capture costs about 3.3, so the floor leaves the machine unable to cross into the region where a runner's own build would fail. A skipped night is a small loss; a full disk is three broken runners and a morning spent diagnosing it.</div>
+
+<div class="decision"><strong>Decision 4 &mdash; a continuous-integration interlock.</strong> If a runner job is active, the capture does not start. Both want simulators, the machine has one shared device set, and Henceforth's interface tests are already flake-prone enough to be a tracked card. Three in the morning is usually quiet, but usually is not a guarantee, so it checks rather than assumes.</div>
+
+<div class="decision"><strong>Decision 5 &mdash; artifacts are deleted as part of the run, not after it.</strong> Build output is removed when the app finishes capturing, inside the same script, so a crash between apps cannot leave two sets on disk. This is the difference between a rotation that fits and one that slowly does not.</div>
+
+<h2>4 &middot; Baselines, and why nothing is committed</h2>
+
+<p>The two apps disagree about git, which rules out the obvious approach. Deck commits twenty-four snapshots so its <code>--baseline &lt;sha&gt;</code> diff can <code>git show</code> them. Henceforth gitignores all two hundred and four deliberately. There is no common baseline to diff against.</p>
+
+<p>Committing nightly would be worse than inconvenient: two hundred and four images at roughly two hundred kilobytes is about forty megabytes a night, over a gigabyte a month, into repositories currently seventy-two and one hundred and sixteen megabytes.</p>
+
+<div class="decision"><strong>Decision 6 &mdash; the baseline lives beside the capture on disk, and nothing is committed.</strong> Last night's set is kept as <code>snapshots-baseline/</code>; the new capture lands in the pipeline's usual directory; changed screens are found by comparing file hashes. Deck's existing <code>--baseline</code> diff mode is untouched and keeps working &mdash; this is an additional on-disk baseline, not a replacement for it.</div>
+
+<h2>5 &middot; How it reaches Henry</h2>
+
+<p>Two hundred and four images is not something a person reviews. Six named screens is.</p>
+
+<p>Each run writes a status file recording the date, the app, how many screens were captured, which changed, and if it did not run, why. The morning routine reads that file and reports it, then copies the changed images to the laptop for actual looking.</p>
+
+<pre><code>OVERNIGHT: Henceforth, 204 screens captured 03:04
+  6 changed since Friday:
+    wallet-detail, settings-appearance, terminal-vocabulary,
+    send-many, xarchive-sheet, file-editor
+  pulled to ~/Desktop/overnight/ for review</code></pre>
+
+<p>A quiet night reads <code>OVERNIGHT: Henceforth, no screens changed.</code> &mdash; which is information, not an absence of it.</p>
+
+<div class="decision"><strong>Decision 7 &mdash; a stale or missing status file is reported loudly, as a failure.</strong> This is the decision this spec cares most about. A nightly job that quietly stops running is worse than no job, because it manufactures false confidence: Henry would believe he had coverage he did not have. The morning routine therefore treats an absent or out-of-date status file as a finding in its own right, not as silence. This is not hypothetical &mdash; on this same day a fix shipped whose failure path renders to the user as &ldquo;on-chain, site indexing pending&rdquo;, so a permanent failure reads as success. The same shape, caught here before it is built rather than after.</div>
+
+<h2>6 &middot; Failure handling</h2>
+
+<table>
+<tr><th>Condition</th><th>Behaviour</th></tr>
+<tr><td>Free space below six gigabytes</td><td>Skip. Record the reason and the measured figure. Exit zero &mdash; a deliberate skip is not a failure.</td></tr>
+<tr><td>A continuous-integration job is running</td><td>Skip. Record which runner. Exit zero.</td></tr>
+<tr><td>The capture script fails</td><td>Record the failing app and the last output. Delete artifacts anyway. Exit non-zero.</td></tr>
+<tr><td>Capture produces zero images</td><td>Treated as a failure, never as &ldquo;every screen was deleted&rdquo;. The baseline is left untouched so the next run still has something to compare against.</td></tr>
+<tr><td>The repository will not update</td><td>Capture the existing checkout anyway and record that the code is stale, rather than skipping. A picture of last week's code beats no picture.</td></tr>
+</table>
+
+<h2>7 &middot; What has to be set up once</h2>
+
+<ul>
+<li><strong>Henceforth cloned to the mini</strong> at <code>~/Programming/Main Projects/Henceforth</code>, matching where Deck and Hansard already sit. One hundred and sixteen megabytes of history. It must not use the continuous-integration runner's workspace, which a live job may check out or clean underneath it.</li>
+<li><strong>Its snapshot pipeline verified once by hand</strong> before it is scheduled. A pipeline that has never run on that machine should not first run unattended at three in the morning.</li>
+</ul>
+
+<h2>8 &middot; Explicitly out of scope</h2>
+
+<ul>
+<li><strong>Hansard.</strong> Carded, not bolted on. It needs a design board built properly.</li>
+<li><strong>Automatic judgement of what changed.</strong> The run reports which screens moved; deciding whether a change is an improvement is Henry's, and a machine guessing would train him to ignore it.</li>
+<li><strong>Publishing images to the board.</strong> No board surface renders images today, and building one is its own piece of work. The changed screens land on the laptop instead.</li>
+<li><strong>Committing screenshots.</strong> Covered above &mdash; the repository cost is not worth it.</li>
+</ul>
+
+</div>
+</body>
+</html>
