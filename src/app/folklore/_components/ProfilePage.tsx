@@ -1,3 +1,4 @@
+import { txExplorerUrl } from "@/lib/explorer";
 import type { XArchive } from "../parseArchive";
 import type { ScoreWindow } from "@/lib/xScore";
 import type { RatingTable } from "@/lib/kudos/elo";
@@ -49,7 +50,7 @@ export default function ProfilePage({
         <p className="ledger-label">Reclaimed from X · {txid ? "on Bitcoin" : "preview"}</p>
         {txid ? (
           <a
-            href={`https://whatsonchain.com/tx/${txid}`}
+            href={txExplorerUrl(txid)}
             target="_blank"
             rel="noopener noreferrer"
             className="mt-2 inline-block break-all font-mono text-[11px] text-accent hover:underline"

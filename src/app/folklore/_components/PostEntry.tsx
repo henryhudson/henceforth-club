@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { txExplorerUrl } from "@/lib/explorer";
 import Link from "next/link";
 import { PROVISIONAL_DUELS } from "@/lib/kudos/constants";
 import type { Rating } from "@/lib/kudos/elo";
@@ -232,7 +233,7 @@ export default function PostEntry({
           <>
             <span aria-hidden>·</span>
             <a
-              href={`https://whatsonchain.com/tx/${post.txid}`}
+              href={txExplorerUrl(post.txid)}
               target="_blank"
               rel="noopener noreferrer"
               className="font-mono transition-colors hover:text-accent hover:underline"
@@ -338,7 +339,7 @@ function OnChain({ txid, txTime }: { txid: string; txTime?: number }) {
         {txTime !== undefined ? `Inscribed ${formatUnixSeconds(txTime)}` : "Inscribed on Bitcoin"}
         {" · "}
         <a
-          href={`https://whatsonchain.com/tx/${txid}`}
+          href={txExplorerUrl(txid)}
           target="_blank"
           rel="noopener noreferrer"
           className="text-accent transition-colors hover:underline"

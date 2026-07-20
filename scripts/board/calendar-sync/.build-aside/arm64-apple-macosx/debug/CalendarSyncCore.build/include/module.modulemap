@@ -1,0 +1,3 @@
+module CalendarSyncCore {
+    header "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCore.build/include/CalendarSyncCore-Swift.h"
+}

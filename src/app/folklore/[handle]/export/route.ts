@@ -23,7 +23,7 @@ export async function GET(
     about: {
       what: `The on-chain archive of @${page.profile.handle}, exported from henceforth.club/folklore`,
       verify:
-        "Every post lives in the Bitcoin transaction named by its txid. Read any of them on a block explorer (for example whatsonchain.com/tx/<txid>) — this file, and this site, are conveniences, not custodians.",
+        "Every post lives in the Bitcoin transaction named by its txid. Read any of them on a block explorer (for example bananablocks.com/tx/<txid>) — this file, and this site, are conveniences, not custodians.",
       exportedAt: new Date().toISOString(),
     },
     profile: page.profile,

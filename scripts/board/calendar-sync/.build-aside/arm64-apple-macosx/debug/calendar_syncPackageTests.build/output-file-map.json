@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar_syncPackageTests.build/primary.swiftdeps"
+  },
+  "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar-syncPackageTests.derived/runner.swift": {
+    "dependencies": "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar_syncPackageTests.build/runner.d",
+    "object": "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar_syncPackageTests.build/runner.swift.o",
+    "swiftmodule": "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar_syncPackageTests.build/runner~partial.swiftmodule",
+    "swift-dependencies": "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar_syncPackageTests.build/runner.swiftdeps",
+    "diagnostics": "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar_syncPackageTests.build/runner.dia"
+  }
+}

@@ -1,3 +1,5 @@
+import { txExplorerUrl } from "@/lib/explorer";
+
 export default function Proof({ txid }: { txid: string }) {
   return (
     <section className="mx-auto max-w-2xl px-6 py-8 text-sm text-muted">
@@ -11,7 +13,7 @@ export default function Proof({ txid }: { txid: string }) {
           className="text-accent hover:underline"
           rel="noreferrer"
           target="_blank"
-          href={`https://whatsonchain.com/tx/${txid}`}
+          href={txExplorerUrl(txid)}
         >
           a block explorer we do not run
         </a>

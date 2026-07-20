@@ -1,0 +1,932 @@
+{
+  "builtTestProducts" : [
+    {
+      "binaryPath" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar-syncPackageTests.xctest/Contents/MacOS/calendar-syncPackageTests",
+      "packagePath" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync",
+      "productName" : "calendar-syncPackageTests"
+    }
+  ],
+  "copyCommands" : {
+
+  },
+  "explicitTargetDependencyImportCheckingMode" : {
+    "none" : {
+
+    }
+  },
+  "generatedSourceTargetSet" : [
+
+  ],
+  "pluginDescriptions" : [
+
+  ],
+  "swiftCommands" : {
+    "C.CalendarSyncCore-arm64-apple-macosx-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCore.build/sources",
+      "importPath" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Sources/CalendarSyncCore/BoardDecoding.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Sources/CalendarSyncCore/Model.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Sources/CalendarSyncCore/Presentation.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Sources/CalendarSyncCore/Reconcile.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCore.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "CalendarSyncCore",
+      "moduleOutputPath" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/Modules/CalendarSyncCore.swiftmodule",
+      "objects" : [
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCore.build/BoardDecoding.swift.o",
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCore.build/Model.swift.o",
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCore.build/Presentation.swift.o",
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCore.build/Reconcile.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCore.build/include/CalendarSyncCore-Swift.h",
+        "-swift-version",
+        "6",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "calendar_sync"
+      ],
+      "outputFileMapPath" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCore.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCore.build/BoardDecoding.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCore.build/Model.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCore.build/Presentation.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCore.build/Reconcile.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/Modules/CalendarSyncCore.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Sources/CalendarSyncCore/BoardDecoding.swift",
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Sources/CalendarSyncCore/Model.swift",
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Sources/CalendarSyncCore/Presentation.swift",
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Sources/CalendarSyncCore/Reconcile.swift"
+      ],
+      "tempsPath" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCore.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.CalendarSyncCoreTests-arm64-apple-macosx-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCoreTests.build/sources",
+      "importPath" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Tests/CalendarSyncCoreTests/BoardDecodingTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Tests/CalendarSyncCoreTests/NotesTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Tests/CalendarSyncCoreTests/PresentationTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Tests/CalendarSyncCoreTests/ReconcileTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/Modules/CalendarSyncCore.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCoreTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "CalendarSyncCoreTests",
+      "moduleOutputPath" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/Modules/CalendarSyncCoreTests.swiftmodule",
+      "objects" : [
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCoreTests.build/BoardDecodingTests.swift.o",
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCoreTests.build/NotesTests.swift.o",
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCoreTests.build/PresentationTests.swift.o",
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCoreTests.build/ReconcileTests.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-swift-version",
+        "6",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "calendar_sync"
+      ],
+      "outputFileMapPath" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCoreTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCoreTests.build/BoardDecodingTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCoreTests.build/NotesTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCoreTests.build/PresentationTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCoreTests.build/ReconcileTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/Modules/CalendarSyncCoreTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Tests/CalendarSyncCoreTests/BoardDecodingTests.swift",
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Tests/CalendarSyncCoreTests/NotesTests.swift",
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Tests/CalendarSyncCoreTests/PresentationTests.swift",
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Tests/CalendarSyncCoreTests/ReconcileTests.swift"
+      ],
+      "tempsPath" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCoreTests.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.calendar-sync-arm64-apple-macosx-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar_sync.build/sources",
+      "importPath" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Sources/calendar-sync/main.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/Modules/CalendarSyncCore.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar_sync.build/sources"
+        }
+      ],
+      "isLibrary" : false,
+      "moduleName" : "calendar_sync",
+      "moduleOutputPath" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/Modules/calendar_sync.swiftmodule",
+      "objects" : [
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar_sync.build/main.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-Xfrontend",
+        "-entry-point-function-name",
+        "-Xfrontend",
+        "calendar_sync_main",
+        "-swift-version",
+        "6",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "calendar_sync"
+      ],
+      "outputFileMapPath" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar_sync.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar_sync.build/main.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/Modules/calendar_sync.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Sources/calendar-sync/main.swift"
+      ],
+      "tempsPath" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar_sync.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.calendar-syncPackageTests-arm64-apple-macosx-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar_syncPackageTests.build/sources",
+      "importPath" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar-syncPackageTests.derived/runner.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/Modules/CalendarSyncCoreTests.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar_syncPackageTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "calendar_syncPackageTests",
+      "moduleOutputPath" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/Modules/calendar_syncPackageTests.swiftmodule",
+      "objects" : [
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar_syncPackageTests.build/runner.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar_syncPackageTests.build/include/calendar-syncPackageTests-Swift.h",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "calendar_sync"
+      ],
+      "outputFileMapPath" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar_syncPackageTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar_syncPackageTests.build/runner.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/Modules/calendar_syncPackageTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar-syncPackageTests.derived/runner.swift"
+      ],
+      "tempsPath" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar_syncPackageTests.build",
+      "wholeModuleOptimization" : false
+    }
+  },
+  "swiftFrontendCommands" : {
+
+  },
+  "swiftTargetScanArgs" : {
+    "CalendarSyncCore" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "CalendarSyncCore",
+      "-package-name",
+      "calendar_sync",
+      "-c",
+      "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Sources/CalendarSyncCore/BoardDecoding.swift",
+      "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Sources/CalendarSyncCore/Model.swift",
+      "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Sources/CalendarSyncCore/Presentation.swift",
+      "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Sources/CalendarSyncCore/Reconcile.swift",
+      "-I",
+      "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCore.build/include/CalendarSyncCore-Swift.h",
+      "-swift-version",
+      "6",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "calendar_sync",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "CalendarSyncCoreTests" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "CalendarSyncCoreTests",
+      "-package-name",
+      "calendar_sync",
+      "-c",
+      "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Tests/CalendarSyncCoreTests/BoardDecodingTests.swift",
+      "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Tests/CalendarSyncCoreTests/NotesTests.swift",
+      "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Tests/CalendarSyncCoreTests/PresentationTests.swift",
+      "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Tests/CalendarSyncCoreTests/ReconcileTests.swift",
+      "-I",
+      "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-swift-version",
+      "6",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "calendar_sync",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "calendar_sync" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "calendar_sync",
+      "-package-name",
+      "calendar_sync",
+      "-c",
+      "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Sources/calendar-sync/main.swift",
+      "-I",
+      "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-Xfrontend",
+      "-entry-point-function-name",
+      "-Xfrontend",
+      "calendar_sync_main",
+      "-swift-version",
+      "6",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "calendar_sync",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "calendar_syncPackageTests" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "calendar_syncPackageTests",
+      "-package-name",
+      "calendar_sync",
+      "-c",
+      "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar-syncPackageTests.derived/runner.swift",
+      "-I",
+      "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar_syncPackageTests.build/include/calendar-syncPackageTests-Swift.h",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "calendar_sync",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ]
+  },
+  "targetDependencyMap" : {
+    "CalendarSyncCore" : [
+
+    ],
+    "CalendarSyncCoreTests" : [
+      "CalendarSyncCore"
+    ],
+    "calendar_sync" : [
+      "CalendarSyncCore"
+    ],
+    "calendar_syncPackageTests" : [
+      "CalendarSyncCoreTests",
+      "CalendarSyncCore"
+    ]
+  },
+  "testDiscoveryCommands" : {
+
+  },
+  "testEntryPointCommands" : {
+    "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar-syncPackageTests.derived/runner.swift" : {
+      "inputs" : [
+
+      ],
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar-syncPackageTests.derived/runner.swift"
+        }
+      ]
+    }
+  },
+  "traitConfiguration" : {
+    "default" : {
+
+    }
+  },
+  "writeCommands" : {
+    "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCore.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Sources/CalendarSyncCore/BoardDecoding.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Sources/CalendarSyncCore/Model.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Sources/CalendarSyncCore/Presentation.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Sources/CalendarSyncCore/Reconcile.swift"
+        }
+      ],
+      "outputFilePath" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCore.build/sources"
+    },
+    "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCoreTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Tests/CalendarSyncCoreTests/BoardDecodingTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Tests/CalendarSyncCoreTests/NotesTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Tests/CalendarSyncCoreTests/PresentationTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Tests/CalendarSyncCoreTests/ReconcileTests.swift"
+        }
+      ],
+      "outputFilePath" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCoreTests.build/sources"
+    },
+    "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar-sync-entitlement.plist" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<entitlement-plist>"
+        },
+        {
+          "kind" : "virtual",
+          "name" : "<com.apple.security.get-task-allow>"
+        }
+      ],
+      "outputFilePath" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar-sync-entitlement.plist"
+    },
+    "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar-sync.product/Objects.LinkFileList" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<link-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCore.build/BoardDecoding.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCore.build/Model.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCore.build/Presentation.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCore.build/Reconcile.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar_sync.build/main.swift.o"
+        }
+      ],
+      "outputFilePath" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar-sync.product/Objects.LinkFileList"
+    },
+    "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar-syncPackageTests.product/Objects.LinkFileList" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<link-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCore.build/BoardDecoding.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCore.build/Model.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCore.build/Presentation.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCore.build/Reconcile.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCoreTests.build/BoardDecodingTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCoreTests.build/NotesTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCoreTests.build/PresentationTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/CalendarSyncCoreTests.build/ReconcileTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar_syncPackageTests.build/runner.swift.o"
+        }
+      ],
+      "outputFilePath" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar-syncPackageTests.product/Objects.LinkFileList"
+    },
+    "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar_sync.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/Sources/calendar-sync/main.swift"
+        }
+      ],
+      "outputFilePath" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar_sync.build/sources"
+    },
+    "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar_syncPackageTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar-syncPackageTests.derived/runner.swift"
+        }
+      ],
+      "outputFilePath" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar_syncPackageTests.build/sources"
+    },
+    "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt" : {
+      "alwaysOutOfDate" : true,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<swift-get-version>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+        }
+      ],
+      "outputFilePath" : "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+    }
+  }
+}

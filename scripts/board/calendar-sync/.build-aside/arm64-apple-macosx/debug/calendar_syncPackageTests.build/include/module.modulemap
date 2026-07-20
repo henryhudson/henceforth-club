@@ -1,0 +1,3 @@
+module calendar_syncPackageTests {
+    header "/private/tmp/hc-week-ui/scripts/board/calendar-sync/.build/arm64-apple-macosx/debug/calendar_syncPackageTests.build/include/calendar-syncPackageTests-Swift.h"
+}

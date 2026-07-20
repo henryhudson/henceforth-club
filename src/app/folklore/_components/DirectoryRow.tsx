@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { txExplorerUrl } from "@/lib/explorer";
 import { getXTxid } from "@/lib/xIndex";
 import { getArchivePage } from "@/lib/xArchiveCache";
 import { getOwner } from "@/lib/xOwner";
@@ -46,7 +47,7 @@ export default async function DirectoryRow({ handle, latestMs }: { handle: strin
       </Link>
       {latestTxid && (
         <a
-          href={`https://whatsonchain.com/tx/${latestTxid}`}
+          href={txExplorerUrl(latestTxid)}
           target="_blank"
           rel="noopener noreferrer"
           title="Latest inscription on a block explorer"
