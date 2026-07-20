@@ -2,6 +2,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { getRedis } from "@/lib/redis";
 import type { PlanItem } from "@/app/board/reports/PlanChecklist";
+import type { Card } from "@/app/board/BoardClient";
 
 export type Finding = {
   refId: string;
@@ -144,4 +145,22 @@ export async function loadWeek(date: string): Promise<WeekReport | null> {
   }
   try { return JSON.parse(await fs.readFile(path.join(WEEKS_DIR, `${date}.json`), "utf8")) as WeekReport; }
   catch { return null; }
+}
+
+export type Board = { generated: string; cards: Card[]; log?: string };
+
+// Production reads the kanban from Upstash (written by /hh's publish step).
+// Local dev (no Redis env) falls back to the gitignored content file.
+export async function loadBoard(): Promise<Board | null> {
+  const redis = getRedis();
+  if (redis) {
+    const data = await redis.get<Board>("board:latest");
+    if (data) return data;
+  }
+  try {
+    const file = path.join(process.cwd(), "content/board/latest.json");
+    return JSON.parse(await fs.readFile(file, "utf8")) as Board;
+  } catch {
+    return null;
+  }
 }

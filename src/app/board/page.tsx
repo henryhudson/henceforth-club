@@ -1,28 +1,7 @@
-import { promises as fs } from "fs";
-import path from "path";
-import { getRedis } from "@/lib/redis";
-import { listWeeks, loadWeek } from "@/lib/board-data";
-import BoardClient, { type Card, type WeekSlice } from "./BoardClient";
+import { listWeeks, loadBoard, loadWeek } from "@/lib/board-data";
+import BoardClient, { type WeekSlice } from "./BoardClient";
 
 export const dynamic = "force-dynamic";
-
-type Board = { generated: string; cards: Card[]; log?: string };
-
-// Production reads the board from Upstash (written by /hh's publish step). Local
-// dev (no Redis env) falls back to the gitignored content file.
-async function loadBoard(): Promise<Board | null> {
-  const redis = getRedis();
-  if (redis) {
-    const data = await redis.get<Board>("board:latest");
-    if (data) return data;
-  }
-  try {
-    const file = path.join(process.cwd(), "content/board/latest.json");
-    return JSON.parse(await fs.readFile(file, "utf8")) as Board;
-  } catch {
-    return null;
-  }
-}
 
 async function loadWeekSlice(): Promise<WeekSlice | null> {
   const weeks = await listWeeks();

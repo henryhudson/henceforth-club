@@ -17,6 +17,25 @@ export function verdictLine(findings: { verdict: string }[]): string {
   return parts.join(" · ");
 }
 
+export type ShippedCard = { id: string; title: string };
+
+/** Kanban cards finished on each of the given days, keyed by day. A card counts
+ *  for the day it was marked done — falling back to the last column move for the
+ *  cards that predate `doneAt`. */
+export function shippedByDay(
+  cards: { id: string; title: string; col: string; movedAt?: string; doneAt?: string }[],
+  days: string[],
+): Record<string, ShippedCard[]> {
+  const wanted = new Set(days);
+  const out: Record<string, ShippedCard[]> = {};
+  for (const c of cards) {
+    const day = (c.doneAt || c.movedAt || "").slice(0, 10);
+    if (c.col !== "done" || !wanted.has(day)) continue;
+    (out[day] = out[day] || []).push({ id: c.id, title: c.title });
+  }
+  return out;
+}
+
 export function editionIndex(dailyDates: string[], weekDates: string[]): Edition[] {
   const dailies: Edition[] = dailyDates.map((d) => ({ type: "daily", date: d, href: `/board/reports/${d}` }));
   const weeklies: Edition[] = weekDates.map((d) => ({ type: "weekly", date: d, href: `/board/reports/week/${d}` }));

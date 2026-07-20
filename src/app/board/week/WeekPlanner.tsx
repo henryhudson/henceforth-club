@@ -1,33 +1,51 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { PlanDay } from "@/lib/board-data";
+import type { ShippedCard } from "@/lib/report-helpers";
 
-type Task = string | { label: string; start?: number; end?: number; done?: boolean };
-type PlanDay = { date: string; weekday: string; isReviewDay: boolean; tasks: Task[] };
+// Published tasks may still carry `start`/`end` (the tick route preserves them);
+// no week has ever set one, and nothing renders them.
+const norm = (t: PlanDay["tasks"][number]): { label: string; done: boolean } =>
+  typeof t === "string" ? { label: t, done: false } : { label: t.label, done: t.done ?? false };
 
-// Henry's planner palette — one highlighter colour per day.
-const DAY_COLOR: Record<string, string> = {
-  Sun: "#f87171", // red
-  Mon: "#4ade80", // green
-  Tue: "#c084fc", // purple
-  Wed: "#fb923c", // orange
-  Thu: "#ffffff", // white
-  Fri: "#60a5fa", // blue
-  Sat: "#fde047", // yellow
+// Amber wash + glow that lifts today out of the rail. Root tokens, not the
+// --color-* aliases, so the print block's palette override reaches them too.
+const TODAY_SURFACE = {
+  background:
+    "linear-gradient(165deg, color-mix(in srgb, var(--accent-warm) 14%, transparent), transparent 48%), var(--card-bg)",
+  boxShadow: "0 0 0 1px var(--accent-warm-glow), 0 8px 28px rgba(0, 0, 0, 0.35)",
 };
 
-const norm = (t: Task): { label: string; start?: number; end?: number; done?: boolean } =>
-  typeof t === "string" ? { label: t } : t;
-const hh = (h: number) => `${String(h).padStart(2, "0")}:00`;
-
-// 0–24h timeline geometry.
-const PX_PER_HOUR = 15;
-const BODY_H = 24 * PX_PER_HOUR;
-const GRID_HOURS = [0, 4, 8, 12, 16, 20, 24];
-
-export default function WeekPlanner({ days, weekKey }: { days: PlanDay[]; weekKey: string }) {
+export default function WeekPlanner({
+  days,
+  weekKey,
+  shipped,
+}: {
+  days: PlanDay[];
+  weekKey: string;
+  shipped: Record<string, ShippedCard[]>;
+}) {
   // Optimistic overrides on top of the server's `done` state; the tick persists to Upstash.
   const [overrides, setOverrides] = useState<Record<string, boolean>>({});
+  const rail = useRef<HTMLDivElement>(null);
+  const todayCard = useRef<HTMLDivElement>(null);
+
+  const todayISO = new Date().toLocaleDateString("en-CA");
+  // Dimming reads as emphasis only next to today, so an archived week renders
+  // at full strength rather than uniformly grey.
+  const showsToday = days.some((d) => d.date === todayISO);
+
+  // The rail is wider than a phone — open it on today rather than on Sunday.
+  // Panning the rail itself, not scrollIntoView, which also scrolls the page
+  // down to fit the full height of a tall card. Landing on today's own snap
+  // point, since any offset between two of them is snapped away.
+  useEffect(() => {
+    const track = rail.current;
+    const card = todayCard.current;
+    if (!track || !card) return;
+    track.scrollLeft += card.getBoundingClientRect().left - track.getBoundingClientRect().left;
+  }, []);
 
   const tick = (dayDate: string, index: number, next: boolean) => {
     setOverrides((o) => ({ ...o, [`${dayDate}:${index}`]: next }));
@@ -39,71 +57,99 @@ export default function WeekPlanner({ days, weekKey }: { days: PlanDay[]; weekKe
   };
 
   return (
-    <div className="mt-3 overflow-x-auto pb-2">
-      <div className="grid min-w-[760px] grid-cols-7 gap-2">
-        {days.map((day) => {
-          const tasks = day.tasks.map(norm);
-          return (
-            <div key={day.date} className="flex flex-col overflow-hidden rounded-md border border-card-border bg-card-bg/20">
-              <div
-                className="flex items-baseline justify-between gap-1 px-2 py-1 text-[11px] font-bold uppercase tracking-wide"
-                style={{ color: "#1c1917", backgroundColor: DAY_COLOR[day.weekday] ?? "#e5e7eb", borderBottom: "1px solid var(--color-card-border)" }}
-              >
-                <span>{day.weekday}{day.isReviewDay ? " ★" : ""}</span>
-                <span className="font-normal opacity-70">{day.date.slice(5)}</span>
-              </div>
+    <div
+      ref={rail}
+      className="mt-3 flex snap-x snap-proximity items-stretch gap-2 overflow-x-auto pb-2 text-[12.5px] print:grid print:grid-cols-4 print:overflow-visible"
+    >
+      {days.map((day) => {
+        const tasks = day.tasks.map(norm);
+        const done = tasks.map((t, i) => overrides[`${day.date}:${i}`] ?? t.done);
+        const doneCount = done.filter(Boolean).length;
+        const isToday = day.date === todayISO;
+        const isPast = showsToday && day.date < todayISO;
+        const shippedToday = shipped[day.date] ?? [];
 
-              <ul className="space-y-1.5 p-2">
-                {tasks.length === 0 && <li className="text-xs text-muted">&mdash;</li>}
-                {tasks.map((t, i) => {
-                  const doneNow = overrides[`${day.date}:${i}`] ?? t.done ?? false;
-                  return (
-                    <li key={i}>
-                      <label className="flex cursor-pointer items-start gap-1.5 text-xs leading-snug">
-                        <input
-                          type="checkbox"
-                          checked={doneNow}
-                          onChange={() => tick(day.date, i, !doneNow)}
-                          className="mt-0.5 shrink-0"
-                          style={{ accentColor: "var(--color-accent-green)" }}
-                        />
-                        <span className={doneNow ? "text-muted line-through" : "text-foreground"}>
-                          {t.start != null && <span className="mr-1 font-bold text-muted">{hh(t.start)}</span>}
-                          {t.label}
-                        </span>
-                      </label>
-                    </li>
-                  );
-                })}
-              </ul>
-
-              <div className="relative mx-2 mb-2 mt-auto" style={{ height: BODY_H }}>
-                {GRID_HOURS.map((h) => (
-                  <div key={h} className="absolute inset-x-0 border-t border-card-border/40" style={{ top: h * PX_PER_HOUR }}>
-                    <span className="absolute -top-1.5 left-0 text-[9px] text-muted">{hh(h)}</span>
-                  </div>
-                ))}
-                {tasks
-                  .filter((t) => t.start != null && t.end != null)
-                  .map((t, i) => {
-                    const top = (t.start as number) * PX_PER_HOUR;
-                    const height = Math.max(13, ((t.end as number) - (t.start as number)) * PX_PER_HOUR - 2);
-                    return (
-                      <div
-                        key={i}
-                        title={`${hh(t.start as number)}–${hh(t.end as number)} ${t.label}`}
-                        className="absolute right-0 left-8 overflow-hidden rounded-sm px-1 py-0.5 text-[9px] leading-tight"
-                        style={{ top, height, backgroundColor: (DAY_COLOR[day.weekday] ?? "#cbd5e1") + "66", color: "#1c1917" }}
-                      >
-                        <span className="font-bold">{hh(t.start as number)}</span> {t.label}
-                      </div>
-                    );
-                  })}
-              </div>
+        return (
+          <div
+            key={day.date}
+            ref={isToday ? todayCard : undefined}
+            className={`flex snap-start flex-col gap-2 border p-3 print:min-w-0 ${
+              isToday
+                ? "min-w-[148px] flex-[1.55_1_140px] border-accent-warm/50"
+                : "min-w-[118px] flex-[1_1_0] border-card-border bg-card-bg/40 text-[11.5px]"
+            } ${isPast ? "opacity-[0.55] saturate-[0.85] print:opacity-100" : ""}`}
+            style={isToday ? TODAY_SURFACE : undefined}
+          >
+            <div className="flex flex-wrap items-baseline gap-1.5">
+              <span className={`tracking-[0.02em] ${isToday ? "text-[18px] text-accent-warm" : "text-[15px]"}`}>
+                {day.weekday}
+              </span>
+              <span className="text-[10.5px] text-muted">{day.date.slice(5).replace("-", "·")}</span>
+              {isToday ? (
+                <span className="border border-accent-warm/45 bg-accent-warm-glow px-1.5 py-px text-[9px] uppercase tracking-[0.12em] text-accent-warm">
+                  today
+                </span>
+              ) : day.isReviewDay ? (
+                <span className="border border-card-border-hover px-1.5 py-px text-[9px] uppercase tracking-[0.12em] text-muted">
+                  review
+                </span>
+              ) : null}
+              <span className={`ml-auto text-[10px] tabular-nums ${isToday ? "text-accent-warm" : "text-muted"}`}>
+                {tasks.length > 0 ? `${doneCount}/${tasks.length}` : "—"}
+              </span>
             </div>
-          );
-        })}
-      </div>
+
+            <div className="h-0.5 overflow-hidden bg-card-border" aria-hidden>
+              <div
+                className={`h-full ${isToday ? "bg-accent-warm" : "bg-accent-green"}`}
+                style={{ width: `${tasks.length > 0 ? Math.round((doneCount / tasks.length) * 100) : 0}%` }}
+              />
+            </div>
+
+            {shippedToday.length > 0 && (
+              <details open={isToday} className="text-[10.5px] text-muted">
+                <summary className="cursor-pointer">
+                  <span className="text-accent-green">✓</span> {shippedToday.length} shipped
+                </summary>
+                <ul className="mt-1.5 flex flex-col gap-1">
+                  {shippedToday.map((c) => (
+                    <li key={c.id} className="line-clamp-2 border-l-2 border-accent-green/40 pl-1.5">
+                      {c.title}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+
+            {tasks.length === 0 ? (
+              <p className="flex-1 text-[11px] italic text-muted">clear</p>
+            ) : (
+              <ul className="flex flex-1 flex-col gap-[7px]">
+                {tasks.map((t, i) => (
+                  <li key={i}>
+                    <label className="flex cursor-pointer items-start gap-[7px] leading-snug">
+                      <input
+                        type="checkbox"
+                        checked={done[i]}
+                        onChange={() => tick(day.date, i, !done[i])}
+                        className="mt-0.5 shrink-0"
+                        style={{ accentColor: "var(--accent-green)" }}
+                      />
+                      <span
+                        className={`break-words ${isToday ? "" : "line-clamp-3"} ${
+                          done[i] ? "text-muted line-through" : "text-foreground"
+                        }`}
+                      >
+                        {t.label}
+                      </span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

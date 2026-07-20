@@ -1,14 +1,18 @@
 import Link from "next/link";
 import WeekPlanner from "./WeekPlanner";
-import { listWeeks, loadWeek } from "@/lib/board-data";
+import { listWeeks, loadBoard, loadWeek } from "@/lib/board-data";
+import { shippedByDay } from "@/lib/report-helpers";
 
 export const dynamic = "force-dynamic";
 
 export default async function WeekPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
   const { date } = await searchParams;
-  const weeks = await listWeeks();
+  const [weeks, board] = await Promise.all([listWeeks(), loadBoard()]);
   const active = date && weeks.includes(date) ? date : weeks[0];
   const w = active ? await loadWeek(active) : null;
+
+  // What each day of the week actually shipped, from the kanban's done column.
+  const shipped = shippedByDay(board?.cards ?? [], (w?.retro.weekPlan ?? []).map((d) => d.date));
 
   return (
     <main className="mx-auto px-6 py-10">
@@ -25,13 +29,13 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
         <p className="mt-8 text-muted">No weekly review yet. Run <code>/whh</code> to generate one.</p>
       ) : (
         <>
-          {w.retro.weekPlan?.length === 7 && (
+          {w.retro.weekPlan?.length ? (
             <>
               <h2 className="mt-10 border-b border-card-border pb-1 text-xl font-bold">This week&apos;s plan</h2>
-              <p className="mt-1 text-xs text-muted">Wednesday ★ is update &amp; review · article day. Tick tasks off as you go.</p>
-              <WeekPlanner days={w.retro.weekPlan} weekKey={w.weekEnd} />
+              <p className="mt-1 text-xs text-muted">Wednesday is update &amp; review · article day. Tick tasks off as you go.</p>
+              <WeekPlanner days={w.retro.weekPlan} weekKey={w.weekEnd} shipped={shipped} />
             </>
-          )}
+          ) : null}
 
           <p className="mt-6 text-sm">
             <Link href={`/board/reports/week/${active}`} className="text-accent-green underline">
