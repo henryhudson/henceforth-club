@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TITLE_MAX, COMMENT_MAX } from "@/app/folklore/linkRecord";
+import { MAX_CONCURRENT_JOBS } from "@/lib/folkloreJob/constants";
+import { SUBMIT_QUOTES_PER_ADDRESS } from "@/lib/folkloreJob/submitThrottle";
 
 const mockQuoteLink = vi.fn();
 const mockGbpPerBsv = vi.fn();
@@ -18,6 +20,20 @@ vi.mock("@/lib/folkloreJob/jobStore", () => ({
 }));
 vi.mock("@/lib/folkloreBoard", () => ({
   readLinkRecord: (...args: unknown[]) => mockReadLinkRecord(...args),
+}));
+// The throttle itself is NOT mocked — these tests exercise the real one
+// against an in-memory counter, so the capacity property is asserted end to
+// end at the route rather than against a stub of itself.
+const throttleCounters = new Map<string, number>();
+vi.mock("@/lib/redis", () => ({
+  getRedis: () => ({
+    incr: async (key: string) => {
+      const next = (throttleCounters.get(key) ?? 0) + 1;
+      throttleCounters.set(key, next);
+      return next;
+    },
+    expire: async () => 1,
+  }),
 }));
 
 import { POST } from "./route";
@@ -46,6 +62,7 @@ const JOB = {
 
 beforeEach(() => {
   vi.unstubAllEnvs();
+  throttleCounters.clear();
   vi.stubEnv("FOLKLORE_SUBMIT_ENABLED", "true");
   mockQuoteLink.mockReset();
   mockGbpPerBsv.mockReset();
@@ -202,6 +219,62 @@ describe("POST /api/folklore/link — refusals", () => {
   });
 });
 
+describe("POST /api/folklore/link — the free-submission allowance", () => {
+  const linkBody = (title: string) => ({ kind: "link", url: "https://example.com/a", title });
+  const from = (address: string, title = "a title") =>
+    jsonRequest(linkBody(title), { "x-forwarded-for": address });
+
+  it("four free quote requests cannot deny the pipeline to the next submitter", async () => {
+    // The reported attack: four ~60-byte posts open four "quoted" jobs, which
+    // are ACTIVE against MAX_CONCURRENT_JOBS — a ceiling shared with the paid
+    // archive route — and hold it at capacity for a whole quote expiry, free
+    // and repeatable. The allowance stops the flood short of the ceiling.
+    const flood = [];
+    for (let i = 0; i < MAX_CONCURRENT_JOBS; i += 1) {
+      flood.push(await POST(from("10.0.0.1", `flood ${i}`)));
+    }
+
+    expect(flood.filter((res) => res.status === 200)).toHaveLength(SUBMIT_QUOTES_PER_ADDRESS);
+    expect(flood.filter((res) => res.status === 429).length).toBeGreaterThan(0);
+    // Only the allowed ones ever reached job creation, so the flood is
+    // holding strictly fewer than all four slots.
+    expect(mockCreateJob).toHaveBeenCalledTimes(SUBMIT_QUOTES_PER_ADDRESS);
+    expect(SUBMIT_QUOTES_PER_ADDRESS).toBeLessThan(MAX_CONCURRENT_JOBS);
+
+    // And the next submitter — the paid one this pipeline exists for — is
+    // quoted and gets a job exactly as if the flood had never happened.
+    mockCreateJob.mockClear();
+    const paid = await POST(from("198.51.100.9", "a genuine submission"));
+    expect(paid.status).toBe(200);
+    expect(mockCreateJob).toHaveBeenCalledTimes(1);
+  });
+
+  it("names the refusal and says when to come back", async () => {
+    for (let i = 0; i < SUBMIT_QUOTES_PER_ADDRESS; i += 1) await POST(from("10.0.0.2", `t${i}`));
+
+    const res = await POST(from("10.0.0.2", "one too many"));
+    expect(res.status).toBe(429);
+    expect(await res.json()).toEqual({ ok: false, reason: "too-many-submissions" });
+    expect(Number(res.headers.get("retry-after"))).toBeGreaterThan(0);
+  });
+
+  it("spends no allowance on a request that could never open a job", async () => {
+    // Validation refusals come first, so an honest mistake never costs a slot.
+    for (let i = 0; i < 5; i += 1) {
+      expect((await POST(from("10.0.0.3", "  "))).status).toBe(400);
+    }
+    expect((await POST(from("10.0.0.3"))).status).toBe(200);
+  });
+
+  it("refuses before fetching a price — a throttled request costs no upstream call", async () => {
+    for (let i = 0; i < SUBMIT_QUOTES_PER_ADDRESS; i += 1) await POST(from("10.0.0.4", `t${i}`));
+    mockGbpPerBsv.mockClear();
+
+    expect((await POST(from("10.0.0.4", "blocked"))).status).toBe(429);
+    expect(mockGbpPerBsv).not.toHaveBeenCalled();
+  });
+});
+
 describe("POST /api/folklore/link — accepted submissions", () => {
   it("quotes and creates a job for a valid link; the record itself is the payload, the handle stays empty", async () => {
     const res = await POST(
@@ -222,7 +295,7 @@ describe("POST /api/folklore/link — accepted submissions", () => {
       10.76375,
     );
     expect(mockCreateJob).toHaveBeenCalledWith(
-      { handle: "", contentHash: expect.stringMatching(/^[0-9a-f]{64}$/), archive: record },
+      { kind: "folklore", handle: "", contentHash: expect.stringMatching(/^[0-9a-f]{64}$/), archive: record },
       QUOTE,
       expect.any(Number),
     );
@@ -235,7 +308,7 @@ describe("POST /api/folklore/link — accepted submissions", () => {
     expect(res.status).toBe(200);
     const record = { v: 1, app: "folklore", kind: "comment", parent: PARENT, text: "well said" };
     expect(mockCreateJob).toHaveBeenCalledWith(
-      { handle: "", contentHash: expect.stringMatching(/^[0-9a-f]{64}$/), archive: record },
+      { kind: "folklore", handle: "", contentHash: expect.stringMatching(/^[0-9a-f]{64}$/), archive: record },
       QUOTE,
       expect.any(Number),
     );
