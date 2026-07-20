@@ -69,3 +69,6 @@ scripts/this-week/preview/
 # plans, never committed (the repo is public).
 ledger-backup-*.json
 plan-founding-*.json
+
+# Swift package build artifacts (scripts/board/calendar-sync)
+.build/
