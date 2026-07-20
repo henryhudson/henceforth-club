@@ -60,6 +60,22 @@ struct BoardDecodingTests {
         #expect(days.count == 1)
     }
 
+    @Test("a task written as a bare string decodes alongside one written as an object")
+    func mixedTaskShapes() throws {
+        // Both forms appear in the live records, sometimes within one day.
+        // A bare string carries no completion marker, so it reads as not done.
+        let mixed = """
+        {"retro":{"weekPlan":[{"date":"2026-07-18","weekday":"Sat","isReviewDay":false,
+         "tasks":[{"label":"Object form","done":true},"Bare string form"]}]}}
+        """
+        let days = plannedDays(weeks: [try decodeWeek(mixed)], cards: [])
+        #expect(days.count == 1)
+        #expect(days[0].tasks == [
+            PlannedTask(label: "Object form", done: true),
+            PlannedTask(label: "Bare string form", done: false),
+        ])
+    }
+
     @Test("days that cross a month boundary come back in true chronological order")
     func monthBoundaryOrdering() throws {
         // "9" sorts after "1" as a string, so an unpadded string sort would

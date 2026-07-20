@@ -8,7 +8,26 @@ public struct WeekRecord: Decodable, Sendable {
         public let isReviewDay: Bool?
         public let tasks: [Task]?
     }
-    public struct Task: Decodable, Sendable { public let label: String; public let done: Bool? }
+    /// A task is written either as an object carrying a done marker or as a
+    /// bare string, and the live records mix the two forms within a single
+    /// day. A bare string records no completion state, so it reads as not done.
+    public struct Task: Decodable, Sendable {
+        public let label: String
+        public let done: Bool?
+
+        private enum CodingKeys: String, CodingKey { case label, done }
+
+        public init(from decoder: any Decoder) throws {
+            if let label = try? decoder.singleValueContainer().decode(String.self) {
+                self.label = label
+                self.done = nil
+                return
+            }
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.label = try container.decode(String.self, forKey: .label)
+            self.done = try container.decodeIfPresent(Bool.self, forKey: .done)
+        }
+    }
     public let retro: Retro?
 }
 
