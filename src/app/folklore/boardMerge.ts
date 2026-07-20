@@ -25,6 +25,38 @@ export const linkTxidsOf = (entries: { member: string }[]): string[] =>
     .filter((e) => e.member.startsWith(LINK_PREFIX))
     .map((e) => e.member.slice(LINK_PREFIX.length));
 
+/**
+ * Pure. Every directory handle the board did not account for, appended after
+ * the board's own rows in the directory's order.
+ *
+ * The board is an opinion about the chain (spec Decision 2), and an opinion
+ * can be incomplete: a handle registered before the board existed, one whose
+ * seed never ran, one below `boardTop`'s window. The page must not treat "one
+ * link exists" as "the board is authoritative" — that reading made the first
+ * paid link erase the whole handle-only directory, and every archiver who had
+ * paid for a front-page card lost it in the same instant.
+ *
+ * Appended rather than merged into the ranking, and at score zero: these
+ * handles have no board standing to claim, so they sit under everything that
+ * does, in whatever order the directory itself chose.
+ */
+export function withUnlistedHandles(rows: BoardRow[], handleCards: HandleCard[]): BoardRow[] {
+  const listed = new Set(
+    rows.flatMap((row) => (row.kind === "profile" ? [row.handle.toLowerCase()] : [])),
+  );
+  return [
+    ...rows,
+    ...handleCards
+      .filter((card) => !listed.has(card.handle.toLowerCase()))
+      .map((card): BoardRow => ({
+        kind: "profile",
+        score: 0,
+        handle: card.handle,
+        latestMs: card.latestMs,
+      })),
+  ];
+}
+
 /** Pure. One board, one ranking: each member becomes a row against the data
  * the page loaded, in the score order `boardTop` already established.
  *

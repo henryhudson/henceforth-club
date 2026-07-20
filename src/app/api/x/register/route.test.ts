@@ -12,6 +12,7 @@ const store = {
   warms: [] as string[],
   live: { kind: "verified" } as LiveBinding,
   liveCalls: 0,
+  board: new Map<string, number>(),
 };
 
 vi.mock("@/lib/whatsonchain", () => ({
@@ -36,6 +37,16 @@ vi.mock("@/lib/xIndex", () => ({
 // X itself is an I/O boundary — the live read is faked, never performed.
 vi.mock("@/lib/xBindingLive", () => ({
   verifyBindingPost: async () => { store.liveCalls++; return store.live; },
+}));
+// The board seed, faked as the `nx` write it really is: a handle already on
+// the board keeps whatever score kudos have since given it.
+vi.mock("@/lib/folkloreBoard", () => ({
+  seedProfileOnBoard: async (handle: string, score: number) => {
+    const member = `profile:${handle.toLowerCase()}`;
+    if (store.board.has(member)) return false;
+    store.board.set(member, score);
+    return true;
+  },
 }));
 vi.mock("@/lib/xOwner", async (orig) => ({
   ...(await orig()),
@@ -63,7 +74,7 @@ function claimFor(handle: string, txid: string) {
 }
 const post = (body: unknown) => POST(new Request("http://x/api/x/register", { method: "POST", body: JSON.stringify(body) }));
 
-beforeEach(() => { store.archives.clear(); store.owners.clear(); store.lists.clear(); store.handles.clear(); store.warms.length = 0; store.live = { kind: "verified" }; store.liveCalls = 0; });
+beforeEach(() => { store.archives.clear(); store.owners.clear(); store.lists.clear(); store.handles.clear(); store.warms.length = 0; store.live = { kind: "verified" }; store.liveCalls = 0; store.board.clear(); });
 
 describe("POST /api/x/register", () => {
   it("still accepts an unsigned registration for an unclaimed handle (backward compatible)", async () => {
@@ -167,5 +178,41 @@ describe("POST /api/x/register", () => {
     expect(store.lists.get(HANDLE)).toEqual([TXID, DELTA]); // appended, not reset
     expect(store.liveCalls).toBe(0); // an append repeats no binding tweet, so it asks X nothing
     expect(store.warms).toEqual([HANDLE]); // the delta extension is paid here, never by a page view
+  });
+});
+
+describe("registration lands a board card, so the board is never behind the directory", () => {
+  it("seeds a profile card for a handle registering after go-live", async () => {
+    // Before this, seedProfileOnBoard's only non-test caller was a hand-run
+    // script — so any handle archiving after that script last ran was absent
+    // from /folklore permanently, while having paid for the listing.
+    store.archives.set(TXID, archive(HANDLE));
+    expect((await post({ handle: HANDLE, txid: TXID })).status).toBe(200);
+    expect(store.board.get(`profile:${HANDLE}`)).toBe(0);
+  });
+
+  it("seeds one for a handle that establishes ownership with a signed claim", async () => {
+    const c = claimFor(HANDLE, TXID);
+    store.archives.set(TXID, archive(HANDLE, `Verifying my Henceforth identity: ${c.address}`));
+    const res = await post({ handle: HANDLE, txid: TXID, address: c.address, pubkey: c.pubkey, signature: c.signature });
+    expect(res.status).toBe(200);
+    expect(store.board.get(`profile:${HANDLE}`)).toBe(0);
+  });
+
+  it("never resets a score kudos have moved — re-registering is idempotent", async () => {
+    store.archives.set(TXID, archive(HANDLE));
+    await post({ handle: HANDLE, txid: TXID });
+    store.board.set(`profile:${HANDLE}`, 42); // kudos arrive
+
+    const DELTA = "d".repeat(64);
+    store.archives.set(DELTA, archive(HANDLE));
+    expect((await post({ handle: HANDLE, txid: DELTA })).status).toBe(200);
+    expect(store.board.get(`profile:${HANDLE}`)).toBe(42);
+  });
+
+  it("seeds nothing when the registration itself was refused", async () => {
+    store.archives.set(TXID, archive("someone-else"));
+    expect((await post({ handle: HANDLE, txid: TXID })).status).toBe(422);
+    expect(store.board.size).toBe(0);
   });
 });

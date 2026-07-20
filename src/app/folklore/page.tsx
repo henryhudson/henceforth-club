@@ -9,7 +9,7 @@ import { readRatingTable } from "@/lib/kudos/ledger";
 import { readAuthorRatings } from "@/lib/kudos/candidates";
 import { boardTop, commentCount, readLinkRecord } from "@/lib/folkloreBoard";
 import { sortHandlesByAuthorElo } from "./sortPosts";
-import { linkTxidsOf, mergeBoard, type LinkResolution } from "./boardMerge";
+import { linkTxidsOf, mergeBoard, withUnlistedHandles, type LinkResolution } from "./boardMerge";
 import FolkloreWordmark from "./_components/FolkloreWordmark";
 import FolkloreForest from "./_components/FolkloreForest";
 import ProfileView from "./_components/ProfileView";
@@ -32,6 +32,17 @@ export const metadata: Metadata = {
  * conversion section under roughly four thousand words of one man's tweets. */
 const WITNESS_TEASER_POSTS = 6;
 
+/**
+ * How many rows the front page considers, on both reads.
+ *
+ * One number for the board window and the directory read, because a board
+ * member can only render if the directory supplied its card: reading fewer
+ * handles than board members spends window slots on rows that must then be
+ * dropped, and reading fewer board members than handles hides cards the board
+ * does rank.
+ */
+const BOARD_WINDOW = 100;
+
 export default async function FolklorePage() {
   // The web archive flow hides behind its go-live flag; until it is on, the
   // primary action must not lead to a stub that tells a warmed-up visitor to
@@ -39,7 +50,7 @@ export default async function FolklorePage() {
   // 2026-07-14 smoothness research).
   const webArchiveOpen = process.env.XTEXT_WEB_ARCHIVE_ENABLED === "true";
   const witness = await getArchivePage(WITNESS_HANDLE, 0, WITNESS_TEASER_POSTS);
-  const handles = await listHandles(50);
+  const handles = await listHandles(BOARD_WINDOW);
   // One ledger read, five folds — readScores per window re-read the ledger
   // each time. Shared with /folklore/<handle>, which now carries the same toggle.
   const { scoresByWindow, foundingByPost } = await readLedgerRollup(WITNESS_HANDLE);
@@ -63,10 +74,12 @@ export default async function FolklorePage() {
     eloByPost !== undefined
       ? sortHandlesByAuthorElo(handles, await readAuthorRatings(eloByPost))
       : handles;
-  // The unified board: profile and link cards in one kudos ranking. While the
-  // board zset is empty (pre-seed production) `boardRows` is empty and the
-  // handle-only directory below renders exactly as it always has.
-  const boardEntries = await boardTop(100);
+  // The unified board: profile and link cards in one kudos ranking, then every
+  // directory handle the board did not account for appended beneath it. The
+  // board is an opinion about the chain, never the authority on who has
+  // archived — so a handle it has not learned of still gets its card, and a
+  // board holding only links still renders the directory.
+  const boardEntries = await boardTop(BOARD_WINDOW);
   const linkRecords = new Map<string, LinkResolution>(
     (
       await Promise.all(
@@ -82,7 +95,14 @@ export default async function FolklorePage() {
       )
     ).flatMap((pair) => (pair ? [pair] : [])),
   );
-  const boardRows = mergeBoard(boardEntries, handles, linkRecords);
+  const boardRows = withUnlistedHandles(
+    mergeBoard(boardEntries, handles, linkRecords),
+    directoryHandles,
+  );
+  // Whether the section is a kudos-ranked board or still just the ledger of
+  // who has archived is decided by whether any LINK is on it — not by whether
+  // the board zset happens to be non-empty, which was never the same question.
+  const hasLinks = boardRows.some((row) => row.kind === "link");
 
   return (
     // A <div>, not a <main>: the root layout already provides the single <main>
@@ -187,15 +207,21 @@ export default async function FolklorePage() {
         </p>
       </section>
 
-      {/* The board — profile and link cards in one kudos ranking; until the
-          board zset is seeded, the directory of who has archived renders
-          exactly as before */}
-      {boardRows.length > 0 ? (
-        <section className="mx-auto max-w-2xl px-6 pb-24">
-          <div className="flex items-baseline justify-between">
-            <h2 className="ledger-label">The board · archives and links · ranked by kudos</h2>
-            <span className="font-mono text-[11px] text-muted">{boardRows.length} on chain</span>
-          </div>
+      {/* One section, always: the board's kudos ranking first, then every
+          archiver the board has not accounted for. Nobody who paid for a card
+          can lose it to a link being submitted. */}
+      <section className="mx-auto max-w-2xl px-6 pb-24">
+        <div className="flex items-baseline justify-between">
+          <h2 className="ledger-label">
+            {hasLinks
+              ? "The board · archives and links · ranked by kudos"
+              : eloByPost !== undefined
+                ? "The ledger · who has archived · ranked by duels won"
+                : "The ledger · who has archived"}
+          </h2>
+          <span className="font-mono text-[11px] text-muted">{boardRows.length} on chain</span>
+        </div>
+        {boardRows.length > 0 ? (
           <div className="mt-3 divide-y divide-card-border border-y border-card-border">
             {boardRows.map((row) =>
               row.kind === "profile" ? (
@@ -211,28 +237,10 @@ export default async function FolklorePage() {
               ),
             )}
           </div>
-        </section>
-      ) : (
-        <section className="mx-auto max-w-2xl px-6 pb-24">
-          <div className="flex items-baseline justify-between">
-            <h2 className="ledger-label">
-              {eloByPost !== undefined
-                ? "The ledger · who has archived · ranked by duels won"
-                : "The ledger · who has archived"}
-            </h2>
-            <span className="font-mono text-[11px] text-muted">{handles.length} on chain</span>
-          </div>
-          {directoryHandles.length > 0 ? (
-            <div className="mt-3 divide-y divide-card-border border-y border-card-border">
-              {directoryHandles.map(({ handle, latestMs }) => (
-                <DirectoryRow key={handle} handle={handle} latestMs={latestMs} />
-              ))}
-            </div>
-          ) : (
-            <p className="mt-3 text-sm text-muted">Nobody has archived yet. Be the first entry.</p>
-          )}
-        </section>
-      )}
+        ) : (
+          <p className="mt-3 text-sm text-muted">Nobody has archived yet. Be the first entry.</p>
+        )}
+      </section>
     </div>
   );
 }
