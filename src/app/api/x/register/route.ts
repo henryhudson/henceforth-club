@@ -5,6 +5,7 @@ import { appendXTxid, setXTxids, stampHandle } from "@/lib/xIndex";
 import { archiveDigest, setTxDigest } from "@/lib/xDigest";
 import { getOwner, setOwner, claimOutcome, type XOwner } from "@/lib/xOwner";
 import { parseBindingAddress, registrationMessage, verifyClaim } from "@/lib/xBinding";
+import { verifyBindingPost } from "@/lib/xBindingLive";
 
 /**
  * POST /api/x/register  { handle, txid, address?, pubkey?, signature? }
@@ -74,12 +75,32 @@ export async function POST(req: Request) {
       if (parseBindingAddress(archive.posts) !== address) {
         return NextResponse.json({ ok: false, reason: "no-binding-in-tx" }, { status: 422 });
       }
+      // ...but the archive is written by whoever paid for the transaction, so
+      // on its own it is the claimant's own testimony. Ownership turns on the
+      // one thing only the account can do: put the binding line under its own
+      // handle. Read it back off X, once, at the moment ownership is first
+      // established. Runs last, so a network call happens only for a claim
+      // that has already passed every cheap local check.
+      const postId = bindingPostId(archive.posts, address);
+      const live = await verifyBindingPost({ handle, postId, address });
+      switch (live.kind) {
+        case "not-found":
+          return NextResponse.json({ ok: false, reason: "binding-post-missing" }, { status: 422 });
+        case "wrong-author":
+          return NextResponse.json({ ok: false, reason: "binding-post-not-by-handle" }, { status: 422 });
+        case "no-binding":
+          return NextResponse.json({ ok: false, reason: "binding-post-lacks-address" }, { status: 422 });
+        case "unreachable":
+          return NextResponse.json({ ok: false, reason: "x-unreachable" }, { status: 503 });
+        case "verified":
+          break;
+      }
       const record: XOwner = {
         address,
         pubkey: body.pubkey!,
         boundAt: Math.floor(Date.now() / 1000),
         bindingTxid: txid,
-        bindingPostId: bindingPostId(archive.posts, address),
+        bindingPostId: postId,
       };
       // Reset the feed before recording the owner: if either write fails (no
       // Redis), the route returns 503 rather than a false success, and a retry

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BSM, PrivateKey, Utils } from "@bsv/sdk";
 import { registrationMessage } from "@/lib/xBinding";
+import type { LiveBinding } from "@/lib/xBindingLive";
 
 // In-memory fakes for the input/output boundaries.
 const store = {
@@ -9,6 +10,8 @@ const store = {
   lists: new Map(),
   handles: new Map(),
   warms: [] as string[],
+  live: { kind: "verified" } as LiveBinding,
+  liveCalls: 0,
 };
 
 vi.mock("@/lib/whatsonchain", () => ({
@@ -29,6 +32,10 @@ vi.mock("@/lib/xIndex", () => ({
   appendXTxid: async (h: string, t: string) => { const k = h.toLowerCase(); store.lists.set(k, [...(store.lists.get(k) ?? []), t]); return true; },
   setXTxids: async (h: string, t: string[]) => { store.lists.set(h.toLowerCase(), t); return true; },
   stampHandle: async (h: string, atMs: number) => { store.handles.set(h.toLowerCase(), atMs); return true; },
+}));
+// X itself is an I/O boundary — the live read is faked, never performed.
+vi.mock("@/lib/xBindingLive", () => ({
+  verifyBindingPost: async () => { store.liveCalls++; return store.live; },
 }));
 vi.mock("@/lib/xOwner", async (orig) => ({
   ...(await orig()),
@@ -56,7 +63,7 @@ function claimFor(handle: string, txid: string) {
 }
 const post = (body: unknown) => POST(new Request("http://x/api/x/register", { method: "POST", body: JSON.stringify(body) }));
 
-beforeEach(() => { store.archives.clear(); store.owners.clear(); store.lists.clear(); store.handles.clear(); store.warms.length = 0; });
+beforeEach(() => { store.archives.clear(); store.owners.clear(); store.lists.clear(); store.handles.clear(); store.warms.length = 0; store.live = { kind: "verified" }; store.liveCalls = 0; });
 
 describe("POST /api/x/register", () => {
   it("still accepts an unsigned registration for an unclaimed handle (backward compatible)", async () => {
@@ -76,9 +83,52 @@ describe("POST /api/x/register", () => {
     const res = await post({ handle: HANDLE, txid: TXID, address: c.address, pubkey: c.pubkey, signature: c.signature });
     expect(res.status).toBe(200);
     expect(store.lists.get(HANDLE)).toEqual([TXID]); // reset — stranger-txid dropped
+    expect(store.liveCalls).toBe(1); // the reset is gated on X confirming the post
     expect((store.owners.get(HANDLE) as { address: string }).address).toBe(c.address);
     expect(store.handles.has(HANDLE)).toBe(true); // a claim that resets the feed is also a registration
     expect(store.warms).toEqual([HANDLE]); // the reset feed's cache rebuilds here too
+  });
+
+  it("refuses to establish when the live binding post is not authored by the handle", async () => {
+    // A fabricated archive: the attacker inscribes a binding line for their own
+    // address under someone else's handle. Everything local passes — the
+    // signature is real, the address matches the archive — because the archive
+    // is the attacker's own writing. Only X can say who posted it.
+    store.lists.set(HANDLE, ["paid-archive-txid"]); // the handle's real, paid-for feed
+    store.live = { kind: "wrong-author", author: "attacker" };
+    const c = claimFor(HANDLE, TXID);
+    store.archives.set(TXID, archive(HANDLE, `Verifying my Henceforth identity: ${c.address}`));
+
+    const res = await post({ handle: HANDLE, txid: TXID, address: c.address, pubkey: c.pubkey, signature: c.signature });
+
+    expect(res.status).toBe(422);
+    expect(store.owners.get(HANDLE)).toBeUndefined(); // no ownership seized
+    expect(store.lists.get(HANDLE)).toEqual(["paid-archive-txid"]); // and the paid feed NOT reset
+    expect(store.warms).toEqual([]);
+  });
+
+  it("returns 503 and records nothing when X is unreachable", async () => {
+    store.lists.set(HANDLE, ["paid-archive-txid"]);
+    store.live = { kind: "unreachable" };
+    const c = claimFor(HANDLE, TXID);
+    store.archives.set(TXID, archive(HANDLE, `Verifying my Henceforth identity: ${c.address}`));
+
+    const res = await post({ handle: HANDLE, txid: TXID, address: c.address, pubkey: c.pubkey, signature: c.signature });
+
+    expect(res.status).toBe(503); // transient, so the app retries — never a silent establish
+    expect(store.owners.get(HANDLE)).toBeUndefined();
+    expect(store.lists.get(HANDLE)).toEqual(["paid-archive-txid"]);
+  });
+
+  it("refuses to establish when X serves no such post", async () => {
+    store.live = { kind: "not-found" };
+    const c = claimFor(HANDLE, TXID);
+    store.archives.set(TXID, archive(HANDLE, `Verifying my Henceforth identity: ${c.address}`));
+
+    const res = await post({ handle: HANDLE, txid: TXID, address: c.address, pubkey: c.pubkey, signature: c.signature });
+
+    expect(res.status).toBe(422);
+    expect(store.owners.get(HANDLE)).toBeUndefined();
   });
 
   it("rejects an unsigned registration once the handle is claimed, leaving the directory untouched", async () => {
@@ -115,6 +165,7 @@ describe("POST /api/x/register", () => {
     const res = await post({ handle: HANDLE, txid: DELTA, address, pubkey: pub.toString(), signature });
     expect(res.status).toBe(200);
     expect(store.lists.get(HANDLE)).toEqual([TXID, DELTA]); // appended, not reset
+    expect(store.liveCalls).toBe(0); // an append repeats no binding tweet, so it asks X nothing
     expect(store.warms).toEqual([HANDLE]); // the delta extension is paid here, never by a page view
   });
 });

@@ -68,6 +68,15 @@
 </ul>
 This is the strongest guarantee available without live X reads, and live X reads were rejected by the very problem being solved: you cannot read an account X has already deleted.</div>
 
+<div class="decision"><strong>Superseded 2026-07-20 &mdash; the server now performs the delegated check itself.</strong> The reasoning above is kept because it is sound and the record of why it changed is worth having; one step of it did not survive contact with a live endpoint.
+<ul>
+<li><strong>What went wrong.</strong> &ldquo;Delegated checking&rdquo; was the only thing standing between a fabricated archive and a verified tick, and in practice it was not being delivered: the directory listing renders the tick with no permalink at all, and when an archive&rsquo;s binding post carries no id the route stores <code>bindingPostId: &quot;&quot;</code> and the profile renders a broken <code>x.com/&lt;handle&gt;/status/</code> link. So a fabricated archive could establish ownership &mdash; and reset a paying handle&rsquo;s canonical feed &mdash; with the compensating control silently absent.</li>
+<li><strong>The objection does not apply.</strong> &ldquo;You cannot read an account X has already deleted&rdquo; is about reading a dead account&rsquo;s <em>timeline</em>, which is the archive product. It is not about reading <em>one post the claimant just published</em>, which is the binding claim. Section 3 already requires the owner to bind <em>while the account is alive</em>: you cannot bind a handle you cannot post from. Requiring that post to be readable at registration imposes no requirement this spec did not already impose.</li>
+<li><strong>What the tick now asserts.</strong> Materially stronger: at the moment ownership was established, X itself served the binding post under that handle. Not &ldquo;here is a permalink, check it yourself&rdquo; but &ldquo;this was checked.&rdquo; The permalink remains, for a skeptic and for later re-checking.</li>
+<li><strong>Cost.</strong> None. The check uses X&rsquo;s free unauthenticated oEmbed endpoint, not the metered timeline API that bills per post read, and it runs once per handle &mdash; only on the first claim, never on an append and never on a page view.</li>
+<li><strong>The oracle is <code>author_url</code>, never <code>author_name</code>.</strong> Display names are free-form and changeable, so an attacker can set theirs to the victim&rsquo;s handle; handles are unique and owned, and cannot be borrowed. Every failure arm refuses.</li>
+</ul></div>
+
 <h2>3 &middot; The protocol, in three acts</h2>
 
 <div class="flow">
@@ -160,6 +169,7 @@ Fetch the archive at <code>T</code>. Confirm a post matches the exact binding fo
 <p><strong>C establishes ownership and shows it.</strong> The binding, the gated registration, the index reset, the tick. It deliberately stops there.</p>
 <p><strong>D is the bounty, and C unblocks it with one value.</strong> The address <code>A</code> that C binds and proves is, unchanged, the destination a later archiver&rsquo;s transaction pays &mdash; non-custodial, no escrow, because paying an arbitrary owner address is identical in shape to the reward payout xtext already makes. C stores <code>A</code>; D spends to it. Nothing in C needs to anticipate D beyond keeping <code>A</code> exactly as it is: an address, publicly committed, provably controlled.</p>
 <p><strong>Not in C:</strong> any bounty routing, any escrow, any second on-chain binding record (the tweet is the record), and any live X read (the permalink is the check).</p>
+<p><strong>Amended 2026-07-20 &mdash; the live X read is now in scope, and only there.</strong> Establishing ownership reads the binding post once from X&rsquo;s free oEmbed endpoint; see the superseding note in section 2. The exclusion held on the assumption that the permalink was a real check, which section 2&rsquo;s note shows it was not. Everything else in this list stands, and the read is narrow on purpose: one post, by id, on the first claim only &mdash; never a timeline, never an append, never a page view. No key, no metered API, no new environment variable.</p>
 
 <h2>11 &middot; Open questions</h2>
 <ul>
