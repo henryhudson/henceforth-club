@@ -4,6 +4,7 @@ import { warmArchiveCache } from "@/lib/xArchiveCache";
 import { appendXTxid, setXTxids, stampHandle } from "@/lib/xIndex";
 import { archiveDigest, setTxDigest } from "@/lib/xDigest";
 import { getOwner, setOwner, claimOutcome, type XOwner } from "@/lib/xOwner";
+import { seedProfileOnBoard } from "@/lib/folkloreBoard";
 import { parseBindingAddress, registrationMessage, verifyClaim } from "@/lib/xBinding";
 
 /**
@@ -88,6 +89,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: false, reason: "index-unavailable" }, { status: 503 });
       }
       await stampHandle(handle, Date.now()); // a claim that resets the feed is also a registration
+      await seedProfileOnBoard(handle, 0); // and lands a board card — see below
       if (!(await setOwner(handle, record))) {
         return NextResponse.json({ ok: false, reason: "index-unavailable" }, { status: 503 });
       }
@@ -105,6 +107,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, reason: "index-unavailable" }, { status: 503 });
   }
   await stampHandle(handle, Date.now());
+  // A registration lands a board card as well as a directory stamp. Until
+  // this line the board was populated only by a hand-run seed script, so a
+  // handle archiving after that script last ran was permanently absent from
+  // the board — and the front page switched wholesale to the board the moment
+  // one paid link existed, which made the omission invisible-by-design rather
+  // than merely stale. Both halves are paying customers losing a listing they
+  // were delivered, so the board is now complete without a manual step.
+  // `nx`-guarded inside, so re-registering never resets a score kudos moved.
+  await seedProfileOnBoard(handle, 0);
   // Extend the page cache by this one new transaction now, after the response
   // — the registration just proved the transaction is fetchable, and a page
   // view must never be the request that pays for the stitch.

@@ -1,5 +1,11 @@
 // Seed the folklore board with one profile card per directory handle.
 //
+// A BACKFILL, not a step anyone has to remember. /api/x/register seeds a
+// profile card as it stamps the directory, so the board keeps up with new
+// registrations by itself; this script exists to catch the handles that
+// registered before it did. Relying on a hand-run script was the defect —
+// anything registering after its last run was absent from /folklore forever.
+//
 // Idempotent by construction: every write is `zadd nx`, so a handle already
 // on the board — including one whose kudos have since moved its score —
 // is left exactly as it stands. Safe to re-run any time; running it twice

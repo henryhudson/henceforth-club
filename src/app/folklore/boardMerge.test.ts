@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { LINK_SCORE_OFFSET, linkMember, profileMember } from "@/lib/folkloreBoard";
 import { validateComment, validateLink } from "./linkRecord";
-import { linkTxidsOf, mergeBoard, type LinkResolution } from "./boardMerge";
+import { linkTxidsOf, mergeBoard, withUnlistedHandles, type LinkResolution } from "./boardMerge";
 
 const TXID_A = "a".repeat(64);
 const TXID_B = "b".repeat(64);
@@ -89,5 +89,79 @@ describe("linkTxidsOf", () => {
     ]);
 
     expect(txids).toEqual([TXID_A, TXID_B]);
+  });
+});
+
+describe("withUnlistedHandles — a paying archiver never loses their card", () => {
+  it("renders the directory when the board holds only links", () => {
+    // The defect: the front page switched wholesale to the board the moment
+    // one paid link existed, and a board of links alone resolved to no
+    // profile rows at all — so the first submitted link erased every prior
+    // archiver's front-page card.
+    const boardRows = mergeBoard(
+      [{ member: linkMember(TXID_A), score: LINK_SCORE_OFFSET }],
+      [{ handle: "ada", latestMs: 1_000 }],
+      resolutions([[TXID_A, { record: LINK, comments: 0 }]]),
+    );
+    expect(boardRows.map((r) => r.kind)).toEqual(["link"]);
+
+    const rows = withUnlistedHandles(boardRows, [
+      { handle: "ada", latestMs: 1_000 },
+      { handle: "henry", latestMs: 2_000 },
+    ]);
+    expect(rows.map((r) => r.kind)).toEqual(["link", "profile", "profile"]);
+    expect(rows.flatMap((r) => (r.kind === "profile" ? [r.handle] : []))).toEqual(["ada", "henry"]);
+  });
+
+  it("carries a handle that registered after the board was seeded", () => {
+    // The other half: the seed was a hand-run script, so anything registering
+    // after it last ran was absent from the board permanently.
+    const seeded = mergeBoard(
+      [{ member: profileMember("ada"), score: 5 }],
+      [{ handle: "ada", latestMs: 1_000 }],
+      resolutions([]),
+    );
+
+    const rows = withUnlistedHandles(seeded, [
+      { handle: "ada", latestMs: 1_000 },
+      { handle: "latecomer", latestMs: 9_000 },
+    ]);
+    expect(rows.flatMap((r) => (r.kind === "profile" ? [r.handle] : []))).toEqual([
+      "ada",
+      "latecomer",
+    ]);
+  });
+
+  it("never duplicates a handle the board already ranks, whatever the case", () => {
+    const seeded = mergeBoard(
+      [{ member: profileMember("Ada"), score: 5 }],
+      [{ handle: "Ada", latestMs: 1_000 }],
+      resolutions([]),
+    );
+    const rows = withUnlistedHandles(seeded, [{ handle: "ada", latestMs: 1_000 }]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ kind: "profile", handle: "Ada", score: 5 });
+  });
+
+  it("appends beneath the ranking, claiming no standing it has not earned", () => {
+    const seeded = mergeBoard(
+      [{ member: profileMember("ada"), score: 40 }],
+      [{ handle: "ada", latestMs: 1_000 }],
+      resolutions([]),
+    );
+    const rows = withUnlistedHandles(seeded, [
+      { handle: "ada", latestMs: 1_000 },
+      { handle: "newcomer", latestMs: 2_000 },
+    ]);
+    expect(rows.map((r) => r.score)).toEqual([40, 0]);
+  });
+
+  it("is the identity on an empty directory, and the whole list on an empty board", () => {
+    const seeded = mergeBoard([{ member: profileMember("ada"), score: 1 }], [{ handle: "ada", latestMs: 1 }], resolutions([]));
+    expect(withUnlistedHandles(seeded, [])).toEqual(seeded);
+    expect(withUnlistedHandles([], [{ handle: "ada", latestMs: 1 }])).toEqual([
+      { kind: "profile", score: 0, handle: "ada", latestMs: 1 },
+    ]);
+    expect(withUnlistedHandles([], [])).toEqual([]);
   });
 });

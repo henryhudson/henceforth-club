@@ -34,13 +34,24 @@ const linkKey = (txid: string) => `folklore:link:${txid}`;
  * was born beneath it (invisible outright once the directory outgrew
  * boardTop's window).
  *
- * Half a kudos defeats that tie-break everywhere rather than only at the
- * floor: link scores are whole kudos plus a half, profile scores are whole
- * kudos, so the two families can never hold the same score and the
- * lexicographic rule never runs at all. At equal kudos the link — which paid
- * to be on the board — edges the profile; a profile with one more kudos
- * still outranks it, so the board remains exactly the kudos ranking the spec
- * asks for (Decision 1).
+ * Half a kudos defeats that tie-break BETWEEN THE TWO FAMILIES rather than
+ * only at the floor: link scores are whole kudos plus a half, profile scores
+ * are whole kudos, so a link and a profile can never hold the same score. At
+ * equal kudos the link — which paid to be on the board — edges the profile; a
+ * profile with one more kudos still outranks it, so the board remains exactly
+ * the kudos ranking the spec asks for (Decision 1).
+ *
+ * WITHIN the profile family the lexicographic rule very much still runs, and
+ * an earlier version of this comment wrongly said it "never runs at all".
+ * Every profile seeds at zero, so until kudos move them the directory's order
+ * under `rev` is reverse-alphabetical by handle. Accepted, with the bound
+ * stated rather than implied: the order among zero-kudos profiles is
+ * arbitrary but stable, and nobody is hidden by it — the front page reads the
+ * same number of handles as board members and appends any the board omits
+ * (withUnlistedHandles), so a profile cut from the window still renders. The
+ * one repair that would remove the tie — seeding a fractional recency value —
+ * is exactly what LINK_SCORE_OFFSET needs the profile side to stay clear of,
+ * so it would trade a cosmetic ordering for a real collision.
  *
  * The offset rides the LINK side because a link has exactly one creation
  * door (addLinkToBoard) while a profile card has two (the directory seed and
