@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morning Board to Apple Calendar — implementation plan</title>
+<style>
+  :root { --bg:#f4f1ea; --ink:#1c1a16; --muted:#6b6358; --rule:#d8d0c0; --accent:#a8431f; --accent-soft:#c4a572; --card:#fbf9f4; --code-bg:#1e1e1e; --code-ink:#e8e8e8; --ok:#2f6f3e; --warn:#a8431f; --shadow:0 1px 3px rgba(0,0,0,0.08); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.65;}
+  .wrap{max-width:880px;margin:0 auto;padding:56px 32px;} header.doc{margin-bottom:40px;border-bottom:2px solid var(--rule);padding-bottom:24px;}
+  .eyebrow{font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:34px;line-height:1.15;margin:0 0 12px;font-weight:700;} h2{font-size:24px;margin:48px 0 14px;padding-top:20px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 10px;} .lede{font-size:19px;color:var(--muted);margin:0;} p{margin:14px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(0,0,0,0.06);padding:2px 6px;border-radius:4px;}
+  pre{background:var(--code-bg);color:var(--code-ink);padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;} th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .task{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:8px 22px 18px;margin:22px 0;box-shadow:var(--shadow);}
+  .task .tasknum{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);}
+  .files{font-size:14px;background:#efe9dc;border-radius:6px;padding:10px 14px;margin:10px 0;}
+  .note{background:#f6efe0;border-left:4px solid var(--accent-soft);padding:10px 16px;border-radius:0 6px 6px 0;margin:14px 0;}
+  ul{margin:12px 0;padding-left:24px;} li{margin:5px 0;}
+  ul.steps{list-style:none;padding-left:4px;} ul.steps>li{margin:12px 0;padding-left:30px;position:relative;}
+  ul.steps>li input[type=checkbox]{position:absolute;left:0;top:5px;width:18px;height:18px;}
+  .badge{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:2px 8px;border-radius:999px;white-space:nowrap;background:#f3dcd2;color:var(--accent);}
+  .effort{font-size:13px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Implementation plan &middot; 2026-07-20 &middot; henceforth-club</div>
+<h1>Morning Board to Apple Calendar</h1>
+<p class="lede">Five tasks. The first four build a pure Swift library with no calendar, no network and no permission, each one test-first. The fifth is the thin shell that talks to Upstash and EventKit.</p>
+</header>
+
+<div class="note"><strong>For agentic workers:</strong> REQUIRED SUB-SKILL &mdash; use <code>superpowers:subagent-driven-development</code> (recommended) or <code>superpowers:executing-plans</code> to implement this plan task by task. Steps use real checkboxes for tracking.</div>
+
+<p><strong>Goal:</strong> Write the week plan into a dedicated Apple Calendar that Henry owns, so the plan reaches his phone through iCloud.</p>
+
+<p><strong>Architecture:</strong> A Swift Package at <code>scripts/board/calendar-sync/</code> with two targets. <code>CalendarSyncCore</code> is a library holding every decision &mdash; decoding, title and notes rendering, and the reconciliation between what is planned and what already exists &mdash; and it imports neither EventKit nor any network type, so it is fully testable with <code>swift test</code>. The <code>calendar-sync</code> executable is the shell: it reads <code>.env.local</code>, fetches from Upstash over its REST interface, calls the library, and applies the result through EventKit.</p>
+
+<p><strong>Tech stack:</strong> Swift 6, Swift Package Manager, EventKit, Foundation. No third-party dependencies.</p>
+
+<p><strong>Spec:</strong> <code>docs/superpowers/specs/2026-07-20-morning-board-calendar-design.html</code></p>
+
+<h2>Global constraints</h2>
+<ul>
+<li><strong>No emoji or pictographic symbols anywhere</strong> &mdash; in code, comments, commit messages, or the calendar content itself. Words only: &ldquo;to do&rdquo;, &ldquo;done&rdquo;, &ldquo;Ship day&rdquo;. Henry's standing preference, 2026-07-20.</li>
+<li><strong>No acronyms in prose or commit messages.</strong> Spell things out.</li>
+<li><strong>Swift 6, strict concurrency.</strong> Value types by default, <code>let</code> before <code>var</code>, <code>struct</code> before <code>class</code>. No force unwraps (<code>!</code>, <code>try!</code>, <code>as!</code>) on any path.</li>
+<li><strong>Swift Testing</strong> (<code>@Test</code>, <code>#expect</code>), never XCTest.</li>
+<li><strong>An empty read is an error, never a deletion</strong> (spec decision 4). This constraint outranks every other behaviour in the plan.</li>
+<li><strong>All-day events are built from date components, never a parsed instant</strong> (spec decision 5).</li>
+<li><strong>Never touch</strong> Henry's other calendars. Every write is scoped to the calendar named <code>Morning Board</code>.</li>
+<li><strong>The repository checkout may be on a feature branch with uncommitted work.</strong> Do not stash, reset, or check out anything. Work in a git worktree off <code>main</code>.</li>
+</ul>
+
+<h2>File structure</h2>
+<table>
+<tr><th>File</th><th>Responsibility</th></tr>
+<tr><td><code>scripts/board/calendar-sync/Package.swift</code></td><td>Two targets plus a test target.</td></tr>
+<tr><td><code>Sources/CalendarSyncCore/Model.swift</code></td><td>The value types: a planned day, a desired event, an existing event, a reconciliation.</td></tr>
+<tr><td><code>Sources/CalendarSyncCore/Presentation.swift</code></td><td>Turns a planned day into an event title and notes body.</td></tr>
+<tr><td><code>Sources/CalendarSyncCore/Reconcile.swift</code></td><td>Decides what to create, update and delete. The heart of the package.</td></tr>
+<tr><td><code>Sources/CalendarSyncCore/BoardDecoding.swift</code></td><td>Turns the Upstash week records and board cards into planned days.</td></tr>
+<tr><td><code>Sources/calendar-sync/main.swift</code></td><td>The shell: environment, network, EventKit, exit codes.</td></tr>
+<tr><td><code>Tests/CalendarSyncCoreTests/*.swift</code></td><td>One test file per source file above.</td></tr>
+</table>
+
+<hr>
+
+<div class="task">
+<div class="tasknum">Task 1 &middot; <span class="badge">package and presentation</span></div>
+<h3>The package skeleton, the value types, and the event title</h3>
+
+<div class="files">
+<strong>Create:</strong> <code>scripts/board/calendar-sync/Package.swift</code>, <code>Sources/CalendarSyncCore/Model.swift</code>, <code>Sources/CalendarSyncCore/Presentation.swift</code><br>
+<strong>Test:</strong> <code>Tests/CalendarSyncCoreTests/PresentationTests.swift</code>
+</div>
+
+<p><strong>Interfaces produced</strong> (later tasks depend on these exact names):</p>
+<pre><code>public struct PlannedTask: Equatable, Sendable { public let label: String; public let done: Bool }
+public struct PlannedDay: Equatable, Sendable {
+    public let date: DateComponents      // year, month, day only
+    public let isShipDay: Bool
+    public let tasks: [PlannedTask]
+    public let shipped: [String]
+}
+public struct DesiredEvent: Equatable, Sendable {
+    public let date: DateComponents
+    public let title: String
+    public let notes: String
+}
+public func eventTitle(for day: PlannedDay) -> String</code></pre>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1: Create the package.</strong> From the repository root:
+<pre><code>mkdir -p scripts/board/calendar-sync/Sources/CalendarSyncCore
+mkdir -p scripts/board/calendar-sync/Sources/calendar-sync
+mkdir -p scripts/board/calendar-sync/Tests/CalendarSyncCoreTests</code></pre>
+Write <code>scripts/board/calendar-sync/Package.swift</code>:
+<pre><code>// swift-tools-version: 6.0
+import PackageDescription
+
+let package = Package(
+    name: "calendar-sync",
+    platforms: [.macOS(.v14)],
+    targets: [
+        .target(name: "CalendarSyncCore"),
+        .executableTarget(name: "calendar-sync", dependencies: ["CalendarSyncCore"]),
+        .testTarget(name: "CalendarSyncCoreTests", dependencies: ["CalendarSyncCore"]),
+    ]
+)</code></pre>
+Create a placeholder executable so the package builds &mdash; <code>Sources/calendar-sync/main.swift</code> containing only <code>print("not yet implemented")</code>.
+</li>
+
+<li><input type="checkbox"> <strong>Step 2: Write the failing test.</strong> <code>Tests/CalendarSyncCoreTests/PresentationTests.swift</code>:
+<pre><code>import Testing
+import Foundation
+@testable import CalendarSyncCore
+
+private func day(
+    _ d: Int, ship: Bool = false, tasks: [PlannedTask], shipped: [String] = []
+) -> PlannedDay {
+    PlannedDay(
+        date: DateComponents(year: 2026, month: 7, day: d),
+        isShipDay: ship, tasks: tasks, shipped: shipped
+    )
+}
+
+@Suite("Event titles")
+struct EventTitleTests {
+    @Test("a single short task is the whole title")
+    func singleTask() {
+        let t = eventTitle(for: day(24, tasks: [PlannedTask(label: "Sci Fri", done: false)]))
+        #expect(t == "Sci Fri")
+    }
+
+    @Test("a ship day is announced in words, not a symbol")
+    func shipDay() {
+        let t = eventTitle(for: day(22, ship: true, tasks: [PlannedTask(label: "Deck 1.26", done: false)]))
+        #expect(t == "Ship day, Deck 1.26")
+    }
+
+    @Test("the remaining tasks are counted in words")
+    func counted() {
+        let two = eventTitle(for: day(20, tasks: [
+            PlannedTask(label: "First", done: false), PlannedTask(label: "Second", done: false),
+        ]))
+        #expect(two == "First, plus one more")
+
+        let four = eventTitle(for: day(20, tasks: (1...4).map { PlannedTask(label: "T\($0)", done: false) }))
+        #expect(four == "T1, plus three more")
+    }
+
+    @Test("a long label is cut on a word boundary, never mid-word")
+    func truncation() {
+        let long = "SHIP: Deck of Cards 1.26 the free app is the only real funnel this week and the listing goes with it"
+        let t = eventTitle(for: day(22, tasks: [PlannedTask(label: long, done: false)]))
+        #expect(t.count &lt;= 61)                       // 60 plus the ellipsis
+        #expect(t.hasSuffix("\u{2026}"))
+        #expect(!t.contains("fun\u{2026}"))           // did not split a word
+        #expect(long.hasPrefix(t.dropLast()))         // it is a genuine prefix
+    }
+}</code></pre>
+</li>
+
+<li><input type="checkbox"> <strong>Step 3: Run it and watch it fail.</strong>
+<pre><code>cd scripts/board/calendar-sync &amp;&amp; swift test</code></pre>
+Expected: compilation failure, <code>cannot find 'eventTitle' in scope</code>.
+</li>
+
+<li><input type="checkbox"> <strong>Step 4: Write <code>Sources/CalendarSyncCore/Model.swift</code>.</strong>
+<pre><code>import Foundation
+
+public struct PlannedTask: Equatable, Sendable {
+    public let label: String
+    public let done: Bool
+    public init(label: String, done: Bool) { self.label = label; self.done = done }
+}
+
+/// One day of the week plan, with whatever the board finished on that date.
+public struct PlannedDay: Equatable, Sendable {
+    public let date: DateComponents
+    public let isShipDay: Bool
+    public let tasks: [PlannedTask]
+    public let shipped: [String]
+    public init(date: DateComponents, isShipDay: Bool, tasks: [PlannedTask], shipped: [String]) {
+        self.date = date; self.isShipDay = isShipDay; self.tasks = tasks; self.shipped = shipped
+    }
+}
+
+public struct DesiredEvent: Equatable, Sendable {
+    public let date: DateComponents
+    public let title: String
+    public let notes: String
+    public init(date: DateComponents, title: String, notes: String) {
+        self.date = date; self.title = title; self.notes = notes
+    }
+}</code></pre>
+</li>
+
+<li><input type="checkbox"> <strong>Step 5: Write <code>Sources/CalendarSyncCore/Presentation.swift</code>.</strong>
+<pre><code>import Foundation
+
+/// Small counts read better as words. Above nine the numeral is clearer.
+func spelled(_ n: Int) -> String {
+    let words = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
+    return words.indices.contains(n) ? words[n] : String(n)
+}
+
+/// A month-view row shows roughly forty characters; board labels run past two
+/// hundred because they are written to wrap on the board. Cut on a word.
+func truncated(_ s: String, to limit: Int) -> String {
+    guard s.count > limit else { return s }
+    let head = s.prefix(limit)
+    guard let lastSpace = head.lastIndex(of: " ") else { return head + "\u{2026}" }
+    return head[head.startIndex..&lt;lastSpace] + "\u{2026}"
+}
+
+public func eventTitle(for day: PlannedDay) -> String {
+    guard let first = day.tasks.first else { return "" }
+    var title = truncated(first.label, to: 60)
+    if day.isShipDay { title = "Ship day, " + title }
+    let rest = day.tasks.count - 1
+    if rest > 0 { title += ", plus \(spelled(rest)) more" }
+    return title
+}</code></pre>
+</li>
+
+<li><input type="checkbox"> <strong>Step 6: Run the tests and watch them pass.</strong>
+<pre><code>cd scripts/board/calendar-sync &amp;&amp; swift test</code></pre>
+Expected: 4 tests pass in the &ldquo;Event titles&rdquo; suite.
+</li>
+
+<li><input type="checkbox"> <strong>Step 7: Commit.</strong>
+<pre><code>git add scripts/board/calendar-sync
+git commit -m "Calendar sync: the package, its value types, and event titles"</code></pre>
+</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 2 &middot; <span class="badge">presentation</span></div>
+<h3>The notes body</h3>
+
+<div class="files">
+<strong>Modify:</strong> <code>Sources/CalendarSyncCore/Presentation.swift</code><br>
+<strong>Test:</strong> <code>Tests/CalendarSyncCoreTests/NotesTests.swift</code>
+</div>
+
+<p><strong>Interfaces consumed:</strong> <code>PlannedDay</code>, <code>PlannedTask</code> from task 1.<br>
+<strong>Interfaces produced:</strong> <code>public func eventNotes(for day: PlannedDay) -> String</code></p>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1: Write the failing test.</strong> <code>Tests/CalendarSyncCoreTests/NotesTests.swift</code>:
+<pre><code>import Testing
+import Foundation
+@testable import CalendarSyncCore
+
+@Suite("Event notes")
+struct EventNotesTests {
+    private let sample = PlannedDay(
+        date: DateComponents(year: 2026, month: 7, day: 22),
+        isShipDay: true,
+        tasks: [
+            PlannedTask(label: "Ship Deck of Cards 1.26", done: false),
+            PlannedTask(label: "Correct the store listing", done: true),
+        ],
+        shipped: ["Deck VoiceOver count fix", "Register binding hole closed"]
+    )
+
+    @Test("the plan is listed with each task marked in words")
+    func plan() {
+        let n = eventNotes(for: sample)
+        #expect(n.contains("PLAN"))
+        #expect(n.contains("to do   Ship Deck of Cards 1.26"))
+        #expect(n.contains("done    Correct the store listing"))
+    }
+
+    @Test("what shipped that day is listed under its own heading")
+    func shipped() {
+        let n = eventNotes(for: sample)
+        #expect(n.contains("SHIPPED TODAY"))
+        #expect(n.contains("Deck VoiceOver count fix"))
+    }
+
+    @Test("the board link is always the last line")
+    func link() {
+        let n = eventNotes(for: sample)
+        #expect(n.hasSuffix("https://henceforth.club/board/week"))
+    }
+
+    @Test("a day with nothing shipped omits that heading entirely")
+    func nothingShipped() {
+        let bare = PlannedDay(
+            date: DateComponents(year: 2026, month: 7, day: 23),
+            isShipDay: false,
+            tasks: [PlannedTask(label: "Only this", done: false)],
+            shipped: []
+        )
+        let n = eventNotes(for: bare)
+        #expect(!n.contains("SHIPPED TODAY"))
+        #expect(n.contains("Only this"))
+    }
+
+    @Test("no pictographic characters reach the calendar")
+    func wordsOnly() {
+        let n = eventNotes(for: sample) + eventTitle(for: sample)
+        for scalar in n.unicodeScalars {
+            #expect(!scalar.properties.isEmoji, "found a pictographic character: \(scalar)")
+        }
+    }
+}</code></pre>
+</li>
+
+<li><input type="checkbox"> <strong>Step 2: Run it and watch it fail.</strong>
+<pre><code>cd scripts/board/calendar-sync &amp;&amp; swift test --filter EventNotesTests</code></pre>
+Expected: <code>cannot find 'eventNotes' in scope</code>.
+</li>
+
+<li><input type="checkbox"> <strong>Step 3: Append to <code>Presentation.swift</code>.</strong>
+<pre><code>public func eventNotes(for day: PlannedDay) -> String {
+    var lines: [String] = ["PLAN"]
+    for task in day.tasks {
+        lines.append("  \(task.done ? "done    " : "to do   ")\(task.label)")
+    }
+    if !day.shipped.isEmpty {
+        lines.append("")
+        lines.append("SHIPPED TODAY")
+        for title in day.shipped { lines.append("  \(title)") }
+    }
+    lines.append("")
+    lines.append("https://henceforth.club/board/week")
+    return lines.joined(separator: "\n")
+}</code></pre>
+</li>
+
+<li><input type="checkbox"> <strong>Step 4: Run the tests and watch them pass.</strong>
+<pre><code>cd scripts/board/calendar-sync &amp;&amp; swift test</code></pre>
+Expected: 9 tests pass across both suites.
+</li>
+
+<li><input type="checkbox"> <strong>Step 5: Commit.</strong>
+<pre><code>git add scripts/board/calendar-sync
+git commit -m "Calendar sync: the notes body, with the plan and what shipped"</code></pre>
+</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 3 &middot; <span class="badge">the heart</span></div>
+<h3>Reconciliation</h3>
+
+<div class="note">This is the task that matters. Every other task is plumbing around it. The property under test is that <em>running twice changes nothing the second time</em> &mdash; without it, running from the morning routine daily multiplies events.</div>
+
+<div class="files">
+<strong>Create:</strong> <code>Sources/CalendarSyncCore/Reconcile.swift</code><br>
+<strong>Test:</strong> <code>Tests/CalendarSyncCoreTests/ReconcileTests.swift</code>
+</div>
+
+<p><strong>Interfaces consumed:</strong> <code>DesiredEvent</code> from task 1.<br>
+<strong>Interfaces produced:</strong></p>
+<pre><code>public struct ExistingEvent: Equatable, Sendable {
+    public let id: String
+    public let date: DateComponents
+    public let title: String
+    public let notes: String
+}
+public struct EventUpdate: Equatable, Sendable { public let id: String; public let event: DesiredEvent }
+public struct Reconciliation: Equatable, Sendable {
+    public let create: [DesiredEvent]
+    public let update: [EventUpdate]
+    public let delete: [String]      // event identifiers
+    public var isEmpty: Bool
+}
+public func reconcile(desired: [DesiredEvent], existing: [ExistingEvent]) -> Reconciliation</code></pre>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1: Write the failing test.</strong> <code>Tests/CalendarSyncCoreTests/ReconcileTests.swift</code>:
+<pre><code>import Testing
+import Foundation
+@testable import CalendarSyncCore
+
+private func dc(_ d: Int) -> DateComponents { DateComponents(year: 2026, month: 7, day: d) }
+private func desired(_ d: Int, _ title: String, _ notes: String = "n") -> DesiredEvent {
+    DesiredEvent(date: dc(d), title: title, notes: notes)
+}
+private func existing(_ id: String, _ d: Int, _ title: String, _ notes: String = "n") -> ExistingEvent {
+    ExistingEvent(id: id, date: dc(d), title: title, notes: notes)
+}
+
+@Suite("Reconciliation")
+struct ReconcileTests {
+    @Test("a planned day with no event is created")
+    func creates() {
+        let r = reconcile(desired: [desired(22, "Ship day")], existing: [])
+        #expect(r.create == [desired(22, "Ship day")])
+        #expect(r.update.isEmpty)
+        #expect(r.delete.isEmpty)
+    }
+
+    @Test("running twice changes nothing the second time")
+    func idempotent() {
+        let d = [desired(22, "Ship day"), desired(24, "Sci Fri")]
+        let e = [existing("a", 22, "Ship day"), existing("b", 24, "Sci Fri")]
+        let r = reconcile(desired: d, existing: e)
+        #expect(r.isEmpty)
+    }
+
+    @Test("a reworded task updates in place rather than deleting and recreating")
+    func updates() {
+        let r = reconcile(desired: [desired(22, "New wording")], existing: [existing("a", 22, "Old wording")])
+        #expect(r.update == [EventUpdate(id: "a", event: desired(22, "New wording"))])
+        #expect(r.create.isEmpty)
+        #expect(r.delete.isEmpty)
+    }
+
+    @Test("changed notes alone are enough to trigger an update")
+    func notesChanged() {
+        let r = reconcile(desired: [desired(22, "Same", "new notes")],
+                          existing: [existing("a", 22, "Same", "old notes")])
+        #expect(r.update.count == 1)
+    }
+
+    @Test("an event whose date left the plan is deleted")
+    func deletes() {
+        let r = reconcile(desired: [desired(22, "Ship day")], existing: [existing("gone", 21, "Old day")])
+        #expect(r.delete == ["gone"])
+        #expect(r.create == [desired(22, "Ship day")])
+    }
+
+    @Test("two events on one date keep the first and delete the rest")
+    func duplicates() {
+        let r = reconcile(desired: [desired(22, "Ship day")],
+                          existing: [existing("keep", 22, "Ship day"), existing("dupe", 22, "Ship day")])
+        #expect(r.delete == ["dupe"])
+        #expect(r.update.isEmpty)
+    }
+
+    @Test("an empty plan deletes nothing at all")
+    func emptyPlanIsNeverADeletion() {
+        let r = reconcile(desired: [], existing: [existing("a", 22, "Ship day"), existing("b", 24, "Sci Fri")])
+        #expect(r.isEmpty)
+        #expect(r.delete.isEmpty)
+    }
+}</code></pre>
+</li>
+
+<li><input type="checkbox"> <strong>Step 2: Run it and watch it fail.</strong>
+<pre><code>cd scripts/board/calendar-sync &amp;&amp; swift test --filter ReconcileTests</code></pre>
+Expected: <code>cannot find 'reconcile' in scope</code>.
+</li>
+
+<li><input type="checkbox"> <strong>Step 3: Write <code>Sources/CalendarSyncCore/Reconcile.swift</code>.</strong>
+<pre><code>import Foundation
+
+public struct ExistingEvent: Equatable, Sendable {
+    public let id: String
+    public let date: DateComponents
+    public let title: String
+    public let notes: String
+    public init(id: String, date: DateComponents, title: String, notes: String) {
+        self.id = id; self.date = date; self.title = title; self.notes = notes
+    }
+}
+
+public struct EventUpdate: Equatable, Sendable {
+    public let id: String
+    public let event: DesiredEvent
+    public init(id: String, event: DesiredEvent) { self.id = id; self.event = event }
+}
+
+public struct Reconciliation: Equatable, Sendable {
+    public let create: [DesiredEvent]
+    public let update: [EventUpdate]
+    public let delete: [String]
+    public var isEmpty: Bool { create.isEmpty &amp;&amp; update.isEmpty &amp;&amp; delete.isEmpty }
+    public static let none = Reconciliation(create: [], update: [], delete: [])
+}
+
+/// Compare by day, never by instant: an all-day event's stored start is an
+/// instant, and comparing instants across a timezone change lands on the
+/// wrong day. See spec decision 5.
+private func key(_ c: DateComponents) -> String {
+    "\(c.year ?? 0)-\(c.month ?? 0)-\(c.day ?? 0)"
+}
+
+public func reconcile(desired: [DesiredEvent], existing: [ExistingEvent]) -> Reconciliation {
+    // An empty plan is a failed read, not an instruction to empty the
+    // calendar. Refusing here is the last line of defence; the shell also
+    // refuses before it ever calls this. See spec decision 4.
+    guard !desired.isEmpty else { return .none }
+
+    var byDate: [String: [ExistingEvent]] = [:]
+    for event in existing { byDate[key(event.date), default: []].append(event) }
+
+    var create: [DesiredEvent] = []
+    var update: [EventUpdate] = []
+    var delete: [String] = []
+
+    for want in desired {
+        let matches = byDate.removeValue(forKey: key(want.date)) ?? []
+        guard let keep = matches.first else {
+            create.append(want)
+            continue
+        }
+        // One event per date is the invariant. Extras can only come from a bug
+        // or a manual edit, so remove them rather than tolerate the ambiguity.
+        delete.append(contentsOf: matches.dropFirst().map(\.id))
+        if keep.title != want.title || keep.notes != want.notes {
+            update.append(EventUpdate(id: keep.id, event: want))
+        }
+    }
+
+    // Whatever is left was on a date the plan no longer contains.
+    for leftover in byDate.values.flatMap({ $0 }) { delete.append(leftover.id) }
+
+    return Reconciliation(create: create, update: update, delete: delete.sorted())
+}</code></pre>
+</li>
+
+<li><input type="checkbox"> <strong>Step 4: Run the tests and watch them pass.</strong>
+<pre><code>cd scripts/board/calendar-sync &amp;&amp; swift test</code></pre>
+Expected: 16 tests pass across three suites.
+</li>
+
+<li><input type="checkbox"> <strong>Step 5: Commit.</strong>
+<pre><code>git add scripts/board/calendar-sync
+git commit -m "Calendar sync: reconcile the plan against the calendar, idempotently"</code></pre>
+</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 4 &middot; <span class="badge">decoding</span></div>
+<h3>Turning board records into planned days</h3>
+
+<div class="files">
+<strong>Create:</strong> <code>Sources/CalendarSyncCore/BoardDecoding.swift</code><br>
+<strong>Test:</strong> <code>Tests/CalendarSyncCoreTests/BoardDecodingTests.swift</code>
+</div>
+
+<p><strong>Interfaces consumed:</strong> <code>PlannedDay</code>, <code>PlannedTask</code> from task 1.<br>
+<strong>Interfaces produced:</strong></p>
+<pre><code>public struct WeekRecord: Decodable, Sendable { /* mirrors board:week:&lt;date&gt; */ }
+public struct BoardCard: Decodable, Sendable { /* mirrors one card in board:latest */ }
+public func plannedDays(weeks: [WeekRecord], cards: [BoardCard]) -> [PlannedDay]</code></pre>
+
+<div class="note">Real data shapes, read from Upstash on 2026-07-20. A plan day carries <code>date</code>, <code>weekday</code>, <code>isShipDay</code> <em>and</em> <code>isReviewDay</code> &mdash; older records use the second where newer ones use the first, so either counts as a ship marker. A done card carries <code>doneAt</code>, or only <code>movedAt</code> on older cards.</div>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1: Write the failing test.</strong> <code>Tests/CalendarSyncCoreTests/BoardDecodingTests.swift</code>:
+<pre><code>import Testing
+import Foundation
+@testable import CalendarSyncCore
+
+private func decodeWeek(_ json: String) throws -> WeekRecord {
+    try JSONDecoder().decode(WeekRecord.self, from: Data(json.utf8))
+}
+
+@Suite("Board decoding")
+struct BoardDecodingTests {
+    let weekJSON = """
+    {"retro":{"weekPlan":[
+      {"date":"2026-07-22","weekday":"Wed","isShipDay":true,"isReviewDay":false,
+       "tasks":[{"label":"Ship Deck 1.26","done":false}]},
+      {"date":"2026-07-25","weekday":"Sat","isShipDay":false,"isReviewDay":false,"tasks":[]}
+    ]}}
+    """
+
+    @Test("a plan day becomes a planned day with date components, not an instant")
+    func daysDecode() throws {
+        let days = plannedDays(weeks: [try decodeWeek(weekJSON)], cards: [])
+        #expect(days.count == 1)                       // the empty Saturday is dropped
+        #expect(days[0].date.year == 2026)
+        #expect(days[0].date.month == 7)
+        #expect(days[0].date.day == 22)
+        #expect(days[0].isShipDay)
+        #expect(days[0].tasks == [PlannedTask(label: "Ship Deck 1.26", done: false)])
+    }
+
+    @Test("a day with no tasks produces no planned day at all")
+    func emptyDayDropped() throws {
+        let days = plannedDays(weeks: [try decodeWeek(weekJSON)], cards: [])
+        #expect(!days.contains { $0.date.day == 25 })
+    }
+
+    @Test("the older review-day flag also counts as a ship marker")
+    func legacyFlag() throws {
+        let legacy = """
+        {"retro":{"weekPlan":[{"date":"2026-07-15","weekday":"Wed","isReviewDay":true,
+         "tasks":[{"label":"Old style","done":true}]}]}}
+        """
+        let days = plannedDays(weeks: [try decodeWeek(legacy)], cards: [])
+        #expect(days[0].isShipDay)
+    }
+
+    @Test("done cards attach to the day they were finished")
+    func shippedAttaches() throws {
+        let cards = [
+            BoardCard(id: "a", title: "VoiceOver fix", col: "done", doneAt: "2026-07-22T10:45:00+01:00", movedAt: nil),
+            BoardCard(id: "b", title: "Still open", col: "review", doneAt: nil, movedAt: nil),
+            BoardCard(id: "c", title: "Older card", col: "done", doneAt: nil, movedAt: "2026-07-22T09:00:00+01:00"),
+        ]
+        let days = plannedDays(weeks: [try decodeWeek(weekJSON)], cards: cards)
+        #expect(days[0].shipped == ["VoiceOver fix", "Older card"])
+    }
+
+    @Test("duplicate dates across week records are merged, not repeated")
+    func noDuplicateDates() throws {
+        let days = plannedDays(weeks: [try decodeWeek(weekJSON), try decodeWeek(weekJSON)], cards: [])
+        #expect(days.count == 1)
+    }
+}</code></pre>
+</li>
+
+<li><input type="checkbox"> <strong>Step 2: Run it and watch it fail.</strong>
+<pre><code>cd scripts/board/calendar-sync &amp;&amp; swift test --filter BoardDecodingTests</code></pre>
+Expected: <code>cannot find 'WeekRecord' in scope</code>.
+</li>
+
+<li><input type="checkbox"> <strong>Step 3: Write <code>Sources/CalendarSyncCore/BoardDecoding.swift</code>.</strong>
+<pre><code>import Foundation
+
+public struct WeekRecord: Decodable, Sendable {
+    public struct Retro: Decodable, Sendable { public let weekPlan: [PlanDay]? }
+    public struct PlanDay: Decodable, Sendable {
+        public let date: String
+        public let isShipDay: Bool?
+        public let isReviewDay: Bool?
+        public let tasks: [Task]?
+    }
+    public struct Task: Decodable, Sendable { public let label: String; public let done: Bool? }
+    public let retro: Retro?
+}
+
+public struct BoardCard: Decodable, Sendable {
+    public let id: String
+    public let title: String
+    public let col: String
+    public let doneAt: String?
+    public let movedAt: String?
+    public init(id: String, title: String, col: String, doneAt: String?, movedAt: String?) {
+        self.id = id; self.title = title; self.col = col; self.doneAt = doneAt; self.movedAt = movedAt
+    }
+}
+
+/// The plan stores plain dates ("2026-07-22") and the cards store timestamps.
+/// Both reduce to a year, month and day; nothing here ever builds an instant.
+private func components(fromPlainDate s: String) -> DateComponents? {
+    let parts = s.prefix(10).split(separator: "-")
+    guard parts.count == 3,
+          let y = Int(parts[0]), let m = Int(parts[1]), let d = Int(parts[2]) else { return nil }
+    return DateComponents(year: y, month: m, day: d)
+}
+
+private func dayKey(_ c: DateComponents) -> String {
+    "\(c.year ?? 0)-\(c.month ?? 0)-\(c.day ?? 0)"
+}
+
+public func plannedDays(weeks: [WeekRecord], cards: [BoardCard]) -> [PlannedDay] {
+    var shippedByDay: [String: [String]] = [:]
+    for card in cards where card.col == "done" {
+        guard let stamp = card.doneAt ?? card.movedAt,
+              let c = components(fromPlainDate: stamp) else { continue }
+        shippedByDay[dayKey(c), default: []].append(card.title)
+    }
+
+    var byDate: [String: PlannedDay] = [:]
+    for week in weeks {
+        for planDay in week.retro?.weekPlan ?? [] {
+            guard let c = components(fromPlainDate: planDay.date) else { continue }
+            let tasks = (planDay.tasks ?? []).map {
+                PlannedTask(label: $0.label, done: $0.done ?? false)
+            }
+            // A day with nothing planned gets no event. See spec decision 3.
+            guard !tasks.isEmpty else { continue }
+            byDate[dayKey(c)] = PlannedDay(
+                date: c,
+                isShipDay: (planDay.isShipDay ?? false) || (planDay.isReviewDay ?? false),
+                tasks: tasks,
+                shipped: shippedByDay[dayKey(c)] ?? []
+            )
+        }
+    }
+    return byDate.values.sorted { dayKey($0.date) &lt; dayKey($1.date) }
+}</code></pre>
+</li>
+
+<li><input type="checkbox"> <strong>Step 4: Run the tests and watch them pass.</strong>
+<pre><code>cd scripts/board/calendar-sync &amp;&amp; swift test</code></pre>
+Expected: 21 tests pass across four suites.
+</li>
+
+<li><input type="checkbox"> <strong>Step 5: Commit.</strong>
+<pre><code>git add scripts/board/calendar-sync
+git commit -m "Calendar sync: decode week records and done cards into planned days"</code></pre>
+</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 5 &middot; <span class="badge">the shell</span></div>
+<h3>Environment, Upstash, EventKit</h3>
+
+<div class="files">
+<strong>Modify:</strong> <code>Sources/calendar-sync/main.swift</code> (replacing the placeholder)<br>
+<strong>Create:</strong> <code>scripts/board/calendar-sync/README.md</code>
+</div>
+
+<p><strong>Interfaces consumed:</strong> everything from tasks 1 to 4 &mdash; <code>plannedDays(weeks:cards:)</code>, <code>eventTitle(for:)</code>, <code>eventNotes(for:)</code>, <code>reconcile(desired:existing:)</code>, and the <code>ExistingEvent</code> and <code>Reconciliation</code> types.</p>
+
+<div class="note">This target has no unit tests: it is the untestable seam by design, and mocking EventKit would only assert that the file calls the methods it calls. It is verified by running it twice against a real calendar and asserting the second run reports no changes &mdash; step 6.</div>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1: Write <code>Sources/calendar-sync/main.swift</code>.</strong>
+<pre><code>import Foundation
+import EventKit
+import CalendarSyncCore
+
+let calendarName = "Morning Board"
+
+func fail(_ message: String) -> Never {
+    FileHandle.standardError.write(Data(("calendar-sync: " + message + "\n").utf8))
+    exit(1)
+}
+
+// ---- environment -------------------------------------------------------
+// .env.local is not exported into this process the way `node --env-file` does
+// it, so read the two keys directly.
+func loadEnv(_ path: String) -> [String: String] {
+    guard let text = try? String(contentsOfFile: path, encoding: .utf8) else { return [:] }
+    var out: [String: String] = [:]
+    for line in text.split(separator: "\n") {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.hasPrefix("#"), let eq = trimmed.firstIndex(of: "=") else { continue }
+        let key = String(trimmed[trimmed.startIndex..&lt;eq])
+        var value = String(trimmed[trimmed.index(after: eq)...])
+        if value.hasPrefix("\"") &amp;&amp; value.hasSuffix("\"") &amp;&amp; value.count >= 2 { value = String(value.dropFirst().dropLast()) }
+        out[key] = value
+    }
+    return out
+}
+
+let repoRoot = FileManager.default.currentDirectoryPath
+let env = loadEnv(repoRoot + "/.env.local")
+func setting(_ names: [String]) -> String? {
+    for n in names { if let v = ProcessInfo.processInfo.environment[n] ?? env[n], !v.isEmpty { return v } }
+    return nil
+}
+guard let baseURL = setting(["KV_REST_API_URL", "UPSTASH_REDIS_REST_URL"]),
+      let token = setting(["KV_REST_API_TOKEN", "UPSTASH_REDIS_REST_TOKEN"]) else {
+    fail("Upstash credentials not found. Run this from the henceforth-club root, where .env.local lives.")
+}
+
+// ---- Upstash over its rest interface -----------------------------------
+func upstash(_ pathParts: [String]) throws -> Data {
+    let path = pathParts.map { $0.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? $0 }
+        .joined(separator: "/")
+    guard let url = URL(string: baseURL + "/" + path) else { throw URLError(.badURL) }
+    var request = URLRequest(url: url)
+    request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
+    request.timeoutInterval = 20
+    let semaphore = DispatchSemaphore(value: 0)
+    var result: Result&lt;Data, Error&gt; = .failure(URLError(.unknown))
+    URLSession.shared.dataTask(with: request) { data, response, error in
+        if let error { result = .failure(error) }
+        else if let http = response as? HTTPURLResponse, http.statusCode != 200 {
+            result = .failure(URLError(.badServerResponse))
+        } else { result = .success(data ?? Data()) }
+        semaphore.signal()
+    }.resume()
+    semaphore.wait()
+    return try result.get()
+}
+
+/// Upstash wraps every reply as {"result": ...}; a GET returns a JSON string.
+struct Envelope&lt;T: Decodable&gt;: Decodable { let result: T? }
+
+let weekKeys: [String]
+do {
+    let data = try upstash(["keys", "board:week:*"])
+    weekKeys = (try JSONDecoder().decode(Envelope&lt;[String]&gt;.self, from: data).result) ?? []
+} catch { fail("could not list week records: \(error.localizedDescription)") }
+
+// An empty read is an error, never a deletion. See spec decision 4.
+guard !weekKeys.isEmpty else { fail("no week records found. Refusing to touch the calendar.") }
+
+func fetchJSON&lt;T: Decodable&gt;(_ key: String, as type: T.Type) throws -> T? {
+    let data = try upstash(["get", key])
+    guard let inner = try JSONDecoder().decode(Envelope&lt;String&gt;.self, from: data).result else { return nil }
+    return try JSONDecoder().decode(T.self, from: Data(inner.utf8))
+}
+
+var weeks: [WeekRecord] = []
+var cards: [BoardCard] = []
+do {
+    for key in weekKeys { if let w = try fetchJSON(key, as: WeekRecord.self) { weeks.append(w) } }
+    struct Board: Decodable { let cards: [BoardCard]? }
+    cards = (try fetchJSON("board:latest", as: Board.self))?.cards ?? []
+} catch { fail("could not read the board: \(error.localizedDescription)") }
+
+let days = plannedDays(weeks: weeks, cards: cards)
+guard !days.isEmpty else { fail("the plan decoded to no days. Refusing to touch the calendar.") }
+
+// ---- calendar ----------------------------------------------------------
+let store = EKEventStore()
+let granted: Bool = {
+    let semaphore = DispatchSemaphore(value: 0)
+    var ok = false
+    store.requestFullAccessToEvents { allowed, _ in ok = allowed; semaphore.signal() }
+    semaphore.wait()
+    return ok
+}()
+guard granted else {
+    fail("calendar access was refused. Grant it in System Settings, Privacy and Security, Calendars.")
+}
+
+let calendar = Calendar.current
+func startOfDay(_ c: DateComponents) -> Date? { calendar.date(from: c).map { calendar.startOfDay(for: $0) } }
+
+let target: EKCalendar
+if let found = store.calendars(for: .event).first(where: { $0.title == calendarName }) {
+    target = found
+} else {
+    guard let source = store.sources.first(where: { $0.sourceType == .calDAV &amp;&amp; $0.title == "iCloud" })
+            ?? store.sources.first(where: { $0.sourceType == .calDAV }) else {
+        fail("no iCloud calendar account found, so a new calendar would not reach the phone.")
+    }
+    let made = EKCalendar(for: .event, eventStore: store)
+    made.title = calendarName
+    made.source = source
+    do { try store.saveCalendar(made, commit: true) } catch { fail("could not create the calendar: \(error.localizedDescription)") }
+    target = made
+}
+
+// Read back what is already there, across the whole span the plan covers.
+guard let earliest = days.compactMap({ startOfDay($0.date) }).min(),
+      let latest = days.compactMap({ startOfDay($0.date) }).max() else {
+    fail("could not resolve the plan's date range.")
+}
+let predicate = store.predicateForEvents(
+    withStart: calendar.date(byAdding: .day, value: -1, to: earliest) ?? earliest,
+    end: calendar.date(byAdding: .day, value: 1, to: latest) ?? latest,
+    calendars: [target]
+)
+let existing: [ExistingEvent] = store.events(matching: predicate).compactMap { event in
+    guard let id = event.eventIdentifier else { return nil }
+    let c = calendar.dateComponents([.year, .month, .day], from: event.startDate)
+    return ExistingEvent(id: id, date: c, title: event.title ?? "", notes: event.notes ?? "")
+}
+
+let desired = days.map {
+    DesiredEvent(date: $0.date, title: eventTitle(for: $0), notes: eventNotes(for: $0))
+}
+let plan = reconcile(desired: desired, existing: existing)
+
+// ---- apply -------------------------------------------------------------
+var failures = 0
+func apply(_ event: EKEvent, _ want: DesiredEvent) -> Bool {
+    guard let start = startOfDay(want.date) else { return false }
+    event.calendar = target
+    event.title = want.title
+    event.notes = want.notes
+    event.isAllDay = true
+    event.startDate = start
+    event.endDate = start
+    do { try store.save(event, span: .thisEvent, commit: false); return true }
+    catch {
+        FileHandle.standardError.write(Data("  could not save \(want.title): \(error.localizedDescription)\n".utf8))
+        return false
+    }
+}
+
+for want in plan.create where !apply(EKEvent(eventStore: store), want) { failures += 1 }
+for change in plan.update {
+    guard let event = store.event(withIdentifier: change.id) else { failures += 1; continue }
+    if !apply(event, change.event) { failures += 1 }
+}
+for id in plan.delete {
+    guard let event = store.event(withIdentifier: id) else { continue }
+    do { try store.remove(event, span: .thisEvent, commit: false) } catch { failures += 1 }
+}
+do { try store.commit() } catch { fail("could not commit the calendar changes: \(error.localizedDescription)") }
+
+print("calendar-sync: \(plan.create.count) created, \(plan.update.count) updated, \(plan.delete.count) removed, across \(days.count) planned days")
+if failures > 0 { fail("\(failures) event(s) failed to save") }</code></pre>
+</li>
+
+<li><input type="checkbox"> <strong>Step 2: Build it.</strong>
+<pre><code>cd scripts/board/calendar-sync &amp;&amp; swift build</code></pre>
+Expected: <code>Build complete</code>. Fix any compilation error before continuing.
+</li>
+
+<li><input type="checkbox"> <strong>Step 3: Run it for the first time.</strong> From the repository root, not the package directory, because it reads <code>.env.local</code> from the working directory:
+<pre><code>swift run --package-path scripts/board/calendar-sync calendar-sync</code></pre>
+Expected: a system prompt asking for calendar access. Grant it. Then a line such as <code>calendar-sync: 29 created, 0 updated, 0 removed, across 29 planned days</code>.
+</li>
+
+<li><input type="checkbox"> <strong>Step 4: Check it in Calendar.</strong> Open Calendar and confirm a &ldquo;Morning Board&rdquo; calendar exists under iCloud, that Wednesday 22 July reads <code>Ship day, SHIP: Deck of Cards 1.26 &hellip;, plus one more</code>, and that opening it shows the plan, what shipped, and the board link. Confirm no event landed on the wrong day &mdash; the 22nd must be on the 22nd.
+</li>
+
+<li><input type="checkbox"> <strong>Step 5: Confirm it reaches the phone.</strong> Wait for iCloud to sync and check Calendar on the phone. This is the whole point of the feature; do not mark this task complete without it.
+</li>
+
+<li><input type="checkbox"> <strong>Step 6: Prove idempotency against the real calendar.</strong> Run the exact same command a second time:
+<pre><code>swift run --package-path scripts/board/calendar-sync calendar-sync</code></pre>
+Expected: <code>calendar-sync: 0 created, 0 updated, 0 removed, across 29 planned days</code>. Any other numbers mean the reconciliation is comparing something that is not stable across runs &mdash; most likely the notes string &mdash; and must be fixed before this task is done.
+</li>
+
+<li><input type="checkbox"> <strong>Step 7: Write <code>scripts/board/calendar-sync/README.md</code>.</strong>
+<pre><code># calendar-sync
+
+Writes the week plan into an Apple Calendar named "Morning Board", so the plan
+reaches the phone through iCloud.
+
+    swift run --package-path scripts/board/calendar-sync calendar-sync
+
+Run it from the repository root: it reads Upstash credentials from .env.local in
+the working directory. Calendar access is granted once, interactively, on the
+first run.
+
+The sync owns the "Morning Board" calendar completely and touches no other
+calendar. Running it twice changes nothing the second time. An empty read is
+treated as an error rather than an instruction to empty the calendar.
+
+    swift test --package-path scripts/board/calendar-sync
+
+Design: docs/superpowers/specs/2026-07-20-morning-board-calendar-design.html</code></pre>
+</li>
+
+<li><input type="checkbox"> <strong>Step 8: Commit.</strong>
+<pre><code>git add scripts/board/calendar-sync
+git commit -m "Calendar sync: read the board, write the Morning Board calendar"</code></pre>
+</li>
+</ul>
+</div>
+
+<div class="task">
+<div class="tasknum">Task 6 &middot; <span class="badge">wiring</span></div>
+<h3>Run it from the morning and weekly routines</h3>
+
+<div class="files">
+<strong>Modify:</strong> <code>~/.claude/commands/hh.md</code> (step 7, beside the Upstash publish), <code>~/.claude/commands/whh.md</code> (step 5, beside publish-week)
+</div>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1: Add the command to the morning routine.</strong> In <code>hh.md</code>, in step 7, immediately after the <code>publish.mjs</code> line, add:
+<pre><code>- **Push the plan to Apple Calendar** so it reaches the phone:
+  `swift run --package-path scripts/board/calendar-sync calendar-sync`.
+  Idempotent by design — a run with nothing to change reports zeroes. It reads
+  Upstash, so it must run AFTER the publish above, never before.</code></pre>
+</li>
+
+<li><input type="checkbox"> <strong>Step 2: Add the same to the weekly routine.</strong> In <code>whh.md</code>, in step 5, after <code>publish-week.mjs</code>, add the identical instruction. The weekly review is what creates a new week, so this is the run that first puts the coming week in the calendar.
+</li>
+
+<li><input type="checkbox"> <strong>Step 3: Verify the ordering holds.</strong> Confirm by reading both files that the calendar command appears after the publish command in each. Running before the publish would write the previous state into the calendar.
+</li>
+
+<li><input type="checkbox"> <strong>Step 4: Commit.</strong> The command files live outside the repository, so commit only if they are tracked somewhere; otherwise note the change in the terminal summary.
+</li>
+</ul>
+</div>
+
+<h2>Self-review against the spec</h2>
+<table>
+<tr><th>Spec section</th><th>Covered by</th></tr>
+<tr><td>1 &mdash; events not a feed; the dedicated calendar</td><td>Task 5, calendar resolution and creation</td></tr>
+<tr><td>2 &mdash; Swift and EventKit, beside the board tooling</td><td>Task 1 package, at <code>scripts/board/calendar-sync</code></td></tr>
+<tr><td>3 &mdash; data flow, key scan not the set, credentials</td><td>Task 5, <code>keys board:week:*</code> and <code>loadEnv</code></td></tr>
+<tr><td>4 &mdash; title, notes, truncation, ship marker</td><td>Tasks 1 and 2</td></tr>
+<tr><td>5 &mdash; reconciliation and the one-per-date invariant</td><td>Task 3</td></tr>
+<tr><td>6 &mdash; permission, full access, clean refusal</td><td>Task 5, step 1 and step 3</td></tr>
+<tr><td>7 &mdash; runs on the laptop from the routines</td><td>Task 6</td></tr>
+<tr><td>8 &mdash; failure handling, empty read is an error</td><td>Task 5 guards, and task 3's guard as the second line of defence</td></tr>
+<tr><td>9 &mdash; pure reconciliation tested without a calendar</td><td>Task 3, and the twice-run check in task 5 step 6</td></tr>
+<tr><td>10 &mdash; out of scope</td><td>Nothing in this plan implements two-way sync, alerts, the kanban board, or attendees</td></tr>
+</table>
+
+</div>
+</body>
+</html>
