@@ -30,6 +30,16 @@ const AUTHOR_URL = /^https:\/\/x\.com\/([A-Za-z0-9_]{1,15})$/;
  * which carries the attacker-controlled display name, sits outside it. */
 const FIRST_PARAGRAPH = /<p[^>]*>([\s\S]*?)<\/p>/;
 
+/** The attribution tail's permalink. `author_url` says who is SHOWING the
+ * embed; this says who WROTE the text in the first paragraph, and which post
+ * that text is. For an ordinary post the two agree. For a RETWEET they do not:
+ * X serves the retweeter in `author_url` and the original author's words in the
+ * paragraph, so `author_url` alone lets a victim's single retweet certify an
+ * attacker's binding line — one tap, and the attacker holds the handle.
+ * Matched only against the markup AFTER the post text, so an x.com status link
+ * written INSIDE a post cannot pose as the tail. */
+const TAIL_PERMALINK = /<a\s+href="https:\/\/x\.com\/([A-Za-z0-9_]{1,15})\/status\/(\d+)[^"]*"/;
+
 const TIMEOUT_MS = 5000;
 
 export type LiveBinding =
@@ -75,8 +85,22 @@ export async function verifyBindingPost(
     return { kind: "wrong-author", author: author[1] };
   }
 
-  const paragraph = typeof body.html === "string" ? FIRST_PARAGRAPH.exec(body.html) : null;
+  const html = typeof body.html === "string" ? body.html : "";
+  const paragraph = FIRST_PARAGRAPH.exec(html);
   if (!paragraph) return { kind: "no-binding" };
+
+  // Corroborate the author against the tail before trusting the text. Without
+  // this, `author_url` is certifying words it does not own. Fails closed when
+  // there is no tail: an embed that names nobody for its own text is not
+  // evidence, and no shape X actually serves omits it.
+  const tail = TAIL_PERMALINK.exec(html.slice(paragraph.index + paragraph[0].length));
+  if (!tail) return { kind: "unreachable" };
+  // Both halves matter. A different handle is the retweet vector. The same
+  // handle with a different post id is text from some OTHER post of theirs,
+  // which cannot stand in for the post the claim actually named.
+  if (tail[1].toLowerCase() !== input.handle.toLowerCase() || tail[2] !== input.postId) {
+    return { kind: "wrong-author", author: tail[1] };
+  }
 
   // One parser, two sources: the address the live post commits to is read by
   // the same function that reads the on-chain one, so the two cannot drift.

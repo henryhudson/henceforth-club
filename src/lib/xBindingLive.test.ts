@@ -19,6 +19,22 @@ function oembed(input: { author: string; text: string }) {
   };
 }
 
+/** A RETWEET, which is the shape that broke the author check. X serves the
+ * RETWEETER in `author_url` but the ORIGINAL author's text in the first <p>,
+ * and the attribution tail links to the original author AND the original
+ * status id — both different from the ones the claim named. */
+function retweetOembed(input: { retweeter: string; originalAuthor: string; originalPostId: string; text: string }) {
+  return {
+    url: `https://x.com/${input.retweeter}/status/${POST_ID}`,
+    author_name: "a free-form display name",
+    author_url: `https://x.com/${input.retweeter}`,
+    html:
+      `<blockquote class="twitter-tweet"><p lang="en" dir="ltr">${input.text}</p>` +
+      `&mdash; ${input.originalAuthor} (@${input.originalAuthor}) ` +
+      `<a href="https://x.com/${input.originalAuthor}/status/${input.originalPostId}">June 27, 2018</a></blockquote>`,
+  };
+}
+
 const jsonResponse = (body: unknown) =>
   new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json; charset=utf-8" } });
 
@@ -112,6 +128,69 @@ describe("verifyBindingPost", () => {
   it("fails closed when the embed names an author X could not resolve to a handle", async () => {
     const body = oembed({ author: HANDLE, text: bindingLine });
     body.author_url = "https://x.com/";
+    const fetchFn = vi.fn(async () => jsonResponse(body));
+
+    const result = await verifyBindingPost({ handle: HANDLE, postId: POST_ID, address: ADDRESS }, fetchFn as unknown as typeof fetch);
+
+    expect(result).toEqual({ kind: "unreachable" });
+  });
+
+  it("refuses a retweet: the retweeter's author_url must not certify another account's text", async () => {
+    // The live vector, reproduced from a real oEmbed response on 2026-07-21.
+    // The attacker posts a binding line naming the VICTIM's address, the victim
+    // retweets it, and X then serves that text under the victim's author_url.
+    // One tap by the victim is the whole exploit — the author check passes and
+    // the first paragraph carries a genuine binding line.
+    const fetchFn = vi.fn(async () =>
+      jsonResponse(
+        retweetOembed({
+          retweeter: HANDLE,
+          originalAuthor: "attacker",
+          originalPostId: "1012002789747195904",
+          text: bindingLine,
+        }),
+      ),
+    );
+
+    const result = await verifyBindingPost({ handle: HANDLE, postId: POST_ID, address: ADDRESS }, fetchFn as unknown as typeof fetch);
+
+    expect(result).toEqual({ kind: "wrong-author", author: "attacker" });
+  });
+
+  it("refuses a quote-style embed whose tail names the requested handle but a different post", async () => {
+    // Same handle, different status id: the text being certified is not the
+    // post the claim named, so it cannot stand in for it.
+    const fetchFn = vi.fn(async () =>
+      jsonResponse(
+        retweetOembed({
+          retweeter: HANDLE,
+          originalAuthor: HANDLE,
+          originalPostId: "999999999999999999",
+          text: bindingLine,
+        }),
+      ),
+    );
+
+    const result = await verifyBindingPost({ handle: HANDLE, postId: POST_ID, address: ADDRESS }, fetchFn as unknown as typeof fetch);
+
+    expect(result).toEqual({ kind: "wrong-author", author: HANDLE });
+  });
+
+  it("still verifies an ordinary post, whose tail names the same handle and the same post", async () => {
+    // Guards against the retweet refusal swallowing the happy path: the normal
+    // embed's tail already points at exactly the requested handle and id.
+    const fetchFn = vi.fn(async () => jsonResponse(oembed({ author: HANDLE, text: bindingLine })));
+
+    const result = await verifyBindingPost({ handle: HANDLE, postId: POST_ID, address: ADDRESS }, fetchFn as unknown as typeof fetch);
+
+    expect(result).toEqual({ kind: "verified" });
+  });
+
+  it("fails closed when the embed carries no attribution tail to corroborate the author", async () => {
+    // No tail means nothing independently names the author of the text in the
+    // first paragraph, so author_url alone would be certifying it again.
+    const body = oembed({ author: HANDLE, text: bindingLine });
+    body.html = `<blockquote class="twitter-tweet"><p lang="en" dir="ltr">${bindingLine}</p></blockquote>`;
     const fetchFn = vi.fn(async () => jsonResponse(body));
 
     const result = await verifyBindingPost({ handle: HANDLE, postId: POST_ID, address: ADDRESS }, fetchFn as unknown as typeof fetch);
