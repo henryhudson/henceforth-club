@@ -163,14 +163,20 @@ export default function HeroTerminal() {
         <FadeIn>
           <div className="max-w-3xl">
             <p className="text-sm tracking-widest text-accent/70 uppercase">
-              iOS Apps
+              Three apps. One dream.
             </p>
             <h1 className="mt-6 text-4xl sm:text-6xl leading-[1.1] text-foreground font-bold">
               FORTH. Cards. Parliament.
             </h1>
+            {/* Each clause is the app's own north star, not a feature list:
+                Henceforth's is that a Forth word and a Bitcoin Script are the
+                same artifact, Hansard's load-bearing invariant is offline-first
+                from the bundled snapshot, and the Deck's is that it must never
+                pin you to one game. Keep them that way if this copy changes —
+                a feature list would read as marketing and age worse. */}
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
-              A FORTH interpreter with a Bitcoin wallet. A multiplayer deck of
-              cards. A UK Parliament browser. Native iOS. No ads.
+              A programmable Bitcoin wallet. Every constituency offline. A deck
+              with no rules of its own. Native iOS. No ads.
             </p>
           </div>
         </FadeIn>

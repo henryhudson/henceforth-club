@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     template: "%s | Henceforth Club",
   },
   description:
-    "FORTH. Cards. Parliament. A FORTH interpreter with a Bitcoin wallet, a multiplayer deck of cards, and a UK Parliament browser. Native iOS apps. No ads.",
+    "Three apps, one dream. A programmable Bitcoin wallet, every UK constituency offline, and a deck with no rules of its own. Native iOS apps. No ads.",
   keywords: [
     "iOS",
     "apps",
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Henceforth Club",
     description:
-      "FORTH. Cards. Parliament. A FORTH interpreter with a Bitcoin wallet, a multiplayer deck of cards, and a UK Parliament browser. Native iOS. No ads.",
+      "Three apps, one dream. A programmable Bitcoin wallet, every UK constituency offline, and a deck with no rules of its own. Native iOS. No ads.",
     url: "https://henceforth.club",
     siteName: "Henceforth Club",
     locale: "en_NZ",
@@ -51,7 +51,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Henceforth Club",
     description:
-      "FORTH. Cards. Parliament. A FORTH interpreter with a Bitcoin wallet, a multiplayer deck of cards, and a UK Parliament browser. Native iOS. No ads.",
+      "Three apps, one dream. A programmable Bitcoin wallet, every UK constituency offline, and a deck with no rules of its own. Native iOS. No ads.",
     // No images here on purpose: each route's opengraph-image.tsx flows into
     // twitter:image automatically, so a default would shadow every card on X.
     // Cardless pages still fall back to the openGraph /cover.png above.
