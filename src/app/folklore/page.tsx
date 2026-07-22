@@ -109,9 +109,10 @@ export default async function FolklorePage() {
     // landmark for every page (see app/layout.tsx).
     <div className="min-h-screen bg-background">
       {/* Wordmark, then straight into the live archive — the posts are the pitch. */}
-      <header className="relative overflow-hidden">
+      {/* min-h gives the forest a proper stage under the wordmark before the feed. */}
+      <header className="relative min-h-[min(52vh,28rem)] overflow-hidden">
         <FolkloreForest />
-        <div className="relative z-10 mx-auto max-w-2xl px-6 pb-10 pt-16 text-center">
+        <div className="relative z-10 mx-auto flex min-h-[min(52vh,28rem)] max-w-2xl flex-col items-center justify-center px-6 pb-12 pt-20 text-center">
           {/* The wordmark IS the heading — the thesis <h1> that used to carry
               that job left with the banner, and a page with no <h1> strands
               anyone navigating by headings. The mark's aria-label supplies the

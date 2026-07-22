@@ -6,6 +6,64 @@ records that sweep's **rejections and dismissals**, newest first, so a later run
 re-flag what a prior run already refuted. Confirmed findings go to the Morning Board, not
 here. Cite `file:line` (or the live probe) so each verdict is independently re-derivable.
 
+## 2026-07-22 — the 01:55 alert was CORRECT (do not refute it); the branch merge hazard REFUTED by simulation; two stall readings corrected
+
+**REJECTED — "today's 01:55 folklore alert is refuted by live production curls."** The alert never
+claimed the site was down, so the curls refute nothing. Reading the monitor's alerting block on the
+monitoring host: the subject defaults to `/folklore is failing its synthetic check`, but when the
+failure text contains `THIS MACHINE` it is **overridden** to
+`The folklore monitor cannot trust itself — the Mac mini is low on disk`, with advice reading
+`This is the MONITORING HOST, not the site.` `monitor.log:709` records the 02:55:29 BST entry:
+`THIS MACHINE is low on disk: 125 MB free (floor 2048 MB) — page checks below cannot be trusted`.
+**The guard added on 2026-07-21 worked correctly on its first real outing**, and its condition is
+still true. Credit it; do not re-file it as a site finding.
+
+**CONFIRMED for the record — the site itself is healthy and every gate fails closed.** Live curls
+this run: root **200 in 0.071-0.080 s**, `/folklore` **200 in 0.275-0.637 s** warm, no latency
+escalation across samples. `POST /api/folklore/job` → **503** `{"ok":false,"reason":"not-available"}`;
+`POST /api/folklore/link` → **503**, same shape; `/board` challenges. `gh pr list` empty at exit 0 —
+no finished feature sitting unmerged.
+
+**REFUTED BY SIMULATION — "Henry's branch is 36 behind and lacks both binding-security commits, so
+merging it risks un-shipping them."** Every raw fact re-derived and true:
+`git rev-list --left-right --count origin/main...folklore-submit-rails` = **36 10**, merge base
+`748d96c`; `git cat-file -e folklore-submit-rails:src/lib/xBindingLive.ts` exits 128 while
+`origin/main` exits 0. **But the risk mechanism is a causal story that was asserted, never
+demonstrated — and it is false.** `git merge-tree --write-tree` run read-only in **both** directions
+resolves without un-shipping the binding-security code. `git cherry` marks 8 of 10 commits already
+equivalent on main and the other two shipped under rewritten hashes, so **nothing is stranded**.
+This is stale-predecessor hygiene, not a security hazard. The branch is nonetheless **spent**:
+merging it would revert 40 files (133 insertions against 3,082 deletions). Move the four uncommitted
+files onto main; leave the branch behind.
+
+**REJECTED — "the kudos and Elo card's build half rode yesterday's rebase onto main."** It did not.
+The plan `2026-07-18-folklore-kudos-elo.html` still reads 28 checkboxes with 19 checked and its last
+touching commit is `ec5dc50` (2026-07-19 09:42), which **predates** the rebase. Stripe remains two
+prose comments only (`src/lib/kudos/constants.ts:64`, `src/lib/kudos/float.ts:79`) with no dependency
+and no webhook; no `src/lib/kudos/pricing.ts` exists anywhere on `origin/main`; `markSettled` has
+zero production callers (definition at `src/lib/kudos/float.ts:180` plus nine test hits). Nothing
+moved in three days.
+
+**CONFIRMED — the folklore link board LANDED on main, so the "branch-only" premise is retired.**
+Nine folklore commits sit on `origin/main` at `6c07ec5` with author dates 07-19/07-20 but committer
+dates 2026-07-21 14:50-14:52 (the rebase signature); `git reflog show origin/main` records the push
+at 14:53:00. `src/app/api/folklore/link/route.ts` and its test now exist on main, gated at `:144` as
+the **first statement** of POST. The binding fix survived the rebase:
+`git merge-base --is-ancestor 0f1fd7b origin/main` is YES and
+`git cat-file -e origin/main:src/lib/xBindingLive.ts` succeeds.
+
+**METHOD NOTE — an absence claim needs a control, and a glob is not a search.** A Sci Fri alarm
+("episode 2 undelivered") rested on `ls -lt ~/Desktop/*.mp4`, a **non-recursive** glob that misses
+`~/Desktop/Top Secret/`, where both masters in fact sit. A test that fires identically on delivered
+and undelivered work proves nothing. The same run's good absence claims each carried a control that
+found a neighbouring file — that is the difference between "not there" and "I looked in the wrong
+place".
+
+**HOUSEKEEPING — this ledger is uncommitted on a spent branch.** The 2026-07-20 entry above and this
+one both sit in the working tree on `folklore-submit-rails`, which contributes nothing main does not
+already have. Move this file to main alongside the four folklore presentation files rather than
+committing it here.
+
 ## 2026-07-21 — the `/folklore` alerts were a false alarm from the monitoring host; the site never went down
 
 Two synthetic-check alerts fired (2026-07-20 22:55:47 and 2026-07-21 06:15:10), both reading
