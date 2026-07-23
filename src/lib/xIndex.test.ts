@@ -8,14 +8,24 @@ import type { Redis } from "@upstash/redis";
 let current: Redis | null = null;
 vi.mock("./redis", () => ({ getRedis: () => current }));
 
-import { listHandles, setXTxids, stampHandle } from "./xIndex";
+import { listHandles, readHandleCards, setXTxids, stampHandle } from "./xIndex";
+
+/** Every `zmscore` the fake was asked for, so a test can assert that a
+ * look-up with nothing to look up costs no round trip at all. */
+let zmscoreCalls: string[][] = [];
 
 /** A minimal in-memory stand-in for the Upstash client — only the calls
- * xIndex actually makes: `zadd` (with `gt`) and `zrange` (with `rev` +
- * `withScores`, returned flat as Upstash does: member, score, member, score…). */
+ * xIndex actually makes: `zadd` (with `gt`), `zrange` (with `rev` +
+ * `withScores`, returned flat as Upstash does: member, score, member, score…)
+ * and `zmscore`, which answers null for a member the set does not hold. */
 function fakeRedis(): Redis {
   const zsets = new Map<string, Map<string, number>>();
   return {
+    zmscore: async (key: string, members: string[]) => {
+      zmscoreCalls.push(members);
+      const zset = zsets.get(key) ?? new Map<string, number>();
+      return members.map((member) => zset.get(member) ?? null);
+    },
     zadd: async (key: string, opts: { gt?: boolean }, ...pairs: Array<{ score: number; member: string }>) => {
       const zset = zsets.get(key) ?? new Map<string, number>();
       for (const { score, member } of pairs) {
@@ -38,6 +48,7 @@ function fakeRedis(): Redis {
 
 beforeEach(() => {
   current = null;
+  zmscoreCalls = [];
 });
 
 describe("setXTxids", () => {
@@ -86,5 +97,40 @@ describe("listHandles", () => {
 
   it("tolerates missing Redis, returning an empty list rather than throwing", async () => {
     await expect(listHandles()).resolves.toEqual([]);
+  });
+});
+
+describe("readHandleCards", () => {
+  it("reads the cards for named handles, whatever the directory window held", async () => {
+    current = fakeRedis();
+    await stampHandle("zed", 1_000);
+    await stampHandle("newcomer", 10_000);
+    expect(await readHandleCards(["zed"])).toEqual([{ handle: "zed", latestMs: 1_000 }]);
+  });
+
+  it("is case-blind, and answers in the order it was asked", async () => {
+    current = fakeRedis();
+    await stampHandle("ada", 1_000);
+    await stampHandle("zed", 2_000);
+    expect(await readHandleCards(["ZED", "Ada"])).toEqual([
+      { handle: "zed", latestMs: 2_000 },
+      { handle: "ada", latestMs: 1_000 },
+    ]);
+  });
+
+  it("drops a handle the directory never registered — no card, no row", async () => {
+    current = fakeRedis();
+    await stampHandle("ada", 1_000);
+    expect(await readHandleCards(["ada", "ghost"])).toEqual([{ handle: "ada", latestMs: 1_000 }]);
+  });
+
+  it("costs no round trip when there is nothing to look up", async () => {
+    current = fakeRedis();
+    expect(await readHandleCards([])).toEqual([]);
+    expect(zmscoreCalls).toEqual([]);
+  });
+
+  it("tolerates missing Redis, returning an empty list rather than throwing", async () => {
+    await expect(readHandleCards(["ada"])).resolves.toEqual([]);
   });
 });

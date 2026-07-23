@@ -26,6 +26,41 @@ export const linkTxidsOf = (entries: { member: string }[]): string[] =>
     .map((e) => e.member.slice(LINK_PREFIX.length));
 
 /**
+ * Pure. The handles the board ranks as profiles that the directory read did
+ * not supply a card for — what the page must look up before merging, the
+ * profile-side twin of `linkTxidsOf`.
+ *
+ * The two windows are drawn from different sorted sets and ordered by
+ * different quantities: `x:handles` is scored by registration time, so its
+ * window is the most recently REGISTERED handles, while `folklore:board` is
+ * scored by kudos, so its window is the highest-SCORING members. Equal window
+ * sizes therefore do not make the two sets equal, and the difference falls on
+ * the archivers who registered earliest and earned most — exactly the people
+ * with the most standing to lose. mergeBoard can only render a member whose
+ * card it was handed, so an unlooked-up veteran renders NOWHERE: not demoted,
+ * absent. Every archive on that board was paid for, so that is a payer losing
+ * a delivered artifact, the same harm the directory rescue closed.
+ *
+ * Lower-cased and de-duplicated because the result is a Redis read, and the
+ * directory's members are lower-cased handles.
+ */
+export const unresolvedProfileHandles = (
+  entries: { member: string }[],
+  handleCards: HandleCard[],
+): string[] => {
+  const listed = new Set(handleCards.map((card) => card.handle.toLowerCase()));
+  return [
+    ...new Set(
+      entries.flatMap((e) =>
+        e.member.startsWith(PROFILE_PREFIX)
+          ? [e.member.slice(PROFILE_PREFIX.length).toLowerCase()]
+          : [],
+      ),
+    ),
+  ].filter((handle) => !listed.has(handle));
+};
+
+/**
  * Pure. Every directory handle the board did not account for, appended after
  * the board's own rows in the directory's order.
  *

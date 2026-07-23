@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getArchivePage } from "@/lib/xArchiveCache";
-import { listHandles } from "@/lib/xIndex";
+import { listHandles, readHandleCards } from "@/lib/xIndex";
 import { gbpPerBsv } from "@/lib/xPrice";
 import { readFoundingTotal, readLedgerRollup } from "@/lib/xVotes";
 import { readTipCounts } from "@/lib/kudos/tips";
@@ -9,7 +9,13 @@ import { readRatingTable } from "@/lib/kudos/ledger";
 import { readAuthorRatings } from "@/lib/kudos/candidates";
 import { boardTop, commentCount, readLinkRecord } from "@/lib/folkloreBoard";
 import { sortHandlesByAuthorElo } from "./sortPosts";
-import { linkTxidsOf, mergeBoard, withUnlistedHandles, type LinkResolution } from "./boardMerge";
+import {
+  linkTxidsOf,
+  mergeBoard,
+  unresolvedProfileHandles,
+  withUnlistedHandles,
+  type LinkResolution,
+} from "./boardMerge";
 import FolkloreWordmark from "./_components/FolkloreWordmark";
 import FolkloreForest from "./_components/FolkloreForest";
 import ProfileView from "./_components/ProfileView";
@@ -35,11 +41,19 @@ const WITNESS_TEASER_POSTS = 6;
 /**
  * How many rows the front page considers, on both reads.
  *
- * One number for the board window and the directory read, because a board
- * member can only render if the directory supplied its card: reading fewer
- * handles than board members spends window slots on rows that must then be
- * dropped, and reading fewer board members than handles hides cards the board
- * does rank.
+ * One number for the board window and the directory read because the page
+ * shows one list and that list has one length — not because the two windows
+ * hold the same handles. They cannot: the directory is ordered by
+ * registration time and the board by kudos, so equal sizes still cut
+ * different people. An earlier version of this comment reasoned from the
+ * sizes alone and concluded the reads were kept in step; they never were, and
+ * a board member the directory window cut used to render nowhere at all. The
+ * page closes that separately, by looking the missing cards up by name
+ * (`unresolvedProfileHandles`) instead of hoping the windows agree.
+ *
+ * What a short board window costs is rank, not presence: a profile the board
+ * did not return is appended at score zero by `withUnlistedHandles` rather
+ * than hidden.
  */
 const BOARD_WINDOW = 100;
 
@@ -95,8 +109,19 @@ export default async function FolklorePage() {
       )
     ).flatMap((pair) => (pair ? [pair] : [])),
   );
+  // Resolution and the appended tail are two different jobs, and one array was
+  // doing both badly. The TAIL must stay page-sized — it is the directory
+  // section, and reading a thousand handles would print a thousand rows.
+  // RESOLUTION must cover every profile the board ranks, wherever it sits in
+  // registration order, or that archiver's card is not demoted but absent.
+  // Only resolution grows, and only by the names actually missing: while every
+  // board handle is inside the directory window — the whole of today — this
+  // reads nothing extra at all.
+  const rescuedHandles = unresolvedProfileHandles(boardEntries, handles);
+  const resolvableHandles =
+    rescuedHandles.length > 0 ? [...handles, ...(await readHandleCards(rescuedHandles))] : handles;
   const boardRows = withUnlistedHandles(
-    mergeBoard(boardEntries, handles, linkRecords),
+    mergeBoard(boardEntries, resolvableHandles, linkRecords),
     directoryHandles,
   );
   // Whether the section is a kudos-ranked board or still just the ledger of

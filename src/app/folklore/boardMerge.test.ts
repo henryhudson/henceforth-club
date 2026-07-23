@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { LINK_SCORE_OFFSET, linkMember, profileMember } from "@/lib/folkloreBoard";
 import { validateComment, validateLink } from "./linkRecord";
-import { linkTxidsOf, mergeBoard, withUnlistedHandles, type LinkResolution } from "./boardMerge";
+import {
+  linkTxidsOf,
+  mergeBoard,
+  unresolvedProfileHandles,
+  withUnlistedHandles,
+  type LinkResolution,
+} from "./boardMerge";
 
 const TXID_A = "a".repeat(64);
 const TXID_B = "b".repeat(64);
@@ -89,6 +95,60 @@ describe("linkTxidsOf", () => {
     ]);
 
     expect(txids).toEqual([TXID_A, TXID_B]);
+  });
+});
+
+describe("unresolvedProfileHandles — the board ranks beyond the directory's window", () => {
+  // The two windows hold different populations: the directory is the most
+  // recently REGISTERED handles, the board the highest-KUDOS members. A
+  // long-standing archiver can top the board and still fall outside the
+  // directory read, and mergeBoard can only render a member whose card it was
+  // handed — so without a second look-up she renders nowhere at all.
+  const window100 = Array.from({ length: 100 }, (_, i) => ({
+    handle: `newcomer${i}`,
+    latestMs: 10_000 + i,
+  }));
+
+  it("names the board's top archiver when the directory window cut her", () => {
+    const entries = [{ member: profileMember("zed"), score: 40 }];
+
+    // Today's drop, stated as an assertion rather than assumed.
+    expect(mergeBoard(entries, window100, resolutions([]))).toEqual([]);
+
+    expect(unresolvedProfileHandles(entries, window100)).toEqual(["zed"]);
+
+    const rescued = mergeBoard(
+      entries,
+      [...window100, { handle: "zed", latestMs: 1_000 }],
+      resolutions([]),
+    );
+    expect(rescued).toEqual([{ kind: "profile", score: 40, handle: "zed", latestMs: 1_000 }]);
+  });
+
+  it("is empty when the directory supplied every profile member, case-blind", () => {
+    expect(
+      unresolvedProfileHandles([{ member: profileMember("Ada") }], [{ handle: "ada", latestMs: 1_000 }]),
+    ).toEqual([]);
+  });
+
+  it("ignores link members and unknown encodings — only profiles need a card", () => {
+    expect(
+      unresolvedProfileHandles(
+        [{ member: linkMember(TXID_A) }, { member: "garbage-member" }],
+        [],
+      ),
+    ).toEqual([]);
+  });
+
+  it("asks for each missing handle once, however many times the board names it", () => {
+    // The board's members are unique, but a defensive duplicate must not
+    // become two look-ups: this list is what the page reads Redis with.
+    expect(
+      unresolvedProfileHandles(
+        [{ member: profileMember("zed") }, { member: profileMember("ZED") }],
+        [],
+      ),
+    ).toEqual(["zed"]);
   });
 });
 

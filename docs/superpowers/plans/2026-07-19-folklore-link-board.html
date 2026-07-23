@@ -37,6 +37,10 @@
 
 <div class="note"><strong>For agentic workers:</strong> execute with superpowers:subagent-driven-development (recommended) or superpowers:executing-plans, task by task, checkboxes tracked. Each task's implementer sees only their task — the Interfaces block is how neighbouring names reach you.</div>
 
+<div class="note"><strong>Status &middot; 2026-07-23.</strong> The ticks are what today's sweep could verify in the two source trees — the files exist, the suites are green (site: 1,130 vitest tests), and each task's commit carries this plan's own message. Six boxes stay unticked, and only three of them are outstanding work: <strong>the production seed run</strong> (A8 — <code>folklore:board</code> reads zero members while <code>x:handles</code> holds one, so the one pre-existing handle has never been backfilled), <strong>the adversarial money review</strong> of A6+A7+A8, and <strong>the merge that was meant to follow it</strong> — those three commits are already on <code>main</code>, so the gate ran in the wrong order, though <code>FOLKLORE_SUBMIT_ENABLED</code> is unset and nothing is live. The other three are process-only boxes (&ldquo;run and watch it fail&rdquo; in A1 and B1, &ldquo;read <code>run.mjs</code> first&rdquo; in A7): their evidence is not in the tree, so they are left unclaimed rather than ticked.</div>
+
+<div class="note"><strong>Gap this plan never had a task for.</strong> Spec §4 names <code>/folklore/submit</code> as the only path for links and comments, but no task creates the form: A6 builds the endpoint and nothing in the site calls it. The funded end-to-end run of Q3 therefore has nothing to drive, and flipping the flag would open an endpoint no visitor can reach. That is engineering, not a decision for Henry.</div>
+
 <h2>Global constraints (every task inherits these)</h2>
 <ul>
 <li><strong>Flags dark:</strong> <code>FOLKLORE_SUBMIT_ENABLED</code> stays unset in production until Henry's funded end-to-end run (spec Q3). Read it per-request, exactly like <code>src/app/api/folklore/job/route.ts</code> reads its gate — never at module scope.</li>
@@ -57,7 +61,7 @@
 <div class="files"><strong>Create:</strong> <code>src/app/folklore/linkRecord.ts</code>, <code>src/app/folklore/linkRecord.test.ts</code></div>
 <p><strong>Interfaces — produces:</strong> <code>TITLE_MAX=300</code>, <code>COMMENT_MAX=10_000</code>, <code>TXID_RE</code>, types <code>FolkloreLink</code>/<code>FolkloreComment</code>/<code>FolkloreRecord</code>, <code>validateLink(url,title,by?)</code>, <code>validateComment(parent,text,by?)</code> (both return the record or <code>null</code>), <code>encodeRecord(r): Uint8Array</code>, <code>recordFromScripts(scriptHexes: string[]): FolkloreRecord | null</code>. Consumes <code>extractPushdata</code> from <code>src/app/folklore/onchain.ts</code>.</p>
 <ul class="steps">
-<li><input type="checkbox"> <strong>Failing tests first</strong> — shape round-trips, caps, hostile input:
+<li><input type="checkbox" checked> <strong>Failing tests first</strong> — shape round-trips, caps, hostile input:
 <pre><code>import { validateLink, validateComment, encodeRecord, recordFromScripts,
          TITLE_MAX, COMMENT_MAX } from "./linkRecord";
 
@@ -77,7 +81,7 @@ test("comment parent must be a 64-hex txid", () =&gt; { /* bad parent null */ })
 test("garbage json and a SocialArchive are not records", () =&gt; { /* null */ });</code></pre>
 Write a tiny local <code>pushdataHex</code>/<code>utf8</code> helper in the test file (PUSHDATA2 length prefix — mirror the byte layout <code>extractPushdata</code> walks).</li>
 <li><input type="checkbox"> <strong>Run:</strong> <code>npx vitest run src/app/folklore/linkRecord.test.ts</code> — expect every test to fail (module missing).</li>
-<li><input type="checkbox"> <strong>Implement.</strong> Validation is total functions returning <code>null</code>, never throwing:
+<li><input type="checkbox" checked> <strong>Implement.</strong> Validation is total functions returning <code>null</code>, never throwing:
 <pre><code>export const TITLE_MAX = 300;
 export const COMMENT_MAX = 10_000;
 export const TXID_RE = /^[0-9a-fA-F]{64}$/;
@@ -127,8 +131,8 @@ function tryParse(bytes: Uint8Array): FolkloreRecord | null {
   return null;
 }</code></pre>
 Note how parse funnels through the same validators — the caps hold on read by construction.</li>
-<li><input type="checkbox"> <strong>Run the file green</strong>, then the full suite: <code>npm test</code>.</li>
-<li><input type="checkbox"> <strong>Commit:</strong> <code>git add src/app/folklore/linkRecord.ts src/app/folklore/linkRecord.test.ts &amp;&amp; git commit -m "Folklore board: link and comment record types — validate, encode, parse"</code></li>
+<li><input type="checkbox" checked> <strong>Run the file green</strong>, then the full suite: <code>npm test</code>.</li>
+<li><input type="checkbox" checked> <strong>Commit:</strong> <code>git add src/app/folklore/linkRecord.ts src/app/folklore/linkRecord.test.ts &amp;&amp; git commit -m "Folklore board: link and comment record types — validate, encode, parse"</code></li>
 </ul>
 </div>
 
@@ -136,16 +140,16 @@ Note how parse funnels through the same validators — the caps hold on read by 
 <div class="files"><strong>Create:</strong> <code>src/lib/folkloreBoard.ts</code>, <code>src/lib/folkloreBoard.test.ts</code></div>
 <p><strong>Interfaces — produces:</strong> <code>linkMember(txid)</code> / <code>profileMember(handle)</code>, <code>addLinkToBoard(txid, record, nowMs)</code>, <code>addCommentToIndex(parent, txid, nowMs)</code>, <code>bumpBoardKudos(member, by)</code>, <code>boardTop(n): Promise&lt;{member,score}[]&gt;</code>, <code>commentTxids(parent)</code>, <code>commentCount(parent)</code>, <code>getLinkRecord(txid)</code>, <code>indexSince(sinceMs): Promise&lt;{txids: string[]; now: number}&gt;</code>. Consumes <code>getRedis</code> from <code>src/lib/redis.ts</code> (nullable — every function no-ops or returns empty on null) and <code>FolkloreRecord</code> from A1.</p>
 <ul class="steps">
-<li><input type="checkbox"> <strong>Failing tests first</strong> (mock <code>getRedis</code> with <code>vi.mock</code>, an in-memory zset/list fake — follow the pattern the existing kudos tests use):
+<li><input type="checkbox" checked> <strong>Failing tests first</strong> (mock <code>getRedis</code> with <code>vi.mock</code>, an in-memory zset/list fake — follow the pattern the existing kudos tests use):
 <pre><code>test("addLinkToBoard: zero-score board entry, record cached, log stamped", …);
 test("indexSince returns only txids logged after since, oldest first,
       and now is captured BEFORE the read", …);   // fake clock injected
 test("bumpBoardKudos increments the member score; boardTop orders by score", …);
 test("comments: RPUSH order preserved; commentCount matches; log stamped", …);
 test("null redis: every function is a safe no-op / empty", …);</code></pre></li>
-<li><input type="checkbox"> <strong>Implement.</strong> Keys: <code>folklore:board</code> (zset), <code>folklore:comments:&lt;txid&gt;</code> (list), <code>folklore:log</code> (zset, score = insertion ms), <code>folklore:link:&lt;txid&gt;</code> (the validated record JSON — a read cache; the chain stays the truth). <code>addLinkToBoard</code> uses <code>zadd(..., { nx: true })</code> so a retry never resets a score. <code>indexSince(sinceMs)</code>: <code>const now = Date.now()</code> FIRST, then <code>zrange(log, sinceMs, "+inf", { byScore: true })</code> exclusive of <code>sinceMs</code> itself is wrong — use inclusive read and let the client's set-union dedupe (spec: merge is idempotent); return <code>{ txids, now }</code>.</li>
-<li><input type="checkbox"> <strong>Green file, full suite, build</strong>: <code>npm test &amp;&amp; npm run build</code>.</li>
-<li><input type="checkbox"> <strong>Commit:</strong> <code>"Folklore board: Upstash index — board zset, comment lists, insertion-time log"</code></li>
+<li><input type="checkbox" checked> <strong>Implement.</strong> Keys: <code>folklore:board</code> (zset), <code>folklore:comments:&lt;txid&gt;</code> (list), <code>folklore:log</code> (zset, score = insertion ms), <code>folklore:link:&lt;txid&gt;</code> (the validated record JSON — a read cache; the chain stays the truth). <code>addLinkToBoard</code> uses <code>zadd(..., { nx: true })</code> so a retry never resets a score. <code>indexSince(sinceMs)</code>: <code>const now = Date.now()</code> FIRST, then <code>zrange(log, sinceMs, "+inf", { byScore: true })</code> exclusive of <code>sinceMs</code> itself is wrong — use inclusive read and let the client's set-union dedupe (spec: merge is idempotent); return <code>{ txids, now }</code>.</li>
+<li><input type="checkbox" checked> <strong>Green file, full suite, build</strong>: <code>npm test &amp;&amp; npm run build</code>.</li>
+<li><input type="checkbox" checked> <strong>Commit:</strong> <code>"Folklore board: Upstash index — board zset, comment lists, insertion-time log"</code></li>
 </ul>
 </div>
 
@@ -153,9 +157,9 @@ test("null redis: every function is a safe no-op / empty", …);</code></pre></l
 <div class="files"><strong>Create:</strong> <code>src/app/api/folklore/index/route.ts</code>, <code>src/app/api/folklore/index/route.test.ts</code></div>
 <p><strong>Interfaces — produces:</strong> <code>GET /api/folklore/index?since=&lt;ms&gt;</code> → <code>200 { txids: string[], now: number }</code>. Consumes <code>indexSince</code> from A2. Read-only, public, no flag (it serves txids — already-public data, same posture as the showroom reads).</p>
 <ul class="steps">
-<li><input type="checkbox"> <strong>Failing tests:</strong> default <code>since=0</code> returns everything; a garbage or negative <code>since</code> is treated as 0 (never a 500); response carries <code>now</code>; <code>Cache-Control: no-store</code> (a cached delta would freeze a watermark).</li>
-<li><input type="checkbox"> <strong>Implement</strong> — thin: parse <code>since</code> with <code>Number.parseInt</code>, clamp to <code>&gt;= 0</code>, call <code>indexSince</code>, <code>NextResponse.json(result, { headers: { "Cache-Control": "no-store" } })</code>. <code>export const dynamic = "force-dynamic"</code>.</li>
-<li><input type="checkbox"> <strong>Green + build + commit:</strong> <code>"Folklore board: /api/folklore/index — the since-watermark delta feed"</code></li>
+<li><input type="checkbox" checked> <strong>Failing tests:</strong> default <code>since=0</code> returns everything; a garbage or negative <code>since</code> is treated as 0 (never a 500); response carries <code>now</code>; <code>Cache-Control: no-store</code> (a cached delta would freeze a watermark).</li>
+<li><input type="checkbox" checked> <strong>Implement</strong> — thin: parse <code>since</code> with <code>Number.parseInt</code>, clamp to <code>&gt;= 0</code>, call <code>indexSince</code>, <code>NextResponse.json(result, { headers: { "Cache-Control": "no-store" } })</code>. <code>export const dynamic = "force-dynamic"</code>.</li>
+<li><input type="checkbox" checked> <strong>Green + build + commit:</strong> <code>"Folklore board: /api/folklore/index — the since-watermark delta feed"</code></li>
 </ul>
 </div>
 
@@ -163,10 +167,10 @@ test("null redis: every function is a safe no-op / empty", …);</code></pre></l
 <div class="files"><strong>Create:</strong> <code>src/lib/explorer.ts</code>, <code>src/app/folklore/_components/LinkCard.tsx</code>, <code>src/app/folklore/boardMerge.ts</code>, <code>src/app/folklore/boardMerge.test.ts</code> &nbsp;<strong>Modify:</strong> <code>src/app/folklore/page.tsx</code></div>
 <p><strong>Interfaces — produces:</strong> <code>txExplorerUrl(txid)</code>; <code>mergeBoard(entries, handleCards, linkRecords): BoardRow[]</code> (pure — resolves board members against loaded data, drops unresolvable members). Consumes <code>boardTop</code>/<code>getLinkRecord</code>/<code>commentCount</code> (A2) and the page's existing handle-card data.</p>
 <ul class="steps">
-<li><input type="checkbox"> <strong>Verify the BananaBlocks transaction-page URL format live</strong> (fetch the explorer's site and open a known txid) before writing <code>explorer.ts</code>; if it cannot be confirmed today, point <code>txExplorerUrl</code> at WhatsOnChain (<code>https://whatsonchain.com/tx/&lt;txid&gt;</code>) with a one-line comment naming the swap — never guess a domain into production.</li>
-<li><input type="checkbox"> <strong>Failing tests for <code>mergeBoard</code></strong>: score order preserved; a <code>profile:</code> member resolves to its handle card; a <code>link:</code> member to its record; an unresolvable member (delisted cache, unknown handle) is dropped silently — the moderation lever from spec §7.</li>
-<li><input type="checkbox"> <strong>Implement</strong> the pure merge + <code>LinkCard</code> (title → the url; domain via <code>new URL(url).hostname</code>; <code>by</code> when present; kudos count; comment count; explorer link-out). Wire <code>page.tsx</code>: read <code>boardTop(100)</code>, resolve, render — profile members reuse the existing handle card component untouched. Keep the current handle-only rendering as the fallback when the board zset is empty (pre-seed production).</li>
-<li><input type="checkbox"> <strong>Green + build + commit:</strong> <code>"Folklore board: unified feed — profile and link cards ranked together"</code></li>
+<li><input type="checkbox" checked> <strong>Verify the BananaBlocks transaction-page URL format live</strong> (fetch the explorer's site and open a known txid) before writing <code>explorer.ts</code>; if it cannot be confirmed today, point <code>txExplorerUrl</code> at WhatsOnChain (<code>https://whatsonchain.com/tx/&lt;txid&gt;</code>) with a one-line comment naming the swap — never guess a domain into production.</li>
+<li><input type="checkbox" checked> <strong>Failing tests for <code>mergeBoard</code></strong>: score order preserved; a <code>profile:</code> member resolves to its handle card; a <code>link:</code> member to its record; an unresolvable member (delisted cache, unknown handle) is dropped silently — the moderation lever from spec §7.</li>
+<li><input type="checkbox" checked> <strong>Implement</strong> the pure merge + <code>LinkCard</code> (title → the url; domain via <code>new URL(url).hostname</code>; <code>by</code> when present; kudos count; comment count; explorer link-out). Wire <code>page.tsx</code>: read <code>boardTop(100)</code>, resolve, render — profile members reuse the existing handle card component untouched. Keep the current handle-only rendering as the fallback when the board zset is empty (pre-seed production).</li>
+<li><input type="checkbox" checked> <strong>Green + build + commit:</strong> <code>"Folklore board: unified feed — profile and link cards ranked together"</code></li>
 </ul>
 </div>
 
@@ -174,9 +178,9 @@ test("null redis: every function is a safe no-op / empty", …);</code></pre></l
 <div class="files"><strong>Modify:</strong> the transaction page under <code>src/app/folklore/tx/</code> (read its current shape first) &nbsp;<strong>Create:</strong> <code>src/app/folklore/tx/thread.test.ts</code></div>
 <p><strong>Interfaces — consumes:</strong> <code>recordFromScripts</code> (A1), <code>commentTxids</code> (A2), the existing WhatsOnChain fetch in <code>src/lib/whatsonchain.ts</code>.</p>
 <ul class="steps">
-<li><input type="checkbox"> <strong>Failing test</strong> for the pure thread assembly: given a link record and comment records fetched by txid, render order is chronological (list order — the RPUSH order IS submission order), a comment whose parent is missing renders nowhere (spec §8), a hostile record among the comments is skipped.</li>
-<li><input type="checkbox"> <strong>Implement:</strong> when the transaction's scripts parse as a <code>FolkloreLink</code>, render the link header (title, url, by, explorer link) then the thread — <code>commentTxids(txid)</code>, fetch each transaction's scripts, <code>recordFromScripts</code>, render text + by. Non-link transactions keep their existing rendering exactly.</li>
-<li><input type="checkbox"> <strong>Green + build + commit:</strong> <code>"Folklore board: link pages render their comment thread from chain"</code></li>
+<li><input type="checkbox" checked> <strong>Failing test</strong> for the pure thread assembly: given a link record and comment records fetched by txid, render order is chronological (list order — the RPUSH order IS submission order), a comment whose parent is missing renders nowhere (spec §8), a hostile record among the comments is skipped.</li>
+<li><input type="checkbox" checked> <strong>Implement:</strong> when the transaction's scripts parse as a <code>FolkloreLink</code>, render the link header (title, url, by, explorer link) then the thread — <code>commentTxids(txid)</code>, fetch each transaction's scripts, <code>recordFromScripts</code>, render text + by. Non-link transactions keep their existing rendering exactly.</li>
+<li><input type="checkbox" checked> <strong>Green + build + commit:</strong> <code>"Folklore board: link pages render their comment thread from chain"</code></li>
 </ul>
 </div>
 
@@ -184,10 +188,10 @@ test("null redis: every function is a safe no-op / empty", …);</code></pre></l
 <div class="files"><strong>Create:</strong> <code>src/lib/folkloreJob/linkQuote.ts</code>, <code>src/lib/folkloreJob/linkQuote.test.ts</code>, <code>src/app/api/folklore/link/route.ts</code>, <code>src/app/api/folklore/link/route.test.ts</code></div>
 <p><strong>Interfaces — produces:</strong> <code>LINK_FLOOR_PENCE = 10</code>; <code>quoteLinkSats(recordBytes: number, gbpPerBsv: number): number | null</code> (inscription fee via <code>estimateSingleOpReturn</code> + the floor converted at the live rate; null on no rate — fail closed, the <code>quote.ts</code> posture); <code>POST /api/folklore/link</code> — flag off → 503; invalid record → 400 with reason; valid → a job via the A7 contract. Consumes A1 validators, <code>createJob</code> from <code>src/lib/folkloreJob/jobStore.ts</code>, <code>gbpPerBsv</code> from <code>src/lib/xPrice.ts</code>.</p>
 <ul class="steps">
-<li><input type="checkbox"> <strong>Failing quote tests:</strong> floor dominates for a tiny record (fee pennies, floor 10p); no live rate → null; the fee half delegates to <code>estimateSingleOpReturn</code> (assert against its own output, never a re-derived formula — the quote.ts comment explains why).</li>
-<li><input type="checkbox"> <strong>Failing route tests:</strong> flag unset → 503 before ANY body read; oversized title → 400 <code>reason:"title-too-long"</code>; bad url scheme → 400; valid link → 200 with <code>{ jobId, priceSats, address }</code>-shaped job from the existing <code>createJob</code>; comment with a parent not on the board → 400 <code>reason:"unknown-parent"</code> (submit-side courtesy; chain-side orphans stay legal per spec §8).</li>
-<li><input type="checkbox"> <strong>Implement</strong> both. The route mirrors <code>job/route.ts</code>'s per-request flag read and refusal helper verbatim in shape.</li>
-<li><input type="checkbox"> <strong>Green + build.</strong> <strong>Do not merge yet</strong> — this and A7 merge together after the adversarial money review (A8's step).</li>
+<li><input type="checkbox" checked> <strong>Failing quote tests:</strong> floor dominates for a tiny record (fee pennies, floor 10p); no live rate → null; the fee half delegates to <code>estimateSingleOpReturn</code> (assert against its own output, never a re-derived formula — the quote.ts comment explains why).</li>
+<li><input type="checkbox" checked> <strong>Failing route tests:</strong> flag unset → 503 before ANY body read; oversized title → 400 <code>reason:"title-too-long"</code>; bad url scheme → 400; valid link → 200 with <code>{ jobId, priceSats, address }</code>-shaped job from the existing <code>createJob</code>; comment with a parent not on the board → 400 <code>reason:"unknown-parent"</code> (submit-side courtesy; chain-side orphans stay legal per spec §8).</li>
+<li><input type="checkbox" checked> <strong>Implement</strong> both. The route mirrors <code>job/route.ts</code>'s per-request flag read and refusal helper verbatim in shape.</li>
+<li><input type="checkbox" checked> <strong>Green + build.</strong> <strong>Do not merge yet</strong> — this and A7 merge together after the adversarial money review (A8's step).</li>
 </ul>
 </div>
 
@@ -196,9 +200,9 @@ test("null redis: every function is a safe no-op / empty", …);</code></pre></l
 <p><strong>Interfaces — consumes:</strong> the A6 job payload (<code>kind:"link"</code>, the validated record); <code>encodeRecord</code> (A1); <code>addLinkToBoard</code>/<code>addCommentToIndex</code> (A2). <strong>Produces:</strong> on payment: one OP_RETURN transaction carrying the record, broadcast on the worker's existing rails; on confirmation: board + log + cache writes; sweep-to-revenue unchanged.</p>
 <ul class="steps">
 <li><input type="checkbox"> <strong>Read first:</strong> <code>scripts/xtext-worker/run.mjs</code> end to end. The per-job key lifecycle (mint → watch → inscribe → sweep) is the spec B posture and MUST NOT change — a link is just the smallest payload the rails carry.</li>
-<li><input type="checkbox"> <strong>Failing test</strong> for the new pure piece: job payload → OP_RETURN script bytes (record from A1's <code>encodeRecord</code>, script prefix matching what <code>extractPushdata</code>/<code>recordFromScripts</code> can walk — assert the round-trip through A1's parser).</li>
-<li><input type="checkbox"> <strong>Implement</strong> the link branch in the worker's dispatch: build, broadcast, then <code>addLinkToBoard(txid, record, Date.now())</code> (or <code>addCommentToIndex</code> for comments). A failed index write after a successful broadcast retries on the worker's next tick — the chain is truth, the index self-heals (log the miss loudly).</li>
-<li><input type="checkbox"> <strong>Green.</strong> Hold with A6 for the review gate in A8.</li>
+<li><input type="checkbox" checked> <strong>Failing test</strong> for the new pure piece: job payload → OP_RETURN script bytes (record from A1's <code>encodeRecord</code>, script prefix matching what <code>extractPushdata</code>/<code>recordFromScripts</code> can walk — assert the round-trip through A1's parser).</li>
+<li><input type="checkbox" checked> <strong>Implement</strong> the link branch in the worker's dispatch: build, broadcast, then <code>addLinkToBoard(txid, record, Date.now())</code> (or <code>addCommentToIndex</code> for comments). A failed index write after a successful broadcast retries on the worker's next tick — the chain is truth, the index self-heals (log the miss loudly).</li>
+<li><input type="checkbox" checked> <strong>Green.</strong> Hold with A6 for the review gate in A8.</li>
 </ul>
 </div>
 
@@ -206,8 +210,8 @@ test("null redis: every function is a safe no-op / empty", …);</code></pre></l
 <div class="files"><strong>Modify:</strong> <code>src/lib/kudos/tips.ts</code> (<code>recordTip</code>) and the duel route's accrual site &nbsp;<strong>Create:</strong> <code>scripts/seed-folklore-board.mjs</code></div>
 <p><strong>Interfaces — consumes:</strong> <code>bumpBoardKudos</code> (A2); the two accrual sites the kudos work of 2026-07-19 already single-homed (<code>recordTip</code> and the duel resolution).</p>
 <ul class="steps">
-<li><input type="checkbox"> <strong>Failing test:</strong> a tip on a board link's txid bumps <code>link:&lt;txid&gt;</code> in <code>folklore:board</code>; a tip on an archived post bumps its <code>profile:&lt;handle&gt;</code>; the tips-footprint whitelist test gains exactly the board key.</li>
-<li><input type="checkbox"> <strong>Implement</strong> the bump at both accrual sites (after accrual succeeds, never before).</li>
+<li><input type="checkbox" checked> <strong>Failing test:</strong> a tip on a board link's txid bumps <code>link:&lt;txid&gt;</code> in <code>folklore:board</code>; a tip on an archived post bumps its <code>profile:&lt;handle&gt;</code>; the tips-footprint whitelist test gains exactly the board key.</li>
+<li><input type="checkbox" checked> <strong>Implement</strong> the bump at both accrual sites (after accrual succeeds, never before).</li>
 <li><input type="checkbox"> <strong>Seed script</strong> (idempotent, <code>zadd nx</code>): every handle in the directory → <code>profile:&lt;handle&gt;</code> scored by that handle's existing kudos total, read through the same rollup the feed ranks by today. Run locally with <code>node --env-file=.env.local scripts/seed-folklore-board.mjs</code> against production only after A4 deploys.</li>
 <li><input type="checkbox"> <strong>Adversarial money review</strong> of A6+A7+A8 together (workflow: independent refuters on the quote floor, the job custody, the index-write failure arm, the kudos bump ordering). Findings block merge; SHIP verdict merges all three in one push.</li>
 <li><input type="checkbox"> <strong>Commit + push</strong> after the review: <code>"Folklore board: submit rails, worker inscription, kudos wiring, seed (adversarially reviewed)"</code></li>
@@ -231,15 +235,15 @@ extension FolkloreFile {
     func merging(_ delta: FolkloreDelta) -&gt; FolkloreFile
 }</code></pre></p>
 <ul class="steps">
-<li><input type="checkbox"> <strong>Failing tests</strong> (Swift Testing, <code>@Test</code>/<code>#expect</code>): fresh file + full delta = delta order; replayed delta is a no-op except the watermark; overlapping delta appends only the unknown txids; watermark always becomes <code>delta.now</code> even on an empty delta; decode of the on-disk JSON shape <code>{"v":1,"lastSyncAt":0,"txids":[]}</code> round-trips.</li>
+<li><input type="checkbox" checked> <strong>Failing tests</strong> (Swift Testing, <code>@Test</code>/<code>#expect</code>): fresh file + full delta = delta order; replayed delta is a no-op except the watermark; overlapping delta appends only the unknown txids; watermark always becomes <code>delta.now</code> even on an empty delta; decode of the on-disk JSON shape <code>{"v":1,"lastSyncAt":0,"txids":[]}</code> round-trips.</li>
 <li><input type="checkbox"> <strong>Run scoped, expect fail:</strong> <code>xcodebuild test … -only-testing:Henceforth_Tests/FolkloreFile_Tests</code>.</li>
-<li><input type="checkbox"> <strong>Implement</strong> — <code>merging</code> is a Set-membership fold, no mutation of the receiver (<code>let</code> + value semantics):
+<li><input type="checkbox" checked> <strong>Implement</strong> — <code>merging</code> is a Set-membership fold, no mutation of the receiver (<code>let</code> + value semantics):
 <pre><code>func merging(_ delta: FolkloreDelta) -&gt; FolkloreFile {
     let known = Set(txids)
     let fresh = delta.txids.filter { !known.contains($0) }
     return FolkloreFile(v: v, lastSyncAt: delta.now, txids: txids + fresh)
 }</code></pre></li>
-<li><input type="checkbox"> <strong>Green scoped run, then commit:</strong> <code>"Folklore file: per-account board index with a server-stamped watermark"</code></li>
+<li><input type="checkbox" checked> <strong>Green scoped run, then commit:</strong> <code>"Folklore file: per-account board index with a server-stamped watermark"</code></li>
 </ul>
 </div>
 
@@ -247,9 +251,9 @@ extension FolkloreFile {
 <div class="files"><strong>Create:</strong> <code>FORTH/FORTH/Terminal MVVM/View Model/Functions/Bitcoin/FolkloreSync.swift</code>, <code>FORTH/Henceforth_Tests/FolkloreSync_Tests.swift</code> &nbsp;<strong>Modify:</strong> the wallet-card creation path in <code>UserSettings</code> (create the file alongside the account) — read how <code>transactionDetails_&lt;walletTitle&gt;</code> files are created and mirror the convention: <code>folklore_&lt;walletTitle&gt;.json</code> via <code>LocalFileManager</code>.</p></div>
 <p><strong>Interfaces — produces:</strong> <code>extension WalletState { func syncFolkloreFile() async -&gt; FolkloreSyncOutcome }</code> where <code>enum FolkloreSyncOutcome { case synced(new: Int, total: Int); case offline; case corrupt }</code>; a <code>static var testFolkloreTransport: ((Int) async throws -&gt; FolkloreDelta)?</code> seam exactly like <code>ChainQueryService.testChainQueryStub</code>. Consumes B1. Endpoint: <code>https://www.henceforth.club/api/folklore/index?since=&lt;lastSyncAt&gt;</code>.</p>
 <ul class="steps">
-<li><input type="checkbox"> <strong>Failing tests</strong> through the seam: first sync (since 0) writes the file with the delta and the server now; second sync passes the stored watermark and appends only fresh txids; transport error → <code>.offline</code>, file untouched; corrupt file on disk → <code>.corrupt</code>, file quarantined not overwritten (never lose a good watermark to a bad write — atomic write per repo convention).</li>
-<li><input type="checkbox"> <strong>Implement</strong> — the fetch is one <code>URLSession</code> get decoded to <code>FolkloreDelta</code>, then B1's pure merge, then an atomic write. Domain owner: <code>WalletState</code> (spec: the file is account-scoped).</li>
-<li><input type="checkbox"> <strong>Green scoped + iOS simulator build + commit:</strong> <code>"Folklore sync: delta fetch against the server watermark, file created with the account"</code></li>
+<li><input type="checkbox" checked> <strong>Failing tests</strong> through the seam: first sync (since 0) writes the file with the delta and the server now; second sync passes the stored watermark and appends only fresh txids; transport error → <code>.offline</code>, file untouched; corrupt file on disk → <code>.corrupt</code>, file quarantined not overwritten (never lose a good watermark to a bad write — atomic write per repo convention).</li>
+<li><input type="checkbox" checked> <strong>Implement</strong> — the fetch is one <code>URLSession</code> get decoded to <code>FolkloreDelta</code>, then B1's pure merge, then an atomic write. Domain owner: <code>WalletState</code> (spec: the file is account-scoped).</li>
+<li><input type="checkbox" checked> <strong>Green scoped + iOS simulator build + commit:</strong> <code>"Folklore sync: delta fetch against the server watermark, file created with the account"</code></li>
 </ul>
 </div>
 
@@ -257,9 +261,9 @@ extension FolkloreFile {
 <div class="files"><strong>Modify (the seven-location vocabulary checklist):</strong> <code>VocabularyEnum.swift</code>, <code>VocabularyWords.swift</code>, <code>VocabularyDefinitions.swift</code>, <code>VocabularyStackDiagrams.swift</code>, <code>VocabularyCategories.swift</code>, <code>WordDispatch.swift</code>, implementation in <code>FolkloreSync.swift</code> &nbsp;<strong>Test:</strong> extend <code>FolkloreSync_Tests</code></p></div>
 <p><strong>Interfaces — produces:</strong> the word <code>folklore-sync</code> ( -- ), printing <code>folklore: N new, M total &middot; synced &lt;date&gt;</code> on success, <code>folklore: offline — file unchanged (M total)</code> otherwise. Consumes B2.</p>
 <ul class="steps">
-<li><input type="checkbox"> <strong>Failing test:</strong> through the transport seam, executing the word in test mode prints the success line with the right counts; the offline line leaves the file byte-identical.</li>
-<li><input type="checkbox"> <strong>Implement</strong> across the seven locations (context-aware not needed — a simple word with a dispatch closure; async via the existing awaitable/Task pattern the chain-query words use if a suspension is needed, else fire-and-report like <code>receive</code>).</li>
-<li><input type="checkbox"> <strong>Green scoped + build + commit:</strong> <code>"folklore-sync: the board index syncs on demand, watermark honest"</code>. Push (the pre-push suite is the repo's gate).</li>
+<li><input type="checkbox" checked> <strong>Failing test:</strong> through the transport seam, executing the word in test mode prints the success line with the right counts; the offline line leaves the file byte-identical.</li>
+<li><input type="checkbox" checked> <strong>Implement</strong> across the seven locations (context-aware not needed — a simple word with a dispatch closure; async via the existing awaitable/Task pattern the chain-query words use if a suspension is needed, else fire-and-report like <code>receive</code>).</li>
+<li><input type="checkbox" checked> <strong>Green scoped + build + commit:</strong> <code>"folklore-sync: the board index syncs on demand, watermark honest"</code>. Push (the pre-push suite is the repo's gate).</li>
 </ul>
 </div>
 

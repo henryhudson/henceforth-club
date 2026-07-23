@@ -65,6 +65,35 @@ export async function stampHandle(handle: string, atMs: number): Promise<boolean
   return true;
 }
 
+/**
+ * The directory cards for named handles, in the order asked, skipping any the
+ * directory has never registered.
+ *
+ * `listHandles` answers "who registered most recently", which is the wrong
+ * question for a caller that already knows WHICH handles it needs — the
+ * folklore board ranks by kudos, so the handles it wants can sit anywhere in
+ * registration order, including past the end of any window. One `zmscore`
+ * against the same sorted set answers the whole batch in a single round trip.
+ *
+ * A handle with no score is a handle the directory does not hold: it produces
+ * no card, so a board member naming it still renders nothing. That absence is
+ * deliberate — it is the moderation lever and the unknown-handle drop, not a
+ * read worth retrying.
+ */
+export async function readHandleCards(
+  handles: string[],
+): Promise<{ handle: string; latestMs: number }[]> {
+  const redis = getRedis();
+  if (!redis || handles.length === 0) return [];
+  const members = handles.map((handle) => handle.toLowerCase());
+  const scores = await redis.zmscore(HANDLES_KEY, members);
+  if (!scores) return [];
+  return members.flatMap((handle, i) => {
+    const score = scores[i];
+    return typeof score === "number" ? [{ handle, latestMs: Number(score) }] : [];
+  });
+}
+
 /** Registered handles, newest-stamped first. Empty when nobody has
  * registered yet, or when Redis isn't configured. */
 export async function listHandles(limit = 50): Promise<{ handle: string; latestMs: number }[]> {
