@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { listWeekSlugs, loadDigest } from '@/lib/this-week/store'
+import { listWeekSlugs, loadDigest, selectPublished } from '@/lib/this-week/store'
 import DigestView from '../../_components/DigestView'
 
 export const revalidate = 3600
@@ -26,7 +26,9 @@ function cardDescription(intro: string): string {
 
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
   const { week } = await params
-  const digest = loadDigest(week)
+  // Same gate as the page below: a 404 response still carries this metadata, so
+  // reading a draft here republishes its headline and lede at a public URL.
+  const [digest] = selectPublished([loadDigest(week)])
   if (!digest) return { title: 'This Week in Parliament' }
   const title = digest.headline
     ? `${digest.headline} — This Week in Parliament — the full article`
