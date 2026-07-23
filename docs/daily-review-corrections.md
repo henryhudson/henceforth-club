@@ -6,6 +6,53 @@ records that sweep's **rejections and dismissals**, newest first, so a later run
 re-flag what a prior run already refuted. Confirmed findings go to the Morning Board, not
 here. Cite `file:line` (or the live probe) so each verdict is independently re-derivable.
 
+## 2026-07-23 — the site is healthy and every gate holds, but the first-ever draft digest leaks through a route nothing gates
+
+**Range.** Two commits since yesterday's sweep. `8a9b902` (2026-07-23 00:17, 8 files / 805 insertions) is
+the folklore hero redesign plus the four `/hh` screenshot scripts; `ebeae69` adds one file,
+`content/this-week/2026-07-22.json`. HEAD == `origin/main` == `8a9b902958ec395c318112d4f1ae595dcbb5dbd8`;
+`gh pr list` empty at exit 0, so nothing finished is sitting unmerged.
+
+**CONFIRMED CLEAN — the live site, recorded so it is not re-derived tomorrow.** Measured on `www` (per
+the standing apex-307 correction below): root **200 in 0.074 / 0.082 / 0.090 s**, `/folklore` **200 in
+0.651 / 0.264 / 0.442 s** — the sub-second bar met with no escalation across samples. Every gate fails
+closed: `POST /api/folklore/job` → **503** `{"ok":false,"reason":"not-available"}`,
+`POST /api/folklore/link` → **503**, same shape; `/board` → **307** to `/board/login?from=%2Fboard`.
+
+**CLOSED, DO NOT RE-FILE — the 2026-07-20 EMERGENCY on `/api/x/register`.** `verifyBindingPost` is
+imported from `src/lib/xBindingLive.ts` at `route.ts:9` and **awaited** at `route.ts:86`; not-found,
+wrong-author and no-binding all return 422 and unreachable returns 503. It fails closed on main. The
+self-certifying binding hole is fixed.
+
+**REFUTED BY TEST — "`fetch-mini-screenshots.sh` could prune outside its destination."** The hypothesised
+catastrophic delete cannot occur: `${SCREENSHOT_DEST:-$HOME/…}` uses `:-`, which substitutes on **empty**
+as well as unset, so the destination can never expand to bare `/`. Tested, not reasoned. The four new
+scripts also hold no secrets — grep for `WIF|KEY|SECRET|TOKEN|PASSWORD` returns nothing.
+
+**REFUTED — "the folklore hero redesign is a performance or accessibility risk."** The component is
+`aria-hidden` and `pointer-events-none`, its scroll listener is passive and `requestAnimationFrame`-
+throttled with a cleanup that cancels the pending frame (`FolkloreForest.tsx:169-177`), and
+`prefers-reduced-motion` is honoured in both the effect and the stylesheet. `8a9b902` also touches no
+money path: `git show --name-only 8a9b902 | grep -cE 'src/lib|src/app/api'` returns **0**.
+
+**CONFIRMED and carded — `finding-site-draft-digest-og-leak-2026-07-23` (HIGH).** `ebeae69` committed the
+first digest ever carrying `"status": "draft"` (the other eight read `published`), and its own commit
+message claims it "404s at its own URL until Henry publishes it". That is true of the page and **false of
+the share card**. `[week]/page.tsx:45` gates correctly on `digest.status !== 'published'`; its sibling
+`[week]/opengraph-image.tsx:17` calls `loadDigest(week)` and never reads `.status` at all. Live this run:
+the page returns **404** while `/hansard/this-week/2026-07-22/opengraph-image` returns **200 image/png,
+67,546 bytes** — and the rendered PNG, opened and read, carries the draft's own headline ("Andy Burnham
+takes office, and rewires the state"), window label, statistics ("115 MPs · 823 written questions · 2
+votes") and story of the week. This is review-gated content escaping before sign-off.
+
+**CONFIRMED and carded — `finding-site-sitemap-draft-2026-07-23` (medium).** `sitemap.ts:43` builds its
+week routes from `listPublishedWeeks()`, which does not do what its name says: `store.ts:9-17` readdirs,
+filters on `.json`, sorts and reverses, with **no status filter anywhere in its body**. The real filter is
+`selectPublished` at `:34-36`, which the sitemap never reaches — while the neighbouring `learnRoutes` at
+`:36` correctly use `publishedEpisodes()`. Live: the sitemap lists all nine weeks including
+`this-week/2026-07-22`, whose page 404s. `npx vitest run src/app/sitemap.test.ts src/lib/this-week` is
+green at **44 passing**, and none of those tests asserts draft exclusion — so the gate cannot catch it.
+
 ## 2026-07-22 — the 01:55 alert was CORRECT (do not refute it); the branch merge hazard REFUTED by simulation; two stall readings corrected
 
 **REJECTED — "today's 01:55 folklore alert is refuted by live production curls."** The alert never
