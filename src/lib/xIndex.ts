@@ -90,7 +90,20 @@ export async function readHandleCards(
   if (!scores) return [];
   return members.flatMap((handle, i) => {
     const score = scores[i];
-    return typeof score === "number" ? [{ handle, latestMs: Number(score) }] : [];
+    // Absence first, coercion second, and the order matters: a member the
+    // directory does not hold comes back null, and `Number(null)` is 0 — a
+    // perfectly finite number that would date a card to 1970 instead of
+    // dropping it. That drop is the delisting lever, so it is tested before
+    // the value is touched.
+    if (score === null || score === undefined) return [];
+    // Then coerce rather than type-check, because `listHandles` reads this
+    // same sorted set a few lines below through a `(string | number)[]`
+    // generic and coerces with `Number(...)` — the score arrives via the
+    // client's generic recursive parser, so its runtime type is not
+    // guaranteed. Two readers of one set disagreeing about what a score is
+    // would silently drop the very handles this look-up exists to rescue.
+    const latestMs = Number(score);
+    return Number.isFinite(latestMs) ? [{ handle, latestMs }] : [];
   });
 }
 

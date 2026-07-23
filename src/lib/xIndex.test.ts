@@ -130,6 +130,31 @@ describe("readHandleCards", () => {
     expect(zmscoreCalls).toEqual([]);
   });
 
+  // `listHandles` reads this very sorted set through a `(string | number)[]`
+  // generic and coerces every score with `Number(...)` — its author did not
+  // trust the runtime type, because the value comes back through the client's
+  // generic recursive parser. Two readers of one set must not disagree about
+  // what a score is: a string score that `listHandles` accepts and
+  // `readHandleCards` rejected would silently re-open the hole this look-up
+  // exists to close, and it would fail exactly where it costs most — the
+  // veteran archiver outside the directory window.
+  it("accepts a score that arrives as a string, exactly as listHandles does", async () => {
+    current = { zmscore: async () => ["1000"] } as unknown as Redis;
+    expect(await readHandleCards(["ada"])).toEqual([{ handle: "ada", latestMs: 1_000 }]);
+  });
+
+  it("still yields no card for a member the directory does not hold — the delisting lever", async () => {
+    // Coercion must not turn absence into a card: `Number(null)` is 0, a
+    // perfectly finite number, so the missing-member guard has to come first.
+    current = { zmscore: async () => [null] } as unknown as Redis;
+    expect(await readHandleCards(["ghost"])).toEqual([]);
+  });
+
+  it("drops a score that coerces to nothing numeric rather than dating a card to 1970", async () => {
+    current = { zmscore: async () => ["not-a-number"] } as unknown as Redis;
+    expect(await readHandleCards(["ada"])).toEqual([]);
+  });
+
   it("tolerates missing Redis, returning an empty list rather than throwing", async () => {
     await expect(readHandleCards(["ada"])).resolves.toEqual([]);
   });
