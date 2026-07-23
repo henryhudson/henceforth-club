@@ -5,7 +5,7 @@ import { appendXTxid, setXTxids, stampHandle } from "@/lib/xIndex";
 import { archiveDigest, setTxDigest } from "@/lib/xDigest";
 import { getOwner, setOwner, claimOutcome, type XOwner } from "@/lib/xOwner";
 import { seedProfileOnBoard } from "@/lib/folkloreBoard";
-import { parseBindingAddress, registrationMessage, verifyClaim } from "@/lib/xBinding";
+import { parseBindingAddress, postBindingAddress, registrationMessage, verifyClaim } from "@/lib/xBinding";
 import { verifyBindingPost } from "@/lib/xBindingLive";
 
 /**
@@ -144,7 +144,9 @@ export async function POST(req: Request) {
   return NextResponse.json({ ok: true, handle, txid, verified: Boolean(owner || hasClaim), posts: archive.posts.length, url: `/x/${handle}` });
 }
 
-/** The id of the post that carries the binding line for `address`, for the permalink. */
+/** The id of the post that carries the binding line for `address`, for the permalink.
+ *  Reads the line through the library predicate, so the post X is asked to confirm
+ *  is the same post `parseBindingAddress` accepted — one definition, not two. */
 function bindingPostId(posts: { id: string; text: string }[], address: string): string {
-  return posts.find((p) => p.text.includes("Verifying my Henceforth identity:") && p.text.includes(address))?.id ?? "";
+  return posts.find((p) => postBindingAddress(p.text) === address)?.id ?? "";
 }

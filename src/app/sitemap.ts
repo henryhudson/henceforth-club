@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { publishedEpisodes } from "@/lib/episodes";
-import { listPublishedWeeks } from "@/lib/this-week/store";
+import { listPublishedDigests } from "@/lib/this-week/store";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = "https://henceforth.club";
@@ -40,8 +40,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.6,
   }));
 
-  const weekRoutes = listPublishedWeeks().map((week) => ({
-    url: `${baseUrl}/hansard/this-week/${week}`,
+  const weekRoutes = listPublishedDigests().map((d) => ({
+    url: `${baseUrl}/hansard/this-week/${d.week}`,
     lastModified: now,
     changeFrequency: "monthly" as const,
     priority: 0.65,

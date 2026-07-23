@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { listPublishedWeeks, loadDigest } from '@/lib/this-week/store'
+import { listWeekSlugs, loadDigest } from '@/lib/this-week/store'
 import DigestView from '../../_components/DigestView'
 
 export const revalidate = 3600
@@ -8,7 +8,7 @@ export const revalidate = 3600
 type Params = { week: string }
 
 export function generateStaticParams(): Params[] {
-  return listPublishedWeeks()
+  return listWeekSlugs()
     .filter(week => Boolean(loadDigest(week)?.body?.length))
     .map(week => ({ week }))
 }

@@ -14,16 +14,27 @@ const BINDING_PREFIX = "Verifying my Henceforth identity:";
 const ADDRESS = /\b([13][1-9A-HJ-NP-Za-km-z]{25,34})\b/;
 
 /**
+ * The address one post commits to, or null. The single definition of "this post
+ * binds this address": the address must FOLLOW the binding line, so an address
+ * mentioned anywhere else in the same post is not a commitment. Every caller
+ * asking that question must ask it here — a second, looser reading elsewhere
+ * would let one post be the binding for two different addresses.
+ */
+export function postBindingAddress(text: string): string | null {
+  const at = text.indexOf(BINDING_PREFIX);
+  if (at === -1) return null;
+  return ADDRESS.exec(text.slice(at + BINDING_PREFIX.length))?.[1] ?? null;
+}
+
+/**
  * The first address an account committed to, scanning its archived posts for the
  * exact binding line. Returns null if no post carries it — the common case, since
  * most handles never bind.
  */
 export function parseBindingAddress(posts: { text: string }[]): string | null {
   for (const { text } of posts) {
-    const at = text.indexOf(BINDING_PREFIX);
-    if (at === -1) continue;
-    const match = ADDRESS.exec(text.slice(at + BINDING_PREFIX.length));
-    if (match) return match[1];
+    const address = postBindingAddress(text);
+    if (address) return address;
   }
   return null;
 }

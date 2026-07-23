@@ -12,6 +12,7 @@ const store = {
   warms: [] as string[],
   live: { kind: "verified" } as LiveBinding,
   liveCalls: 0,
+  livePostId: "",
   board: new Map<string, number>(),
 };
 
@@ -36,7 +37,7 @@ vi.mock("@/lib/xIndex", () => ({
 }));
 // X itself is an I/O boundary — the live read is faked, never performed.
 vi.mock("@/lib/xBindingLive", () => ({
-  verifyBindingPost: async () => { store.liveCalls++; return store.live; },
+  verifyBindingPost: async (input: { postId: string }) => { store.liveCalls++; store.livePostId = input.postId; return store.live; },
 }));
 // The board seed, faked as the `nx` write it really is: a handle already on
 // the board keeps whatever score kudos have since given it.
@@ -59,10 +60,10 @@ import { POST } from "./route";
 const TXID = "a".repeat(64);
 const HANDLE = "henryhudson6";
 
-function archive(handle: string, extraPostText?: string) {
+function archive(handle: string, ...extraPostTexts: string[]) {
   return { v: 1, source: "x", handle, profile: {}, posts: [
     { id: "1", at: "2012-09-02T00:00:00Z", text: "gm" },
-    ...(extraPostText ? [{ id: "2", at: "2013-01-01T00:00:00Z", text: extraPostText }] : []),
+    ...extraPostTexts.map((text, i) => ({ id: String(i + 2), at: "2013-01-01T00:00:00Z", text })),
   ] };
 }
 function claimFor(handle: string, txid: string) {
@@ -74,7 +75,7 @@ function claimFor(handle: string, txid: string) {
 }
 const post = (body: unknown) => POST(new Request("http://x/api/x/register", { method: "POST", body: JSON.stringify(body) }));
 
-beforeEach(() => { store.archives.clear(); store.owners.clear(); store.lists.clear(); store.handles.clear(); store.warms.length = 0; store.live = { kind: "verified" }; store.liveCalls = 0; store.board.clear(); });
+beforeEach(() => { store.archives.clear(); store.owners.clear(); store.lists.clear(); store.handles.clear(); store.warms.length = 0; store.live = { kind: "verified" }; store.liveCalls = 0; store.livePostId = ""; store.board.clear(); });
 
 describe("POST /api/x/register", () => {
   it("still accepts an unsigned registration for an unclaimed handle (backward compatible)", async () => {
@@ -98,6 +99,25 @@ describe("POST /api/x/register", () => {
     expect((store.owners.get(HANDLE) as { address: string }).address).toBe(c.address);
     expect(store.handles.has(HANDLE)).toBe(true); // a claim that resets the feed is also a registration
     expect(store.warms).toEqual([HANDLE]); // the reset feed's cache rebuilds here too
+  });
+
+  it("names the post that carries the binding line, not one that merely mentions the address", async () => {
+    // The decoy holds both the prefix and the address, but in unrelated places:
+    // it commits to nothing. Only the prefix-anchored reading is the binding,
+    // so a second, looser predicate would send X the wrong permalink to verify
+    // and record it as the evidence of ownership.
+    const c = claimFor(HANDLE, TXID);
+    store.archives.set(TXID, archive(
+      HANDLE,
+      `paid ${c.address} for lunch. Verifying my Henceforth identity: soon`,
+      `Verifying my Henceforth identity: ${c.address}`,
+    ));
+
+    const res = await post({ handle: HANDLE, txid: TXID, address: c.address, pubkey: c.pubkey, signature: c.signature });
+
+    expect(res.status).toBe(200);
+    expect(store.livePostId).toBe("3");
+    expect((store.owners.get(HANDLE) as { bindingPostId: string }).bindingPostId).toBe("3");
   });
 
   it("refuses to establish when the live binding post is not authored by the handle", async () => {

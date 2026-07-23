@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og'
 import { ogSize, ogContentType } from '@/lib/og'
-import { loadDigest } from '@/lib/this-week/store'
+import { loadDigest, selectPublished } from '@/lib/this-week/store'
 
 export const size = ogSize
 export const contentType = ogContentType
@@ -14,7 +14,9 @@ const BG = '#faf9f6'
 // One card per published week — the share preview for /hansard/this-week/{week}.
 export default async function OG({ params }: { params: Promise<{ week: string }> }) {
   const { week } = await params
-  const digest = loadDigest(week)
+  // The same gate the page uses: a card for a week that 404s must say nothing
+  // about it, or an unpublished issue is readable through its own share preview.
+  const [digest] = selectPublished([loadDigest(week)])
   const windowLabel = digest?.windowLabel ?? ''
   const headline = digest?.headline ?? 'This Week in Parliament'
   const stats = digest?.stats

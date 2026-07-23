@@ -5,8 +5,9 @@ import { toSummary } from './calendar'
 
 const CONTENT_DIR = path.join(process.cwd(), 'content', 'this-week')
 
-/** Returns all week slugs (YYYY-MM-DD) that have a published digest, newest first. */
-export function listPublishedWeeks(): string[] {
+/** Every week slug (YYYY-MM-DD) with a digest file, drafts included, newest
+ *  first. Callers that must not surface a draft want `listPublishedDigests`. */
+export function listWeekSlugs(): string[] {
   if (!fs.existsSync(CONTENT_DIR)) return []
   return fs
     .readdirSync(CONTENT_DIR)
@@ -37,7 +38,7 @@ export function selectPublished(digests: readonly (DigestData | null)[]): Digest
 
 /** All published digests, newest first — the archive index. */
 export function listPublishedDigests(): DigestData[] {
-  return selectPublished(listPublishedWeeks().map(loadDigest))
+  return selectPublished(listWeekSlugs().map(loadDigest))
 }
 
 /** All published issues as summaries, newest first. */

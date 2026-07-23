@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import sitemap from "./sitemap";
+import { listPublishedDigests } from "@/lib/this-week/store";
 
 describe("sitemap", () => {
   it("excludes the unlisted /provenance route", () => {
@@ -32,5 +33,14 @@ describe("sitemap", () => {
       e.url.includes("/hansard/this-week/"),
     );
     expect(weeks.length).toBeGreaterThan(0);
+  });
+
+  it("advertises the published weeks and no others — a draft's page 404s", () => {
+    const listed = sitemap()
+      .map((e) => e.url)
+      .filter((url) => url.includes("/hansard/this-week/"))
+      .map((url) => url.split("/").pop());
+    const published = listPublishedDigests().map((d) => d.week);
+    expect([...listed].sort()).toEqual([...published].sort());
   });
 });

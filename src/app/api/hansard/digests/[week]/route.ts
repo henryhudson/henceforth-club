@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { loadDigest, listPublishedWeeks } from '@/lib/this-week/store'
+import { loadDigest, listWeekSlugs } from '@/lib/this-week/store'
 
 // One published week's full DigestData, by Wednesday-anchor slug (YYYY-MM-DD).
 // Consumed by the Hansard iOS app to enrich its bundled snapshot with newer
@@ -8,7 +8,7 @@ import { loadDigest, listPublishedWeeks } from '@/lib/this-week/store'
 export const revalidate = 3600
 
 export function generateStaticParams(): { week: string }[] {
-  return listPublishedWeeks().map(week => ({ week }))
+  return listWeekSlugs().map(week => ({ week }))
 }
 
 export async function GET(

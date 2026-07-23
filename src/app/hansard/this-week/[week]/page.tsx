@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { listPublishedWeeks, loadDigest } from '@/lib/this-week/store'
+import { listWeekSlugs, loadDigest } from '@/lib/this-week/store'
 import Overview from '../_components/overview/Overview'
 
 export const revalidate = 3600
@@ -8,7 +8,7 @@ export const revalidate = 3600
 type Params = { week: string }
 
 export function generateStaticParams(): Params[] {
-  return listPublishedWeeks().map(week => ({ week }))
+  return listWeekSlugs().map(week => ({ week }))
 }
 
 /** Card blurb: the intro's first full sentence when it's a sensible length,

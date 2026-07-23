@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BSM, PrivateKey, Utils } from "@bsv/sdk";
-import { parseBindingAddress, registrationMessage, verifyClaim } from "./xBinding";
+import { postBindingAddress, parseBindingAddress, registrationMessage, verifyClaim } from "./xBinding";
 
 /** Produce a valid claim the way the app will, with a throwaway key. */
 function makeClaim(handle: string, txid: string) {
@@ -16,6 +16,24 @@ describe("registrationMessage", () => {
   it("binds the lowercased handle and the txid, so a signature cannot be replayed", () => {
     expect(registrationMessage("HenryHudson6", "a".repeat(64)))
       .toBe(`henceforth-x-register:henryhudson6:${"a".repeat(64)}`);
+  });
+});
+
+describe("postBindingAddress", () => {
+  const ADDR = "1GsP511Tf1xEXAMPLEaddr7WSqc7hCfva";
+
+  it("reads the address the binding line commits to", () => {
+    expect(postBindingAddress(`Verifying my Henceforth identity: ${ADDR} — henceforth.club/x`)).toBe(ADDR);
+  });
+
+  it("does not bind an address that merely appears elsewhere in the post", () => {
+    // Prefix and address both present, in unrelated positions. Anything looser
+    // than a prefix-anchored read would call this a commitment to ADDR.
+    expect(postBindingAddress(`paid ${ADDR} for lunch. Verifying my Henceforth identity: soon`)).toBeNull();
+  });
+
+  it("returns null for a post with no binding line", () => {
+    expect(postBindingAddress(`sent to ${ADDR} this morning`)).toBeNull();
   });
 });
 
