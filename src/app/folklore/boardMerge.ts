@@ -76,6 +76,12 @@ export const unresolvedProfileHandles = (
  * does, in whatever order the directory itself chose.
  */
 export function withUnlistedHandles(rows: BoardRow[], handleCards: HandleCard[]): BoardRow[] {
+  // The invariant is one PROFILE card per handle, so the set is built from
+  // profile rows and dedupes against profile rows only. A link row naming the
+  // same handle in its `by` is not a second card for that archiver: spec §4
+  // gives an archive and a link two different card kinds, and both were paid
+  // for separately. Suppressing either because the other exists would delete
+  // something a payer bought.
   const listed = new Set(
     rows.flatMap((row) => (row.kind === "profile" ? [row.handle.toLowerCase()] : [])),
   );
