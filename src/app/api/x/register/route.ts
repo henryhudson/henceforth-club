@@ -19,6 +19,21 @@ import { verifyBindingPost } from "@/lib/xBindingLive";
  * claim establishes ownership and resets the canonical feed to the owner's
  * archive, so a stranger's pre-claim inscription leaves the owner's feed (it
  * stays reachable by its own txid — nothing on Bitcoin is destroyed).
+ *
+ * CONTRACT WITH THE SHIPPED APP — how to pick a status for a NEW reason.
+ * The app (xtextWord.swift, `xRegistrationOutcome`) classifies refusals by
+ * reason first; a reason it has never heard of falls back to the status
+ * band: 4xx = permanent (the registration is dropped from the app's durable
+ * retry queue, forever), 5xx = transient (kept and replayed on the next run).
+ * So choose the status for the app already on people's phones, not for HTTP
+ * taste: a refusal that can heal with time (a lagging index, an unreachable
+ * upstream) MUST ship as a 5xx, or every existing app permanently drops a
+ * PAID registration the first time it meets it. Reasons naming broken
+ * evidence (bad signature, wrong handle) are correctly 4xx. Two more legs of
+ * the same contract: every non-200 return MUST name a reason (the app reads
+ * a reasonless answer as "not this route" — a middlebox or the platform —
+ * and retries it), and both 200 returns MUST carry `ok: true` (the app
+ * requires that marker before it believes a success).
  */
 export async function POST(req: Request) {
   let body: { handle?: string; txid?: string; address?: string; pubkey?: string; signature?: string };
