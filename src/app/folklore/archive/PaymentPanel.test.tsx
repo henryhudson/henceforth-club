@@ -28,4 +28,12 @@ describe("PaymentPanel", () => {
     expect(html).not.toContain("£1");
     expect(html).toContain("one payment");
   });
+
+  it("lets a caller name the price line — the submit flow's pence floor", () => {
+    const html = renderToStaticMarkup(
+      <PaymentPanel address={ADDRESS} priceSats={12_345} priceLabel="10p + inscription fee" />,
+    );
+    expect(html).toContain("10p + inscription fee");
+    expect(html).not.toContain("£2");
+  });
 });

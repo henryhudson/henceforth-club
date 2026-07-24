@@ -12,9 +12,13 @@ import { qrSvg } from "./qr";
 export default function PaymentPanel({
   address,
   priceSats,
+  priceLabel = "£2 + inscription fee",
 }: {
   address: string;
   priceSats: number;
+  /** How the price line names the quote — the archive's £2 wording by
+   * default; the submit flow passes its own pence-floor wording. */
+  priceLabel?: string;
 }) {
   const uri = bitcoinUri(address, priceSats);
   const { size, path } = qrSvg(uri);
@@ -33,7 +37,7 @@ export default function PaymentPanel({
       </a>
       <p className="mt-4 select-all break-all font-mono text-sm text-foreground">{address}</p>
       <p className="mt-1 select-all font-mono text-sm text-muted">
-        &pound;2 + inscription fee &middot; {amount} bitcoin SV &middot; {priceSats.toLocaleString("en-GB")} satoshis
+        {priceLabel} &middot; {amount} bitcoin SV &middot; {priceSats.toLocaleString("en-GB")} satoshis
       </p>
       {/* One output, exactly: the watcher matches a single payment of the
           quoted amount — two half-pound legs read as short, forever. */}
