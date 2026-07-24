@@ -7,6 +7,7 @@ import { getOwner, setOwner, claimOutcome, type XOwner } from "@/lib/xOwner";
 import { seedProfileOnBoard } from "@/lib/folkloreBoard";
 import { parseBindingAddress, postBindingAddress, registrationMessage, verifyClaim } from "@/lib/xBinding";
 import { verifyBindingPost } from "@/lib/xBindingLive";
+import { logRefusal } from "@/lib/xRefusalLog";
 
 /**
  * POST /api/x/register  { handle, txid, address?, pubkey?, signature? }
@@ -40,21 +41,21 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ ok: false, reason: "bad-json" }, { status: 400 });
+    return refused({}, { ok: false, reason: "bad-json" }, 400);
   }
 
   const handle = body.handle?.trim().replace(/^@/, "");
   const txid = body.txid?.trim();
   if (!handle || !txid || !/^[0-9a-fA-F]{64}$/.test(txid)) {
-    return NextResponse.json({ ok: false, reason: "bad-input" }, { status: 400 });
+    return refused({ handle, txid }, { ok: false, reason: "bad-input" }, 400);
   }
 
   const archive = await fetchTxArchive(txid);
   if (!archive) {
-    return NextResponse.json({ ok: false, reason: "no-archive-in-tx" }, { status: 422 });
+    return refused({ handle, txid }, { ok: false, reason: "no-archive-in-tx" }, 422);
   }
   if (archive.handle.toLowerCase() !== handle.toLowerCase()) {
-    return NextResponse.json({ ok: false, reason: "handle-mismatch", onChain: archive.handle }, { status: 422 });
+    return refused({ handle, txid }, { ok: false, reason: "handle-mismatch", onChain: archive.handle }, 422);
   }
 
   await setTxDigest(txid, archiveDigest(archive));
@@ -64,7 +65,7 @@ export async function POST(req: Request) {
 
   // A claimed handle may only be extended by a signed claim.
   if (owner && !hasClaim) {
-    return NextResponse.json({ ok: false, reason: "handle-claimed" }, { status: 403 });
+    return refused({ handle, txid }, { ok: false, reason: "handle-claimed" }, 403);
   }
 
   if (hasClaim) {
@@ -76,12 +77,12 @@ export async function POST(req: Request) {
       committedAddress: address,
     });
     if (!ok) {
-      return NextResponse.json({ ok: false, reason: "bad-signature" }, { status: 403 });
+      return refused({ handle, txid }, { ok: false, reason: "bad-signature" }, 403);
     }
 
     const outcome = claimOutcome(owner, address);
     if (outcome === "reject") {
-      return NextResponse.json({ ok: false, reason: "not-the-owner" }, { status: 403 });
+      return refused({ handle, txid }, { ok: false, reason: "not-the-owner" }, 403);
     }
     if (outcome === "establish") {
       // The archive establishing ownership must itself carry the account's
@@ -89,7 +90,7 @@ export async function POST(req: Request) {
       // one transaction. A later append is covered by the owner's signature
       // alone; it need not repeat the binding tweet.
       if (parseBindingAddress(archive.posts) !== address) {
-        return NextResponse.json({ ok: false, reason: "no-binding-in-tx" }, { status: 422 });
+        return refused({ handle, txid }, { ok: false, reason: "no-binding-in-tx" }, 422);
       }
       // ...but the archive is written by whoever paid for the transaction, so
       // on its own it is the claimant's own testimony. Ownership turns on the
@@ -101,13 +102,13 @@ export async function POST(req: Request) {
       const live = await verifyBindingPost({ handle, postId, address });
       switch (live.kind) {
         case "not-found":
-          return NextResponse.json({ ok: false, reason: "binding-post-missing" }, { status: 422 });
+          return refused({ handle, txid }, { ok: false, reason: "binding-post-missing" }, 422);
         case "wrong-author":
-          return NextResponse.json({ ok: false, reason: "binding-post-not-by-handle" }, { status: 422 });
+          return refused({ handle, txid }, { ok: false, reason: "binding-post-not-by-handle" }, 422);
         case "no-binding":
-          return NextResponse.json({ ok: false, reason: "binding-post-lacks-address" }, { status: 422 });
+          return refused({ handle, txid }, { ok: false, reason: "binding-post-lacks-address" }, 422);
         case "unreachable":
-          return NextResponse.json({ ok: false, reason: "x-unreachable" }, { status: 503 });
+          return refused({ handle, txid }, { ok: false, reason: "x-unreachable" }, 503);
         case "verified":
           break;
       }
@@ -122,12 +123,12 @@ export async function POST(req: Request) {
       // Redis), the route returns 503 rather than a false success, and a retry
       // re-establishes cleanly because no owner was recorded to short-circuit it.
       if (!(await setXTxids(handle, [txid]))) {
-        return NextResponse.json({ ok: false, reason: "index-unavailable" }, { status: 503 });
+        return refused({ handle, txid }, { ok: false, reason: "index-unavailable" }, 503);
       }
       await stampHandle(handle, Date.now()); // a claim that resets the feed is also a registration
       await seedProfileOnBoard(handle, 0); // and lands a board card — see below
       if (!(await setOwner(handle, record))) {
-        return NextResponse.json({ ok: false, reason: "index-unavailable" }, { status: 503 });
+        return refused({ handle, txid }, { ok: false, reason: "index-unavailable" }, 503);
       }
       // Rebuild the page cache now, after the response, while this route has
       // just proved the transaction is fetchable — a page view must never be
@@ -140,7 +141,7 @@ export async function POST(req: Request) {
 
   const stored = await appendXTxid(handle, txid);
   if (!stored) {
-    return NextResponse.json({ ok: false, reason: "index-unavailable" }, { status: 503 });
+    return refused({ handle, txid }, { ok: false, reason: "index-unavailable" }, 503);
   }
   await stampHandle(handle, Date.now());
   // A registration lands a board card as well as a directory stamp. Until
@@ -157,6 +158,26 @@ export async function POST(req: Request) {
   // view must never be the request that pays for the stitch.
   after(() => warmArchiveCache(handle));
   return NextResponse.json({ ok: true, handle, txid, verified: Boolean(owner || hasClaim), posts: archive.posts.length, url: `/x/${handle}` });
+}
+
+/** Every refusal leaves the route through here: the response is exactly the
+ *  NextResponse.json the call site always sent, and a durable record of it is
+ *  written after the response (the route's own `after` pattern — a log write
+ *  must never be the request that pays, or fails, the answer; `logRefusal`
+ *  additionally never throws). */
+function refused(
+  request: { handle?: string; txid?: string },
+  body: { ok: false; reason: string; onChain?: string },
+  status: number,
+) {
+  after(() => logRefusal({
+    at: Math.floor(Date.now() / 1000),
+    handle: request.handle ?? "",
+    txid: request.txid ?? "",
+    reason: body.reason,
+    status,
+  }));
+  return NextResponse.json(body, { status });
 }
 
 /** The id of the post that carries the binding line for `address`, for the permalink.

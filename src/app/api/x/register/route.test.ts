@@ -14,6 +14,7 @@ const store = {
   liveCalls: 0,
   livePostId: "",
   board: new Map<string, number>(),
+  refusals: [] as unknown[],
 };
 
 vi.mock("@/lib/whatsonchain", () => ({
@@ -49,6 +50,10 @@ vi.mock("@/lib/folkloreBoard", () => ({
     return true;
   },
 }));
+// The durable refusal record — every non-200 the route sends must land one.
+vi.mock("@/lib/xRefusalLog", () => ({
+  logRefusal: async (refusal: unknown) => { store.refusals.push(refusal); return true; },
+}));
 vi.mock("@/lib/xOwner", async (orig) => ({
   ...(await orig()),
   getOwner: async (h: string) => store.owners.get(h.toLowerCase()) ?? null,
@@ -75,7 +80,7 @@ function claimFor(handle: string, txid: string) {
 }
 const post = (body: unknown) => POST(new Request("http://x/api/x/register", { method: "POST", body: JSON.stringify(body) }));
 
-beforeEach(() => { store.archives.clear(); store.owners.clear(); store.lists.clear(); store.handles.clear(); store.warms.length = 0; store.live = { kind: "verified" }; store.liveCalls = 0; store.livePostId = ""; store.board.clear(); });
+beforeEach(() => { store.archives.clear(); store.owners.clear(); store.lists.clear(); store.handles.clear(); store.warms.length = 0; store.live = { kind: "verified" }; store.liveCalls = 0; store.livePostId = ""; store.board.clear(); store.refusals.length = 0; });
 
 describe("POST /api/x/register", () => {
   it("still accepts an unsigned registration for an unclaimed handle (backward compatible)", async () => {
@@ -234,5 +239,47 @@ describe("registration lands a board card, so the board is never behind the dire
     store.archives.set(TXID, archive("someone-else"));
     expect((await post({ handle: HANDLE, txid: TXID })).status).toBe(422);
     expect(store.board.size).toBe(0);
+  });
+});
+
+describe("every refusal leaves a durable record, and the answer it records is unchanged", () => {
+  it("a refusal returns the same body as ever AND logs {at, handle, txid, reason, status}", async () => {
+    // No archive behind the txid — the commonest real refusal.
+    const res = await post({ handle: HANDLE, txid: TXID });
+
+    expect(res.status).toBe(422);
+    expect(await res.json()).toEqual({ ok: false, reason: "no-archive-in-tx" });
+    expect(store.refusals).toEqual([{
+      at: expect.any(Number),
+      handle: HANDLE,
+      txid: TXID,
+      reason: "no-archive-in-tx",
+      status: 422,
+    }]);
+  });
+
+  it("even a request that never yields a handle is recorded — with empty fields, not skipped", async () => {
+    const res = await POST(new Request("http://x/api/x/register", { method: "POST", body: "not json" }));
+
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ ok: false, reason: "bad-json" });
+    expect(store.refusals).toEqual([{ at: expect.any(Number), handle: "", txid: "", reason: "bad-json", status: 400 }]);
+  });
+
+  it("a live-binding refusal records the reason the app was sent, not the internal kind", async () => {
+    store.live = { kind: "wrong-author", author: "attacker" };
+    const c = claimFor(HANDLE, TXID);
+    store.archives.set(TXID, archive(HANDLE, `Verifying my Henceforth identity: ${c.address}`));
+
+    const res = await post({ handle: HANDLE, txid: TXID, address: c.address, pubkey: c.pubkey, signature: c.signature });
+
+    expect(res.status).toBe(422);
+    expect(store.refusals).toEqual([expect.objectContaining({ reason: "binding-post-not-by-handle", status: 422 })]);
+  });
+
+  it("a success records nothing", async () => {
+    store.archives.set(TXID, archive(HANDLE));
+    expect((await post({ handle: HANDLE, txid: TXID })).status).toBe(200);
+    expect(store.refusals).toEqual([]);
   });
 });
