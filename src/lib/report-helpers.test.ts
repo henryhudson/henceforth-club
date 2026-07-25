@@ -1,5 +1,40 @@
 import { describe, expect, it } from "vitest";
-import { editionIndex, shippedByDay, verdictLine } from "./report-helpers";
+import { asList, editionIndex, reachAppLine, shippedByDay, verdictLine } from "./report-helpers";
+
+describe("asList", () => {
+  it("joins a list with middle dots", () => {
+    expect(asList(["a", "b"])).toBe("a · b");
+  });
+  it("passes a plain string through (older reports)", () => {
+    expect(asList("just this")).toBe("just this");
+  });
+  it("renders absent as empty", () => {
+    expect(asList(undefined)).toBe("");
+  });
+});
+
+describe("reachAppLine", () => {
+  it("reads a real zero as zero downloads", () => {
+    expect(reachAppLine("deck", { date: "2026-07-24", count: 0 }, { "2026-07-22": 6, "2026-07-23": 4 })).toBe(
+      "deck — 0 downloads yesterday · 10 in the window",
+    );
+  });
+  it("never renders an unprocessed day as zero", () => {
+    expect(reachAppLine("hansard", { date: "2026-07-24", count: null })).toBe(
+      "hansard — yesterday not yet processed",
+    );
+  });
+  it("singularizes one download and appends a rating when one exists", () => {
+    expect(
+      reachAppLine("henceforth", { date: "2026-07-24", count: 1 }, undefined, { average: 5, count: 2 }),
+    ).toBe("henceforth — 1 download yesterday · rating 5.0 of 5 from 2");
+  });
+  it("omits the rating when nobody has rated", () => {
+    expect(reachAppLine("hansard", { date: "2026-07-24", count: 0 }, {}, { average: 0, count: 0 })).toBe(
+      "hansard — 0 downloads yesterday · 0 in the window",
+    );
+  });
+});
 
 describe("verdictLine", () => {
   it("orders confirmed, rejected, abstained, already fixed", () => {

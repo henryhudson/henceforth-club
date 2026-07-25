@@ -70,6 +70,27 @@ const APPS = [
   { app: "hansard", name: "Hansard", reqEnv: "ASC_ANALYTICS_REQ_HANSARD", storeId: "6762037651" },
 ];
 
+/** Site page views from the counters /api/hit has always kept (views:YYYY-MM-DD
+ *  + views:total in Upstash). Unlike Apple these have no lag, and an absent day
+ *  key IS a real zero — the counter has been live since launch. */
+async function siteViews(today, take = 8) {
+  const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return null;
+  const jget = async (k) => {
+    const r = await fetch(`${url}/get/${k}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!r.ok) return 0;
+    return Number((await r.json()).result) || 0;
+  };
+  const days = {};
+  for (let i = take; i >= 1; i--) {
+    const d = new Date(new Date(today + "T00:00:00Z").getTime() - i * 86400000).toISOString().slice(0, 10);
+    days[d] = await jget(`views:${d}`);
+  }
+  const y = new Date(new Date(today + "T00:00:00Z").getTime() - 86400000).toISOString().slice(0, 10);
+  return { days, yesterday: { date: y, count: days[y] ?? 0 }, total: await jget("views:total") };
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const today = process.argv[2] ?? new Date().toISOString().slice(0, 10);
   const pem = readFileSync(process.env.ASC_KEY_PATH, "utf8");
@@ -83,5 +104,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const rating = await fetchRatings(storeId);
     perApp.push({ app, name, dataThrough, days, yesterday: dataThrough ? yesterdayCount(days, dataThrough, today) : { date: null, count: null }, rating });
   }
-  console.log(JSON.stringify({ today, perApp }, null, 1));
+  const site = await siteViews(today);
+  console.log(JSON.stringify({ today, perApp, site }, null, 1));
 }

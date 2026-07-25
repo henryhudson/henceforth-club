@@ -17,6 +17,36 @@ export function verdictLine(findings: { verdict: string }[]): string {
   return parts.join(" · ");
 }
 
+/** Older reports store notToday/decisions as one string; newer ones as a list. */
+export function asList(v?: string | string[]): string {
+  return Array.isArray(v) ? v.join(" · ") : (v ?? "");
+}
+
+export type ReachYesterday = { date: string | null; count: number | null };
+
+/** One human line for an app's reach. Honest about the lag: a null yesterday
+ *  means Apple has not processed the day yet — it must never render as zero. */
+export function reachAppLine(
+  name: string,
+  yesterday: ReachYesterday,
+  week?: Record<string, number>,
+  rating?: { average: number | null; count: number },
+): string {
+  const parts = [
+    yesterday.count == null
+      ? "yesterday not yet processed"
+      : `${yesterday.count} download${yesterday.count === 1 ? "" : "s"} yesterday`,
+  ];
+  if (week) {
+    const total = Object.values(week).reduce((a, b) => a + b, 0);
+    parts.push(`${total} in the window`);
+  }
+  if (rating && rating.count > 0 && rating.average != null) {
+    parts.push(`rating ${rating.average.toFixed(1)} of 5 from ${rating.count}`);
+  }
+  return `${name} — ${parts.join(" · ")}`;
+}
+
 export type ShippedCard = { id: string; title: string };
 
 /** Kanban cards finished on each of the given days, keyed by day. A card counts

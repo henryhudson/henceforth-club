@@ -26,9 +26,24 @@ export type Plan = {
   lead?: string;
   note?: string;
   items: PlanItem[];
-  notToday?: string;
-  decisions?: string;
+  notToday?: string | string[];
+  decisions?: string | string[];
 };
+export type ArticleSection = { heading: string; body: string };
+export type Article = { headline: string; lede: string; sections: ArticleSection[] };
+export type ReachYesterday = { date: string | null; count: number | null };
+export type ReachApp = {
+  app: string;
+  yesterday: ReachYesterday;
+  week?: Record<string, number>;
+  rating?: { average: number | null; count: number };
+};
+export type Reach = {
+  dataThrough?: string | null;
+  perApp: ReachApp[];
+  site?: { yesterday: number | null; week: number; total: number };
+};
+export type Decision = { card: string; proposal: string; why: string };
 export type Emergency = {
   tag: string;
   title: string;
@@ -56,6 +71,9 @@ export type Report = {
   appStore?: AppStore;
   apps: AppReport[];
   plan?: Plan;
+  article?: Article;
+  reach?: Reach;
+  decisions?: Decision[];
 };
 
 const DIR = path.join(process.cwd(), "content/board/reports");

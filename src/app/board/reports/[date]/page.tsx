@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadReport } from "@/lib/board-data";
-import { verdictLine } from "@/lib/report-helpers";
+import { asList, reachAppLine, verdictLine } from "@/lib/report-helpers";
 import PlanChecklist from "../PlanChecklist";
 
 export const dynamic = "force-dynamic";
@@ -53,6 +53,43 @@ export default async function DailyEdition({ params }: { params: Promise<{ date:
       </div>
       <p className="text-sm text-muted">{report.date} · generated {report.generatedAt}</p>
 
+      {report.article && (
+        <article className="mt-8">
+          <h2 className="text-2xl font-bold leading-tight text-foreground">{report.article.headline}</h2>
+          <p className="mt-3 text-base leading-relaxed text-foreground/90">{report.article.lede}</p>
+          {report.article.sections.map((sec) => (
+            <section key={sec.heading} className="mt-5">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-accent-green">{sec.heading}</h3>
+              {sec.body.split("\n\n").map((p, i) => (
+                <p key={i} className="mt-2 text-sm leading-relaxed text-muted">{p}</p>
+              ))}
+            </section>
+          ))}
+        </article>
+      )}
+
+      {report.reach && (
+        <section className="mt-8">
+          <h2 className="mb-2 border-b border-card-border pb-1 text-xl font-bold text-foreground">Reach</h2>
+          <ul className="flex flex-col gap-1 text-sm text-muted">
+            {report.reach.perApp.map((a) => (
+              <li key={a.app}>{reachAppLine(a.app, a.yesterday, a.week, a.rating)}</li>
+            ))}
+            {report.reach.site && (
+              <li>
+                site — {report.reach.site.yesterday ?? 0} page views yesterday · {report.reach.site.week} in the
+                window · {report.reach.site.total} all-time
+              </li>
+            )}
+          </ul>
+          {report.reach.dataThrough && (
+            <p className="mt-1 text-xs text-muted/60">
+              App Store data through {report.reach.dataThrough} — Apple lags about a day.
+            </p>
+          )}
+        </section>
+      )}
+
       {report.emergencies && (
         <section
           className={`mt-6 rounded-md border-2 p-4 ${
@@ -92,8 +129,26 @@ export default async function DailyEdition({ params }: { params: Promise<{ date:
         </section>
       )}
 
+      {report.decisions && report.decisions.length > 0 && (
+        <section className="mt-8 print:hidden">
+          <h2 className="mb-2 border-b border-card-border pb-1 text-xl font-bold text-foreground">
+            This morning&apos;s decisions
+          </h2>
+          <ul className="flex flex-col divide-y divide-card-border text-sm">
+            {report.decisions.map((d) => (
+              <li key={d.card} className="py-2 text-muted first:pt-0 last:pb-0">
+                <span className="mr-2 inline-block rounded border border-accent/50 px-1.5 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wide text-accent">
+                  {d.proposal}
+                </span>
+                <span className="font-semibold text-foreground">{d.card}</span> — {d.why}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {report.plan && report.plan.items.length > 0 && (
-        <section className="mt-14">
+        <section className="mt-14 print:hidden">
           <h2 className="mb-1 border-b border-card-border pb-1 text-xl font-bold text-foreground">
             Plan of action
           </h2>
@@ -107,13 +162,13 @@ export default async function DailyEdition({ params }: { params: Promise<{ date:
           {report.plan.notToday && (
             <p className="mt-8 text-sm leading-relaxed text-muted">
               <span className="font-semibold text-foreground/80">Deliberately not today.</span>{" "}
-              {report.plan.notToday}
+              {asList(report.plan.notToday)}
             </p>
           )}
           {report.plan.decisions && (
             <p className="mt-3 text-sm leading-relaxed text-muted">
               <span className="font-semibold text-foreground/80">Open decisions.</span>{" "}
-              {report.plan.decisions}
+              {asList(report.plan.decisions)}
             </p>
           )}
         </section>
