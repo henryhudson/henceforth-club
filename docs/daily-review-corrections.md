@@ -6,6 +6,16 @@ records that sweep's **rejections and dismissals**, newest first, so a later run
 re-flag what a prior run already refuted. Confirmed findings go to the Morning Board, not
 here. Cite `file:line` (or the live probe) so each verdict is independently re-derivable.
 
+## 2026-07-25 — healthy end-to-end, and the 2026-07-20 xregister EMERGENCY is formally CLOSED
+
+**Range.** `origin/main` ab56100..08fe057 (tip `08fe0573`) — nine commits, all reviewed clean: both digest-leak fixes verified LIVE (`/han*` draft URLs 404 with zero draft-headline occurrences in the bodies), the register status contract (`d7b1d27`), the durable refusal log (`08fe057`), the folklore board wiring (`677745b`/`620c7ac`/`a7771a9`) and the gated submit page (`0139ec3`, serving its honest closed state at `/folklore/submit`) all confirmed at their definitions; `asc-release.mjs` (`1769b0d`) sound as a laptop-side tool.
+
+**Live checks (the evidence).** `/` 200 in 0.16–0.30s ×3; `/folklore` 200 in 0.36–0.50s ×3 — sub-second bar met. `POST /api/folklore/job` → 503 `not-available` (fails closed). `/board` → challenges (login redirect). `npm test`: 1179 passed / 2 skipped on a clean checkout at tip. `gh pr list`: zero open pull requests.
+
+**CLOSED.** The 2026-07-20 CONFIRMED EMERGENCY (`/api/x/register` self-certifying handle binding) is fixed and live at HEAD: `0f1fd7b` verifies the binding post off X's oEmbed (author_url handle, tail-permalink corroboration against both handle and post id) and `d4c36de` kills the retweet vector; every refusal reason present with correct status bands. Future runs stop carrying this as live. (Not re-verified with a funded live registration this run — report-only.)
+
+Nothing rejected today.
+
 ## 2026-07-23 — the site is healthy and every gate holds, but the first-ever draft digest leaks through a route nothing gates
 
 **Range.** Two commits since yesterday's sweep. `8a9b902` (2026-07-23 00:17, 8 files / 805 insertions) is
