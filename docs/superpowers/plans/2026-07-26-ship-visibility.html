@@ -36,27 +36,29 @@
 
 <div class="note"><strong>Three constraints that outrank visibility.</strong> (1) The Henceforth money fix does not wait for marketing — if the 4.49 archive happens before the review prompt lands, the prompt rides the next cycle. (2) Apple allows the system rating prompt <strong>three times per user per year</strong>: every prompt fires only at a genuinely earned completion moment, never at launch, never as a tap-reaction, and never gated on predicted sentiment (gating violates Apple's rules). (3) Everything Henry-voiced — X posts, pitches, the Product Hunt launch — is drafted here but <strong>posted only by Henry</strong>; content stays review-gated.</p></div>
 
+<div class="note"><strong>Status &middot; 2026-07-26 evening.</strong> The Monday code landed a day early: all three review prompts are on their shipping branches — Hansard <code>515de7c</code> (scroll-to-end with an overflow guard so a short recess digest can never fire at first render), Deck <code>ed8fbb9</code> (twenty-interaction engagement gate at the player&rsquo;s own table sweep; the OLD leave-match prompt — immediate tap-reaction, lifetime-capped, subscription-walled, the story behind seven ratings in six years — is deleted), Henceforth <code>97106e29</code> (view-layer only, additions only, zero money-path touches, fires after the PAID surface settles). All test-first, all through their pre-push gates. The copy pack is drafted at <code>docs/marketing/2026-07-29-ship-surround-copy.md</code> (local, review-gated).</div>
+
 <h2>Monday 28 July — code that rides the ship <span class="effort">(Claude, test-first, one commit per app)</span></h2>
 
 <div class="task"><span class="tasknum">Task 1</span> <span class="badge">hansard</span> <span class="effort">review prompt after a finished digest read</span>
 <ul class="steps">
-<li><input type="checkbox"> A pure completion signal: the reader reaches the end of a This Week digest (the final section scrolled into view, or the share button used) — pinned by a unit test on the pure gate.</li>
-<li><input type="checkbox"> Fire <code>requestReview</code> via the environment action after a beat (never as the immediate tap-reaction), at most once per version, tracked in <code>UserDefaults</code>.</li>
-<li><input type="checkbox"> Suite green; rides the 1.5 archive as its named headline change alongside the front door.</li>
+<li><input type="checkbox" checked> A pure completion signal: the reader reaches the end of a This Week digest (the final section scrolled into view, or the share button used) — pinned by a unit test on the pure gate.</li>
+<li><input type="checkbox" checked> Fire <code>requestReview</code> via the environment action after a beat (never as the immediate tap-reaction), at most once per version, tracked in <code>UserDefaults</code>.</li>
+<li><input type="checkbox" checked> Suite green; rides the 1.5 archive as its named headline change alongside the front door.</li>
 </ul></div>
 
 <div class="task"><span class="tasknum">Task 2</span> <span class="badge">deck</span> <span class="effort">review prompt after a completed game session</span>
 <ul class="steps">
-<li><input type="checkbox"> Completion signal: a multiplayer match ends cleanly, or a meaningful single-player session closes (cards returned to deck after real play) — pure gate, unit-tested.</li>
-<li><input type="checkbox"> Same discipline: delayed beat, once per version, no sentiment gating.</li>
-<li><input type="checkbox"> Unit gate + SwiftLint green; lands on master before Henry archives 1.27.</li>
+<li><input type="checkbox" checked> Completion signal: a multiplayer match ends cleanly, or a meaningful single-player session closes (cards returned to deck after real play) — pure gate, unit-tested.</li>
+<li><input type="checkbox" checked> Same discipline: delayed beat, once per version, no sentiment gating.</li>
+<li><input type="checkbox" checked> Unit gate + SwiftLint green; lands on master before Henry archives 1.27.</li>
 </ul></div>
 
 <div class="task"><span class="tasknum">Task 3</span> <span class="badge">henceforth</span> <span class="effort">review prompt after a successful broadcast</span>
 <ul class="steps">
-<li><input type="checkbox"> Completion signal: a broadcast reports <code>sent TXID</code> — the one moment the app has provably done its job with real money. Pure gate, unit-tested; fires after the payment surface fully settles, never during it.</li>
-<li><input type="checkbox"> Same discipline; full suite through the pre-push gate.</li>
-<li><input type="checkbox"> Rides whichever archive Henry cuts — and if 4.49 is already submitted, this waits for 4.50/next without complaint.</li>
+<li><input type="checkbox" checked> Completion signal: a broadcast reports <code>sent TXID</code> — the one moment the app has provably done its job with real money. Pure gate, unit-tested; fires after the payment surface fully settles, never during it.</li>
+<li><input type="checkbox" checked> Same discipline; full suite through the pre-push gate.</li>
+<li><input type="checkbox" checked> Rides whichever archive Henry cuts — and if 4.49 is already submitted, this waits for 4.50/next without complaint.</li>
 </ul></div>
 
 <div class="task"><span class="tasknum">Task 4</span> <span class="badge henry">henry &middot; 15 min</span> <span class="effort">the stalled submit</span>
