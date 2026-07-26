@@ -24,6 +24,7 @@ Write the file to: content/this-week/{{WEEK_DATE}}.json   (overwrite if it exist
 - departments: histogram by answeringBodyName, sorted desc; keep top 12 named rows, then collapse the rest into one final {"department":"N other departments","count":<sum>}. Counts must sum to stats.questions.
 - topTopics: the ~10 most common SUBSTANTIVE question headings by count; exclude null/empty headings and procedural meta-headings like "<Department>: Written Questions".
 - highlights.votes: EVERY division this window, each with a one-line blurb, ordered for narrative (lead with the most significant, not by id). highlights.questions: [].
+  - Each row's `id` MUST be the real commonsvotes-api DivisionId copied from the search response — NEVER a sequence number. The Hansard app replays the division by this id, so a made-up id sends readers to the wrong vote. (The 8 and 15 July 2026 issues shipped ids 1..N and had to be repaired; `content-integrity.test.ts` now fails any digest whose vote id is below 1000.)
 - highlights.bills: the ~5 most significant bills that moved, each with a blurb.
 
 ## 3. Pick the TOP STORY (editorial core)
