@@ -83,10 +83,12 @@ export default async function FolklorePage() {
   const witness = witnessWindow
     ? {
         ...witnessWindow,
-        posts: sortPostsByHot(witnessWindow.posts, scoresByWindow.all ?? {}, nowMs).slice(
-          0,
-          WITNESS_TEASER_POSTS,
-        ),
+        posts: sortPostsByHot(
+          witnessWindow.posts,
+          scoresByWindow.all ?? {},
+          foundingByPost ?? {},
+          nowMs,
+        ).slice(0, WITNESS_TEASER_POSTS),
       }
     : null;
   // One ledger read, not one per handle. This used to fan readFoundingTotal

@@ -70,39 +70,57 @@ describe("the hot fold", () => {
   const post = (id: string, at: string, media?: Array<{ type: string }>) => ({ id, at, media });
   const video = (id: string, agedDays: number) => post(id, daysAgo(agedDays), [{ type: "video" }]);
   const text = (id: string, agedDays: number) => post(id, daysAgo(agedDays));
+  // Founding costs measured on the witness archive: text ~15 sats, a photo
+  // ~8.6k, a small reply clip ~1.4k, the big tutorials 1.7 million.
+  const TUTORIAL = 1_700_000, CLIP = 1_400, TEXT_COST = 15;
 
-  it("an old video outranks old text — the cold-start shelf", () => {
-    expect(sortPostsByHot([text("t", 400), video("v", 400)], {}, NOW).map((p) => p.id)).toEqual(["v", "t"]);
+  it("a settled tutorial outranks old text — the shelf is real upload cost", () => {
+    const founding = { t: TEXT_COST, v: TUTORIAL };
+    expect(sortPostsByHot([text("t", 400), video("v", 400)], {}, founding, NOW).map((p) => p.id)).toEqual(["v", "t"]);
   });
 
-  it("a brand-new text post outranks a bare old video for its first fortnight, then sinks beneath it", () => {
-    expect(hotScore(text("fresh", 1), 0, NOW)).toBeGreaterThan(hotScore(video("v", 400), 0, NOW));
-    expect(hotScore(text("aged", 15), 0, NOW)).toBeLessThan(hotScore(video("v", 400), 0, NOW));
+  it("a newer fourteen-kilobyte clip never outranks a settled fifteen-megabyte tutorial", () => {
+    // The mouth-of-Sauron pin: under the flat class constant both were 'a
+    // video' and recency decided; under the cost prior the tutorial's
+    // 1.7 million founding sats (~249) hold above the clip (~126 + spent
+    // freshness) once its first days pass.
+    const founding = { clip: CLIP, tutorial: TUTORIAL };
+    const posts = [video("clip", 11), video("tutorial", 35)];
+    expect(sortPostsByHot(posts, {}, founding, NOW).map((p) => p.id)).toEqual(["tutorial", "clip"]);
   });
 
-  it("earned kudos outrank settled media and fresh text — but a day-old video is allowed its moment", () => {
-    // 1,000 sats ≈ 240 points: above a settled video (prior 100 + spent
-    // freshness) and above brand-new bare text (200) — but deliberately
-    // BELOW a video in its first days (prior + freshness ≈ 270+), because
-    // hot means the new costly thing gets its window before money settles it.
-    const posts = [text("fresh", 0), video("settled", 30), text("paid", 300)];
-    expect(sortPostsByHot(posts, { paid: 1000 }, NOW).map((p) => p.id)[0]).toBe("paid");
-    expect(hotScore(video("day-old", 1), 0, NOW)).toBeGreaterThan(hotScore(text("paid", 300), 1000, NOW));
+  it("brand-new bare text never displaces the archive's monuments", () => {
+    const founding = { fresh: TEXT_COST, tutorial: TUTORIAL };
+    expect(hotScore(text("fresh", 0), 0, TEXT_COST, NOW)).toBeLessThan(
+      hotScore(video("tutorial", 400), 0, TUTORIAL, NOW),
+    );
+    void founding;
+  });
+
+  it("earned kudos outrank everything unpaid once content settles", () => {
+    const founding = { fresh: TEXT_COST, tutorial: TUTORIAL, paid: TEXT_COST };
+    const posts = [text("fresh", 0), video("tutorial", 35), text("paid", 300)];
+    expect(sortPostsByHot(posts, { paid: 5000 }, founding, NOW).map((p) => p.id)[0]).toBe("paid");
   });
 
   it("the paid term is log-damped — the first satoshis move a post most", () => {
-    const first = hotScore(text("p", 300), 100, NOW) - hotScore(text("p", 300), 0, NOW);
-    const later = hotScore(text("p", 300), 10_100, NOW) - hotScore(text("p", 300), 10_000, NOW);
+    const first = hotScore(text("p", 300), 100, 0, NOW) - hotScore(text("p", 300), 0, 0, NOW);
+    const later = hotScore(text("p", 300), 10_100, 0, NOW) - hotScore(text("p", 300), 10_000, 0, NOW);
     expect(first).toBeGreaterThan(later * 10);
+  });
+
+  it("without founding data the class floors hold — a video archive never collapses to freshness", () => {
+    expect(hotScore(video("v", 400), 0, 0, NOW)).toBeCloseTo(100, 6);
+    expect(hotScore(post("p", daysAgo(400), [{ type: "photo" }]), 0, 0, NOW)).toBeCloseTo(30, 6);
   });
 
   it("an unparseable date counts as old, never as new", () => {
     const undated = { id: "u", at: "not a date", media: undefined };
-    expect(hotScore(undated, 0, NOW)).toBe(0);
+    expect(hotScore(undated, 0, 0, NOW)).toBe(0);
   });
 
   it("ties keep input order, so equal posts never look shuffled", () => {
     const posts = [text("a", 400), text("b", 400)];
-    expect(sortPostsByHot(posts, {}, NOW).map((p) => p.id)).toEqual(["a", "b"]);
+    expect(sortPostsByHot(posts, {}, {}, NOW).map((p) => p.id)).toEqual(["a", "b"]);
   });
 });

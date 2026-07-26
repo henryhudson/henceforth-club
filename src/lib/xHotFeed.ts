@@ -25,7 +25,12 @@ export async function getHotArchivePage(
 ): Promise<ArchivePage | null> {
   const whole = await getArchivePage(handle, 0, WHOLE_ARCHIVE);
   if (!whole) return null;
-  const { scoresByWindow } = await readLedgerRollup(handle);
-  const ranked = sortPostsByHot(whole.posts, scoresByWindow[DEFAULT_WINDOW] ?? {}, nowMs);
+  const { scoresByWindow, foundingByPost } = await readLedgerRollup(handle);
+  const ranked = sortPostsByHot(
+    whole.posts,
+    scoresByWindow[DEFAULT_WINDOW] ?? {},
+    foundingByPost ?? {},
+    nowMs,
+  );
   return { ...whole, posts: ranked.slice(offset, offset + limit) };
 }

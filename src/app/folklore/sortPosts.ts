@@ -33,46 +33,61 @@ export function sortPostsByElo<P extends { id: string }>(
  * The hot fold (Henry, 2026-07-26: "we need the hot feed… it's all about the
  * algorithm"). Three terms, each with a job:
  *
- *   paid   = 80 · log₁₀(1 + sats)      — earned kudos rank first, log-damped
- *            so the first satoshis move a post most and one whale cannot
- *            freeze the feed forever. Founding (upload cost) is already
- *            excluded upstream by the score fold.
- *   prior  = video 100 · photo 30      — the cold-start shelf: before anyone
- *            has voted, the archive's own economics rank it (a video is the
- *            costliest thing anyone inscribed). Supersedes the earlier
- *            media-cost sort, which was this prior with no other terms.
- *   fresh  = 200 · e^(−ageDays/14)     — a new post outranks a bare video for
- *            roughly its first fortnight (at 14 days: ~74, under the video
- *            prior), then settles to where kudos and media put it. This is
- *            what lets a weekly delta surface on arrival and sink honestly.
+ *   paid   = 80 · log₁₀(1 + kudosSats)   — earned votes rank first,
+ *            log-damped so the first satoshis move a post most and one whale
+ *            cannot freeze the feed. Founding is excluded upstream: kudos
+ *            here is money OTHERS committed.
+ *   prior  = 40 · log₁₀(1 + foundingSats) — the cold-start shelf is the
+ *            post's REAL upload cost from the founding ledger, so a
+ *            fourteen-kilobyte reply clip can never outrank a fifteen-
+ *            megabyte tutorial by both being "a video" (the flat class
+ *            constant did exactly that). Measured on the witness archive:
+ *            text ~15 sats ≈ 48, photos ~8.6k ≈ 157, videos ~666k ≈ 233,
+ *            the big tutorials 1.7M+ ≈ 249. The old class constants remain
+ *            only as FLOORS (video 100, photo 30) for an archive whose
+ *            founding was never ledgered. Half the paid weight per decade:
+ *            money others committed counts double against money you spent
+ *            on yourself.
+ *   fresh  = 150 · e^(−ageDays/14)       — a new post gets its days at the
+ *            top, then settles where cost and kudos put it. Capped BELOW the
+ *            settled big-tutorial band (~249), so brand-new bare text
+ *            (~198) never displaces the archive's monuments. This is what
+ *            lets a weekly delta surface on arrival and sink honestly.
  *
- * Reference points: 1,000 sats ≈ 240 (beats everything unpaid); a fresh text
- * post starts at 200; a video floor is 100. `now` is injected so the fold
- * stays pure; a post whose `at` does not parse counts as old (fresh 0),
- * never as new. Ties keep input order (newest-first from the archive).
+ * Reference points: 1,000 kudos sats ≈ 240; 5,000 ≈ 296 — real votes beat
+ * everything unpaid. `now` is injected so the fold stays pure; a post whose
+ * `at` does not parse counts as old (fresh 0), never as new. Ties keep
+ * input order (newest-first from the archive).
  */
 type HotRankable = { at?: string; media?: ReadonlyArray<{ type: string }> };
 
-export function hotScore(post: HotRankable, sats: number, nowMs: number): number {
-  const paid = 80 * Math.log10(1 + Math.max(0, sats));
-  const prior = post.media?.some((m) => m.type === "video")
+export function hotScore(
+  post: HotRankable,
+  kudosSats: number,
+  foundingSats: number,
+  nowMs: number,
+): number {
+  const paid = 80 * Math.log10(1 + Math.max(0, kudosSats));
+  const classFloor = post.media?.some((m) => m.type === "video")
     ? 100
     : post.media && post.media.length > 0
       ? 30
       : 0;
+  const prior = Math.max(40 * Math.log10(1 + Math.max(0, foundingSats)), classFloor);
   const atMs = post.at === undefined ? NaN : Date.parse(post.at);
   const ageDays = Number.isNaN(atMs) ? Infinity : Math.max(0, (nowMs - atMs) / 86_400_000);
-  const fresh = 200 * Math.exp(-ageDays / 14);
+  const fresh = 150 * Math.exp(-ageDays / 14);
   return paid + prior + fresh;
 }
 
 export function sortPostsByHot<P extends HotRankable & { id: string }>(
   posts: readonly P[],
   scores: Record<string, number>,
+  founding: Record<string, number>,
   nowMs: number,
 ): P[] {
   return posts
-    .map((p, i) => ({ p, i, h: hotScore(p, scores[p.id] ?? 0, nowMs) }))
+    .map((p, i) => ({ p, i, h: hotScore(p, scores[p.id] ?? 0, founding[p.id] ?? 0, nowMs) }))
     .sort((x, y) => y.h - x.h || x.i - y.i)
     .map((d) => d.p);
 }
