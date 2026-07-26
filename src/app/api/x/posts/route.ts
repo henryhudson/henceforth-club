@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getArchivePage, PAGE_SIZE } from "@/lib/xArchiveCache";
 import { postsWithMedia } from "@/lib/xMediaFilter";
+import { getHotArchivePage } from "@/lib/xHotFeed";
 
 /**
  * GET /api/x/posts?handle=<handle>&offset=<n>&mode=latest|videos|photos
@@ -19,7 +20,7 @@ import { postsWithMedia } from "@/lib/xMediaFilter";
  * page's) — small and stable per handle, so it rides along on every page
  * rather than needing its own request.
  */
-const MODES = new Set(["latest", "videos", "photos"]);
+const MODES = new Set(["latest", "hot", "videos", "photos"]);
 /** Far above X's own per-profile export ceiling — the media scan is uncapped
  * in practice; a cap that silently dropped an old tutorial would be worse
  * than the read cost of walking every chunk. */
@@ -41,6 +42,22 @@ export async function GET(req: Request) {
   const offset = Number(params.get("offset") ?? "0");
   if (!Number.isInteger(offset) || offset < 0) {
     return NextResponse.json({ ok: false, reason: "bad-offset" }, { status: 400 });
+  }
+
+  if (mode === "hot") {
+    // Ranked over the whole archive, then sliced — see xHotFeed. `postCount`
+    // stays the archive total: hot pages the same set in a different order.
+    const page = await getHotArchivePage(handle, offset, PAGE_SIZE, Date.now());
+    if (!page) {
+      return NextResponse.json({ ok: false, reason: "not-found" }, { status: 404 });
+    }
+    return NextResponse.json({
+      profile: page.profile,
+      posts: page.posts,
+      offset,
+      postCount: page.postCount,
+      txTimes: page.txTimes,
+    });
   }
 
   if (mode === "videos" || mode === "photos") {

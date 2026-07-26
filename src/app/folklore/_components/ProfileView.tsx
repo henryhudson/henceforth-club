@@ -50,7 +50,7 @@ export default function ProfileView({
   eloByPost?: RatingTable;
   header?: "profile" | "ledger";
   /** Pass-through for SSR tests that assert Best-tab ranking. */
-  defaultMode?: "latest" | "best";
+  defaultMode?: "latest" | "best" | "hot";
 }) {
   const { profile } = archive;
   const posts = dedupePosts(archive.posts);

@@ -26,6 +26,7 @@ export default function ProfilePage({
   kudosEnabled = false,
   tipsByPost,
   eloByPost,
+  defaultMode,
 }: {
   archive: XArchive;
   txid?: string | null;
@@ -43,6 +44,9 @@ export default function ProfilePage({
   kudosEnabled?: boolean;
   tipsByPost?: Record<string, number>;
   eloByPost?: RatingTable;
+  /** The tab the feed opens on — "hot" ONLY where the server ranked the
+   * initial posts by the hot fold; the transaction view keeps chronology. */
+  defaultMode?: "latest" | "best" | "hot";
 }) {
   return (
     <main className="min-h-screen bg-background">
@@ -78,6 +82,7 @@ export default function ProfilePage({
         archive={archive}
         postCount={postCount}
         handle={handle}
+        defaultMode={defaultMode}
         isPreview={!txid}
         photoCount={photoCount}
         txCount={txCount}

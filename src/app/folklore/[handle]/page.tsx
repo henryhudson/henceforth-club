@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getArchivePage, PAGE_SIZE } from "@/lib/xArchiveCache";
+import { getHotArchivePage } from "@/lib/xHotFeed";
 import { getOwner } from "@/lib/xOwner";
 import { readFoundingTotal, readLedgerRollup } from "@/lib/xVotes";
 import { readTipCounts } from "@/lib/kudos/tips";
@@ -25,7 +26,10 @@ export default async function HandlePage(
   { params }: { params: Promise<{ handle: string }> },
 ) {
   const { handle } = await params;
-  const page = await getArchivePage(handle, 0, PAGE_SIZE);
+  // The archive opens hot — the whole set ranked by the hot fold, first page
+  // served — so the reader lands on what is worth seeing, not on whatever
+  // happened last. Latest remains one tab away.
+  const page = await getHotArchivePage(handle, 0, PAGE_SIZE, Date.now());
 
   if (!page) {
     return (
@@ -76,6 +80,7 @@ export default async function HandlePage(
       kudosEnabled={kudosEnabled}
       tipsByPost={tipsByPost}
       eloByPost={eloByPost}
+      defaultMode="hot"
     />
   );
 }

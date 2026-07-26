@@ -9,9 +9,11 @@ import { computeShowParent } from "./PostCard";
 import { sortPostsByElo, sortPostsByScore } from "../sortPosts";
 import PostEntry from "./PostEntry";
 
-type Mode = "latest" | "best" | "videos" | "photos";
+type Mode = "hot" | "latest" | "best" | "videos" | "photos";
+type StreamMode = "hot" | "latest";
 type MediaMode = "videos" | "photos";
 const isMediaMode = (m: Mode): m is MediaMode => m === "videos" || m === "photos";
+const isStreamMode = (m: Mode): m is StreamMode => m === "hot" || m === "latest";
 
 const WINDOWS: ReadonlyArray<{ value: ScoreWindow; label: string }> = [
   { value: "day", label: "Today" },
@@ -29,13 +31,16 @@ type PostsResponse = {
 };
 
 /**
- * Feed ranking + infinite scroll, plus the archive's media views. Latest /
- * Best sort one continuously-paged list; Videos / Photos are a different
- * question — each fetches its complete match list in ONE request the first
- * time it is opened (the server scans the whole archive), because a
- * client-side filter over incrementally-loaded pages would show only the
- * media scrolled past so far — three videos where the archive holds
- * twenty-three.
+ * The feed's reading orders. Hot and Latest are SERVER streams, each paged
+ * independently — the server ranks (hot) or pages (latest) the whole archive
+ * and the client only appends, because a client-side reorder over
+ * incrementally-loaded pages can only ever rank what happened to be scrolled
+ * past. The default stream's first page arrives server-rendered; the other
+ * stream starts empty and pages from the top on first opening. Best is a
+ * client sort over every post loaded so far (both streams, deduplicated) —
+ * a view of the loaded subset, which its footer does not pretend otherwise.
+ * Videos / Photos fetch their complete match list in one request (the
+ * server scans the whole archive).
  */
 export default function FeedControls({
   posts: initialPosts,
@@ -65,74 +70,93 @@ export default function FeedControls({
   kudosEnabled?: boolean;
   tipsByPost?: Record<string, number>;
   eloByPost?: RatingTable;
-  /** SSR/tests: production defaults to Latest so the full archive can scroll. */
+  /** The tab the feed opens on. "hot" ONLY where the initial posts arrived
+   * hot-ranked from the server — the seeded stream must match its order. */
   defaultMode?: Mode;
 }) {
+  const seededStream: StreamMode = isStreamMode(defaultMode) ? defaultMode : "latest";
+  const totalKnown = postCount ?? initialPosts.length;
+  const pageable = handle !== undefined;
+
   const [mode, setMode] = useState<Mode>(defaultMode);
   const [selectedWindow, setSelectedWindow] = useState<ScoreWindow>(DEFAULT_WINDOW);
-  const [extraPosts, setExtraPosts] = useState<XPost[]>([]);
+  const [streams, setStreams] = useState<Record<StreamMode, { extra: XPost[]; exhausted: boolean }>>({
+    hot: { extra: [], exhausted: !pageable || (seededStream === "hot" && initialPosts.length >= totalKnown) },
+    latest: { extra: [], exhausted: !pageable || (seededStream === "latest" && initialPosts.length >= totalKnown) },
+  });
   const [mediaPosts, setMediaPosts] = useState<Partial<Record<MediaMode, XPost[]>>>({});
   const [mediaLoading, setMediaLoading] = useState(false);
   const [txTimes, setTxTimes] = useState<Record<string, number>>(initialTxTimes);
   const [loadingMore, setLoadingMore] = useState(false);
-  const totalKnown = postCount ?? initialPosts.length;
-  const [exhausted, setExhausted] = useState(
-    handle === undefined || initialPosts.length >= totalKnown,
+
+  const streamPosts = useCallback(
+    (stream: StreamMode, state: Record<StreamMode, { extra: XPost[]; exhausted: boolean }>) =>
+      stream === seededStream ? [...initialPosts, ...state[stream].extra] : state[stream].extra,
+    [initialPosts, seededStream],
   );
+
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const stateRef = useRef({
-    offset: initialPosts.length,
-    loadingMore: false,
-    exhausted: handle === undefined || initialPosts.length >= totalKnown,
-  });
-
+  const stateRef = useRef({ streams, loadingMore });
   useEffect(() => {
-    stateRef.current = {
-      offset: initialPosts.length + extraPosts.length,
-      loadingMore,
-      exhausted,
-    };
+    stateRef.current = { streams, loadingMore };
   });
 
-  const loadMore = useCallback(async () => {
-    if (!handle) return;
-    const { offset, loadingMore: busy, exhausted: done } = stateRef.current;
-    if (busy || done) return;
-    setLoadingMore(true);
-    stateRef.current.loadingMore = true;
-    try {
-      const url = `/api/x/posts?handle=${encodeURIComponent(handle)}&offset=${offset}&mode=latest`;
-      const res = await fetch(url);
-      if (!res.ok) return;
-      const body = (await res.json()) as PostsResponse;
-      setExtraPosts((prev) => {
-        const seen = new Set([...initialPosts, ...prev].map((p) => p.id));
-        const fresh = body.posts.filter((p) => !seen.has(p.id));
-        return [...prev, ...fresh];
-      });
-      setTxTimes(body.txTimes);
-      const nextOffset = offset + body.posts.length;
-      if (body.posts.length === 0 || nextOffset >= body.postCount) {
-        setExhausted(true);
-        stateRef.current.exhausted = true;
+  const loadMore = useCallback(
+    async (stream: StreamMode) => {
+      if (!handle) return;
+      const { streams: current, loadingMore: busy } = stateRef.current;
+      if (busy || current[stream].exhausted) return;
+      const offset = streamPosts(stream, current).length;
+      setLoadingMore(true);
+      stateRef.current.loadingMore = true;
+      try {
+        const url = `/api/x/posts?handle=${encodeURIComponent(handle)}&offset=${offset}&mode=${stream}`;
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const body = (await res.json()) as PostsResponse;
+        setStreams((prev) => {
+          const seen = new Set(streamPosts(stream, prev).map((p) => p.id));
+          const fresh = body.posts.filter((p) => !seen.has(p.id));
+          const grown = {
+            ...prev,
+            [stream]: {
+              extra: [...prev[stream].extra, ...fresh],
+              exhausted:
+                body.posts.length === 0 ||
+                streamPosts(stream, prev).length + body.posts.length >= body.postCount,
+            },
+          };
+          stateRef.current.streams = grown;
+          return grown;
+        });
+        setTxTimes(body.txTimes);
+      } catch {
+        /* leave sentinel — next intersection retries */
+      } finally {
+        setLoadingMore(false);
+        stateRef.current.loadingMore = false;
       }
-    } catch {
-      /* leave sentinel — next intersection retries */
-    } finally {
-      setLoadingMore(false);
-      stateRef.current.loadingMore = false;
-    }
-  }, [handle, initialPosts]);
+    },
+    [handle, streamPosts],
+  );
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
-    if (!sentinel || handle === undefined) return;
+    if (!sentinel || !pageable || !isStreamMode(mode)) return;
     const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) void loadMore();
+      if (entries[0].isIntersecting) void loadMore(mode);
     });
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [handle, loadMore]);
+  }, [pageable, mode, loadMore]);
+
+  const openStreamMode = useCallback(
+    (next: StreamMode) => {
+      setMode(next);
+      if (streamPosts(next, stateRef.current.streams).length === 0) void loadMore(next);
+    },
+    [loadMore, streamPosts],
+  );
 
   const openMediaMode = useCallback(
     async (next: MediaMode) => {
@@ -154,34 +178,54 @@ export default function FeedControls({
     [handle, mediaPosts],
   );
 
-  const allPosts = [...initialPosts, ...extraPosts];
   const windowScores = scoresByWindow?.[selectedWindow] ?? scores;
+  const loadedUnion = (() => {
+    const seen = new Set<string>();
+    const union: XPost[] = [];
+    for (const p of [...initialPosts, ...streams.hot.extra, ...streams.latest.extra]) {
+      if (!seen.has(p.id)) {
+        seen.add(p.id);
+        union.push(p);
+      }
+    }
+    return union;
+  })();
 
   const ordered = isMediaMode(mode)
     ? (mediaPosts[mode] ?? [])
     : mode === "best"
       ? eloByPost !== undefined
-        ? sortPostsByElo(allPosts, eloByPost)
-        : sortPostsByScore(allPosts, windowScores)
-      : allPosts;
+        ? sortPostsByElo(loadedUnion, eloByPost)
+        : sortPostsByScore(loadedUnion, windowScores)
+      : streamPosts(mode, streams);
 
   const showParent = computeShowParent(ordered);
   const threads = buildThreadContext(ordered);
-  const loaded = allPosts.length;
+  const tabClass = (active: boolean) =>
+    active
+      ? "border border-accent px-3 py-1.5 text-foreground"
+      : "border border-card-border px-3 py-1.5 text-muted transition-colors hover:border-card-border-hover";
 
   return (
     <div>
       <div role="tablist" aria-label="Reading order" className="mb-4 flex flex-wrap gap-2 font-mono text-xs">
+        {pageable && (
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "hot"}
+            onClick={() => openStreamMode("hot")}
+            className={tabClass(mode === "hot")}
+          >
+            Hot
+          </button>
+        )}
         <button
           type="button"
           role="tab"
           aria-selected={mode === "latest"}
-          onClick={() => setMode("latest")}
-          className={
-            mode === "latest"
-              ? "border border-accent px-3 py-1.5 text-foreground"
-              : "border border-card-border px-3 py-1.5 text-muted transition-colors hover:border-card-border-hover"
-          }
+          onClick={() => openStreamMode("latest")}
+          className={tabClass(mode === "latest")}
         >
           Latest
         </button>
@@ -190,26 +234,18 @@ export default function FeedControls({
           role="tab"
           aria-selected={mode === "best"}
           onClick={() => setMode("best")}
-          className={
-            mode === "best"
-              ? "border border-accent px-3 py-1.5 text-foreground"
-              : "border border-card-border px-3 py-1.5 text-muted transition-colors hover:border-card-border-hover"
-          }
+          className={tabClass(mode === "best")}
         >
           Best
         </button>
-        {handle !== undefined && (
+        {pageable && (
           <>
             <button
               type="button"
               role="tab"
               aria-selected={mode === "videos"}
               onClick={() => void openMediaMode("videos")}
-              className={
-                mode === "videos"
-                  ? "border border-accent px-3 py-1.5 text-foreground"
-                  : "border border-card-border px-3 py-1.5 text-muted transition-colors hover:border-card-border-hover"
-              }
+              className={tabClass(mode === "videos")}
             >
               Videos
             </button>
@@ -218,11 +254,7 @@ export default function FeedControls({
               role="tab"
               aria-selected={mode === "photos"}
               onClick={() => void openMediaMode("photos")}
-              className={
-                mode === "photos"
-                  ? "border border-accent px-3 py-1.5 text-foreground"
-                  : "border border-card-border px-3 py-1.5 text-muted transition-colors hover:border-card-border-hover"
-              }
+              className={tabClass(mode === "photos")}
             >
               Photos
             </button>
@@ -240,11 +272,7 @@ export default function FeedControls({
                 type="button"
                 aria-pressed={active}
                 onClick={() => setSelectedWindow(value)}
-                className={
-                  active
-                    ? "border border-accent px-3 py-1.5 text-foreground"
-                    : "border border-card-border px-3 py-1.5 text-muted transition-colors hover:border-card-border-hover"
-                }
+                className={tabClass(active)}
               >
                 {label}
               </button>
@@ -279,7 +307,9 @@ export default function FeedControls({
             ? mediaLoading
               ? "Finding the media in this archive…"
               : `No ${mode} in this archive.`
-            : "No posts."}
+            : isStreamMode(mode) && loadingMore
+              ? "Loading…"
+              : "No posts."}
         </p>
       )}
 
@@ -290,17 +320,17 @@ export default function FeedControls({
         </p>
       )}
 
-      {!isMediaMode(mode) && handle !== undefined && !exhausted && (
+      {isStreamMode(mode) && pageable && !streams[mode].exhausted && (
         <div ref={sentinelRef} className="py-6 text-center font-mono text-xs text-muted">
           {loadingMore
-            ? `Loading more… ${loaded.toLocaleString("en-GB")} of ${totalKnown.toLocaleString("en-GB")}`
+            ? `Loading more… ${ordered.length.toLocaleString("en-GB")} of ${totalKnown.toLocaleString("en-GB")}`
             : ""}
         </div>
       )}
 
-      {!isMediaMode(mode) && handle !== undefined && exhausted && totalKnown > initialPosts.length && (
+      {isStreamMode(mode) && pageable && streams[mode].exhausted && ordered.length > initialPosts.length && (
         <p className="mt-4 text-center font-mono text-xs text-muted">
-          {loaded.toLocaleString("en-GB")} posts loaded
+          {ordered.length.toLocaleString("en-GB")} posts loaded
         </p>
       )}
     </div>

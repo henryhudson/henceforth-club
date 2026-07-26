@@ -8,7 +8,7 @@ import { readTipCounts } from "@/lib/kudos/tips";
 import { readRatingTable } from "@/lib/kudos/ledger";
 import { readAuthorRatings } from "@/lib/kudos/candidates";
 import { boardTop, commentCount, readLinkRecord } from "@/lib/folkloreBoard";
-import { sortHandlesByAuthorElo, sortPostsByMediaCost } from "./sortPosts";
+import { sortHandlesByAuthorElo, sortPostsByHot } from "./sortPosts";
 import {
   linkTxidsOf,
   mergeBoard,
@@ -71,16 +71,24 @@ export default async function FolklorePage() {
   // 2026-07-14 smoothness research).
   const webArchiveOpen = process.env.XTEXT_WEB_ARCHIVE_ENABLED === "true";
   const witnessWindow = await getArchivePage(WITNESS_HANDLE, 0, WITNESS_SHOWCASE_WINDOW);
-  const witness = witnessWindow
-    ? {
-        ...witnessWindow,
-        posts: sortPostsByMediaCost(witnessWindow.posts).slice(0, WITNESS_TEASER_POSTS),
-      }
-    : null;
+  const nowMs = Date.now();
   const handles = await listHandles(BOARD_WINDOW);
   // One ledger read, five folds — readScores per window re-read the ledger
   // each time. Shared with /folklore/<handle>, which now carries the same toggle.
   const { scoresByWindow, foundingByPost } = await readLedgerRollup(WITNESS_HANDLE);
+  // The teaser leads with the hot fold's picks over a wider window — the
+  // same ordering the archive page defaults to, so the shop window and the
+  // shop agree. Videos still lead cold (the fold's media prior); kudos
+  // overtake as they accrue.
+  const witness = witnessWindow
+    ? {
+        ...witnessWindow,
+        posts: sortPostsByHot(witnessWindow.posts, scoresByWindow.all ?? {}, nowMs).slice(
+          0,
+          WITNESS_TEASER_POSTS,
+        ),
+      }
+    : null;
   // One ledger read, not one per handle. This used to fan readFoundingTotal
   // across every handle in the directory to sum a site-wide total for the
   // hero's stats line; with that line gone, the witness is the only total the
@@ -176,6 +184,7 @@ export default async function FolklorePage() {
           photoCount={witness.photoCount}
           archiveSats={witnessSats}
           firstInscribedAt={witness.firstInscribedAt}
+          defaultMode="hot"
           txTimes={witness.txTimes}
           scoresByWindow={scoresByWindow}
           foundingByPost={foundingByPost}
