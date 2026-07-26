@@ -92,6 +92,22 @@ export function sortPostsByHot<P extends HotRankable & { id: string }>(
     .map((d) => d.p);
 }
 
+/** The shop window's seating: the owner's picks lead in their listed order,
+ * the given (hot-ranked) order fills the remaining seats. Curation exists
+ * because the hot fold cannot tell an expensive casual clip from an
+ * expensive tutorial — only the owner can. A pick absent from the posts is
+ * skipped, never an error. */
+export function showcasePosts<P extends { id: string }>(
+  posts: readonly P[],
+  picks: readonly string[],
+  seats: number,
+): P[] {
+  const byId = new Map(posts.map((p) => [p.id, p]));
+  const picked = picks.flatMap((id) => (byId.has(id) ? [byId.get(id) as P] : []));
+  const chosen = new Set(picked.map((p) => p.id));
+  return [...picked, ...posts.filter((p) => !chosen.has(p.id))].slice(0, seats);
+}
+
 /** The directory's ordering under the kudos flag: rated authors first by
  * their aggregate rating descending, then the unrated in the order given
  * (which is the existing newest-stamped order — the flag-off directory).

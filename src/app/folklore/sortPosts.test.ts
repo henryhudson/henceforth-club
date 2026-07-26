@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { hotScore, sortHandlesByAuthorElo, sortPostsByElo, sortPostsByHot, sortPostsByScore } from "./sortPosts";
+import { hotScore, showcasePosts, sortHandlesByAuthorElo, sortPostsByElo, sortPostsByHot, sortPostsByScore } from "./sortPosts";
 
 describe("sortPostsByScore", () => {
   it("orders by score desc, missing score = 0, stable on ties", () => {
@@ -122,5 +122,17 @@ describe("the hot fold", () => {
   it("ties keep input order, so equal posts never look shuffled", () => {
     const posts = [text("a", 400), text("b", 400)];
     expect(sortPostsByHot(posts, {}, {}, NOW).map((p) => p.id)).toEqual(["a", "b"]);
+  });
+});
+
+describe("showcasePosts", () => {
+  const posts = [{ id: "hot1" }, { id: "ep9" }, { id: "hot2" }, { id: "kepler" }];
+
+  it("seats the owner's picks first in listed order, hot order filling the rest", () => {
+    expect(showcasePosts(posts, ["kepler", "ep9"], 4).map((p) => p.id)).toEqual(["kepler", "ep9", "hot1", "hot2"]);
+  });
+
+  it("skips a pick the archive does not hold and never duplicates a seat", () => {
+    expect(showcasePosts(posts, ["gone", "ep9"], 3).map((p) => p.id)).toEqual(["ep9", "hot1", "hot2"]);
   });
 });

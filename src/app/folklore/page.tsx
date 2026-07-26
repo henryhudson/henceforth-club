@@ -8,7 +8,7 @@ import { readTipCounts } from "@/lib/kudos/tips";
 import { readRatingTable } from "@/lib/kudos/ledger";
 import { readAuthorRatings } from "@/lib/kudos/candidates";
 import { boardTop, commentCount, readLinkRecord } from "@/lib/folkloreBoard";
-import { sortHandlesByAuthorElo } from "./sortPosts";
+import { showcasePosts, sortHandlesByAuthorElo } from "./sortPosts";
 import {
   linkTxidsOf,
   mergeBoard,
@@ -38,6 +38,18 @@ export const metadata: Metadata = {
  * conversion section under roughly four thousand words of one man's tweets. */
 const WITNESS_TEASER_POSTS = 6;
 
+/** The owner's picks for the shop window, in seating order: the Starting
+ * Henceforth tutorials, Sci Fri, and the defining-feature film. Post ids
+ * from the witness archive; a pick that leaves the archive is skipped. */
+const WITNESS_PICKS: readonly string[] = [
+  "2074559038046499111", // stack, stack, stacks — episode nine
+  "2075673639404380160", // Sci Fri — Kepler's laws
+  "2071892336502567016", // get loopy — episode eight
+  "2070542548825727443", // decisions ×3 — episode seven
+  "2067547024258396270", // words from words — the defining feature
+  "2069372485687005271", // episode 6 — printing and ascii
+];
+
 /**
  * How many rows the front page considers, on both reads.
  *
@@ -63,10 +75,18 @@ export default async function FolklorePage() {
   // leave (the accent button did exactly that — the top finding of the
   // 2026-07-14 smoothness research).
   const webArchiveOpen = process.env.XTEXT_WEB_ARCHIVE_ENABLED === "true";
-  // The whole archive, hot-ranked — a recency window here silently excluded
-  // everything older than the newest sixty posts, which is exactly where the
-  // tutorials live. The shop window shows the archive's overall best.
-  const witnessWindow = await getHotArchivePage(WITNESS_HANDLE, 0, WITNESS_TEASER_POSTS, Date.now());
+  // The whole archive, hot-ranked, then CURATED: the owner's picks — the
+  // tutorials, which are why the showroom exists — hold the front seats,
+  // and the hot fold fills the rest. Curation is honest here because the
+  // fold cannot tell an expensive casual clip from an expensive tutorial;
+  // only the owner can (Henry, 2026-07-26: "i dont see my tutorials").
+  const witnessWhole = await getHotArchivePage(WITNESS_HANDLE, 0, 100_000, Date.now());
+  const witnessWindow = witnessWhole
+    ? {
+        ...witnessWhole,
+        posts: showcasePosts(witnessWhole.posts, WITNESS_PICKS, WITNESS_TEASER_POSTS),
+      }
+    : null;
   const handles = await listHandles(BOARD_WINDOW);
   // One ledger read, five folds — readScores per window re-read the ledger
   // each time. Shared with /folklore/<handle>, which now carries the same toggle.
