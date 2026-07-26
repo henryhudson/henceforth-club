@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ship visibility — the 29 July triple ship, seen</title>
+<style>
+  :root { --bg:#f4f1ea; --ink:#1c1a16; --muted:#6b6358; --rule:#d8d0c0; --accent:#a8431f; --accent-soft:#c4a572; --card:#fbf9f4; --code-bg:#1e1e1e; --code-ink:#e8e8e8; --ok:#2f6f3e; --warn:#a8431f; --shadow:0 1px 3px rgba(0,0,0,0.08); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.65;}
+  .wrap{max-width:880px;margin:0 auto;padding:56px 32px;} header.doc{margin-bottom:40px;border-bottom:2px solid var(--rule);padding-bottom:24px;}
+  .eyebrow{font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:34px;line-height:1.15;margin:0 0 12px;font-weight:700;} h2{font-size:24px;margin:48px 0 14px;padding-top:20px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 10px;} .lede{font-size:19px;color:var(--muted);margin:0;} p{margin:14px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(0,0,0,0.06);padding:2px 6px;border-radius:4px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;} th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .task{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:8px 22px 18px;margin:22px 0;box-shadow:var(--shadow);}
+  .task .tasknum{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);}
+  .note{background:#f6efe0;border-left:4px solid var(--accent-soft);padding:10px 16px;border-radius:0 6px 6px 0;margin:14px 0;}
+  ul{margin:12px 0;padding-left:24px;} li{margin:5px 0;}
+  ul.steps{list-style:none;padding-left:4px;} ul.steps>li{margin:12px 0;padding-left:30px;position:relative;}
+  ul.steps>li input[type=checkbox]{position:absolute;left:0;top:5px;width:18px;height:18px;}
+  .badge{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:2px 8px;border-radius:999px;white-space:nowrap;background:#f3dcd2;color:var(--accent);}
+  .badge.henry{background:#dce8dc;color:var(--ok);}
+  .effort{font-size:13px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Plan &middot; 2026-07-26 &middot; ship visibility &middot; all three apps + site</div>
+<h1>The 29 July triple ship, seen</h1>
+<p class="lede">Wednesday ships all three apps — Deck 1.27 (full localization), Henceforth 4.49/4.50 (the money fixes), Hansard 1.5 (This Week front door). This plan wraps that ship in every visibility lever the 26 July research pass found worth pulling: ratings prompts riding the builds, the store metadata fixed before submit, and a launch surround of the named channels where each app's audience demonstrably lives. Grounded in the three research briefs; honest about ceilings throughout.</p>
+</header>
+
+<div class="note"><strong>Three constraints that outrank visibility.</strong> (1) The Henceforth money fix does not wait for marketing — if the 4.49 archive happens before the review prompt lands, the prompt rides the next cycle. (2) Apple allows the system rating prompt <strong>three times per user per year</strong>: every prompt fires only at a genuinely earned completion moment, never at launch, never as a tap-reaction, and never gated on predicted sentiment (gating violates Apple's rules). (3) Everything Henry-voiced — X posts, pitches, the Product Hunt launch — is drafted here but <strong>posted only by Henry</strong>; content stays review-gated.</p></div>
+
+<h2>Monday 28 July — code that rides the ship <span class="effort">(Claude, test-first, one commit per app)</span></h2>
+
+<div class="task"><span class="tasknum">Task 1</span> <span class="badge">hansard</span> <span class="effort">review prompt after a finished digest read</span>
+<ul class="steps">
+<li><input type="checkbox"> A pure completion signal: the reader reaches the end of a This Week digest (the final section scrolled into view, or the share button used) — pinned by a unit test on the pure gate.</li>
+<li><input type="checkbox"> Fire <code>requestReview</code> via the environment action after a beat (never as the immediate tap-reaction), at most once per version, tracked in <code>UserDefaults</code>.</li>
+<li><input type="checkbox"> Suite green; rides the 1.5 archive as its named headline change alongside the front door.</li>
+</ul></div>
+
+<div class="task"><span class="tasknum">Task 2</span> <span class="badge">deck</span> <span class="effort">review prompt after a completed game session</span>
+<ul class="steps">
+<li><input type="checkbox"> Completion signal: a multiplayer match ends cleanly, or a meaningful single-player session closes (cards returned to deck after real play) — pure gate, unit-tested.</li>
+<li><input type="checkbox"> Same discipline: delayed beat, once per version, no sentiment gating.</li>
+<li><input type="checkbox"> Unit gate + SwiftLint green; lands on master before Henry archives 1.27.</li>
+</ul></div>
+
+<div class="task"><span class="tasknum">Task 3</span> <span class="badge">henceforth</span> <span class="effort">review prompt after a successful broadcast</span>
+<ul class="steps">
+<li><input type="checkbox"> Completion signal: a broadcast reports <code>sent TXID</code> — the one moment the app has provably done its job with real money. Pure gate, unit-tested; fires after the payment surface fully settles, never during it.</li>
+<li><input type="checkbox"> Same discipline; full suite through the pre-push gate.</li>
+<li><input type="checkbox"> Rides whichever archive Henry cuts — and if 4.49 is already submitted, this waits for 4.50/next without complaint.</li>
+</ul></div>
+
+<div class="task"><span class="tasknum">Task 4</span> <span class="badge henry">henry &middot; 15 min</span> <span class="effort">the stalled submit</span>
+<ul class="steps">
+<li><input type="checkbox"> Henceforth 4.49 archive-and-submit — both records open since Thursday; the owner-append money fix and 4.50 sweep fix ride the same archive from main.</li>
+</ul></div>
+
+<h2>Tuesday 29 July eve — the store shelf, fixed before submit <span class="badge henry">henry &middot; App Store Connect, ~30 min total</span></h2>
+<ul class="steps">
+<li><input type="checkbox"> <strong>Henceforth category</strong>: primary Developer Tools, secondary Finance. Research: category changes move charts and browse, not search rank — safe to revert; Education is where nobody looking for this app looks.</li>
+<li><input type="checkbox"> <strong>Deck free trial</strong>: one-week introductory offer on the monthly multiplayer subscription — the only app with arriving players has a full-price gate where a trial belongs.</li>
+<li><input type="checkbox"> <strong>Hansard 1.5 version record</strong> created; Deck's 36 staged locale descriptions applied to the 1.27 record.</li>
+<li><input type="checkbox"> <strong>What's-new text written to be quotable</strong> (Claude drafts, Henry approves): one plain sentence a journalist could lift — Deck leads with "every language", Henceforth with "code that spends money, hardened", Hansard with "the week in Parliament is now the front door".</li>
+</ul>
+
+<h2>Wednesday 29 July — ship day, with its surround</h2>
+<ul class="steps">
+<li><input type="checkbox"> The standing pair first: This Week digest after Prime Minister's Questions; the three archives and submits. <em>(Already planned; listed for order only.)</em></li>
+<li><input type="checkbox"> <span class="badge henry">henry</span> <strong>Featuring nomination filed for Hansard</strong> — App Store Connect → Featuring → Nominations; Claude drafts the text against Apple's seven named criteria (novelty of an underserved niche, design, accessibility, the weekly editorial). Three-week minimum lead means it targets the <em>mid-August</em> release — filing on ship day starts the clock.</li>
+<li><input type="checkbox"> <span class="badge henry">henry</span> <strong>Ship-day thread on X</strong> — one thread, three apps, native screen recordings per app (research: native video, one account, one visible throughline; no reliable follower-to-install ratio exists, so the metric is consistency, not the day's numbers). Claude drafts; Henry posts.</li>
+<li><input type="checkbox"> <strong>BSV Radar + Metanet catalog listings</strong> claimed for Henceforth, pointing at the fresh release (Claude prepares listing copy; Henry claims — the accounts are his).</li>
+</ul>
+
+<h2>Thursday 30 July — the two launches that need their own day</h2>
+<ul class="steps">
+<li><input type="checkbox"> <span class="badge henry">henry posts</span> <strong>Product Hunt: Deck of Cards</strong> — the validated positioning ("no rules enforced — play anything you know or invent"), fresh 1.27 with every-language localization and the new trial as the story. Precedent: a near-identical web product hit #2 of the day with this exact pitch. Claude prepares the gallery, first comment, and maker story Tuesday; launch Thursday morning.</li>
+<li><input type="checkbox"> <strong>9to5Mac Indie App Spotlight pitch for Hansard</strong> — short email to the series' submission address, the 1.5 front door as the hook (Claude drafts, Henry sends). MacStories is deliberately queued for the August featuring-nominated release instead — Viticci asks for two-plus weeks of lead.</li>
+</ul>
+
+<h2>Friday 31 July and the week after</h2>
+<ul class="steps">
+<li><input type="checkbox"> Sci Fri Newton week 1 ships as planned — with the soft-touch experiment the research endorsed: an end-card line pointing at henceforth.club, measured for three months, expected to prove little (no precedent exists for physics content converting installs; Sci Fri is brand, not funnel).</li>
+<li><input type="checkbox"> <strong>Hacker News Forth piece drafted</strong> — "a Forth where the data stack is the Bitcoin script stack", mechanism first, money as the twist; submitted the following Tuesday–Thursday, morning Eastern time, neutral title, honest first comment. Never the word blockchain in a title.</li>
+<li><input type="checkbox"> <strong>Custom product pages</strong> — two or three per app on long-tail keyword assignments (United States storefront only for now), once the new listings settle.</li>
+<li><input type="checkbox"> <span class="badge henry">henry decides</span> <strong>Substack question</strong> — launch This Week in Parliament as a Substack (the recommendation network drives roughly half of all new subscriptions; reciprocal recommendations with three to five UK politics writers is the bootstrap; the companion app is the differentiator no competitor has). A standing project, not a ship-week task: yes opens a card, no closes the question.</li>
+</ul>
+
+<h2>Deliberately not doing</h2>
+<ul>
+<li>Paid discovery advertising — the one named solo-developer test at ten dollars a day called it "a black hole"; revisit only as brand-defense at trivial spend, later.</li>
+<li>In-app events (wrong shape for all three apps), screenshot-caption search tricks (contested, unshipped), Product Page Optimization tests (no impression volume yet).</li>
+<li>Expecting installs from Sci Fri, or submitting folklore to Hacker News with the ledger in the headline.</li>
+</ul>
+
+<h2>How the week is judged</h2>
+<p>Not by Wednesday's download count — by whether the machinery is in place a fortnight on: ratings accumulating past the ~50-count credibility threshold on all three apps, the Product Hunt page standing as a permanent referrer, the featuring nomination in Apple's queue, and one clean measurement of what a launch surround actually moves against the quiet weeks before it. The reach section of the morning report is the instrument; the false-zero fix landed Sunday, so the numbers can now be trusted.</p>
+
+</div>
+</body>
+</html>
