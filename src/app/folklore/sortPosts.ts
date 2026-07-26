@@ -29,6 +29,22 @@ export function sortPostsByElo<P extends { id: string }>(
     .map((d) => d.p);
 }
 
+/** The shop-window ordering (Henry, 2026-07-26): the archive's costliest
+ * artifacts lead — video posts first, then photo posts, then bare text —
+ * because a video is the most expensive thing anyone has inscribed and the
+ * teaser's plain page order was burying all three of the witness's. Stable
+ * within each class, same decorate-sort-undecorate as the score sort. */
+export function sortPostsByMediaCost<P extends { media?: ReadonlyArray<{ type: string }> }>(
+  posts: readonly P[],
+): P[] {
+  const cost = (p: P) =>
+    p.media?.some((m) => m.type === "video") ? 0 : p.media && p.media.length > 0 ? 1 : 2;
+  return posts
+    .map((p, i) => ({ p, i, c: cost(p) }))
+    .sort((x, y) => x.c - y.c || x.i - y.i)
+    .map((d) => d.p);
+}
+
 /** The directory's ordering under the kudos flag: rated authors first by
  * their aggregate rating descending, then the unrated in the order given
  * (which is the existing newest-stamped order — the flag-off directory).

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sortHandlesByAuthorElo, sortPostsByElo, sortPostsByScore } from "./sortPosts";
+import { sortHandlesByAuthorElo, sortPostsByElo, sortPostsByMediaCost, sortPostsByScore } from "./sortPosts";
 
 describe("sortPostsByScore", () => {
   it("orders by score desc, missing score = 0, stable on ties", () => {
@@ -61,5 +61,24 @@ describe("sortHandlesByAuthorElo", () => {
     const handles = [{ handle: "ann", latestMs: 2 }, { handle: "ben", latestMs: 1 }];
     const ratings = { ann: 1500, ben: 1500 };
     expect(sortHandlesByAuthorElo(handles, ratings).map((h) => h.handle)).toEqual(["ann", "ben"]);
+  });
+});
+
+describe("sortPostsByMediaCost", () => {
+  const post = (id: string, media?: Array<{ type: string }>) => ({ id, media });
+
+  it("leads with video posts, then photo posts, then bare text", () => {
+    const posts = [post("text"), post("photo", [{ type: "photo" }]), post("video", [{ type: "video" }])];
+    expect(sortPostsByMediaCost(posts).map((p) => p.id)).toEqual(["video", "photo", "text"]);
+  });
+
+  it("a mixed-media post counts as video — the costliest thing in it decides", () => {
+    const posts = [post("photos", [{ type: "photo" }]), post("mixed", [{ type: "photo" }, { type: "video" }])];
+    expect(sortPostsByMediaCost(posts).map((p) => p.id)).toEqual(["mixed", "photos"]);
+  });
+
+  it("keeps the given order within each class, so the teaser never looks shuffled", () => {
+    const posts = [post("v1", [{ type: "video" }]), post("t1"), post("v2", [{ type: "video" }]), post("t2")];
+    expect(sortPostsByMediaCost(posts).map((p) => p.id)).toEqual(["v1", "v2", "t1", "t2"]);
   });
 });

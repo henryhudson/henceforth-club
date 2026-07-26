@@ -6,6 +6,7 @@ import Link from "next/link";
 import { PROVISIONAL_DUELS } from "@/lib/kudos/constants";
 import type { Rating } from "@/lib/kudos/elo";
 import type { XPost } from "../parseArchive";
+import { playableMediaUrl } from "../mediaProxy";
 import type { ThreadContext } from "./threadContext";
 import { Avatar, formatDate, formatUnixSeconds, shortTxid } from "./PostCard";
 
@@ -172,7 +173,7 @@ export default function PostEntry({
             ) : (
               <video
                 key={i}
-                src={m.url}
+                src={playableMediaUrl(m.url)}
                 poster={m.preview}
                 controls
                 playsInline

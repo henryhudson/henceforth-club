@@ -8,7 +8,7 @@ import { readTipCounts } from "@/lib/kudos/tips";
 import { readRatingTable } from "@/lib/kudos/ledger";
 import { readAuthorRatings } from "@/lib/kudos/candidates";
 import { boardTop, commentCount, readLinkRecord } from "@/lib/folkloreBoard";
-import { sortHandlesByAuthorElo } from "./sortPosts";
+import { sortHandlesByAuthorElo, sortPostsByMediaCost } from "./sortPosts";
 import {
   linkTxidsOf,
   mergeBoard,
@@ -38,6 +38,13 @@ export const metadata: Metadata = {
  * conversion section under roughly four thousand words of one man's tweets. */
 const WITNESS_TEASER_POSTS = 6;
 
+/** How deep the teaser looks for its shop-window picks. The witness's videos
+ * — the costliest artifacts in the archive (Henry, 2026-07-26) — can sit
+ * anywhere in page order, so the teaser reads a wider window, orders by media
+ * cost (video, then photo, then text), and shows the top six. Still six on
+ * screen: the window widens the choice, not the page. */
+const WITNESS_SHOWCASE_WINDOW = 60;
+
 /**
  * How many rows the front page considers, on both reads.
  *
@@ -63,7 +70,13 @@ export default async function FolklorePage() {
   // leave (the accent button did exactly that — the top finding of the
   // 2026-07-14 smoothness research).
   const webArchiveOpen = process.env.XTEXT_WEB_ARCHIVE_ENABLED === "true";
-  const witness = await getArchivePage(WITNESS_HANDLE, 0, WITNESS_TEASER_POSTS);
+  const witnessWindow = await getArchivePage(WITNESS_HANDLE, 0, WITNESS_SHOWCASE_WINDOW);
+  const witness = witnessWindow
+    ? {
+        ...witnessWindow,
+        posts: sortPostsByMediaCost(witnessWindow.posts).slice(0, WITNESS_TEASER_POSTS),
+      }
+    : null;
   const handles = await listHandles(BOARD_WINDOW);
   // One ledger read, five folds — readScores per window re-read the ledger
   // each time. Shared with /folklore/<handle>, which now carries the same toggle.
