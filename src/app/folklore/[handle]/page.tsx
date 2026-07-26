@@ -29,7 +29,7 @@ export default async function HandlePage(
   // The archive opens hot — the whole set ranked by the hot fold, first page
   // served — so the reader lands on what is worth seeing, not on whatever
   // happened last. Latest remains one tab away.
-  const page = await getHotArchivePage(handle, 0, PAGE_SIZE, Date.now());
+  const page = await getHotArchivePage(handle, 0, PAGE_SIZE);
 
   if (!page) {
     return (

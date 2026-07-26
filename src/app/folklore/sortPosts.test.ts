@@ -64,64 +64,49 @@ describe("sortHandlesByAuthorElo", () => {
   });
 });
 
-describe("the hot fold", () => {
-  const NOW = Date.parse("2026-07-26T12:00:00Z");
-  const daysAgo = (n: number) => new Date(NOW - n * 86_400_000).toISOString();
-  const post = (id: string, at: string, media?: Array<{ type: string }>) => ({ id, at, media });
-  const video = (id: string, agedDays: number) => post(id, daysAgo(agedDays), [{ type: "video" }]);
-  const text = (id: string, agedDays: number) => post(id, daysAgo(agedDays));
+describe("the ranking — satoshis earned plus what it cost to upload", () => {
+  const video = (id: string) => ({ id, media: [{ type: "video" }] });
+  const text = (id: string) => ({ id, media: undefined as Array<{ type: string }> | undefined });
   // Founding costs measured on the witness archive: text ~15 sats, a photo
   // ~8.6k, a small reply clip ~1.4k, the big tutorials 1.7 million.
   const TUTORIAL = 1_700_000, CLIP = 1_400, TEXT_COST = 15;
 
-  it("a settled tutorial outranks old text — the shelf is real upload cost", () => {
-    const founding = { t: TEXT_COST, v: TUTORIAL };
-    expect(sortPostsByHot([text("t", 400), video("v", 400)], {}, founding, NOW).map((p) => p.id)).toEqual(["v", "t"]);
+  it("rank IS the sum — upload cost orders the unvoted archive", () => {
+    const founding = { t: TEXT_COST, clip: CLIP, tutorial: TUTORIAL };
+    const posts = [text("t"), video("clip"), video("tutorial")];
+    expect(sortPostsByHot(posts, {}, founding).map((p) => p.id)).toEqual(["tutorial", "clip", "t"]);
   });
 
-  it("a newer fourteen-kilobyte clip never outranks a settled fifteen-megabyte tutorial", () => {
-    // The mouth-of-Sauron pin: under the flat class constant both were 'a
-    // video' and recency decided; under the cost prior the tutorial's
-    // 1.7 million founding sats (~249) hold above the clip (~126 + spent
-    // freshness) once its first days pass.
+  it("the mouth-of-Sauron pin: a small reply clip never outranks a big tutorial, however new", () => {
     const founding = { clip: CLIP, tutorial: TUTORIAL };
-    const posts = [video("clip", 11), video("tutorial", 35)];
-    expect(sortPostsByHot(posts, {}, founding, NOW).map((p) => p.id)).toEqual(["tutorial", "clip"]);
+    expect(sortPostsByHot([video("clip"), video("tutorial")], {}, founding).map((p) => p.id)).toEqual([
+      "tutorial",
+      "clip",
+    ]);
   });
 
-  it("brand-new bare text never displaces the archive's monuments", () => {
-    const founding = { fresh: TEXT_COST, tutorial: TUTORIAL };
-    expect(hotScore(text("fresh", 0), 0, TEXT_COST, NOW)).toBeLessThan(
-      hotScore(video("tutorial", 400), 0, TUTORIAL, NOW),
-    );
+  it("kudos add linearly — earned satoshis lift a post exactly as far as they say", () => {
+    const founding = { t: TEXT_COST, clip: CLIP };
+    expect(hotScore(text("t"), CLIP, TEXT_COST)).toBeGreaterThan(hotScore(video("clip"), 0, CLIP));
+    expect(hotScore(text("t"), 0, TEXT_COST)).toBe(TEXT_COST);
     void founding;
   });
 
-  it("earned kudos outrank everything unpaid once content settles", () => {
-    const founding = { fresh: TEXT_COST, tutorial: TUTORIAL, paid: TEXT_COST };
-    const posts = [text("fresh", 0), video("tutorial", 35), text("paid", 300)];
-    expect(sortPostsByHot(posts, { paid: 5000 }, founding, NOW).map((p) => p.id)[0]).toBe("paid");
+  it("enough kudos outrank any upload — money others committed can top the biggest monument", () => {
+    const founding = { paid: TEXT_COST, tutorial: TUTORIAL };
+    const posts = [video("tutorial"), text("paid")];
+    expect(sortPostsByHot(posts, { paid: TUTORIAL + 1 }, founding).map((p) => p.id)[0]).toBe("paid");
   });
 
-  it("the paid term is log-damped — the first satoshis move a post most", () => {
-    const first = hotScore(text("p", 300), 100, 0, NOW) - hotScore(text("p", 300), 0, 0, NOW);
-    const later = hotScore(text("p", 300), 10_100, 0, NOW) - hotScore(text("p", 300), 10_000, 0, NOW);
-    expect(first).toBeGreaterThan(later * 10);
+  it("without founding data the class floors hold, so a foreign archive still shows media first", () => {
+    expect(hotScore(video("v"), 0, 0)).toBe(100);
+    expect(hotScore({ id: "p", media: [{ type: "photo" }] }, 0, 0)).toBe(30);
+    expect(hotScore(text("t"), 0, 0)).toBe(0);
   });
 
-  it("without founding data the class floors hold — a video archive never collapses to freshness", () => {
-    expect(hotScore(video("v", 400), 0, 0, NOW)).toBeCloseTo(100, 6);
-    expect(hotScore(post("p", daysAgo(400), [{ type: "photo" }]), 0, 0, NOW)).toBeCloseTo(30, 6);
-  });
-
-  it("an unparseable date counts as old, never as new", () => {
-    const undated = { id: "u", at: "not a date", media: undefined };
-    expect(hotScore(undated, 0, 0, NOW)).toBe(0);
-  });
-
-  it("ties keep input order, so equal posts never look shuffled", () => {
-    const posts = [text("a", 400), text("b", 400)];
-    expect(sortPostsByHot(posts, {}, {}, NOW).map((p) => p.id)).toEqual(["a", "b"]);
+  it("ties keep input order — equal-value text reads newest-first, exactly as the archive arrives", () => {
+    const posts = [text("a"), text("b")];
+    expect(sortPostsByHot(posts, {}, { a: TEXT_COST, b: TEXT_COST }).map((p) => p.id)).toEqual(["a", "b"]);
   });
 });
 

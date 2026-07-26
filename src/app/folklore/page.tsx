@@ -80,7 +80,7 @@ export default async function FolklorePage() {
   // and the hot fold fills the rest. Curation is honest here because the
   // fold cannot tell an expensive casual clip from an expensive tutorial;
   // only the owner can (Henry, 2026-07-26: "i dont see my tutorials").
-  const witnessWhole = await getHotArchivePage(WITNESS_HANDLE, 0, 100_000, Date.now());
+  const witnessWhole = await getHotArchivePage(WITNESS_HANDLE, 0, 100_000);
   const witnessWindow = witnessWhole
     ? {
         ...witnessWhole,

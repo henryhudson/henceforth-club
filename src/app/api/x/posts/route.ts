@@ -47,7 +47,7 @@ export async function GET(req: Request) {
   if (mode === "hot") {
     // Ranked over the whole archive, then sliced — see xHotFeed. `postCount`
     // stays the archive total: hot pages the same set in a different order.
-    const page = await getHotArchivePage(handle, offset, PAGE_SIZE, Date.now());
+    const page = await getHotArchivePage(handle, offset, PAGE_SIZE);
     if (!page) {
       return NextResponse.json({ ok: false, reason: "not-found" }, { status: 404 });
     }
