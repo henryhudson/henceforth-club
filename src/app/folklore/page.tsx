@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getArchivePage } from "@/lib/xArchiveCache";
+import { getHotArchivePage } from "@/lib/xHotFeed";
 import { listHandles, readHandleCards } from "@/lib/xIndex";
 import { gbpPerBsv } from "@/lib/xPrice";
 import { readFoundingTotal, readLedgerRollup } from "@/lib/xVotes";
@@ -8,7 +8,7 @@ import { readTipCounts } from "@/lib/kudos/tips";
 import { readRatingTable } from "@/lib/kudos/ledger";
 import { readAuthorRatings } from "@/lib/kudos/candidates";
 import { boardTop, commentCount, readLinkRecord } from "@/lib/folkloreBoard";
-import { sortHandlesByAuthorElo, sortPostsByHot } from "./sortPosts";
+import { sortHandlesByAuthorElo } from "./sortPosts";
 import {
   linkTxidsOf,
   mergeBoard,
@@ -38,13 +38,6 @@ export const metadata: Metadata = {
  * conversion section under roughly four thousand words of one man's tweets. */
 const WITNESS_TEASER_POSTS = 6;
 
-/** How deep the teaser looks for its shop-window picks. The witness's videos
- * — the costliest artifacts in the archive (Henry, 2026-07-26) — can sit
- * anywhere in page order, so the teaser reads a wider window, orders by media
- * cost (video, then photo, then text), and shows the top six. Still six on
- * screen: the window widens the choice, not the page. */
-const WITNESS_SHOWCASE_WINDOW = 60;
-
 /**
  * How many rows the front page considers, on both reads.
  *
@@ -70,27 +63,15 @@ export default async function FolklorePage() {
   // leave (the accent button did exactly that — the top finding of the
   // 2026-07-14 smoothness research).
   const webArchiveOpen = process.env.XTEXT_WEB_ARCHIVE_ENABLED === "true";
-  const witnessWindow = await getArchivePage(WITNESS_HANDLE, 0, WITNESS_SHOWCASE_WINDOW);
-  const nowMs = Date.now();
+  // The whole archive, hot-ranked — a recency window here silently excluded
+  // everything older than the newest sixty posts, which is exactly where the
+  // tutorials live. The shop window shows the archive's overall best.
+  const witnessWindow = await getHotArchivePage(WITNESS_HANDLE, 0, WITNESS_TEASER_POSTS, Date.now());
   const handles = await listHandles(BOARD_WINDOW);
   // One ledger read, five folds — readScores per window re-read the ledger
   // each time. Shared with /folklore/<handle>, which now carries the same toggle.
   const { scoresByWindow, foundingByPost } = await readLedgerRollup(WITNESS_HANDLE);
-  // The teaser leads with the hot fold's picks over a wider window — the
-  // same ordering the archive page defaults to, so the shop window and the
-  // shop agree. Videos still lead cold (the fold's media prior); kudos
-  // overtake as they accrue.
-  const witness = witnessWindow
-    ? {
-        ...witnessWindow,
-        posts: sortPostsByHot(
-          witnessWindow.posts,
-          scoresByWindow.all ?? {},
-          foundingByPost ?? {},
-          nowMs,
-        ).slice(0, WITNESS_TEASER_POSTS),
-      }
-    : null;
+  const witness = witnessWindow;
   // One ledger read, not one per handle. This used to fan readFoundingTotal
   // across every handle in the directory to sum a site-wide total for the
   // hero's stats line; with that line gone, the witness is the only total the
