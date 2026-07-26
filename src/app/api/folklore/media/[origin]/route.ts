@@ -32,16 +32,25 @@ export async function GET(request: Request, { params }: { params: Promise<{ orig
   const { origin } = await params;
   if (!ORIGIN_SHAPE.test(origin)) return new Response("not found", { status: 404 });
 
+  // Two store shapes: the classic static token, or the newer integration
+  // that installs BLOB_STORE_ID and lets the SDK authenticate at runtime.
   const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (token) return viaBlob(origin, token);
+  if (token !== undefined || process.env.BLOB_STORE_ID !== undefined) {
+    try {
+      return await viaBlob(origin, token);
+    } catch {
+      /* misconfigured or transient store — the disk path still serves */
+    }
+  }
   return viaTmp(request, origin);
 }
 
 /** Redirect to the blob copy, populating it from the gateway on first touch. */
-async function viaBlob(origin: string, token: string): Promise<Response> {
+async function viaBlob(origin: string, token: string | undefined): Promise<Response> {
   const pathname = `media/${origin}`;
+  const auth = token === undefined ? undefined : { token };
   try {
-    const existing = await head(pathname, { token });
+    const existing = await head(pathname, auth);
     return redirect(existing.url);
   } catch {
     /* not stored yet */
@@ -53,7 +62,7 @@ async function viaBlob(origin: string, token: string): Promise<Response> {
     access: "public",
     addRandomSuffix: false,
     contentType: upstream.headers.get("content-type") ?? "application/octet-stream",
-    token,
+    ...auth,
   });
   return redirect(stored.url);
 }
