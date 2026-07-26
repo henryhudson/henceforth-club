@@ -9,7 +9,9 @@ import { computeShowParent } from "./PostCard";
 import { sortPostsByElo, sortPostsByScore } from "../sortPosts";
 import PostEntry from "./PostEntry";
 
-type Mode = "latest" | "best";
+type Mode = "latest" | "best" | "videos" | "photos";
+type MediaMode = "videos" | "photos";
+const isMediaMode = (m: Mode): m is MediaMode => m === "videos" || m === "photos";
 
 const WINDOWS: ReadonlyArray<{ value: ScoreWindow; label: string }> = [
   { value: "day", label: "Today" },
@@ -27,8 +29,13 @@ type PostsResponse = {
 };
 
 /**
- * Feed ranking + infinite scroll. One list — Latest / Best only as sort, no
- * media filter chrome. Pages the full archive so every post is reachable.
+ * Feed ranking + infinite scroll, plus the archive's media views. Latest /
+ * Best sort one continuously-paged list; Videos / Photos are a different
+ * question — each fetches its complete match list in ONE request the first
+ * time it is opened (the server scans the whole archive), because a
+ * client-side filter over incrementally-loaded pages would show only the
+ * media scrolled past so far — three videos where the archive holds
+ * twenty-three.
  */
 export default function FeedControls({
   posts: initialPosts,
@@ -64,6 +71,8 @@ export default function FeedControls({
   const [mode, setMode] = useState<Mode>(defaultMode);
   const [selectedWindow, setSelectedWindow] = useState<ScoreWindow>(DEFAULT_WINDOW);
   const [extraPosts, setExtraPosts] = useState<XPost[]>([]);
+  const [mediaPosts, setMediaPosts] = useState<Partial<Record<MediaMode, XPost[]>>>({});
+  const [mediaLoading, setMediaLoading] = useState(false);
   const [txTimes, setTxTimes] = useState<Record<string, number>>(initialTxTimes);
   const [loadingMore, setLoadingMore] = useState(false);
   const totalKnown = postCount ?? initialPosts.length;
@@ -125,11 +134,32 @@ export default function FeedControls({
     return () => observer.disconnect();
   }, [handle, loadMore]);
 
+  const openMediaMode = useCallback(
+    async (next: MediaMode) => {
+      setMode(next);
+      if (!handle || mediaPosts[next] !== undefined) return;
+      setMediaLoading(true);
+      try {
+        const res = await fetch(`/api/x/posts?handle=${encodeURIComponent(handle)}&mode=${next}`);
+        if (!res.ok) return;
+        const body = (await res.json()) as PostsResponse;
+        setMediaPosts((prev) => ({ ...prev, [next]: body.posts }));
+        setTxTimes((prev) => ({ ...prev, ...body.txTimes }));
+      } catch {
+        /* the tab renders its empty state; reselecting retries */
+      } finally {
+        setMediaLoading(false);
+      }
+    },
+    [handle, mediaPosts],
+  );
+
   const allPosts = [...initialPosts, ...extraPosts];
   const windowScores = scoresByWindow?.[selectedWindow] ?? scores;
 
-  const ordered =
-    mode === "best"
+  const ordered = isMediaMode(mode)
+    ? (mediaPosts[mode] ?? [])
+    : mode === "best"
       ? eloByPost !== undefined
         ? sortPostsByElo(allPosts, eloByPost)
         : sortPostsByScore(allPosts, windowScores)
@@ -168,6 +198,36 @@ export default function FeedControls({
         >
           Best
         </button>
+        {handle !== undefined && (
+          <>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === "videos"}
+              onClick={() => void openMediaMode("videos")}
+              className={
+                mode === "videos"
+                  ? "border border-accent px-3 py-1.5 text-foreground"
+                  : "border border-card-border px-3 py-1.5 text-muted transition-colors hover:border-card-border-hover"
+              }
+            >
+              Videos
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === "photos"}
+              onClick={() => void openMediaMode("photos")}
+              className={
+                mode === "photos"
+                  ? "border border-accent px-3 py-1.5 text-foreground"
+                  : "border border-card-border px-3 py-1.5 text-muted transition-colors hover:border-card-border-hover"
+              }
+            >
+              Photos
+            </button>
+          </>
+        )}
       </div>
 
       {mode === "best" && eloByPost === undefined && scoresByWindow && (
@@ -214,10 +274,23 @@ export default function FeedControls({
       </div>
 
       {ordered.length === 0 && (
-        <p className="mt-6 text-center font-mono text-xs text-muted">No posts.</p>
+        <p className="mt-6 text-center font-mono text-xs text-muted">
+          {isMediaMode(mode)
+            ? mediaLoading
+              ? "Finding the media in this archive…"
+              : `No ${mode} in this archive.`
+            : "No posts."}
+        </p>
       )}
 
-      {handle !== undefined && !exhausted && (
+      {isMediaMode(mode) && ordered.length > 0 && (
+        <p className="mt-4 text-center font-mono text-xs text-muted">
+          {ordered.length.toLocaleString("en-GB")} {mode === "videos" ? "video" : "photo"} post
+          {ordered.length === 1 ? "" : "s"} — the archive&rsquo;s complete set
+        </p>
+      )}
+
+      {!isMediaMode(mode) && handle !== undefined && !exhausted && (
         <div ref={sentinelRef} className="py-6 text-center font-mono text-xs text-muted">
           {loadingMore
             ? `Loading more… ${loaded.toLocaleString("en-GB")} of ${totalKnown.toLocaleString("en-GB")}`
@@ -225,7 +298,7 @@ export default function FeedControls({
         </div>
       )}
 
-      {handle !== undefined && exhausted && totalKnown > initialPosts.length && (
+      {!isMediaMode(mode) && handle !== undefined && exhausted && totalKnown > initialPosts.length && (
         <p className="mt-4 text-center font-mono text-xs text-muted">
           {loaded.toLocaleString("en-GB")} posts loaded
         </p>
