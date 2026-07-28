@@ -1,5 +1,29 @@
-import { describe, expect, it } from "vitest";
-import { asList, editionIndex, reachAppLine, shippedByDay, verdictLine } from "./report-helpers";
+import { afterEach, describe, expect, it } from "vitest";
+import { asList, editionIndex, longDate, reachAppLine, shippedByDay, verdictLine } from "./report-helpers";
+
+describe("longDate", () => {
+  const tz = process.env.TZ;
+  afterEach(() => {
+    process.env.TZ = tz;
+  });
+
+  it("names the day in full English", () => {
+    expect(longDate("2026-07-27")).toBe("Monday 27 July 2026");
+  });
+
+  it("keeps the day name in the renderer's timezone-free reading", () => {
+    // The print edition renders headless and Vercel runs in UTC, so an
+    // unpinned formatter would date this edition Sunday west of Greenwich.
+    process.env.TZ = "Pacific/Honolulu";
+    expect(longDate("2026-07-27")).toBe("Monday 27 July 2026");
+    process.env.TZ = "Pacific/Auckland";
+    expect(longDate("2026-07-27")).toBe("Monday 27 July 2026");
+  });
+
+  it("passes an unparseable date through rather than rendering Invalid Date", () => {
+    expect(longDate("not-a-date")).toBe("not-a-date");
+  });
+});
 
 describe("asList", () => {
   it("joins a list with middle dots", () => {

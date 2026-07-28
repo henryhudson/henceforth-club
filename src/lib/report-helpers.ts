@@ -1,5 +1,23 @@
 export type Edition = { type: "daily" | "weekly"; date: string; href: string };
 
+/** An edition's date in full English — "Monday 27 July 2026". Pinned to UTC so
+ *  the day name cannot shift with the renderer's timezone: the print edition
+ *  renders headless and Vercel runs in UTC, west of which an unpinned formatter
+ *  reads midnight as the previous day. */
+export function longDate(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d
+    .toLocaleDateString("en-GB", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC",
+    })
+    .replace(",", "");
+}
+
 export function verdictLine(findings: { verdict: string }[]): string {
   if (findings.length === 0) return "no findings";
   const counts = { confirmed: 0, rejected: 0, abstained: 0, alreadyFixed: 0 };

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadReport } from "@/lib/board-data";
-import { asList, reachAppLine, verdictLine } from "@/lib/report-helpers";
+import { asList, longDate, reachAppLine, verdictLine } from "@/lib/report-helpers";
 import PlanChecklist from "../PlanChecklist";
 
 export const dynamic = "force-dynamic";
@@ -51,7 +51,7 @@ export default async function DailyEdition({ params }: { params: Promise<{ date:
           <a href={`/board/reports/${date}/pdf`} className="underline print:hidden">PDF</a>
         </div>
       </div>
-      <p className="text-sm text-muted">{report.date} · generated {report.generatedAt}</p>
+      <p className="text-sm text-muted">{longDate(report.date)} · generated {report.generatedAt}</p>
 
       {report.article && (
         <article className="mt-8">
