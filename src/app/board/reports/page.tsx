@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { listDates, listWeeks } from "@/lib/board-data";
-import { editionIndex } from "@/lib/report-helpers";
+import { editionIndex, longDate } from "@/lib/report-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +33,7 @@ export default async function ReportsIndex() {
                 {e.type}
               </span>
               <span className="font-semibold text-foreground group-hover:underline">
-                {e.type === "weekly" ? `Week of ${e.date}` : e.date}
+                {e.type === "weekly" ? `Week of ${longDate(e.date)}` : longDate(e.date)}
               </span>
             </Link>
             <a href={`${e.href}/pdf`} className="ml-auto text-xs text-muted underline hover:text-foreground">pdf</a>

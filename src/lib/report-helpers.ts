@@ -1,21 +1,40 @@
 export type Edition = { type: "daily" | "weekly"; date: string; href: string };
 
-/** An edition's date in full English — "Monday 27 July 2026". Pinned to UTC so
- *  the day name cannot shift with the renderer's timezone: the print edition
- *  renders headless and Vercel runs in UTC, west of which an unpinned formatter
- *  reads midnight as the previous day. */
+/** English ordinal for a day of the month — 1st, 2nd, 3rd, 4th … 11th, 21st.
+ *  The teens are the exception that catches naive implementations: 11, 12 and
+ *  13 take "th" despite ending in 1, 2 and 3. */
+function ordinal(day: number): string {
+  if (day % 100 >= 11 && day % 100 <= 13) return `${day}th`;
+  switch (day % 10) {
+    case 1:
+      return `${day}st`;
+    case 2:
+      return `${day}nd`;
+    case 3:
+      return `${day}rd`;
+    default:
+      return `${day}th`;
+  }
+}
+
+/** An edition's date as Henry reads it aloud — "Tuesday 28th of July 2026".
+ *  Pinned to UTC so the day name cannot shift with the renderer's timezone: the
+ *  print edition renders headless and Vercel runs in UTC, west of which an
+ *  unpinned formatter reads midnight as the previous day. */
 export function longDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00Z`);
   if (Number.isNaN(d.getTime())) return iso;
-  return d
-    .toLocaleDateString("en-GB", {
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    new Intl.DateTimeFormat("en-GB", {
       weekday: "long",
       day: "numeric",
       month: "long",
       year: "numeric",
       timeZone: "UTC",
     })
-    .replace(",", "");
+      .formatToParts(d)
+      .find((p) => p.type === type)?.value ?? "";
+  return `${part("weekday")} ${ordinal(Number(part("day")))} of ${part("month")} ${part("year")}`;
 }
 
 export function verdictLine(findings: { verdict: string }[]): string {
