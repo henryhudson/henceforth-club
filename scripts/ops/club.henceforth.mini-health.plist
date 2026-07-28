@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  club.henceforth.mini-health — watches the BUILD MACHINE itself every ten
+  minutes: load average, swap consumption, free space on the DATA volume, and
+  whether the machine can still enumerate its own process table promptly.
+
+  Emails hnryhdsn@gmail.com once when it goes bad and once when it recovers.
+  Source of record: henceforth-club/scripts/ops/mini-health.sh
+
+  Install (on the mini):
+      mkdir -p ~/Programming/Main\ Projects/.mini-health
+      cp mini-health.sh ~/Programming/Main\ Projects/.mini-health/
+      chmod +x ~/Programming/Main\ Projects/.mini-health/mini-health.sh
+      cp club.henceforth.mini-health.plist ~/Library/LaunchAgents/
+      launchctl load ~/Library/LaunchAgents/club.henceforth.mini-health.plist
+
+  Trigger manually:
+      launchctl start club.henceforth.mini-health
+
+  Logs:
+      tail -F "$HOME/Programming/Main Projects/.mini-health/mini-health.log"
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>club.henceforth.mini-health</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>/Users/henryhudson/Programming/Main Projects/.mini-health/mini-health.sh</string>
+    </array>
+
+    <!-- Ten minutes. Frequent enough to catch a slide within one build cycle,
+         rare enough that the check itself is not part of the load. -->
+    <key>StartInterval</key>
+    <integer>600</integer>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- The check must not be descheduled by the very starvation it detects,
+         which is what makes the site monitor's timings unreliable on a loaded
+         machine. Ask for interactive priority. -->
+    <key>ProcessType</key>
+    <string>Interactive</string>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/mini-health.out</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/mini-health.err</string>
+</dict>
+</plist>
