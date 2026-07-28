@@ -1,9 +1,6 @@
 import Link from "next/link";
 import { txExplorerUrl } from "@/lib/explorer";
-import { getXTxid } from "@/lib/xIndex";
-import { getArchivePage } from "@/lib/xArchiveCache";
-import { getOwner } from "@/lib/xOwner";
-import { getTxDigest } from "@/lib/xDigest";
+import type { DirectoryRowData } from "./directoryRows";
 import { formatUnixSeconds, shortTxid } from "./PostCard";
 
 /**
@@ -13,15 +10,21 @@ import { formatUnixSeconds, shortTxid } from "./PostCard";
  * digest told a 1,672-post archive it had "2 posts" the day after a
  * two-post delta (2026-07-16). The digest count remains the fallback for a
  * handle whose archive page hasn't been cached yet.
+ *
+ * The row does no reading of its own: `readDirectoryRows` fetches the whole
+ * board's data in four round trips and hands each row its own slice, so
+ * rendering here is pure.
  */
-export default async function DirectoryRow({ handle, latestMs }: { handle: string; latestMs: number }) {
-  const latestTxid = await getXTxid(handle);
-  const [owner, digest, page] = await Promise.all([
-    getOwner(handle),
-    latestTxid ? getTxDigest(latestTxid) : Promise.resolve(null),
-    getArchivePage(handle, 0, 0),
-  ]);
-  const postCount = page?.postCount ?? digest?.tweetIds.length;
+export default function DirectoryRow({
+  handle,
+  latestMs,
+  data,
+}: {
+  handle: string;
+  latestMs: number;
+  data: DirectoryRowData;
+}) {
+  const { latestTxid, verified, postCount } = data;
 
   return (
     <div className="group flex items-center gap-4 px-4 py-4 transition-colors hover:bg-card-bg">
@@ -34,7 +37,7 @@ export default async function DirectoryRow({ handle, latestMs }: { handle: strin
       <Link href={`/folklore/${handle}`} className="min-w-0 flex-1">
         <p className="truncate font-semibold text-foreground transition-colors group-hover:text-accent">
           @{handle}
-          {owner && (
+          {verified && (
             <span className="ml-2 font-mono text-[11px] text-accent" title="Verified — owner-signed">
               ✓ verified
             </span>

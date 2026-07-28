@@ -177,7 +177,10 @@ describe("fetchTxArchiveWithTime", () => {
   it("returns null, without a time lookup, when the archive itself can't be found", async () => {
     const fetchFn = fetchStub({ txJson: { time: 1751328000 } });
     expect(await fetchTxArchiveWithTime("a".repeat(64), fetchFn)).toBeNull();
-    expect(fetchFn).toHaveBeenCalledTimes(1); // only the hex attempt, never the time lookup
+    // hex attempts only (primary + mirror), never the time lookup
+    const urls = fetchFn.mock.calls.map(([input]) => String(input));
+    expect(urls.every((u) => u.endsWith("/hex"))).toBe(true);
+    expect(urls.some((u) => u.includes("/tx/hash/"))).toBe(false);
   });
 
   it("skips the time lookup entirely when includeTime is false, doing only the archive fetch", async () => {
@@ -213,6 +216,42 @@ describe("fetchTxArchiveWithTime", () => {
   });
 });
 
+describe("BananaBlocks mirror fallback", () => {
+  const p2pkh = "76a914aaaaaaaaaaaaaaaaaaaa88ac";
+
+  it("serves the raw hex from the mirror when WhatsOnChain fails (the 403 bot-block mode)", async () => {
+    const fetchFn = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("whatsonchain.com")) return new Response("blocked", { status: 403 });
+      if (url.includes("bananablocks.com")) return new Response(rawTx([p2pkh]), { status: 200 });
+      return new Response("nope", { status: 404 });
+    });
+    expect(await fetchTxScripts("a".repeat(64), fetchFn)).toEqual([p2pkh]);
+    const hosts = fetchFn.mock.calls.map(([input]) => new URL(String(input)).hostname);
+    expect(hosts).toEqual(["api.whatsonchain.com", "bananablocks.com"]); // primary first, mirror second
+  });
+
+  it("never touches the mirror when WhatsOnChain answers", async () => {
+    const fetchFn = vi.fn(async () => new Response(rawTx([p2pkh]), { status: 200 }));
+    expect(await fetchTxScripts("b".repeat(64), fetchFn)).toEqual([p2pkh]);
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(String(fetchFn.mock.calls[0][0])).toContain("whatsonchain.com");
+  });
+
+  it("resolves the confirmation time from the mirror when WhatsOnChain fails", async () => {
+    const hex = rawTx([opReturnScript("19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut", archiveJSON)]);
+    const fetchFn = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/hex")) return new Response(hex, { status: 200 });
+      if (url.includes("whatsonchain.com")) return new Response("blocked", { status: 403 });
+      return new Response(JSON.stringify({ time: 1751328000 }), { status: 200 });
+    });
+    const result = await fetchTxArchiveWithTime("c".repeat(64), fetchFn);
+    expect(result?.archive.handle).toBe("henry");
+    expect(result?.time).toBe(1751328000);
+  });
+});
+
 describe("txFeeSatsFromJson", () => {
   it("computes the miner fee as inputs minus outputs (in sats)", () => {
     const tx = { vin: [{ value: 0.001 }, { value: 0.0005 }], vout: [{ value: 0.00149 }] };
@@ -228,6 +267,32 @@ const ok = (body: unknown) => ({ ok: true, json: async () => body }) as unknown 
 const notOk = () => ({ ok: false, json: async () => ({}) }) as unknown as Response;
 
 describe("fetchTxFeeSats", () => {
+  it("reads the fee straight from BananaBlocks' parsed endpoint — one call, no prevout walk", async () => {
+    const fake = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("bananablocks.com/api/v1/tx/T")) return ok({ fee: 19, has_fee: true });
+      return notOk();
+    }) as unknown as ReturnType<typeof vi.fn> & typeof fetch;
+    expect(await fetchTxFeeSats("T", fake)).toBe(19);
+    expect(fake).toHaveBeenCalledTimes(1);
+  });
+
+  it("honours a genuine zero fee from BananaBlocks instead of treating it as a miss", async () => {
+    const fake = (async (url: string) =>
+      String(url).includes("bananablocks.com") ? ok({ fee: 0, has_fee: true }) : notOk()) as unknown as typeof fetch;
+    expect(await fetchTxFeeSats("T", fake)).toBe(0);
+  });
+
+  it("falls back to the prevout walk when BananaBlocks has no fee for the transaction", async () => {
+    const fake = (async (url: string) => {
+      if (String(url).includes("bananablocks.com")) return ok({ has_fee: false });
+      if (String(url).endsWith("/tx/hash/T")) return ok({ vin: [{ txid: "P", vout: 0 }], vout: [{ value: 0.0009 }] });
+      if (String(url).endsWith("/tx/hash/P")) return ok({ vout: [{ value: 0.001 }] });
+      return notOk();
+    }) as unknown as typeof fetch;
+    expect(await fetchTxFeeSats("T", fake)).toBe(10_000);
+  });
+
   it("resolves each input's prevout value and computes the miner fee", async () => {
     const fake = (async (url: string) => {
       if (String(url).endsWith("/tx/hash/T")) return ok({ vin: [{ txid: "P", vout: 0 }], vout: [{ value: 0.0009 }] });

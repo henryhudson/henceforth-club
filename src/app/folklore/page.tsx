@@ -21,6 +21,7 @@ import FolkloreForest from "./_components/FolkloreForest";
 import ProfileView from "./_components/ProfileView";
 import ArchiveDropZone from "./_components/ArchiveDropZone";
 import DirectoryRow from "./_components/DirectoryRow";
+import { readDirectoryRows } from "./_components/directoryRows";
 import LinkCard from "./_components/LinkCard";
 import Proof from "./_components/Proof";
 import { WITNESS_HANDLE } from "./witness";
@@ -147,6 +148,11 @@ export default async function FolklorePage() {
   const boardRows = withUnlistedHandles(
     mergeBoard(boardEntries, resolvableHandles, linkRecords),
     directoryHandles,
+  );
+  // Every profile row's data in four round trips rather than four per row —
+  // the rows are known now, and none of their reads depend on another's.
+  const directoryData = await readDirectoryRows(
+    boardRows.flatMap((row) => (row.kind === "profile" ? [row.handle] : [])),
   );
   // Whether the section is a kudos-ranked board or still just the ledger of
   // who has archived is decided by whether any LINK is on it — not by whether
@@ -276,7 +282,14 @@ export default async function FolklorePage() {
           <div className="mt-3 divide-y divide-card-border border-y border-card-border">
             {boardRows.map((row) =>
               row.kind === "profile" ? (
-                <DirectoryRow key={`profile:${row.handle}`} handle={row.handle} latestMs={row.latestMs} />
+                <DirectoryRow
+                  key={`profile:${row.handle}`}
+                  handle={row.handle}
+                  latestMs={row.latestMs}
+                  data={
+                    directoryData.get(row.handle) ?? { latestTxid: null, verified: false }
+                  }
+                />
               ) : (
                 <LinkCard
                   key={`link:${row.txid}`}
