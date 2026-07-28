@@ -605,6 +605,24 @@ body:has(.provenance)::before {
   color: #330a49;
 }
 
+/* ── The daily edition, set as a newspaper ───────────────────
+   The house style is monospace everywhere, and :root deliberately maps
+   --font-serif onto Space Mono so `font-serif` cannot accidentally break it.
+   A newspaper is the one place that mapping is wrong: the masthead and body
+   want an actual serif. Note WHY this overrides the utility rather than the
+   token: Tailwind v4 resolves @theme values at BUILD time, so --font-serif:
+   var(--font-space-mono) compiles .font-serif down to Space Mono directly.
+   Re-pointing --font-serif at a scope therefore changes nothing — verified in
+   the browser, where the variable read Georgia while the computed family was
+   still Space Mono. Overriding .newspaper .font-serif (specificity 0,2,0)
+   beats the compiled utility. A system stack rather than a webfont: no network
+   request, which matters because this page is also rendered headless for the
+   PDF, and every other surface keeps its monospace identity. */
+.newspaper,
+.newspaper .font-serif {
+  font-family: Georgia, "Times New Roman", ui-serif, serif;
+}
+
 /* ── A4 print editions (board report pages) ─────────────────── */
 @page { size: A4; margin: 12mm; }
 
