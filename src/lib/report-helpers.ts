@@ -37,6 +37,14 @@ export function longDate(iso: string): string {
   return `${part("weekday")} ${ordinal(Number(part("day")))} of ${part("month")} ${part("year")}`;
 }
 
+/** The issue number a paper carries on its dateline: this edition's position in
+ *  the run, oldest first, counting from 1. Returns null when the date is not in
+ *  the list, so a masthead never prints a confident wrong number. */
+export function editionNumber(dates: string[], date: string): number | null {
+  const i = [...new Set(dates)].sort().indexOf(date);
+  return i < 0 ? null : i + 1;
+}
+
 export function verdictLine(findings: { verdict: string }[]): string {
   if (findings.length === 0) return "no findings";
   const counts = { confirmed: 0, rejected: 0, abstained: 0, alreadyFixed: 0 };

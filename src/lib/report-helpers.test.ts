@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { asList, editionIndex, longDate, reachAppLine, shippedByDay, verdictLine } from "./report-helpers";
+import { asList, editionIndex, editionNumber, longDate, reachAppLine, shippedByDay, verdictLine } from "./report-helpers";
 
 describe("longDate", () => {
   const tz = process.env.TZ;
@@ -35,6 +35,27 @@ describe("longDate", () => {
 
   it("passes an unparseable date through rather than rendering Invalid Date", () => {
     expect(longDate("not-a-date")).toBe("not-a-date");
+  });
+});
+
+describe("editionNumber", () => {
+  const run = ["2026-07-26", "2026-07-24", "2026-07-25"];
+
+  it("counts from the oldest edition, whatever order the list arrives in", () => {
+    expect(editionNumber(run, "2026-07-24")).toBe(1);
+    expect(editionNumber(run, "2026-07-25")).toBe(2);
+    expect(editionNumber(run, "2026-07-26")).toBe(3);
+  });
+
+  it("does not double-count a date the store lists twice", () => {
+    expect(editionNumber([...run, "2026-07-24"], "2026-07-26")).toBe(3);
+  });
+
+  it("returns null rather than a confident wrong number for an unknown date", () => {
+    // The masthead prints this. A missing edition must leave the slot blank,
+    // never claim an issue number the run does not have.
+    expect(editionNumber(run, "2026-07-27")).toBeNull();
+    expect(editionNumber([], "2026-07-27")).toBeNull();
   });
 });
 
