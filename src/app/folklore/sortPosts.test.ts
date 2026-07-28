@@ -67,6 +67,7 @@ describe("sortHandlesByAuthorElo", () => {
 describe("the ranking — satoshis earned plus what it cost to upload", () => {
   const video = (id: string) => ({ id, media: [{ type: "video" }] });
   const text = (id: string) => ({ id, media: undefined as Array<{ type: string }> | undefined });
+  const photo = (id: string) => ({ id, media: [{ type: "photo" }] });
   // Founding costs measured on the witness archive: text ~15 sats, a photo
   // ~8.6k, a small reply clip ~1.4k, the big tutorials 1.7 million.
   const TUTORIAL = 1_700_000, CLIP = 1_400, TEXT_COST = 15;
@@ -100,7 +101,7 @@ describe("the ranking — satoshis earned plus what it cost to upload", () => {
 
   it("without founding data the class floors hold, so a foreign archive still shows media first", () => {
     expect(hotScore(video("v"), 0, 0)).toBe(100);
-    expect(hotScore({ id: "p", media: [{ type: "photo" }] }, 0, 0)).toBe(30);
+    expect(hotScore(photo("p"), 0, 0)).toBe(30);
     expect(hotScore(text("t"), 0, 0)).toBe(0);
   });
 
