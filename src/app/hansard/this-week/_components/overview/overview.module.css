@@ -233,23 +233,23 @@
    Two bands. The great offices read at a glance; the rest is a dense
    office-and-name list that fills the remaining column depth without
    competing for attention. Both avoid breaking across the A4 fold. */
-.cabNote { font: italic 8pt/1.3 Georgia, serif; color: #555; margin: 0 0 5pt; }
+.cabNote { font: italic 7.4pt/1.25 Georgia, serif; color: #555; margin: 0 0 3pt; }
 
 .cabGreat {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 4pt 9mm;
-  margin: 0 0 6pt;
+  gap: 3pt 9mm;
+  margin: 0 0 4pt;
 }
 .cabGreatItem {
   break-inside: avoid;
   border-left: 2.5px solid #6b2d5b;
   padding-left: 5pt;
 }
-.cabGreatName { display: block; font: 700 10pt/1.15 Georgia, serif; color: #141414; }
+.cabGreatName { display: block; font: 700 9.2pt/1.12 Georgia, serif; color: #141414; }
 .cabGreatOffice {
   display: block;
-  font: 7.4pt/1.2 -apple-system, sans-serif;
+  font: 6.9pt/1.15 -apple-system, sans-serif;
   letter-spacing: .04em;
   text-transform: uppercase;
   color: #6b2d5b;
@@ -262,9 +262,9 @@
   display: flex;
   justify-content: space-between;
   gap: 6pt;
-  font: 8.2pt/1.36 Georgia, serif;
+  font: 7.7pt/1.28 Georgia, serif;
   border-bottom: 0.5px dotted #cfcfcf;
-  padding: 1pt 0;
+  padding: 0.3pt 0;
 }
 .cabOffice { color: #444; }
 .cabName { font-weight: 700; color: #141414; white-space: nowrap; }
