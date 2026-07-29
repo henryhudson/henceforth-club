@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Two posts, dealt — the folklore front door design</title>
+<style>
+  :root { --bg:#f4ecd8; --ink:#2a2318; --muted:#6b5d45; --rule:#c9b98f; --accent:#8b3a1a; --card:#faf4e4; --shadow:0 1px 3px rgba(60,40,10,0.15); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.68;}
+  .wrap{max-width:860px;margin:0 auto;padding:56px 32px;}
+  header.doc{margin-bottom:40px;border-bottom:3px double var(--rule);padding-bottom:26px;}
+  .eyebrow{font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:33px;line-height:1.16;margin:0 0 12px;font-weight:700;}
+  h2{font-size:24px;margin:46px 0 12px;padding-top:18px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 8px;}
+  .lede{font-size:19px;color:var(--muted);margin:0;font-style:italic;}
+  p{margin:13px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(120,90,30,0.12);padding:2px 6px;border-radius:4px;}
+  pre{background:#2a2318;color:#f0e6cf;padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;background:var(--card);}
+  th,td{text-align:left;padding:9px 12px;border:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .decision{background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 18px;margin:18px 0;box-shadow:var(--shadow);}
+  .decision strong{color:var(--accent);}
+  ul{margin:12px 0;padding-left:26px;} li{margin:6px 0;}
+  .flow{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px 20px;margin:16px 0;box-shadow:var(--shadow);}
+  .mock{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:12.5px;line-height:1.5;white-space:pre;background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px 18px;overflow-x:auto;box-shadow:var(--shadow);}
+  .pair{display:flex;gap:18px;flex-wrap:wrap;} .pair > div{flex:1 1 320px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Design spec &middot; 2026-07-27 &middot; henceforth.club/folklore &middot; status: DRAFT for Henry's review</div>
+<h1>Two posts, dealt</h1>
+<p class="lede">Folklore's front page stops being a pitch aimed at people who have already bought, and becomes the game itself &mdash; for the people who can play it. Everyone else still meets the shop window.</p>
+</header>
+
+<p><strong>What exists.</strong> The duel is built and live. <code>henceforth.club/folklore/arena</code> renders today: <em>&ldquo;the arena &middot; two posts, dealt. Give kudos to the one you prefer &mdash; text, photo, or video. The first kudos crowns it, and every further tap in the beat goes to the winner.&rdquo;</em> Pairs are dealt by the server, single-use, and the resolution deals the next pair. What does not exist is any reason for a visitor to find it: the arena is an unlinked side route, and <code>/folklore</code> is a page about archives.</p>
+
+<p><strong>The ask.</strong> Henry, 2026-07-27: <em>&ldquo;i think folklore should start as being a hot or not so we just have 2 posts and we click on the one we prefer to see the next one this could give it 120 sats&rdquo;</em> &mdash; and, once the arithmetic was on the table, <em>&ldquo;ok leave the tap fee as it is&rdquo;</em>.</p>
+
+<div class="decision"><strong>Decision 1 &mdash; this spec moves no money.</strong> A tap stays one kudos. The 120-satoshi figure was withdrawn on the numbers: at BSV&nbsp;$13.735 and $1.334 to the pound, one kudos is already about <strong>9,700 satoshis</strong>, so 120 would have been roughly one eighty-first of the current tap and would sit below the 546-satoshi settlement dust floor. <code>KUDOS_PENCE</code>, <code>FLOAT_KUDOS</code>, <code>DAILY_DUEL_CAP</code> and the Elo fold are untouched. Nothing here reaches the payment path, so <strong>no adversarial money-path review gates this work</strong> &mdash; a first for a folklore spec, and only because the feature is presentation.</div>
+
+<h2>1 &middot; The reframe</h2>
+<p>The duel is not a new feature. It is a feature nobody arrives at. The whole of this spec is about <em>where it lives</em>, and the only genuinely new decision is what a stranger sees versus what a player sees.</p>
+
+<h2>2 &middot; Why the naive promotion fails</h2>
+<p>&ldquo;Make the arena the front page&rdquo; read literally means pointing <code>/folklore</code> at <code>arena/page.tsx</code>. Three things break, and they are the reason this document exists:</p>
+<table>
+<tr><th>What breaks</th><th>Where</th><th>Consequence</th></tr>
+<tr><td>The page leaves the search index</td><td><code>arena/page.tsx</code> declares <code>robots: { index: false }</code></td><td>Folklore's main entry point becomes uncrawlable &mdash; deliberate for a side route, wrong for the front door</td></tr>
+<tr><td>The shop window closes</td><td><code>folklore/page.tsx</code> is titled &ldquo;An archive X can't revoke&rdquo; and carries the witness teaser, directory, board and drop zone</td><td>The page that converts a stranger into a customer stops existing</td></tr>
+<tr><td>The conversion link eats itself</td><td>Arena's visitor state links <em>&ldquo;open your archive &rarr;&rdquo;</em> to <code>/folklore</code></td><td>A visitor with no kudos is sent from the front page to the front page</td></tr>
+</table>
+<p>A stranger arriving at the promoted page would meet one box reading <em>&ldquo;The arena runs on kudos, and kudos come with an archive&rdquo;</em> and a link back to where they already were. No explanation, no proof, no teaser, no way in.</p>
+
+<h2>3 &middot; Two faces, one route</h2>
+<div class="decision"><strong>Decision 2 &mdash; <code>/folklore</code> serves the duel to people who can play and the shop window to everyone else.</strong> One route, one address to share, two faces chosen by whether the visitor holds a kudos float.</div>
+
+<div class="pair">
+<div>
+<p><strong>With a float &mdash; the player's face</strong></p>
+<div class="mock">/folklore
+┌───────────────────────────┐
+│  two posts, dealt         │
+│  ┌─────────┐  ┌─────────┐ │
+│  │ post A  │  │ post B  │ │
+│  │         │  │         │ │
+│  │         │  │         │ │
+│  │ ♦ kudos │  │ ♦ kudos │ │
+│  └─────────┘  └─────────┘ │
+│                           │
+│  board · archives  ↓      │
+└───────────────────────────┘</div>
+</div>
+<div>
+<p><strong>Without one &mdash; the stranger's face</strong></p>
+<div class="mock">/folklore
+┌───────────────────────────┐
+│  FOLKLORE                 │
+│  An archive X can't       │
+│  revoke                   │
+│                           │
+│  witness teaser (6 posts) │
+│  the board                │
+│  the directory            │
+│  drop your export here    │
+└───────────────────────────┘</div>
+</div>
+</div>
+
+<p>The duel section is sized to the viewport, so a player's first screen is the pair and nothing else; the board and archives are one scroll away rather than deleted. That is the mockup Henry picked, delivered to the audience the mockup was drawn for.</p>
+
+<h2>4 &middot; The pair, left and right</h2>
+<p>The arena today stacks the pair: <code>space-y-4</code> over two full-width cards, each rendering its post's text in full. Two ordinary posts do not fit one screen, so the reader scrolls from one to the other.</p>
+
+<div class="decision"><strong>Decision 3 &mdash; both posts must be in view at the moment of choosing (Henry, 2026-07-27: <em>&ldquo;i was thinking left and right&rdquo;</em>).</strong> A duel is a comparison, and a comparison the reader has to scroll between is not a comparison &mdash; it is two sequential judgements, which is the thing a feed already does worse. Side by side is not decoration; it is what makes the gesture mean what it says.</div>
+
+<p>Left and right is how simultaneity looks on a wide screen. It is not how it looks on a phone, where two columns leave roughly 150 pixels each and neither post is legible. So the rule is stated as the requirement rather than the layout:</p>
+<table>
+<tr><th>Width</th><th>Layout</th><th>Both in view because</th></tr>
+<tr><td>Wide (tablet and up)</td><td>Two columns, equal width, left and right</td><td>The screen is wide enough to put them side by side at full legibility</td></tr>
+<tr><td>Narrow (phone)</td><td>Two rows, each capped at roughly half the viewport</td><td>The screen is tall, not wide &mdash; so the pair splits vertically and each card is bounded rather than allowed to run</td></tr>
+</table>
+
+<div class="decision"><strong>Decision 4 &mdash; a bounded card clamps its text.</strong> Both layouts need each side to fit its half, so a long post is line-clamped with a fade rather than rendered in full. This is honest about what a duel actually asks: you are judging the opening of a post, which is the same thing anyone scrolling past judges. The author link and the post's own page remain the way to read it whole.</div>
+
+<p>The existing crowned and dimmed states (<code>border-accent</code> on the winner, <code>opacity-60</code> on the loser) carry over unchanged &mdash; they are per-card classes and do not care which way the pair is arranged.</p>
+
+<h3>The open question: what is clickable</h3>
+<p>Henry's phrasing was <em>&ldquo;we click on the one we prefer&rdquo;</em>, and today the click target is the kudos control inside the card, not the card. Making the whole card the target reads more like the gesture he described, but every tap spends a kudos, and a card contains a video's play button, an author link and a post link &mdash; each of which would become an accidental purchase. <strong>This spec keeps the explicit control and enlarges it</strong>, and flags the alternative for the review rather than deciding it quietly: an accidental spend is a small amount of money and a large amount of annoyance.</p>
+
+<h2>5 &middot; How it works, given what is already there</h2>
+<p><code>Arena.tsx</code> is a client component that renders a heading, then in one effect fetches the kudos session and, if the session has a float, fetches a pair. Every phase &mdash; <code>loading</code>, <code>visitor</code>, <code>empty</code>, <code>unavailable</code>, <code>live</code> &mdash; already exists. The front door needs one behavioural addition and nothing else.</p>
+
+<div class="decision"><strong>Decision 5 &mdash; a quiet mode, not a second component.</strong> <code>Arena</code> gains one optional prop &mdash; working name <code>quiet</code> &mdash; which makes the <code>loading</code> and <code>visitor</code> phases render <strong>nothing at all</strong> instead of a heading and a nudge. <code>/folklore/arena</code> keeps today's behaviour by not passing it. No duplicated dealing logic, no second copy of the phase machine.</div>
+
+<p>That single prop is what protects the search index. Because the quiet mode renders null until the session resolves, the server-rendered HTML of <code>/folklore</code> <strong>carries no duel markup at all</strong>: a crawler has no session, receives the shop window, and indexes it exactly as before. The duel is a client-side arrival on top of a page that never stopped being the sales page underneath.</p>
+
+<div class="flow">
+<p><strong>The sequence.</strong> <code>/folklore</code> server-renders the shop window from its hour-long cache, with the quiet duel mounted at the top rendering nothing. On hydration the duel asks <code>fetchKudosSession()</code>. A visitor answer leaves the page untouched forever. A float answer deals a pair and the duel fills the first screen, pushing the shop window below the fold.</p>
+</div>
+
+<div class="decision"><strong>Decision 6 &mdash; the page stays statically cached (<code>revalidate = 3600</code>).</strong> Deciding on the server instead &mdash; reading the <code>kudos_token</code> cookie in the page &mdash; would remove the reflow, but it makes the route dynamic, and this page reads the board, the directory, the rating tables and six witness posts from chain on every render. Trading an hour of cache for a few hundred milliseconds of polish is the wrong way round against the sub-second standing bar.</div>
+
+<p>The accepted cost is one reflow: a player sees the shop window paint, then the duel arrive above it. If that grates in daily use, the escape hatch is a remembered flag in local storage that reserves the duel's height at first paint &mdash; deliberately <em>not</em> in v1, because it is a fix for a problem we have not yet felt.</p>
+
+<h2>6 &middot; What does not change</h2>
+<ul>
+<li><strong>Money.</strong> One tap, one kudos. No new endpoint, no change to <code>/api/folklore/duel</code>, <code>float.ts</code> or <code>constants.ts</code>. The conservation invariant is not touched, so it cannot be broken here.</li>
+<li><strong>Ranking.</strong> The Elo fold, <code>DAILY_DUEL_CAP</code> of 200, the own-work refusal and the dealer's pair mix all stand as shipped.</li>
+<li><strong>Routes.</strong> Nothing is renamed or redirected. <code>/folklore/arena</code> stays as the dedicated full-screen duel, and its <em>&ldquo;open your archive &rarr;&rdquo;</em> link keeps pointing at a page that still sells archives.</li>
+<li><strong>The flag.</strong> <code>KUDOS_ENABLED</code> still governs the duel. With the flag off, the quiet duel renders nothing and <code>/folklore</code> is exactly today's page &mdash; the feature fails closed into the status quo.</li>
+</ul>
+
+<h2>7 &middot; Failure modes</h2>
+<table>
+<tr><th>Failure</th><th>Behaviour</th></tr>
+<tr><td>Session lookup fails or times out</td><td>Quiet mode renders nothing; the visitor keeps the shop window and never learns anything went wrong</td></tr>
+<tr><td>Kudos flag off in production</td><td>Duel renders nothing; page identical to today. No teaser for something unreachable, per the arena's existing posture</td></tr>
+<tr><td>Player's float hits zero mid-session</td><td>Unchanged from the arena today &mdash; the duel route answers 402 <code>insufficient-float</code> and the control shows it</td></tr>
+<tr><td>Daily cap of 200 duels reached</td><td>Unchanged &mdash; 429 <code>daily-cap</code>; the player still has the board one scroll below</td></tr>
+<tr><td>Pool cannot field two posts</td><td>The existing <code>empty</code> phase line, which quiet mode still shows: a player who can play deserves to know why there is no pair</td></tr>
+<tr><td>Crawler executes JavaScript and holds no cookie</td><td>Resolves to <code>visitor</code>, renders nothing, indexes the shop window &mdash; same as a human stranger</td></tr>
+</table>
+
+<h2>8 &middot; Testing</h2>
+<ul>
+<li><strong>Front page, visitor:</strong> a snapshot asserting <code>/folklore</code> renders the shop window and <em>no</em> duel &mdash; the index-preservation guarantee, pinned.</li>
+<li><strong>Front page, player:</strong> a snapshot asserting the duel renders above the board once the session reports a float.</li>
+<li><strong>Quiet mode, directly:</strong> unit assertions that the <code>loading</code> and <code>visitor</code> phases render null with the prop and unchanged output without it &mdash; so a future edit cannot quietly restore the nudge onto the front page.</li>
+<li><strong>The pair is side by side:</strong> a snapshot pinning the two-column arrangement on a wide viewport &mdash; the assertion that stops a later edit quietly restoring the stack and turning the comparison back into a scroll (Decision 3).</li>
+<li><strong>A long post is clamped:</strong> a card given a post far longer than its box renders clamped rather than tall, so neither side can push the other off the screen (Decision 4).</li>
+<li><strong>Regression:</strong> the arena's existing snapshot tests cover the duel itself; the pair's layout snapshot will change with this work and the dealing logic's must not. If the phase machine's assertions move, something leaked beyond presentation.</li>
+<li><strong>Behaviour isn't shipped until asserted.</strong> Two things here are explicitly judgement rather than assertion and get looked at on a device: the reflow when the duel arrives, and whether the narrow-screen split reads as a duel or as two things stacked.</li>
+</ul>
+
+<h2>9 &middot; What v1 is NOT</h2>
+<ul>
+<li>No change to the tap price, the float, the cap, or the ranking (Decision 1).</li>
+<li>No server-side face selection, no cookie read in the page, no loss of the hourly cache (Decision 6).</li>
+<li>No local-storage pre-paint of the duel &mdash; the reflow is accepted for now and revisited only if it annoys.</li>
+<li>No removal of the shop window for anyone, and no second copy of it on another route.</li>
+<li>No new route, redirect, or rename &mdash; <code>/folklore/arena</code> survives untouched.</li>
+<li>No expand-in-place for a clamped post &mdash; tapping is how you spend a kudos, so it cannot also be how you read more. The post's own page is the way through (Decision 4).</li>
+<li>No whole-card click target &mdash; the explicit kudos control stays, enlarged. Raised in section 4 for the review rather than settled here.</li>
+</ul>
+
+<h2>10 &middot; Decisions taken (Henry, 2026-07-27)</h2>
+<ul>
+<li><strong>Front door:</strong> the arena becomes <code>/folklore</code> &mdash; duel first, board and archives below.</li>
+<li><strong>Tap fee:</strong> left as it is; the 120-satoshi proposal withdrawn on the arithmetic.</li>
+<li><strong>The pair:</strong> left and right, not stacked &mdash; both posts in view at the moment of choosing, with the narrow screen splitting vertically into two bounded halves rather than abandoning simultaneity.</li>
+<li><strong>Open, for the review &mdash; the shop window for a player:</strong> Henry's mockup showed it collapsed to a link; this spec keeps it as a scroll. A link is a smaller page but loses the &ldquo;here is what else is here&rdquo; glance for the people most likely to act on it.</li>
+<li><strong>Open, for the review &mdash; the click target:</strong> the whole card, or the kudos control inside it. The spec keeps the control, because every tap is a purchase and a card holds a video's play button and two links. Named here so it is decided rather than defaulted.</li>
+</ul>
+
+<p style="margin-top:40px;color:var(--muted);font-style:italic;">Next: Henry reviews this document; then the implementation plan &mdash; one prop, one mount, a two-column pair, and the tests that pin all three. No money path.</p>
+
+</div>
+</body>
+</html>
