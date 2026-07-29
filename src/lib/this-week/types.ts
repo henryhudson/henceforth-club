@@ -39,11 +39,17 @@ export interface FeatureStory {
 }
 
 export interface BriefItem { title: string; when: string; note: string }
+
+/** One post in the government of the day. `great` lifts a post into the top
+ *  band of the cabinet graphic — the offices a reader looks for first. */
+export interface CabinetPost { office: string; name: string; great?: boolean }
 export interface MostActiveEntry { name: string; party: string; count: number }
 export interface OverviewBlock {
   headline: string
   intro: string
   brief?: BriefItem[]
+  /** The government as it stands, rendered as a graphic rather than prose. */
+  cabinet?: { title: string; note?: string; posts: CabinetPost[] }
   feature?: { title: string; summary: string }
   mostActive?: { asker: MostActiveEntry; answerer: MostActiveEntry }
 }
