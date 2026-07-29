@@ -3,6 +3,7 @@ import s from './overview.module.css'
 import A4Sheet from './A4Sheet'
 import Masthead from './Masthead'
 import WeekInBrief from './WeekInBrief'
+import Cabinet from './Cabinet'
 import DivisionsBlock from './DivisionsBlock'
 import DepartmentChart from './DepartmentChart'
 import MostAskedSubjects from './MostAskedSubjects'
@@ -45,6 +46,9 @@ export default function Overview({ digest, week }: { digest: DigestData; week: s
       />
       {intro && <p className={s.topstory}>{intro}</p>}
       {hasBrief && <WeekInBrief items={ov!.brief!} />}
+      {ov?.cabinet && (
+        <Cabinet title={ov.cabinet.title} note={ov.cabinet.note} posts={ov.cabinet.posts} />
+      )}
       {hasData && (
         <div className={s.cols2}>
           <div>

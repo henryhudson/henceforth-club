@@ -1,0 +1,217 @@
+{
+  "week": "2026-07-29",
+  "windowLabel": "22–29 July 2026",
+  "mode": "recess",
+  "generatedAt": "2026-07-29T13:40:00.000Z",
+  "recessReturnISO": "2026-09-01",
+  "stats": {
+    "divisions": 0,
+    "questions": 0,
+    "distinctAskers": 0
+  },
+  "departments": [],
+  "highlights": {
+    "votes": [],
+    "questions": [],
+    "bills": [
+      {
+        "id": 4140,
+        "title": "National Security (State Threats) Act 2026",
+        "house": "Commons",
+        "stage": "Royal Assent",
+        "lastUpdate": "2026-07-22"
+      },
+      {
+        "id": 4129,
+        "title": "Financial Services and Markets Bill [HL]",
+        "house": "Lords",
+        "stage": "Report stage",
+        "lastUpdate": "2026-07-23"
+      },
+      {
+        "id": 4065,
+        "title": "Armed Forces Bill",
+        "house": "Commons",
+        "stage": "Committee stage",
+        "lastUpdate": "2026-07-23"
+      },
+      {
+        "id": 4030,
+        "title": "Railways Bill",
+        "house": "Commons",
+        "stage": "Committee stage",
+        "lastUpdate": "2026-07-22"
+      },
+      {
+        "id": 4279,
+        "title": "Co-operative Capital Bill [HL]",
+        "house": "Lords",
+        "stage": "2nd reading",
+        "lastUpdate": "2026-07-23"
+      }
+    ]
+  },
+  "intro": "A government was rebuilt this week, and the House that is supposed to watch it do so was not there. Andy Burnham completed his ministerial appointments on Thursday 23 July, four days after taking office: John Healey moved from Defence to the Treasury; Rachel Reeves left the Chancellorship rather than accept another post; David Lammy was dismissed as Deputy Prime Minister, and no Deputy Prime Minister was appointed to replace him, Louise Haigh instead taking the older title of First Secretary of State alongside the Duchy of Lancaster. Fifteen ministers went in all. Whole departments went with them — Science, Innovation and Technology abolished outright, Business renamed and widened to swallow science and trade, Culture, Media and Sport reconstituted, and a new Office for the Prime Minister and Cabinet raised at the centre. In the Commons, none of this was said aloud. Not one division; not one written question tabled. The Lords took two more days about rising, sitting on the twenty-second and the twenty-third, and on the twenty-second the National Security (State Threats) Bill quietly received Royal Assent. Meanwhile 221 written answers arrived, fifty-two of them from Defence, replies to questions put to a government that in several cases no longer exists in the form addressed. And tomorrow, more than two million people in Greater Manchester vote for the mayoralty Burnham had to give up to sit in the Commons at all — the largest by-election this country has held. The House itself returns on 1 September.",
+  "overview": {
+    "headline": "A new government took shape with the Commons away",
+    "intro": "The Commons did not sit at all this week. It rose on 16 July and does not return until 1 September. There were no divisions and no written questions were tabled. The politics did not stop for that. Andy Burnham finished appointing his ministers on Thursday 23 July, four days after taking office. John Healey went to the Treasury. Fifteen ministers left the government. Several departments were abolished, renamed or recreated. None of it was announced to the House, because the House was not there. Tomorrow Greater Manchester votes for the mayor Burnham vacated. Ministers did keep answering. 221 written answers arrived during the week, fifty-two of them from the Ministry of Defence. Nobody can ask a follow up until the autumn.",
+    "brief": [
+      {
+        "title": "Burnham completes his ministerial appointments",
+        "when": "Thursday 23 July",
+        "note": "The new Prime Minister took office on 20 July and his cabinet first met on the twenty-first. The full slate of ministers was finished on the twenty-third, inside this window. John Healey moved from Defence to become Chancellor of the Exchequer. Rachel Reeves left the Treasury after reportedly declining another post."
+      },
+      {
+        "title": "No Deputy Prime Minister is appointed",
+        "when": "Thursday 23 July",
+        "note": "David Lammy was dismissed as Deputy Prime Minister and Justice Secretary, and the office was left vacant. Louise Haigh instead holds the older title of First Secretary of State, together with the Chancellorship of the Duchy of Lancaster. She is the deputy in everything but name."
+      },
+      {
+        "title": "Departments are abolished, renamed and recreated",
+        "when": "Across the window",
+        "note": "The Department for Science, Innovation and Technology was abolished. Business was renamed and widened into a department covering business, innovation, science and trade. Digital, Culture, Media and Sport was reconstituted. A new Office for the Prime Minister and Cabinet was established at the centre of government. Fifteen ministers departed in total."
+      },
+      {
+        "title": "Greater Manchester votes for a new mayor",
+        "when": "Thursday 30 July",
+        "note": "Burnham had to give up the mayoralty to take his seat. A mayor of a combined authority holding police and crime commissioner powers is disqualified on becoming a Member of Parliament, and he became one by winning the Makerfield by-election. Paul Dennett has been acting mayor and is not standing. Seven candidates are on the ballot. Bev Craig stands for Labour and Co-operative, Sian Astley for Reform UK, Geraldine Coggins for the Green Party, Phil Eckersley for the Conservatives, Richard Kilpatrick for the Liberal Democrats, Marlon West for Restore Britain and Marcus Farmer as an independent. The electorate is above two million, which makes it the largest by-election ever held in Britain and the first for a strategic authority mayor."
+      },
+      {
+        "title": "National Security (State Threats) Act 2026 receives Royal Assent",
+        "when": "Wednesday 22 July",
+        "note": "The bill completed its passage and became an Act on the first day of this window. It was the last piece of legislation to finish before both Houses had gone."
+      },
+      {
+        "title": "The Lords sits for two more days",
+        "when": "Wednesday 22 and Thursday 23 July",
+        "note": "The upper House held eleven chamber items on the Wednesday and nine on the Thursday. For those two days it was the only House working. It gave second readings to bills on sporting events, on microplastic filters in washing machines, on restoring powers to the Youth Justice Board, on creative education access, and on co-operative capital."
+      },
+      {
+        "title": "221 written answers arrive with nobody to receive them",
+        "when": "Across the window",
+        "note": "Departments cleared answers to questions tabled before the rise. Defence sent fifty-two, Housing, Communities and Local Government forty-two, and Education thirty-eight. Some were addressed to departments that have since been renamed or abolished. None of them can be pressed further until the autumn."
+      },
+      {
+        "title": "When Parliament comes back",
+        "when": "Tuesday 1 September",
+        "note": "The summer recess runs to 31 August and the Commons returns the following day. There was no Prime Minister's Questions in either week of this window and there will be none until the House is back. The first session of the new administration therefore falls six weeks into the job. Everything settled during the recess, the appointments and the departmental changes, waits until then to be put to a minister at the despatch box."
+      }
+    ],
+    "feature": {
+      "title": "A government rebuilt without a chamber to answer to",
+      "summary": "Machinery of government changes usually arrive with a statement. A department is abolished, another is created, and a minister comes to the despatch box to explain who now answers for what. That did not happen this week and could not have. The Commons rose on 16 July, before the change of Prime Minister, and does not return until 1 September. So the new shape of government was settled in writing, over six weeks, with no urgent question and no chance to press a minister on where a responsibility has gone. The questions answered this week were written to departments that in some cases no longer exist under those names. The first real accounting falls on 1 September."
+    },
+    "cabinet": {
+      "title": "Burnham's government",
+      "note": "Appointments completed on 23 July. The four great offices and the First Secretary of State are shown first. There is no Deputy Prime Minister; the office was left vacant and Louise Haigh holds the older title instead.",
+      "posts": [
+        {
+          "office": "Prime Minister",
+          "name": "Andy Burnham",
+          "great": true
+        },
+        {
+          "office": "Chancellor of the Exchequer",
+          "name": "John Healey",
+          "great": true
+        },
+        {
+          "office": "Foreign Secretary",
+          "name": "Ed Miliband",
+          "great": true
+        },
+        {
+          "office": "Home Secretary",
+          "name": "Shabana Mahmood",
+          "great": true
+        },
+        {
+          "office": "First Secretary of State",
+          "name": "Louise Haigh",
+          "great": true
+        },
+        {
+          "office": "Defence",
+          "name": "Wes Streeting"
+        },
+        {
+          "office": "Health and Social Care",
+          "name": "Yvette Cooper"
+        },
+        {
+          "office": "Justice, Lord Chancellor",
+          "name": "Alex Norris"
+        },
+        {
+          "office": "Education",
+          "name": "Lucy Powell"
+        },
+        {
+          "office": "Work and Pensions",
+          "name": "Pat McFadden"
+        },
+        {
+          "office": "Business, Innovation, Science and Trade",
+          "name": "Jonathan Reynolds"
+        },
+        {
+          "office": "Housing, Communities and Local Government",
+          "name": "Angela Rayner"
+        },
+        {
+          "office": "Transport",
+          "name": "Heidi Alexander"
+        },
+        {
+          "office": "Energy Security and Net Zero",
+          "name": "Miatta Fahnbulleh"
+        },
+        {
+          "office": "Digital, Culture, Media and Sport",
+          "name": "Lisa Nandy"
+        },
+        {
+          "office": "Environment, Food and Rural Affairs",
+          "name": "Dame Angela Eagle"
+        },
+        {
+          "office": "Northern Ireland",
+          "name": "Sir Chris Bryant"
+        },
+        {
+          "office": "Scotland",
+          "name": "Douglas Alexander"
+        },
+        {
+          "office": "Wales",
+          "name": "Stephen Kinnock"
+        },
+        {
+          "office": "Leader of the Commons",
+          "name": "Sir Alan Campbell"
+        },
+        {
+          "office": "Leader of the Lords",
+          "name": "Baroness Smith of Basildon"
+        },
+        {
+          "office": "Chief Whip",
+          "name": "Anneliese Midgley"
+        },
+        {
+          "office": "Women and Equalities",
+          "name": "Bridget Phillipson"
+        },
+        {
+          "office": "Chief Secretary to the Treasury",
+          "name": "Emma Reynolds"
+        },
+        {
+          "office": "Attorney General",
+          "name": "Ellie Reeves"
+        }
+      ]
+    }
+  },
+  "status": "draft"
+}

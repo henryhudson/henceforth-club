@@ -228,3 +228,43 @@
 @media print {
   .printBtn { display: none; }
 }
+
+/* ── The cabinet graphic ──────────────────────────────────────────────
+   Two bands. The great offices read at a glance; the rest is a dense
+   office-and-name list that fills the remaining column depth without
+   competing for attention. Both avoid breaking across the A4 fold. */
+.cabNote { font: italic 8pt/1.3 Georgia, serif; color: #555; margin: 0 0 5pt; }
+
+.cabGreat {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4pt 9mm;
+  margin: 0 0 6pt;
+}
+.cabGreatItem {
+  break-inside: avoid;
+  border-left: 2.5px solid #6b2d5b;
+  padding-left: 5pt;
+}
+.cabGreatName { display: block; font: 700 10pt/1.15 Georgia, serif; color: #141414; }
+.cabGreatOffice {
+  display: block;
+  font: 7.4pt/1.2 -apple-system, sans-serif;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: #6b2d5b;
+  margin-top: 1pt;
+}
+
+.cabRest { column-count: 2; column-gap: 9mm; }
+.cabRow {
+  break-inside: avoid;
+  display: flex;
+  justify-content: space-between;
+  gap: 6pt;
+  font: 8.2pt/1.36 Georgia, serif;
+  border-bottom: 0.5px dotted #cfcfcf;
+  padding: 1pt 0;
+}
+.cabOffice { color: #444; }
+.cabName { font-weight: 700; color: #141414; white-space: nowrap; }
