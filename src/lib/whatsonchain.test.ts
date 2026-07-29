@@ -232,7 +232,9 @@ describe("BananaBlocks mirror fallback", () => {
   });
 
   it("never touches the mirror when WhatsOnChain answers", async () => {
-    const fetchFn = vi.fn(async () => new Response(rawTx([p2pkh]), { status: 200 }));
+    // Declare the parameter even though it is unused: without it the mock's call
+    // tuple types as [] and `mock.calls[0][0]` below fails to compile.
+    const fetchFn = vi.fn(async (_input: RequestInfo | URL) => new Response(rawTx([p2pkh]), { status: 200 }));
     expect(await fetchTxScripts("b".repeat(64), fetchFn)).toEqual([p2pkh]);
     expect(fetchFn).toHaveBeenCalledTimes(1);
     expect(String(fetchFn.mock.calls[0][0])).toContain("whatsonchain.com");
