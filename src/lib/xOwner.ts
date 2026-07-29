@@ -23,6 +23,24 @@ export async function getOwner(handle: string): Promise<XOwner | null> {
 }
 
 /**
+ * Which of these handles are owner-verified, in one round trip. The directory
+ * shows a verified tick and reads nothing else off the record, so the answer
+ * is the set of names rather than the records themselves — the smallest thing
+ * that renders the row. An unreachable store yields an empty set, which the
+ * row reads as "no tick": the same quiet absence a single `getOwner` gives.
+ */
+export async function getOwnedHandles(handles: string[]): Promise<Set<string>> {
+  const redis = getRedis();
+  const owned = new Set<string>();
+  if (!redis || handles.length === 0) return owned;
+  const values = await redis.mget<Array<XOwner | null>>(...handles.map(key));
+  handles.forEach((handle, i) => {
+    if (values[i]) owned.add(handle);
+  });
+  return owned;
+}
+
+/**
  * The same read as getOwner, with the answer a money gate needs: an owner, a
  * genuine absence, or a store we could not reach.
  *

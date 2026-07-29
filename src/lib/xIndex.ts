@@ -26,6 +26,26 @@ export async function getXTxid(handle: string): Promise<string | null> {
   return txids.at(-1) ?? null;
 }
 
+/**
+ * Every handle's txid list in one round trip, for callers holding a whole page
+ * of names. The directory asked `getXTxids` once per row, which was a hundred
+ * round trips for what one `mget` answers. Same legacy-string migration as the
+ * single read; a handle with no entry is absent from the map rather than
+ * present-as-empty, so "not registered" and "registered with nothing" stay
+ * distinguishable.
+ */
+export async function getXTxidsBatch(handles: string[]): Promise<Map<string, string[]>> {
+  const redis = getRedis();
+  const found = new Map<string, string[]>();
+  if (!redis || handles.length === 0) return found;
+  const values = await redis.mget<Array<string | string[] | null>>(...handles.map(key));
+  handles.forEach((handle, i) => {
+    const raw = values[i];
+    if (raw) found.set(handle, Array.isArray(raw) ? raw : [raw]);
+  });
+  return found;
+}
+
 /** Append a new archive txid to the handle's list. Idempotent — re-registering
  * the same txid is a no-op, so a retry never duplicates. */
 export async function appendXTxid(handle: string, txid: string): Promise<boolean> {

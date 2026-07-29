@@ -23,13 +23,14 @@ vi.mock("@/lib/folkloreBoard", async (orig) => ({
 // furniture here, and an absent one of either renders its own honest fallback.
 vi.mock("@/lib/xArchiveCache", () => ({ getArchivePage: async () => null }));
 vi.mock("@/lib/xPrice", () => ({ gbpPerBsv: async () => undefined }));
-// A directory row is an async server component that reads the chain per
-// handle; `renderToStaticMarkup` cannot await one, and its markup is not what
-// this test is about. Stood in by the one fact the assertion needs — WHICH
-// handle the page decided to give a card to.
+// A directory row's markup is not what this test is about. Stood in by the one
+// fact the assertion needs — WHICH handle the page decided to give a card to.
 vi.mock("./_components/DirectoryRow", () => ({
   default: ({ handle }: { handle: string }) => <div>@{handle}</div>,
 }));
+// The row data is one batched store read; off the network here, same as the
+// witness archive above. `directoryRows.test.ts` covers the batching itself.
+vi.mock("./_components/directoryRows", () => ({ readDirectoryRows: async () => new Map() }));
 
 import { profileMember } from "@/lib/folkloreBoard";
 import FolklorePage from "./page";

@@ -485,6 +485,33 @@ export async function getArchivePage(
   return { posts: resolved.archive.posts.slice(start, end), ...pageInfoFromMeta(resolved.meta) };
 }
 
+/**
+ * Cached post counts for many handles in one round trip — the total the
+ * directory prints beside each name.
+ *
+ * This reads the cached meta and stops there; it never stitches. The board
+ * called `getArchivePage(handle, 0, 0)` per row purely for that number, and
+ * every one of those calls was a rebuild waiting to happen: a hundred rows
+ * could put a hundred full stitches inside a single request, which is the
+ * poison-pill loop the header of this module exists to describe. Warming is
+ * the writer's job (`warmArchiveCache`), so a handle with nothing cached is
+ * simply absent from this map and the caller falls back to the transaction
+ * digest — the same fallback that row already had.
+ */
+export async function readCachedPostCounts(
+  handles: string[],
+  redis: Redis | null = getRedis(),
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (!redis || handles.length === 0) return counts;
+  const metas = await redis.mget<Array<ArchiveMeta | null>>(...handles.map(metaKey));
+  handles.forEach((handle, i) => {
+    const meta = metas[i];
+    if (meta?.v === META_VERSION) counts.set(handle, meta.postCount);
+  });
+  return counts;
+}
+
 function pageInfoFromMeta(meta: ArchiveMeta): Omit<ArchivePage, "posts"> {
   return {
     postCount: meta.postCount,

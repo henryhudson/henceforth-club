@@ -2,7 +2,33 @@ import { socialArchiveFromScripts, type SocialArchive } from "@/app/folklore/onc
 import { voutScriptsFromRawTx } from "./rawTx";
 
 const WOC = "https://api.whatsonchain.com/v1/bsv/main";
+// BananaBlocks (GorillaPool's explorer) serves a WhatsOnChain-compatible
+// mirror — same paths, same shapes — plus a native namespace whose parsed
+// transaction endpoint carries what WhatsOnChain omits (fee, input values).
+const BB_MIRROR = "https://bananablocks.com/api/v1/bsv/main";
+const BB_NATIVE = "https://bananablocks.com/api/v1";
 const BSV = 100_000_000;
+
+// Byte reads try WhatsOnChain first, then the mirror — a base-URL swap, since
+// the shapes match. WhatsOnChain stays primary (it is the independent source
+// everywhere else); the mirror answers only when it doesn't, which is a real
+// mode: on 2026-07-19 WhatsOnChain 403-bot-blocked while BananaBlocks served
+// the same bytes. Returns the first ok response, or null when both fail.
+async function fetchWithMirror(
+  path: string,
+  init: Parameters<typeof fetch>[1],
+  fetchFn: typeof fetch,
+): Promise<Response | null> {
+  for (const base of [WOC, BB_MIRROR]) {
+    try {
+      const res = await fetchFn(`${base}${path}`, init);
+      if (res.ok) return res;
+    } catch {
+      // fall through to the mirror; both-fail is the null below
+    }
+  }
+  return null;
+}
 
 type WocTx = { vin?: Array<{ value?: number }>; vout?: Array<{ value?: number }> };
 
@@ -19,11 +45,30 @@ export function txFeeSatsFromJson(tx: WocTx): number | null {
 type WocVin = { txid?: string; vout?: number; coinbase?: string };
 type WocTxFull = { vin?: WocVin[]; vout?: Array<{ value?: number }> };
 
-/** A transaction's miner fee in sats. WhatsOnChain's tx endpoint omits input
- * values, so each input's value is resolved from its prevout (the referenced
- * output of `vin.txid`). Fail-open (null) on any unresolvable input or read
- * error — a fee is never guessed. */
+/** A transaction's miner fee in sats. BananaBlocks' parsed transaction
+ * endpoint answers in one call (`fee` in sats, `has_fee`); WhatsOnChain's
+ * omits input values, so its path costs one extra fetch per input. The one
+ * call is tried first, the prevout walk remains the fallback. Fail-open
+ * (null) on any unresolvable input or read error — a fee is never guessed. */
 export async function fetchTxFeeSats(txid: string, fetchFn: typeof fetch = fetch): Promise<number | null> {
+  const direct = await fetchBananaBlocksFee(txid, fetchFn);
+  return direct ?? fetchTxFeeSatsFromPrevouts(txid, fetchFn);
+}
+
+async function fetchBananaBlocksFee(txid: string, fetchFn: typeof fetch): Promise<number | null> {
+  try {
+    const res = await fetchFn(`${BB_NATIVE}/tx/${txid}`, { next: { revalidate: 86400 } });
+    if (!res.ok) return null;
+    const tx = (await res.json()) as { fee?: number; has_fee?: boolean };
+    return tx.has_fee === true && typeof tx.fee === "number" && Number.isInteger(tx.fee) && tx.fee >= 0
+      ? tx.fee
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchTxFeeSatsFromPrevouts(txid: string, fetchFn: typeof fetch): Promise<number | null> {
   try {
     const res = await fetchFn(`${WOC}/tx/hash/${txid}`, { next: { revalidate: 86400 } });
     if (!res.ok) return null;
@@ -59,15 +104,8 @@ export async function fetchTxScripts(
 ): Promise<string[] | null> {
   if (!/^[0-9a-fA-F]{64}$/.test(txid)) return null;
 
-  let res: Response;
-  try {
-    res = await fetchFn(`${WOC}/tx/${txid}/hex`, { next: { revalidate: 3600 } });
-  } catch {
-    return null;
-  }
-  if (!res.ok) return null;
-
-  return voutScriptsFromRawTx(await res.text());
+  const res = await fetchWithMirror(`/tx/${txid}/hex`, { next: { revalidate: 3600 } }, fetchFn);
+  return res ? voutScriptsFromRawTx(await res.text()) : null;
 }
 
 /**
@@ -117,16 +155,14 @@ async function fetchConfirmedTime(
   txid: string,
   fetchFn: typeof fetch,
 ): Promise<number | undefined> {
-  let res: Response;
-  try {
-    res = await fetchFn(`${WOC}/tx/hash/${txid}`, {
-      next: { revalidate: 3600 },
-      signal: AbortSignal.timeout(TIME_LOOKUP_TIMEOUT_MS),
-    });
-  } catch {
-    return undefined;
-  }
-  if (!res.ok) return undefined;
+  // One signal across both attempts: the ceiling bounds the whole lookup, so
+  // adding the mirror never widens the stall a hung primary can cause.
+  const res = await fetchWithMirror(
+    `/tx/hash/${txid}`,
+    { next: { revalidate: 3600 }, signal: AbortSignal.timeout(TIME_LOOKUP_TIMEOUT_MS) },
+    fetchFn,
+  );
+  if (!res) return undefined;
 
   const body = (await res.json().catch(() => null)) as
     | { time?: number; blocktime?: number }
