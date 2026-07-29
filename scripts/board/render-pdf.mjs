@@ -26,7 +26,12 @@ import { LockingScript, OP, P2PKH, PrivateKey, SatoshisPerKilobyte, Transaction,
 
 const SITE = process.env.RENDER_PDF_BASE ?? "https://www.henceforth.club";
 const SITE_HOST = new URL(SITE).hostname;
-const BUDGET = { daily: 1, week: 2 };
+// Daily was capped at one page while the report was a digest. Henry's framing
+// on 2026-07-28 changed what it is for: "it is not just a daily report it is the
+// state of our apps what we need to do that day to better the apps" — a state
+// of four properties with an action each does not fit on one A4 page, and the
+// content is the point. Revert to 1 here if the single page matters more.
+const BUDGET = { daily: 2, week: 2 };
 // Keep in sync with src/lib/board-pdf-crypto.ts (the script cannot import TypeScript).
 const INSCRIPTION_MARKER = "HHRPT1";
 // Expected fees at 100 satoshis per kilobyte (the rate BOTH transaction
