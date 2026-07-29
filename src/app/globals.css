@@ -605,6 +605,24 @@ body:has(.provenance)::before {
   color: #330a49;
 }
 
+/* ── The daily edition, set as a newspaper ───────────────────
+   The house style is monospace everywhere, and :root deliberately maps
+   --font-serif onto Space Mono so `font-serif` cannot accidentally break it.
+   A newspaper is the one place that mapping is wrong: the masthead and body
+   want an actual serif. Note WHY this overrides the utility rather than the
+   token: Tailwind v4 resolves @theme values at BUILD time, so --font-serif:
+   var(--font-space-mono) compiles .font-serif down to Space Mono directly.
+   Re-pointing --font-serif at a scope therefore changes nothing — verified in
+   the browser, where the variable read Georgia while the computed family was
+   still Space Mono. Overriding .newspaper .font-serif (specificity 0,2,0)
+   beats the compiled utility. A system stack rather than a webfont: no network
+   request, which matters because this page is also rendered headless for the
+   PDF, and every other surface keeps its monospace identity. */
+.newspaper,
+.newspaper .font-serif {
+  font-family: Georgia, "Times New Roman", ui-serif, serif;
+}
+
 /* ── A4 print editions (board report pages) ─────────────────── */
 @page { size: A4; margin: 12mm; }
 
@@ -653,6 +671,37 @@ body:has(.provenance)::before {
   .print-weekly { font-size: 9.5px; line-height: 1.35; }
   .print-weekly h1 { font-size: 18px; }
   .print-weekly h2 { font-size: 12px; margin-top: 10px; }
+
+  /* ── the daily, set as a newspaper ──────────────────────────────────────
+     Tailwind's sm: breakpoints key off VIEWPORT width, and a print run has no
+     viewport in the sense a browser window does — headless Chrome lays the
+     page out at paper width, where sm: does not reliably apply. The two
+     devices that make this read as a paper — the two-column body and the
+     three standing columns — therefore have to be declared for print
+     explicitly rather than inherited from the screen classes. */
+  .newspaper article > div {
+    column-count: 2;
+    column-gap: 18px;
+    column-rule: 1px solid #d6d3d1;
+  }
+  /* A section split across a column break loses its heading from its text,
+     which is exactly the thing that stops looking like a newspaper. */
+  .newspaper article section { break-inside: avoid-column; }
+  .newspaper .grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  /* The masthead is display type on screen; on paper it only needs to be the
+     largest thing on the page, and every millimetre it gives back is body
+     copy that stays with the edition rather than spilling to another sheet. */
+  .newspaper header { padding-block: 6px; }
+  .newspaper header h1 { font-size: 26px; letter-spacing: 0.1em; }
+  .newspaper h2 { break-after: avoid; }
+
+  /* Boxed furniture — stop press, today's orders — must not be split. */
+  .newspaper section.border-2 { break-inside: avoid; }
 }
 
 /* Stylesheet URL rotation, 2026-07-16: a corrupt copy of this file (fetched

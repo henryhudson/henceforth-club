@@ -31,9 +31,6 @@ export default function PostEntry({
   sats,
   avatarUrl,
   displayName,
-  foundingSats,
-  kudosEnabled = false,
-  tipCount: _tipCount,
   elo,
   defaultOpen = false,
 }: {
@@ -51,10 +48,11 @@ export default function PostEntry({
   avatarUrl?: string;
   /** The author's display name, shown with the handle above the text. */
   displayName?: string;
-  /** Upload cost — not shown on the ranking chip (kept for call-site compat). */
+  // The next three are accepted but never read here — call sites thread them
+  // through, so dropping them from the type would break those callers. Giving
+  // kudos is Henceforth-only; the site renders no tip control.
+  /** Upload cost — not shown on the ranking chip. */
   foundingSats?: number;
-  /** Elo markup only. Giving kudos is app-only (Henceforth); the site never
-   * renders a tip control. */
   kudosEnabled?: boolean;
   /** The post's public tip count, threaded from the server's bulk read. */
   tipCount?: number;

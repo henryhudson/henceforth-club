@@ -1,5 +1,63 @@
-import { describe, expect, it } from "vitest";
-import { asList, editionIndex, reachAppLine, shippedByDay, verdictLine } from "./report-helpers";
+import { afterEach, describe, expect, it } from "vitest";
+import { asList, editionIndex, editionNumber, longDate, reachAppLine, shippedByDay, verdictLine } from "./report-helpers";
+
+describe("longDate", () => {
+  const tz = process.env.TZ;
+  afterEach(() => {
+    process.env.TZ = tz;
+  });
+
+  it("names the day the way it is read aloud", () => {
+    expect(longDate("2026-07-27")).toBe("Monday 27th of July 2026");
+    expect(longDate("2026-07-28")).toBe("Tuesday 28th of July 2026");
+  });
+
+  it("gets the ordinal right, including the teens that catch naive versions", () => {
+    expect(longDate("2026-07-01")).toBe("Wednesday 1st of July 2026");
+    expect(longDate("2026-07-02")).toBe("Thursday 2nd of July 2026");
+    expect(longDate("2026-07-03")).toBe("Friday 3rd of July 2026");
+    expect(longDate("2026-07-11")).toBe("Saturday 11th of July 2026");
+    expect(longDate("2026-07-12")).toBe("Sunday 12th of July 2026");
+    expect(longDate("2026-07-13")).toBe("Monday 13th of July 2026");
+    expect(longDate("2026-07-21")).toBe("Tuesday 21st of July 2026");
+    expect(longDate("2026-07-22")).toBe("Wednesday 22nd of July 2026");
+    expect(longDate("2026-07-23")).toBe("Thursday 23rd of July 2026");
+  });
+
+  it("keeps the day name in the renderer's timezone-free reading", () => {
+    // The print edition renders headless and Vercel runs in UTC, so an
+    // unpinned formatter would date this edition Sunday west of Greenwich.
+    process.env.TZ = "Pacific/Honolulu";
+    expect(longDate("2026-07-27")).toBe("Monday 27th of July 2026");
+    process.env.TZ = "Pacific/Auckland";
+    expect(longDate("2026-07-27")).toBe("Monday 27th of July 2026");
+  });
+
+  it("passes an unparseable date through rather than rendering Invalid Date", () => {
+    expect(longDate("not-a-date")).toBe("not-a-date");
+  });
+});
+
+describe("editionNumber", () => {
+  const run = ["2026-07-26", "2026-07-24", "2026-07-25"];
+
+  it("counts from the oldest edition, whatever order the list arrives in", () => {
+    expect(editionNumber(run, "2026-07-24")).toBe(1);
+    expect(editionNumber(run, "2026-07-25")).toBe(2);
+    expect(editionNumber(run, "2026-07-26")).toBe(3);
+  });
+
+  it("does not double-count a date the store lists twice", () => {
+    expect(editionNumber([...run, "2026-07-24"], "2026-07-26")).toBe(3);
+  });
+
+  it("returns null rather than a confident wrong number for an unknown date", () => {
+    // The masthead prints this. A missing edition must leave the slot blank,
+    // never claim an issue number the run does not have.
+    expect(editionNumber(run, "2026-07-27")).toBeNull();
+    expect(editionNumber([], "2026-07-27")).toBeNull();
+  });
+});
 
 describe("asList", () => {
   it("joins a list with middle dots", () => {

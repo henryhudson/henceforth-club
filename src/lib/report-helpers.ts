@@ -1,5 +1,50 @@
 export type Edition = { type: "daily" | "weekly"; date: string; href: string };
 
+/** English ordinal for a day of the month — 1st, 2nd, 3rd, 4th … 11th, 21st.
+ *  The teens are the exception that catches naive implementations: 11, 12 and
+ *  13 take "th" despite ending in 1, 2 and 3. */
+function ordinal(day: number): string {
+  if (day % 100 >= 11 && day % 100 <= 13) return `${day}th`;
+  switch (day % 10) {
+    case 1:
+      return `${day}st`;
+    case 2:
+      return `${day}nd`;
+    case 3:
+      return `${day}rd`;
+    default:
+      return `${day}th`;
+  }
+}
+
+/** An edition's date as Henry reads it aloud — "Tuesday 28th of July 2026".
+ *  Pinned to UTC so the day name cannot shift with the renderer's timezone: the
+ *  print edition renders headless and Vercel runs in UTC, west of which an
+ *  unpinned formatter reads midnight as the previous day. */
+export function longDate(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return iso;
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    new Intl.DateTimeFormat("en-GB", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC",
+    })
+      .formatToParts(d)
+      .find((p) => p.type === type)?.value ?? "";
+  return `${part("weekday")} ${ordinal(Number(part("day")))} of ${part("month")} ${part("year")}`;
+}
+
+/** The issue number a paper carries on its dateline: this edition's position in
+ *  the run, oldest first, counting from 1. Returns null when the date is not in
+ *  the list, so a masthead never prints a confident wrong number. */
+export function editionNumber(dates: string[], date: string): number | null {
+  const i = [...new Set(dates)].sort().indexOf(date);
+  return i < 0 ? null : i + 1;
+}
+
 export function verdictLine(findings: { verdict: string }[]): string {
   if (findings.length === 0) return "no findings";
   const counts = { confirmed: 0, rejected: 0, abstained: 0, alreadyFixed: 0 };
