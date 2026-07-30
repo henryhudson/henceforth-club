@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The ledger, implemented — /board/ledger</title>
+<style>
+  :root { --bg:#f4f1ea; --ink:#1c1a16; --muted:#6b6358; --rule:#d8d0c0; --accent:#a8431f; --accent-soft:#c4a572; --card:#fbf9f4; --code-bg:#1e1e1e; --code-ink:#e8e8e8; --ok:#2f6f3e; --warn:#a8431f; --shadow:0 1px 3px rgba(0,0,0,0.08); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.65;}
+  .wrap{max-width:880px;margin:0 auto;padding:56px 32px;} header.doc{margin-bottom:40px;border-bottom:2px solid var(--rule);padding-bottom:24px;}
+  .eyebrow{font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:34px;line-height:1.15;margin:0 0 12px;font-weight:700;} h2{font-size:24px;margin:48px 0 14px;padding-top:20px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 10px;} .lede{font-size:19px;color:var(--muted);margin:0;} p{margin:14px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(0,0,0,0.06);padding:2px 6px;border-radius:4px;}
+  pre{background:var(--code-bg);color:var(--code-ink);padding:14px 16px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:12.5px;line-height:1.55;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;} th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .task{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:8px 22px 18px;margin:22px 0;box-shadow:var(--shadow);}
+  .task .tasknum{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);}
+  .note{background:#f6efe0;border-left:4px solid var(--accent-soft);padding:10px 16px;border-radius:0 6px 6px 0;margin:14px 0;}
+  ul{margin:12px 0;padding-left:24px;} li{margin:5px 0;}
+  ul.steps{list-style:none;padding-left:4px;} ul.steps>li{margin:12px 0;padding-left:30px;position:relative;}
+  ul.steps>li input[type=checkbox]{position:absolute;left:0;top:5px;width:18px;height:18px;}
+  .badge{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:2px 8px;border-radius:999px;white-space:nowrap;background:#f3dcd2;color:var(--accent);}
+  .badge.henry{background:#dce8dc;color:var(--ok);}
+  .effort{font-size:13px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Plan &middot; 2026-07-30 &middot; henceforth.club/board/ledger</div>
+<h1>The ledger, implemented</h1>
+<p class="lede">Ten tasks taking Henceforth Bitcoin Limited's accounts from a CSV file to a gated, editable table with a Merkle root per accounting period committed on chain. Tasks 1 to 8 deliver the thing that unblocks the filing; 9 and 10 are the chain.</p>
+</header>
+
+<div class="note"><strong>For agentic workers:</strong> use <code>superpowers:subagent-driven-development</code> (recommended) or <code>superpowers:executing-plans</code> to implement this task by task. Steps are real checkboxes. Spec: <code>docs/superpowers/specs/2026-07-30-ledger-webapp-design.html</code>.</div>
+
+<p><strong>Goal.</strong> A gated, editable ledger at <code>/board/ledger</code> backed by Upstash, committing one Merkle root per accounting period on chain and exporting per-transaction inclusion proofs.</p>
+
+<p><strong>Architecture.</strong> Four pure modules under <code>src/lib/ledger/</code> — money, periods, validation, Merkle — none of which perform any input or output, so all of them are testable without a network or a store. A thin Upstash layer and one gated route sit above them, and a React client renders the table. Broadcast runs from a local Node script, never from a deployed route.</p>
+
+<p><strong>Tech stack.</strong> Next.js 16 App Router, React 19, Tailwind v4, <code>@upstash/redis</code>, <code>@bsv/sdk</code>, vitest. All already dependencies; nothing new is installed.</p>
+
+<h2>Global constraints</h2>
+
+<p>Every task's requirements implicitly include these.</p>
+
+<ul>
+<li><strong>Money is a decimal string, arithmetic is in integer pence.</strong> No value representing money may be held in a JavaScript <code>number</code> outside pence-integer form. This is the defect the source spreadsheet carried (<code>2589.659999999998</code>).</li>
+<li><strong>Merkle: an odd node is carried up unchanged, never duplicated.</strong> Non-negotiable, and unfixable once roots are broadcast.</li>
+<li><strong>Merkle: leaves and internal nodes are domain-separated.</strong> Leaf hashes are prefixed <code>L:</code>, internal nodes <code>N:</code>, so a leaf can never be reinterpreted as an internal node.</li>
+<li><strong><code>/api/ledger</code> must gate on <code>verifySession</code> itself.</strong> <code>src/middleware.ts</code> matches <code>["/board", "/board/:path*"]</code> only. The page is gated by middleware; the endpoint is not, and would otherwise be public.</li>
+<li><strong>A committed period is read-only</strong> at both the endpoint and the interface.</li>
+<li><strong>No test may broadcast or spend.</strong> Broadcast is exercised only through the dry-run path.</li>
+<li><strong>Accounts:</strong> <code>HSBC (debit)</code>, <code>HSBC (credit)</code>, <code>NatWest</code>, <code>Amex (credit)</code>.</li>
+<li><strong>Categories:</strong> Statutory filing fees, Internet, Website, Software subscriptions, Training, Equipment, Phone, Tax payment, App revenue, Uncategorised.</li>
+<li><strong>No acronyms or initialisms in prose</strong> — user-visible copy, commit messages, pull request descriptions. Code identifiers are exempt.</li>
+<li><strong>Test command:</strong> <code>npm test</code> (vitest run). Build gate: <code>npm run build</code>.</li>
+</ul>
+
+<div class="note"><strong>Refinement to Decision 3 of the spec.</strong> The spec says the broadcast is server-side, reusing the board archive key. In practice that means a <strong>local Node script</strong>, exactly as <code>scripts/board/render-pdf.mjs</code> already does — not a deployed route. A Vercel route would require a funded private key in the deployment environment, spendable by anyone with dashboard access or through a compromised build, to serve a job that runs about four times a year. The page reads commitment status from Upstash; only Henry's machine can broadcast.</div>
+
+<h2>File structure</h2>
+
+<table>
+<tr><th>File</th><th>Responsibility</th></tr>
+<tr><td><code>src/lib/ledger/types.ts</code></td><td>The <code>Transaction</code>, <code>Period</code> and <code>Commit</code> shapes, and the account and category lists</td></tr>
+<tr><td><code>src/lib/ledger/money.ts</code></td><td>Parse, format and sum money as integer pence</td></tr>
+<tr><td><code>src/lib/ledger/periods.ts</code></td><td>The accounting periods and which one a date falls in</td></tr>
+<tr><td><code>src/lib/ledger/validate.ts</code></td><td>Row validation, matching the rules <code>check.py</code> enforces</td></tr>
+<tr><td><code>src/lib/ledger/merkle.ts</code></td><td>Canonicalisation, leaf hashing, root, proof construction and verification</td></tr>
+<tr><td><code>src/lib/ledger/store.ts</code></td><td>Upstash reads and writes; the only module here that performs input or output</td></tr>
+<tr><td><code>src/app/api/ledger/route.ts</code></td><td>Gated list, create, update, delete</td></tr>
+<tr><td><code>src/app/api/ledger/proof/route.ts</code></td><td>Gated inclusion-proof export for one transaction</td></tr>
+<tr><td><code>src/app/board/ledger/page.tsx</code></td><td>Server shell; loads transactions and commitments</td></tr>
+<tr><td><code>src/app/board/ledger/LedgerClient.tsx</code></td><td>The table</td></tr>
+<tr><td><code>scripts/ledger/seed.mjs</code></td><td>One-time import from <code>transactions.csv</code></td></tr>
+<tr><td><code>scripts/ledger/commit.mjs</code></td><td>Build the tree, broadcast, write the commitment back</td></tr>
+</table>
+
+<h2>Tasks</h2>
+
+<!-- ─────────────────────────────────── 1 -->
+<div class="task">
+<div class="tasknum">Task 1 &middot; Money in pence</div>
+<p><strong>Files:</strong> Create <code>src/lib/ledger/types.ts</code>, <code>src/lib/ledger/money.ts</code>, <code>src/lib/ledger/money.test.ts</code></p>
+<p><strong>Produces:</strong> <code>parseAmount(s: string): number | null</code> returning signed pence; <code>formatPence(p: number): string</code>; <code>sumPence(amounts: string[]): number</code>. Also the <code>Transaction</code> type every later task consumes.</p>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &mdash; write the types.</strong>
+<pre><code>// src/lib/ledger/types.ts
+export type Transaction = {
+  id: string;
+  date: string;        // YYYY-MM-DD
+  account: string;
+  amount: string;      // signed decimal, two places
+  description: string;
+  category: string;
+  source: string;
+};
+
+export type Period = {
+  id: string;          // e.g. "2024-02-01_2024-12-31"
+  label: string;       // e.g. "01 February 2024 to 31 December 2024"
+  start: string;       // inclusive, YYYY-MM-DD
+  end: string;         // inclusive, YYYY-MM-DD
+};
+
+export type Commit = {
+  periodId: string;
+  root: string;              // hex
+  leaves: string[];          // hex, in committed order
+  transactionIds: string[];  // parallel to leaves
+  count: number;
+  txid: string;
+  broadcastAt: string;       // ISO 8601
+  supersedes?: string;       // previous root, when amending
+};
+
+export const ACCOUNTS = [
+  "HSBC (debit)", "HSBC (credit)", "NatWest", "Amex (credit)",
+] as const;
+
+export const CATEGORIES = [
+  "Statutory filing fees", "Internet", "Website", "Software subscriptions",
+  "Training", "Equipment", "Phone", "Tax payment", "App revenue", "Uncategorised",
+] as const;</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 2 &mdash; write the failing test.</strong>
+<pre><code>// src/lib/ledger/money.test.ts
+import { describe, expect, it } from "vitest";
+import { formatPence, parseAmount, sumPence } from "./money";
+
+describe("parseAmount", () =&gt; {
+  it("reads signed two-place figures as pence", () =&gt; {
+    expect(parseAmount("-19.00")).toBe(-1900);
+    expect(parseAmount("6.07")).toBe(607);
+    expect(parseAmount("-429.00")).toBe(-42900);
+  });
+
+  it("refuses anything that is not exactly two places", () =&gt; {
+    expect(parseAmount("-19")).toBeNull();
+    expect(parseAmount("19.0")).toBeNull();
+    expect(parseAmount("19.005")).toBeNull();
+    expect(parseAmount("")).toBeNull();
+    expect(parseAmount("nineteen")).toBeNull();
+  });
+
+  it("round-trips through formatPence", () =&gt; {
+    for (const s of ["-19.00", "6.07", "0.00", "-2589.66"]) {
+      expect(formatPence(parseAmount(s) as number)).toBe(s);
+    }
+  });
+});
+
+describe("sumPence", () =&gt; {
+  it("sums the 2025 period exactly, where floating point would not", () =&gt; {
+    // The nine outgoings and five receipts recorded to 2025-07-03.
+    const out = ["-49.95","-19.00","-429.00","-49.95","-19.00","-49.95",
+                 "-19.00","-49.95","-100.00","-22.00","-49.95"];
+    const inn = ["20.91","6.91","6.13","3.57","3.55","6.07","12.97"];
+    expect(sumPence(out)).toBe(-85775);
+    expect(sumPence(inn)).toBe(6011);
+    expect(sumPence([...out, ...inn])).toBe(-79764);
+  });
+});</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 3 &mdash; run it and watch it fail.</strong> <code>npx vitest run src/lib/ledger/money.test.ts</code>. Expected: cannot resolve <code>./money</code>.</li>
+
+<li><input type="checkbox"> <strong>Step 4 &mdash; implement.</strong>
+<pre><code>// src/lib/ledger/money.ts
+const AMOUNT = /^(-?)(\d+)\.(\d{2})$/;
+
+/** Signed pence, or null if the string is not exactly a two-place figure. */
+export function parseAmount(s: string): number | null {
+  const m = AMOUNT.exec(s ?? "");
+  if (!m) return null;
+  const [, sign, whole, frac] = m;
+  const pence = Number(whole) * 100 + Number(frac);
+  if (!Number.isSafeInteger(pence)) return null;
+  return sign === "-" ? -pence : pence;
+}
+
+export function formatPence(pence: number): string {
+  const sign = pence &lt; 0 ? "-" : "";
+  const abs = Math.abs(pence);
+  return `${sign}${Math.floor(abs / 100)}.${String(abs % 100).padStart(2, "0")}`;
+}
+
+/** Malformed entries contribute nothing; validation rejects them upstream. */
+export function sumPence(amounts: string[]): number {
+  return amounts.reduce((total, a) =&gt; total + (parseAmount(a) ?? 0), 0);
+}</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 5 &mdash; run it and watch it pass.</strong> <code>npx vitest run src/lib/ledger/money.test.ts</code></li>
+
+<li><input type="checkbox"> <strong>Step 6 &mdash; commit.</strong>
+<pre><code>git add src/lib/ledger/types.ts src/lib/ledger/money.ts src/lib/ledger/money.test.ts
+git commit -m "Ledger money is pence, because pounds are not representable"</code></pre></li>
+</ul>
+</div>
+
+<!-- ─────────────────────────────────── 2 -->
+<div class="task">
+<div class="tasknum">Task 2 &middot; Accounting periods</div>
+<p><strong>Files:</strong> Create <code>src/lib/ledger/periods.ts</code>, <code>src/lib/ledger/periods.test.ts</code></p>
+<p><strong>Consumes:</strong> <code>Period</code> from <code>types.ts</code>. <strong>Produces:</strong> <code>PERIODS: readonly Period[]</code>, <code>periodFor(date: string): Period | null</code>, <code>periodById(id: string): Period | null</code>.</p>
+
+<div class="note">The accounting reference date moved twice. A calendar year is the wrong cut for three of the four filed periods, and this module is the only place that fact is encoded.</div>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &mdash; write the failing test.</strong>
+<pre><code>// src/lib/ledger/periods.test.ts
+import { describe, expect, it } from "vitest";
+import { PERIODS, periodById, periodFor } from "./periods";
+
+describe("periodFor", () =&gt; {
+  it("puts January 2024 in the year ended 31 January 2024, not in 2024", () =&gt; {
+    // The trap the spreadsheet's year-sheets fell into.
+    expect(periodFor("2024-01-22")?.id).toBe("2023-02-01_2024-01-31");
+  });
+
+  it("puts February 2024 in the eleven-month short period", () =&gt; {
+    expect(periodFor("2024-02-20")?.id).toBe("2024-02-01_2024-12-31");
+  });
+
+  it("handles the boundaries inclusively", () =&gt; {
+    expect(periodFor("2024-01-31")?.id).toBe("2023-02-01_2024-01-31");
+    expect(periodFor("2024-12-31")?.id).toBe("2024-02-01_2024-12-31");
+    expect(periodFor("2025-01-01")?.id).toBe("2025-01-01_2025-12-31");
+  });
+
+  it("returns null outside every known period", () =&gt; {
+    expect(periodFor("2019-01-01")).toBeNull();
+  });
+});
+
+describe("PERIODS", () =&gt; {
+  it("never overlaps and never leaves a gap after the first", () =&gt; {
+    for (let i = 1; i &lt; PERIODS.length; i++) {
+      const prevEnd = new Date(PERIODS[i - 1].end);
+      const thisStart = new Date(PERIODS[i].start);
+      expect(thisStart.getTime() - prevEnd.getTime()).toBe(86_400_000);
+    }
+  });
+
+  it("resolves by identifier", () =&gt; {
+    expect(periodById("2025-01-01_2025-12-31")?.label)
+      .toBe("01 January 2025 to 31 December 2025");
+  });
+});</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 2 &mdash; run it and watch it fail.</strong> <code>npx vitest run src/lib/ledger/periods.test.ts</code></li>
+
+<li><input type="checkbox"> <strong>Step 3 &mdash; implement.</strong>
+<pre><code>// src/lib/ledger/periods.ts
+import type { Period } from "./types";
+
+// Henceforth Bitcoin Limited, registration 13829963. The accounting reference
+// date moved twice: originally 31 January, shortened to 31 December for the
+// eleven-month period ending 2024-12-31. Calendar years only align from 2025.
+const RANGES: ReadonlyArray<[string, string, string]> = [
+  ["2021-12-01", "2023-01-31", "incorporation to 31 January 2023"],
+  ["2023-02-01", "2024-01-31", "01 February 2023 to 31 January 2024"],
+  ["2024-02-01", "2024-12-31", "01 February 2024 to 31 December 2024"],
+  ["2025-01-01", "2025-12-31", "01 January 2025 to 31 December 2025"],
+  ["2026-01-01", "2026-12-31", "01 January 2026 to 31 December 2026"],
+];
+
+export const PERIODS: readonly Period[] = RANGES.map(([start, end, label]) =&gt; ({
+  id: `${start}_${end}`, label, start, end,
+}));
+
+export function periodFor(date: string): Period | null {
+  return PERIODS.find((p) =&gt; date &gt;= p.start &amp;&amp; date &lt;= p.end) ?? null;
+}
+
+export function periodById(id: string): Period | null {
+  return PERIODS.find((p) =&gt; p.id === id) ?? null;
+}</code></pre>
+<p class="effort">String comparison is correct here precisely because the dates are ISO 8601: lexicographic order and chronological order coincide. That is the whole reason the conversion normalised them.</p></li>
+
+<li><input type="checkbox"> <strong>Step 4 &mdash; run it and watch it pass.</strong></li>
+
+<li><input type="checkbox"> <strong>Step 5 &mdash; commit.</strong>
+<pre><code>git add src/lib/ledger/periods.ts src/lib/ledger/periods.test.ts
+git commit -m "Encode the accounting periods, which are not calendar years"</code></pre></li>
+</ul>
+</div>
+
+<!-- ─────────────────────────────────── 3 -->
+<div class="task">
+<div class="tasknum">Task 3 &middot; Row validation</div>
+<p><strong>Files:</strong> Create <code>src/lib/ledger/validate.ts</code>, <code>src/lib/ledger/validate.test.ts</code></p>
+<p><strong>Consumes:</strong> <code>Transaction</code>, <code>parseAmount</code>. <strong>Produces:</strong> <code>validateTransaction(t: Partial&lt;Transaction&gt;): string[]</code> returning field-prefixed messages, empty when valid.</p>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &mdash; write the failing test.</strong>
+<pre><code>// src/lib/ledger/validate.test.ts
+import { describe, expect, it } from "vitest";
+import { validateTransaction } from "./validate";
+
+const good = {
+  id: "t1", date: "2025-08-19", account: "HSBC (debit)", amount: "-19.00",
+  description: "GIGACLEAR WIFI", category: "Internet", source: "HSBC 2025-08-19",
+};
+
+describe("validateTransaction", () =&gt; {
+  it("accepts a well-formed row", () =&gt; {
+    expect(validateTransaction(good)).toEqual([]);
+  });
+
+  it("rejects a date a spreadsheet has rewritten", () =&gt; {
+    const errors = validateTransaction({ ...good, date: "19/08/2025" });
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain("date");
+  });
+
+  it("rejects an amount without two decimal places", () =&gt; {
+    expect(validateTransaction({ ...good, amount: "-19" })[0]).toContain("amount");
+  });
+
+  it("rejects an empty description", () =&gt; {
+    expect(validateTransaction({ ...good, description: "  " })[0]).toContain("description");
+  });
+
+  it("rejects a date outside every accounting period", () =&gt; {
+    expect(validateTransaction({ ...good, date: "2019-01-01" })[0]).toContain("period");
+  });
+
+  it("reports every problem at once, not just the first", () =&gt; {
+    expect(validateTransaction({ ...good, date: "nope", amount: "x", description: "" }))
+      .toHaveLength(3);
+  });
+});</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 2 &mdash; run it and watch it fail.</strong></li>
+
+<li><input type="checkbox"> <strong>Step 3 &mdash; implement.</strong>
+<pre><code>// src/lib/ledger/validate.ts
+import { parseAmount } from "./money";
+import { periodFor } from "./periods";
+import type { Transaction } from "./types";
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+function isRealDate(s: string): boolean {
+  const d = new Date(`${s}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) &amp;&amp; d.toISOString().slice(0, 10) === s;
+}
+
+export function validateTransaction(t: Partial&lt;Transaction&gt;): string[] {
+  const errors: string[] = [];
+  const date = t.date ?? "";
+
+  if (!ISO_DATE.test(date) || !isRealDate(date)) {
+    errors.push(`date: ${JSON.stringify(date)} must be YYYY-MM-DD — a spreadsheet may have rewritten it`);
+  } else if (!periodFor(date)) {
+    errors.push(`date: ${date} falls outside every known accounting period`);
+  }
+
+  if (parseAmount(t.amount ?? "") === null) {
+    errors.push(`amount: ${JSON.stringify(t.amount ?? "")} must be signed with exactly two decimal places`);
+  }
+
+  if (!(t.description ?? "").trim()) errors.push("description: must not be empty");
+
+  return errors;
+}</code></pre>
+<p class="effort">Note the ordering: an unparseable date reports as a date problem, and only a <em>valid</em> date is then checked for period membership. Reporting both for one bad string would be noise.</p></li>
+
+<li><input type="checkbox"> <strong>Step 4 &mdash; run it and watch it pass.</strong></li>
+
+<li><input type="checkbox"> <strong>Step 5 &mdash; commit.</strong>
+<pre><code>git add src/lib/ledger/validate.ts src/lib/ledger/validate.test.ts
+git commit -m "Validate a ledger row by the rules the checker already enforces"</code></pre></li>
+</ul>
+</div>
+
+<!-- ─────────────────────────────────── 4 -->
+<div class="task">
+<div class="tasknum">Task 4 &middot; The Merkle tree <span class="badge">no second chance</span></div>
+<p><strong>Files:</strong> Create <code>src/lib/ledger/merkle.ts</code>, <code>src/lib/ledger/merkle.test.ts</code></p>
+<p><strong>Consumes:</strong> <code>Transaction</code>; <code>sha256Hex</code> from <code>@/lib/board-auth</code>. <strong>Produces:</strong> <code>canonicalise</code>, <code>leafHash</code>, <code>buildRoot</code>, <code>buildProof</code>, <code>verifyProof</code>.</p>
+
+<div class="note"><strong>Two rules that cannot be retrofitted.</strong> An odd node is carried up unchanged rather than duplicated, which closes the duplicate-leaf ambiguity where two different sets hash to one root. And leaves are domain-separated from internal nodes by a prefix, so a leaf can never be presented as an internal node. Both are cheap now and impossible later, because by then roots are broadcast.</div>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &mdash; write the failing test.</strong>
+<pre><code>// src/lib/ledger/merkle.test.ts
+import { describe, expect, it } from "vitest";
+import { buildProof, buildRoot, canonicalise, leafHash, verifyProof } from "./merkle";
+import type { Transaction } from "./types";
+
+const tx = (id: string, amount: string): Transaction =&gt; ({
+  id, date: "2025-01-15", account: "HSBC (debit)", amount,
+  description: "IPHONE PAYMENT", category: "Phone", source: "HSBC 2025-01-19",
+});
+
+describe("canonicalise", () =&gt; {
+  it("is insensitive to key order in the object", () =&gt; {
+    const a = tx("t1", "-49.95");
+    const b: Transaction = { source: a.source, category: a.category, description: a.description,
+      amount: a.amount, account: a.account, date: a.date, id: a.id };
+    expect(canonicalise(b)).toBe(canonicalise(a));
+  });
+
+  it("changes when any field changes", () =&gt; {
+    expect(canonicalise(tx("t1", "-49.95"))).not.toBe(canonicalise(tx("t1", "-49.96")));
+  });
+});
+
+describe("buildRoot", () =&gt; {
+  it("is a function of the set, not of insertion order", async () =&gt; {
+    const leaves = await Promise.all([tx("a","-1.00"), tx("b","-2.00"), tx("c","-3.00")].map(leafHash));
+    const shuffled = [leaves[2], leaves[0], leaves[1]];
+    expect(await buildRoot([...leaves].sort())).toBe(await buildRoot([...shuffled].sort()));
+  });
+
+  it("returns the single leaf when there is exactly one", async () =&gt; {
+    const [only] = await Promise.all([tx("a","-1.00")].map(leafHash));
+    expect(await buildRoot([only])).toBe(only);
+  });
+
+  it("refuses an empty set", async () =&gt; {
+    await expect(buildRoot([])).rejects.toThrow(/empty/i);
+  });
+
+  it("cannot be forged by the duplicate-leaf attack", async () =&gt; {
+    // Three leaves. The naive construction duplicates C to pair it, so the
+    // four-leaf set [A,B,C,C] would produce the SAME root as [A,B,C].
+    const [a, b, c] = await Promise.all([tx("a","-1.00"), tx("b","-2.00"), tx("c","-3.00")].map(leafHash));
+    expect(await buildRoot([a, b, c])).not.toBe(await buildRoot([a, b, c, c]));
+  });
+});
+
+describe("proofs", () =&gt; {
+  it("verifies every leaf against the root", async () =&gt; {
+    const txs = ["a","b","c","d","e"].map((id, i) =&gt; tx(id, `-${i + 1}.00`));
+    const leaves = (await Promise.all(txs.map(leafHash))).sort();
+    const root = await buildRoot(leaves);
+    for (let i = 0; i &lt; leaves.length; i++) {
+      expect(await verifyProof(leaves[i], await buildProof(leaves, i), root)).toBe(true);
+    }
+  });
+
+  it("fails when one penny changes", async () =&gt; {
+    const leaves = (await Promise.all([tx("a","-1.00"), tx("b","-2.00")].map(leafHash))).sort();
+    const root = await buildRoot(leaves);
+    const tampered = await leafHash(tx("a", "-1.01"));
+    expect(await verifyProof(tampered, await buildProof(leaves, 0), root)).toBe(false);
+  });
+});</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 2 &mdash; run it and watch it fail.</strong></li>
+
+<li><input type="checkbox"> <strong>Step 3 &mdash; implement.</strong>
+<pre><code>// src/lib/ledger/merkle.ts
+import { sha256Hex } from "@/lib/board-auth";
+import type { Transaction } from "./types";
+
+export type ProofStep = { hash: string; side: "left" | "right" };
+
+const FIELDS = ["id","date","account","amount","description","category","source"] as const;
+
+/**
+ * Fixed field order, unit-separator delimited. Record separators cannot occur
+ * in any field, so the encoding is unambiguous without escaping.
+ */
+export function canonicalise(t: Transaction): string {
+  return FIELDS.map((f) =&gt; String(t[f] ?? "").replace(//g, " ")).join("");
+}
+
+export function leafHash(t: Transaction): Promise&lt;string&gt; {
+  return sha256Hex(`L:${canonicalise(t)}`);
+}
+
+function nodeHash(left: string, right: string): Promise&lt;string&gt; {
+  return sha256Hex(`N:${left}${right}`);
+}
+
+/** Leaves must already be sorted. An odd node is carried up, never duplicated. */
+export async function buildRoot(leaves: string[]): Promise&lt;string&gt; {
+  if (leaves.length === 0) throw new Error("cannot commit an empty period");
+  let level = leaves;
+  while (level.length &gt; 1) {
+    const next: string[] = [];
+    for (let i = 0; i &lt; level.length; i += 2) {
+      next.push(i + 1 &lt; level.length ? await nodeHash(level[i], level[i + 1]) : level[i]);
+    }
+    level = next;
+  }
+  return level[0];
+}
+
+/** The sibling path from a leaf to the root. Carried-up nodes contribute nothing. */
+export async function buildProof(leaves: string[], index: number): Promise&lt;ProofStep[]&gt; {
+  if (index &lt; 0 || index &gt;= leaves.length) throw new Error("leaf index out of range");
+  const steps: ProofStep[] = [];
+  let level = leaves;
+  let i = index;
+  while (level.length &gt; 1) {
+    const isRight = i % 2 === 1;
+    const siblingIndex = isRight ? i - 1 : i + 1;
+    if (siblingIndex &lt; level.length) {
+      steps.push({ hash: level[siblingIndex], side: isRight ? "left" : "right" });
+    }
+    const next: string[] = [];
+    for (let j = 0; j &lt; level.length; j += 2) next.push(level[j]); // WRONG — see warning
+    level = next;
+    i = Math.floor(i / 2);
+  }
+  return steps;
+}
+
+export async function verifyProof(leaf: string, steps: ProofStep[], root: string): Promise&lt;boolean&gt; {
+  let acc = leaf;
+  for (const { hash, side } of steps) {
+    acc = side === "left" ? await nodeHash(hash, acc) : await nodeHash(acc, hash);
+  }
+  return acc === root;
+}</code></pre>
+<div class="note"><strong>Implementer's warning.</strong> The <code>buildProof</code> body above collapses each level with a placeholder that keeps only the left element, which produces the right <em>shape</em> but the wrong sibling hashes above level zero. Replace that inner loop with the real level reduction — the same one <code>buildRoot</code> performs, awaiting <code>nodeHash</code> — and make the function <code>async</code>. The test that verifies every leaf in a five-leaf tree is what catches this; do not weaken it to a two-leaf case, because a two-leaf tree has no level above zero and would pass with the bug intact.</div></li>
+
+<li><input type="checkbox"> <strong>Step 4 &mdash; run and watch the five-leaf proof test fail, then fix <code>buildProof</code> as warned.</strong></li>
+
+<li><input type="checkbox"> <strong>Step 5 &mdash; run the whole file green.</strong> <code>npx vitest run src/lib/ledger/merkle.test.ts</code></li>
+
+<li><input type="checkbox"> <strong>Step 6 &mdash; commit.</strong>
+<pre><code>git add src/lib/ledger/merkle.ts src/lib/ledger/merkle.test.ts
+git commit -m "A Merkle tree that carries odd nodes up instead of duplicating them"</code></pre></li>
+</ul>
+</div>
+
+<!-- ─────────────────────────────────── 5 -->
+<div class="task">
+<div class="tasknum">Task 5 &middot; The store, and seeding it</div>
+<p><strong>Files:</strong> Create <code>src/lib/ledger/store.ts</code>, <code>scripts/ledger/seed.mjs</code></p>
+<p><strong>Consumes:</strong> <code>getRedis</code> from <code>@/lib/redis</code>; <code>Transaction</code>, <code>Commit</code>. <strong>Produces:</strong> <code>loadTransactions()</code>, <code>saveTransactions(list)</code>, <code>loadCommit(periodId)</code>, <code>saveCommit(commit)</code>, <code>loadAllCommits()</code>.</p>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &mdash; implement the store.</strong>
+<pre><code>// src/lib/ledger/store.ts
+import { getRedis } from "@/lib/redis";
+import { PERIODS } from "./periods";
+import type { Commit, Transaction } from "./types";
+
+const TRANSACTIONS = "ledger:transactions";
+const commitKey = (periodId: string) =&gt; `ledger:commit:${periodId}`;
+
+export async function loadTransactions(): Promise&lt;Transaction[]&gt; {
+  const redis = getRedis();
+  if (!redis) return [];
+  return (await redis.get&lt;Transaction[]&gt;(TRANSACTIONS)) ?? [];
+}
+
+export async function saveTransactions(list: Transaction[]): Promise&lt;void&gt; {
+  const redis = getRedis();
+  if (!redis) throw new Error("no store configured");
+  await redis.set(TRANSACTIONS, list);
+}
+
+export async function loadCommit(periodId: string): Promise&lt;Commit | null&gt; {
+  const redis = getRedis();
+  if (!redis) return null;
+  return (await redis.get&lt;Commit&gt;(commitKey(periodId))) ?? null;
+}
+
+export async function saveCommit(commit: Commit): Promise&lt;void&gt; {
+  const redis = getRedis();
+  if (!redis) throw new Error("no store configured");
+  await redis.set(commitKey(commit.periodId), commit);
+}
+
+export async function loadAllCommits(): Promise&lt;Record&lt;string, Commit&gt;&gt; {
+  const entries = await Promise.all(
+    PERIODS.map(async (p) =&gt; [p.id, await loadCommit(p.id)] as const),
+  );
+  return Object.fromEntries(entries.filter(([, c]) =&gt; c !== null)) as Record&lt;string, Commit&gt;;
+}</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 2 &mdash; write the seed script.</strong> It reads the converted ledger, assigns identifiers, and refuses to run twice.
+<pre><code>// scripts/ledger/seed.mjs
+// One-time import of ~/Henceforth/ledger/transactions.csv into Upstash.
+// Refuses to overwrite a non-empty store: seeding twice would duplicate
+// every row and silently double the accounts.
+import { readFileSync } from "node:fs";
+import { Redis } from "@upstash/redis";
+
+const CSV = process.env.LEDGER_CSV
+  ?? `${process.env.HOME}/Henceforth/ledger/transactions.csv`;
+
+const redis = new Redis({
+  url: process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN,
+});
+
+/** Minimal reader for the quoting the export actually produces. */
+function parseCsv(text) {
+  const rows = [];
+  let row = [], field = "", quoted = false;
+  for (let i = 0; i &lt; text.length; i++) {
+    const c = text[i];
+    if (quoted) {
+      if (c === '"' &amp;&amp; text[i + 1] === '"') { field += '"'; i++; }
+      else if (c === '"') quoted = false;
+      else field += c;
+    } else if (c === '"') quoted = true;
+    else if (c === ",") { row.push(field); field = ""; }
+    else if (c === "\n") { row.push(field); rows.push(row); row = []; field = ""; }
+    else if (c !== "\r") field += c;
+  }
+  if (field || row.length) { row.push(field); rows.push(row); }
+  return rows.filter((r) =&gt; r.some((f) =&gt; f !== ""));
+}
+
+const [header, ...body] = parseCsv(readFileSync(CSV, "utf8"));
+const transactions = body.map((cells, i) =&gt; {
+  const row = Object.fromEntries(header.map((h, j) =&gt; [h, cells[j] ?? ""]));
+  return { ...row, id: `x${String(i + 1).padStart(4, "0")}` };
+});
+
+const existing = await redis.get("ledger:transactions");
+if (Array.isArray(existing) &amp;&amp; existing.length &amp;&amp; !process.argv.includes("--force")) {
+  console.error(`store already holds ${existing.length} transactions — pass --force to replace`);
+  process.exit(1);
+}
+
+await redis.set("ledger:transactions", transactions);
+console.log(`seeded ${transactions.length} transactions from ${CSV}`);</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 3 &mdash; run it.</strong> <code>node --env-file=.env.local scripts/ledger/seed.mjs</code>. Expected: <code>seeded 96 transactions</code>.</li>
+
+<li><input type="checkbox"> <strong>Step 4 &mdash; run it again</strong> and confirm it refuses rather than duplicating.</li>
+
+<li><input type="checkbox"> <strong>Step 5 &mdash; commit.</strong>
+<pre><code>git add src/lib/ledger/store.ts scripts/ledger/seed.mjs
+git commit -m "Put the ledger in the store, once, and refuse to do it twice"</code></pre></li>
+</ul>
+</div>
+
+<!-- ─────────────────────────────────── 6 -->
+<div class="task">
+<div class="tasknum">Task 6 &middot; The gated endpoint <span class="badge">security</span></div>
+<p><strong>Files:</strong> Create <code>src/app/api/ledger/route.ts</code></p>
+<p><strong>Consumes:</strong> the store, <code>validateTransaction</code>, <code>periodFor</code>, <code>loadCommit</code>. <strong>Produces:</strong> <code>GET</code>, <code>POST</code>, <code>PATCH</code>, <code>DELETE</code> at <code>/api/ledger</code>.</p>
+
+<div class="note"><strong>The middleware does not cover this path.</strong> <code>src/middleware.ts</code> matches <code>["/board", "/board/:path*"]</code>. Without its own check this endpoint would serve the company's accounts to anyone who requested them. The gate below is copied from <code>src/app/api/board/week/tick/route.ts</code>.</div>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &mdash; implement, gate first.</strong>
+<pre><code>// src/app/api/ledger/route.ts
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { verifySession } from "@/lib/board-auth";
+import { loadCommit, loadTransactions, saveTransactions } from "@/lib/ledger/store";
+import { validateTransaction } from "@/lib/ledger/validate";
+import { periodFor } from "@/lib/ledger/periods";
+import type { Transaction } from "@/lib/ledger/types";
+
+export const runtime = "nodejs";
+
+async function authorised(): Promise&lt;boolean&gt; {
+  const secret = process.env.BOARD_COOKIE_SECRET ?? "";
+  if (!secret) return false;
+  return verifySession((await cookies()).get("board_session")?.value, secret);
+}
+
+const deny = () =&gt; NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+/** A committed period is read-only; editing it would break every proof drawn against it. */
+async function lockedPeriod(date: string): Promise&lt;string | null&gt; {
+  const period = periodFor(date);
+  if (!period) return null;
+  const commit = await loadCommit(period.id);
+  return commit ? period.label : null;
+}
+
+export async function GET() {
+  if (!(await authorised())) return deny();
+  return NextResponse.json({ transactions: await loadTransactions() });
+}
+
+export async function POST(req: Request) {
+  if (!(await authorised())) return deny();
+  let body: { transactions?: Partial&lt;Transaction&gt;[] };
+  try { body = await req.json(); } catch { return NextResponse.json({ error: "bad json" }, { status: 400 }); }
+
+  const incoming = body.transactions ?? [];
+  if (!incoming.length) return NextResponse.json({ error: "no transactions" }, { status: 400 });
+
+  const errors = incoming.flatMap((t, i) =&gt; validateTransaction(t).map((e) =&gt; `row ${i + 1}: ${e}`));
+  if (errors.length) return NextResponse.json({ errors }, { status: 400 });
+
+  for (const t of incoming) {
+    const locked = await lockedPeriod(t.date as string);
+    if (locked) return NextResponse.json({ error: `${locked} is committed and read-only` }, { status: 409 });
+  }
+
+  const existing = await loadTransactions();
+  let counter = existing.length;
+  const added = incoming.map((t) =&gt; ({ ...t, id: `n${Date.now()}${++counter}` }) as Transaction);
+  await saveTransactions([...existing, ...added].sort((a, b) =&gt; a.date.localeCompare(b.date)));
+  return NextResponse.json({ added: added.length });
+}
+
+export async function PATCH(req: Request) {
+  if (!(await authorised())) return deny();
+  let body: { transaction?: Transaction };
+  try { body = await req.json(); } catch { return NextResponse.json({ error: "bad json" }, { status: 400 }); }
+  const next = body.transaction;
+  if (!next?.id) return NextResponse.json({ error: "missing id" }, { status: 400 });
+
+  const errors = validateTransaction(next);
+  if (errors.length) return NextResponse.json({ errors }, { status: 400 });
+
+  const list = await loadTransactions();
+  const current = list.find((t) =&gt; t.id === next.id);
+  if (!current) return NextResponse.json({ error: "not found" }, { status: 404 });
+
+  // Both the period it is leaving and the period it is joining must be open.
+  for (const date of [current.date, next.date]) {
+    const locked = await lockedPeriod(date);
+    if (locked) return NextResponse.json({ error: `${locked} is committed and read-only` }, { status: 409 });
+  }
+
+  await saveTransactions(
+    list.map((t) =&gt; (t.id === next.id ? next : t)).sort((a, b) =&gt; a.date.localeCompare(b.date)),
+  );
+  return NextResponse.json({ ok: true });
+}
+
+export async function DELETE(req: Request) {
+  if (!(await authorised())) return deny();
+  const id = new URL(req.url).searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "missing id" }, { status: 400 });
+
+  const list = await loadTransactions();
+  const target = list.find((t) =&gt; t.id === id);
+  if (!target) return NextResponse.json({ error: "not found" }, { status: 404 });
+
+  const locked = await lockedPeriod(target.date);
+  if (locked) return NextResponse.json({ error: `${locked} is committed and read-only` }, { status: 409 });
+
+  await saveTransactions(list.filter((t) =&gt; t.id !== id));
+  return NextResponse.json({ ok: true });
+}</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 2 &mdash; verify the gate by hand.</strong> With the dev server running, <code>curl -i localhost:3000/api/ledger</code> with no cookie. Expected: <code>401</code> and no transaction data in the body. This is the single most important manual check in the plan.</li>
+
+<li><input type="checkbox"> <strong>Step 3 &mdash; verify a signed-in read.</strong> Sign in at <code>/board/login</code>, then fetch <code>/api/ledger</code> from the browser console. Expected: 96 transactions.</li>
+
+<li><input type="checkbox"> <strong>Step 4 &mdash; commit.</strong>
+<pre><code>git add src/app/api/ledger/route.ts
+git commit -m "Serve the ledger only to a signed-in board session"</code></pre></li>
+</ul>
+</div>
+
+<!-- ─────────────────────────────────── 7 -->
+<div class="task">
+<div class="tasknum">Task 7 &middot; The table, read-only</div>
+<p><strong>Files:</strong> Create <code>src/app/board/ledger/page.tsx</code>, <code>src/app/board/ledger/LedgerClient.tsx</code></p>
+<p><strong>Consumes:</strong> <code>loadTransactions</code>, <code>loadAllCommits</code>, <code>PERIODS</code>, <code>sumPence</code>, <code>formatPence</code>. <strong>Produces:</strong> the page at <code>/board/ledger</code>, gated by existing middleware.</p>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &mdash; the server shell,</strong> following <code>src/app/board/page.tsx</code>.
+<pre><code>// src/app/board/ledger/page.tsx
+import { loadAllCommits, loadTransactions } from "@/lib/ledger/store";
+import LedgerClient from "./LedgerClient";
+
+export const dynamic = "force-dynamic";
+
+export default async function LedgerPage() {
+  const [transactions, commits] = await Promise.all([loadTransactions(), loadAllCommits()]);
+  if (!transactions.length) {
+    return (
+      &lt;main className="mx-auto max-w-3xl px-6 py-16 text-center text-muted"&gt;
+        No ledger data yet — run{" "}
+        &lt;code className="text-accent-green"&gt;node --env-file=.env.local scripts/ledger/seed.mjs&lt;/code&gt;
+      &lt;/main&gt;
+    );
+  }
+  return &lt;LedgerClient initialTransactions={transactions} commits={commits} /&gt;;
+}</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 2 &mdash; the client, rendering one period at a time</strong> with a selector, the running totals, the commitment badge, and rows. Period totals come from <code>sumPence</code> over the period's rows, never from a floating-point sum. Committed periods render every row with a lock and no edit affordance. On a narrow viewport each row becomes a stacked block rather than a horizontally scrolling table.</li>
+
+<li><input type="checkbox"> <strong>Step 3 &mdash; check the figures against the filed accounts.</strong> Select each period and confirm: &pound;586.43, &pound;2,596.67, &pound;526.27, and &pound;797.64 net for 2025. If any differs, stop — the store or the period logic is wrong, not the display.</li>
+
+<li><input type="checkbox"> <strong>Step 4 &mdash; export the period as CSV.</strong> A download button emitting exactly the six columns the converted ledger uses, in the same order, so the accountant's plain-text artifact never drifts from the page.
+<pre><code>const HEADER = ["date","account","amount","description","category","source"] as const;
+
+function toCsv(rows: Transaction[]): string {
+  const cell = (v: string) =&gt; (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+  return [HEADER.join(","), ...rows.map((r) =&gt; HEADER.map((h) =&gt; cell(r[h])).join(","))].join("\n") + "\n";
+}</code></pre></li>
+
+<li><input type="checkbox"> <strong>Step 5 &mdash; round-trip the export through the checker.</strong> Save the download over a copy of <code>~/Henceforth/ledger/transactions.csv</code> and run <code>python3 check.py</code>. Expected: no errors, and the period totals it prints match the page. This is the assertion that the two representations have not diverged.</li>
+
+<li><input type="checkbox"> <strong>Step 6 &mdash; <code>npm run build</code></strong> and confirm it passes.</li>
+
+<li><input type="checkbox"> <strong>Step 7 &mdash; commit.</strong>
+<pre><code>git add src/app/board/ledger
+git commit -m "Show the ledger a period at a time, and export it as the checker expects"</code></pre></li>
+</ul>
+</div>
+
+<!-- ─────────────────────────────────── 8 -->
+<div class="task">
+<div class="tasknum">Task 8 &middot; The table, editable <span class="badge henry">unblocks the filing</span></div>
+<p><strong>Files:</strong> Modify <code>src/app/board/ledger/LedgerClient.tsx</code></p>
+<p><strong>Consumes:</strong> the endpoint from Task 6, <code>validateTransaction</code> for immediate feedback.</p>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &mdash; add a row.</strong> A blank row appended to an open period, each cell editable in place. Account and category are selects drawn from <code>ACCOUNTS</code> and <code>CATEGORIES</code>; date, amount, description and source are text.</li>
+<li><input type="checkbox"> <strong>Step 2 &mdash; duplicate a row.</strong> Copies every field of an existing row into a new one so a recurring charge is one action and a date edit. This is the affordance that makes a month of statements bearable.</li>
+<li><input type="checkbox"> <strong>Step 3 &mdash; validate as typed.</strong> Run <code>validateTransaction</code> on each edit and mark the offending cell; do not block typing, and do not permit the save while errors stand.</li>
+<li><input type="checkbox"> <strong>Step 4 &mdash; edit and delete,</strong> against <code>PATCH</code> and <code>DELETE</code>. A <code>409</code> surfaces as "this period is committed" rather than a generic failure.</li>
+<li><input type="checkbox"> <strong>Step 5 &mdash; paste many.</strong> A textarea accepting tab- or comma-separated rows, parsed, shown in a review table with per-row errors, and written through <code>POST</code> only on confirmation. Nothing is stored until the review is accepted.
+<pre><code>/**
+ * Tab-separated wins when a tab is present, because a pasted description may
+ * itself contain a comma but will never contain a tab.
+ */
+export function parsePasted(text: string): Partial&lt;Transaction&gt;[] {
+  return text
+    .split("\n")
+    .map((line) =&gt; line.trim())
+    .filter(Boolean)
+    .map((line) =&gt; {
+      const cells = line.includes("\t") ? line.split("\t") : line.split(",");
+      const [date, account, amount, description, category, source] = cells.map((c) =&gt; c.trim());
+      return { date, account, amount, description, category: category || "Uncategorised", source: source ?? "" };
+    });
+}</code></pre>
+<p class="effort">Run every parsed row through <code>validateTransaction</code> before showing the review, and show the row number beside each failure — a paste of forty rows with one bad date must say which one.</p></li>
+<li><input type="checkbox"> <strong>Step 6 &mdash; enter a real transaction from a statement,</strong> reload, and confirm it survives.</li>
+<li><input type="checkbox"> <strong>Step 7 &mdash; <code>npm run build</code>, then commit.</strong>
+<pre><code>git add src/app/board/ledger/LedgerClient.tsx
+git commit -m "Make the ledger table an editor, with a paste path for the backlog"</code></pre></li>
+</ul>
+</div>
+
+<!-- ─────────────────────────────────── 9 -->
+<div class="task">
+<div class="tasknum">Task 9 &middot; Commit a period to the chain <span class="badge">real money</span></div>
+<p><strong>Files:</strong> Create <code>scripts/ledger/commit.mjs</code></p>
+<p><strong>Consumes:</strong> the store, the Merkle module, the broadcast pattern at <code>scripts/board/render-pdf.mjs:81-134</code>.</p>
+
+<div class="note">This script spends. It runs on Henry's machine with <code>BOARD_ARCHIVE_WIF</code> from <code>.env.local</code>, never on Vercel. Every run defaults to a dry run; broadcasting requires <code>--broadcast</code> explicitly.</div>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &mdash; build the tree offline.</strong> Load the period's transactions, validate every one, refuse on any error or on an empty period, hash the leaves, sort them, build the root. Print the root, the count and the period. No network.</li>
+<li><input type="checkbox"> <strong>Step 2 &mdash; verify the root by hand</strong> against the same figures the page shows. The count must equal the row count for that period.</li>
+<li><input type="checkbox"> <strong>Step 3 &mdash; refuse an already-committed period</strong> unless <code>--supersede</code> is passed, in which case the previous root is carried into the new commitment's <code>supersedes</code> field.</li>
+<li><input type="checkbox"> <strong>Step 4 &mdash; build the output,</strong> following <code>render-pdf.mjs:131-134</code>.
+<pre><code>import { LockingScript, OP, Utils } from "@bsv/sdk";
+
+const push = (s, text) =&gt; s.writeBin(Utils.toArray(text, "utf8"));
+
+function commitmentScript({ periodId, root, count, supersedes }) {
+  const s = new LockingScript().writeOpCode(OP.OP_FALSE).writeOpCode(OP.OP_RETURN);
+  push(s, "HFLEDGER");
+  push(s, "1");
+  push(s, periodId);
+  push(s, root);
+  push(s, String(count));
+  if (supersedes) push(s, supersedes);
+  return s;
+}</code></pre>
+<p class="effort">The count is not decoration: without it, a verifier cannot detect a set that has had transactions removed from its tail, because a shorter set still produces a valid-looking root.</p></li>
+<li><input type="checkbox"> <strong>Step 5 &mdash; dry run.</strong> Follow <code>render-pdf.mjs</code>: a fabricated ten-thousand-satoshi output, transaction built and signed, hex printed, nothing broadcast. Confirm the hex decodes and the output script contains the root.</li>
+<li><input type="checkbox"> <strong>Step 6 &mdash; broadcast once, for real,</strong> on the earliest filed period. Record the transaction identifier. Confirm on a block explorer that the output carries the expected root.</li>
+<li><input type="checkbox"> <strong>Step 7 &mdash; write the commitment back</strong> to <code>ledger:commit:&lt;period&gt;</code> only after the broadcast is accepted, and confirm the page now shows that period locked.</li>
+<li><input type="checkbox"> <strong>Step 8 &mdash; commit.</strong>
+<pre><code>git add scripts/ledger/commit.mjs
+git commit -m "Commit an accounting period's Merkle root to the chain"</code></pre></li>
+</ul>
+</div>
+
+<!-- ─────────────────────────────────── 10 -->
+<div class="task">
+<div class="tasknum">Task 10 &middot; Inclusion proofs</div>
+<p><strong>Files:</strong> Create <code>src/app/api/ledger/proof/route.ts</code>; modify <code>LedgerClient.tsx</code></p>
+<p><strong>Consumes:</strong> <code>buildProof</code>, <code>verifyProof</code>, <code>loadCommit</code>. <strong>Produces:</strong> <code>GET /api/ledger/proof?id=&lt;transaction&gt;</code>.</p>
+
+<ul class="steps">
+<li><input type="checkbox"> <strong>Step 1 &mdash; write the failing test</strong> for the round trip: a stored commitment plus a transaction identifier yields a proof that <code>verifyProof</code> accepts against the stored root, and that a one-penny alteration causes to fail.</li>
+<li><input type="checkbox"> <strong>Step 2 &mdash; implement the route,</strong> gated the same way as Task 6. It returns the leaf, the sibling path, the root, the on-chain transaction identifier and the period label — and never the other transactions.</li>
+<li><input type="checkbox"> <strong>Step 3 &mdash; assert the disclosure boundary.</strong> A test that the response body contains no description, amount or account from any <em>other</em> transaction. This is the property the whole design exists for; assert it rather than assuming it.</li>
+<li><input type="checkbox"> <strong>Step 4 &mdash; add the row action</strong> on locked rows: export this transaction's proof as a small text file.</li>
+<li><input type="checkbox"> <strong>Step 5 &mdash; verify one proof independently</strong> — recompute the leaf from the exported transaction, walk the path, compare to the root read back from the chain rather than from the store.</li>
+<li><input type="checkbox"> <strong>Step 6 &mdash; <code>npm test</code> and <code>npm run build</code>, then commit.</strong>
+<pre><code>git add src/app/api/ledger/proof/route.ts src/app/board/ledger/LedgerClient.tsx
+git commit -m "Prove one transaction was committed without showing the others"</code></pre></li>
+</ul>
+</div>
+
+<h2>Definition of done</h2>
+
+<ul>
+<li><code>npm test</code> green, including the duplicate-leaf, five-leaf-proof and disclosure-boundary tests.</li>
+<li><code>npm run build</code> green.</li>
+<li><code>curl</code> against <code>/api/ledger</code> with no session returns <code>401</code> and no data.</li>
+<li>All four period totals match the filed figures.</li>
+<li>A transaction typed on a phone survives a reload.</li>
+<li>One period is committed on chain and its rows are locked.</li>
+<li>One inclusion proof verifies against a root read from the chain.</li>
+</ul>
+
+<h2>What this plan does not do</h2>
+
+<p>Multiple companies or tenants; double or triple-entry bookkeeping; delivery-versus-payment contracts; the supplier portal; X12 and EDIFACT translation; Forth contract compilation. And it does not transcribe the missing twelve months &mdash; that needs bank statements which are not yet downloaded.</p>
+
+</div>
+</body>
+</html>
