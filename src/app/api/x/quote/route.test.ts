@@ -8,6 +8,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  */
 const state = {
   head: null as { username: string; postCount: number } | null,
+  /** When set, the head read THROWS instead of resolving. */
+  headThrows: null as Error | null,
   priceOk: true,
   headReserve: null as null | { ok: false; reason: "budget-exhausted" | "accounting-unavailable" },
   headReserved: 0,
@@ -19,6 +21,7 @@ const state = {
 vi.mock("@/lib/xfetch", () => ({
   fetchProfileHead: async () => {
     state.calls.push("head-read");
+    if (state.headThrows) throw state.headThrows;
     return state.head;
   },
   pagesForPostCount: (n: number) => Math.max(1, Math.ceil(n / 100)),
@@ -54,6 +57,7 @@ const get = (query: string) => GET(new Request(`http://x/api/x/quote?${query}`))
 beforeEach(() => {
   process.env.X_BEARER_TOKEN = "test-token";
   state.head = { username: "henryhudson6", postCount: 1498 };
+  state.headThrows = null;
   state.priceOk = true;
   state.headReserve = null;
   state.headReserved = 0;
@@ -104,6 +108,17 @@ describe("GET /api/x/quote — the unpaid head ceiling", () => {
     expect(res.status).toBe(503);
     expect(await res.json()).toEqual({ ok: false, reason: "accounting-unavailable" });
     expect(state.calls).not.toContain("head-read");
+  });
+
+  it("HANDS THE RESERVATION BACK when the read THROWS — a request that never completed billed nothing", async () => {
+    // fetchProfileHead returns null for a non-ok STATUS but throws on a network
+    // rejection, and on a 200 carrying non-JSON. Neither returned a resource, so
+    // neither was billed. Without the release, a flaky network would ratchet the
+    // day's ceiling shut one half-cent at a time and never hand a mil back.
+    state.headThrows = new Error("fetch failed");
+    await expect(get("handle=henryhudson6")).rejects.toThrow("fetch failed");
+    expect(state.headReserved).toBe(1);
+    expect(state.headReleased).toBe(1);
   });
 
   it("HANDS THE RESERVATION BACK for a handle that does not exist — X returned nothing, so X billed nothing", async () => {

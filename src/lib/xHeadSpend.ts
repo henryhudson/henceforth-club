@@ -32,10 +32,31 @@ import { resourcesToUsd, usdToMils, type Reservation } from "./xSpend";
  * hold together." One bucket is not the quantity that needs bounding here.
  *
  * So unpaid reads get their own, smaller ceiling. Anonymous abuse is capped at
- * `X_API_HEAD_BUDGET_USD` a day and CANNOT reach the customers' budget, because
- * it is accounted in a different key. The worst an abuser achieves is denying
- * price discovery — bounded, self-healing at the UTC day boundary, and visible
- * as a refusal rather than a bill.
+ * `X_API_HEAD_BUDGET_USD` a day and cannot spend a single mil of the customers'
+ * BUDGET, because it is accounted in a different Redis key.
+ *
+ * WHAT THIS DOES NOT DO, stated plainly because an earlier draft of this comment
+ * claimed otherwise ("exhausting it leaves the paying path untouched") and that
+ * was false. A separate budget is not a separate PATH. `/api/x/archive?full=1`
+ * must size its fee before it can demand one, so its head read — and therefore
+ * this ceiling — sits in front of the payment gate. Exhaust the head bucket and
+ * a paying caller's whole-profile archive is refused 429 as well, until the UTC
+ * day turns. Price discovery goes with it, and the app quotes before every
+ * purchase, so in practice the paid flow is blocked at its entrance.
+ *
+ * That is a real limitation and it is accepted deliberately, because the
+ * alternative is worse in kind rather than degree: today the same requests are
+ * unbounded and simply cost money, with no ceiling at any price. What is bought
+ * here is a bound; what is not bought is isolation. Two things narrow it — the
+ * archive route now demands a well-formed transaction id BEFORE the read, so the
+ * bucket is no longer reachable from a bare browser request, and the budget is
+ * tunable. Full isolation needs the head read for a VERIFIED payment to draw on
+ * the paid budget instead, which cannot be done without solving the ordering
+ * problem above, and is tracked separately rather than pretended away here.
+ *
+ * `submitThrottle` puts the rule this comment now obeys: a comment that
+ * oversells a protection is worse than none, because the next reader stops
+ * checking.
  *
  * Fails CLOSED, exactly as `reserveXApiSpend` does: without a store we cannot
  * count the spend, so we refuse rather than spend money we cannot account for.
@@ -47,23 +68,39 @@ import { resourcesToUsd, usdToMils, type Reservation } from "./xSpend";
 export const HEAD_RESOURCES = 1;
 
 /**
- * A hundred unpaid head reads a day. Generous against real price discovery,
- * cheap against abuse, and a small fraction of the paid budget so exhausting it
- * leaves the paying path untouched.
+ * A hundred unpaid head reads a day — generous against real price discovery at
+ * today's volumes, cheap against abuse, and a small fraction of the paid budget
+ * so exhausting it costs the customers' budget nothing.
+ *
+ * It does NOT leave the paying path untouched; see the note above. Raise
+ * `X_API_HEAD_BUDGET_USD` if genuine quote volume ever approaches a hundred a
+ * day, because the refusal lands on customers as well as abusers.
  */
 export const DEFAULT_HEAD_BUDGET_USD = 0.5;
 
 /** Two days, so a late release cannot resurrect a stale bucket. */
 const KEY_TTL_SECONDS = 48 * 3600;
 
-/** Reads only the one variable it needs, so a test can pass a bare object. */
+/**
+ * Reads only the one variable it needs, so a test can pass a bare object.
+ *
+ * BLANK IS UNSET, deliberately, and this differs from the sibling
+ * `dailyBudgetUsd` on purpose. `Number("")` and `Number(" ")` are both 0, so
+ * coercing first reads a variable that exists but holds nothing as a ZERO
+ * budget — which refuses every read rather than falling back to the default. A
+ * blank value is the most likely way this is misconfigured (a deployment
+ * setting present but empty), and it must not be the way the feature turns
+ * itself off. `dailyBudgetUsd` has that bug today for the PAID ceiling; it is
+ * left alone here rather than changed as a drive-by, because altering what a
+ * blank budget means on the paid path deserves its own change and its own test.
+ */
 export function headBudgetUsd(
   env: Record<string, string | undefined> = process.env,
 ): number {
-  const raw = Number(env.X_API_HEAD_BUDGET_USD);
-  return Number.isFinite(raw) && raw >= 0 && env.X_API_HEAD_BUDGET_USD !== ""
-    ? raw
-    : DEFAULT_HEAD_BUDGET_USD;
+  const raw = env.X_API_HEAD_BUDGET_USD?.trim();
+  if (!raw) return DEFAULT_HEAD_BUDGET_USD;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : DEFAULT_HEAD_BUDGET_USD;
 }
 
 /** Pure. Which day's UNPAID bucket a moment belongs to, in UTC. */

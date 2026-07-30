@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // In-memory fakes for the input/output boundaries, register-route pattern.
 const state = {
   head: null as { postCount: number } | null,
+  /** When set, the head read THROWS instead of resolving. */
+  headThrows: null as Error | null,
   fetchResult: null as { archive: { posts: unknown[] }; mediaRefs: unknown[] } | null,
   gateOk: true,
   gatedResources: [] as number[],
@@ -18,6 +20,7 @@ const state = {
 vi.mock("@/lib/xfetch", () => ({
   fetchProfileHead: async () => {
     state.calls.push("head-read");
+    if (state.headThrows) throw state.headThrows;
     return state.head;
   },
   fetchXArchive: async () => state.fetchResult,
@@ -62,6 +65,7 @@ const PAID = "payment=" + "a".repeat(64);
 beforeEach(() => {
   process.env.X_BEARER_TOKEN = "test-token";
   state.head = { postCount: 500 };
+  state.headThrows = null;
   state.fetchResult = null;
   state.gateOk = true;
   state.gatedResources.length = 0;
@@ -162,5 +166,30 @@ describe("GET /api/x/archive — the unpaid head ceiling", () => {
     const res = await get(`handle=not+a+handle&${PAID}&full=1`);
     expect(res.status).toBe(400);
     expect(state.calls).toEqual([]);
+  });
+
+  it("DEMANDS A WELL-FORMED PAYMENT ID BEFORE the billed read — a bare browser request cannot reach the bucket", async () => {
+    // The gate cannot run yet (it needs a fee sized from the post count this
+    // read exists to discover), so the gate's own free first act is duplicated
+    // here on purpose. Without it, `?handle=x&full=1` in an address bar spends
+    // half a cent and a slot of the day's ceiling.
+    const res = await get("handle=henryhudson6&full=1");
+    expect(res.status).toBe(402);
+    expect(await res.json()).toEqual({ ok: false, reason: "payment-required" });
+    expect(state.calls).toEqual([]);
+    expect(state.headReserved).toBe(0);
+  });
+
+  it("refuses a malformed payment id before the billed read too", async () => {
+    const res = await get("handle=henryhudson6&payment=not-a-txid&full=1");
+    expect(res.status).toBe(402);
+    expect(state.calls).toEqual([]);
+  });
+
+  it("HANDS THE RESERVATION BACK when the read THROWS — a request that never completed billed nothing", async () => {
+    state.headThrows = new Error("fetch failed");
+    await expect(get(`handle=henryhudson6&${PAID}&full=1`)).rejects.toThrow("fetch failed");
+    expect(state.headReserved).toBe(1);
+    expect(state.headReleased).toBe(1);
   });
 });

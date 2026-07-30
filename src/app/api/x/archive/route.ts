@@ -4,6 +4,7 @@ import { selectRefs } from "@/lib/xArchive";
 import { payAndReserve, resourcesForPosts } from "@/lib/xGate";
 import { releaseXApiSpend } from "@/lib/xSpend";
 import { releaseHeadRead, reserveHeadRead } from "@/lib/xHeadSpend";
+import { isTxid } from "@/lib/xPayment";
 
 /**
  * GET /api/x/archive?handle=<h>&payment=<txid>&images=1&videos=1&full=1
@@ -65,6 +66,16 @@ export async function GET(req: Request) {
   let maxPages = 1;
   let billedPosts = 100;
   if (full) {
+    // A well-formed payment id is demanded BEFORE the billed read, not after.
+    // This costs nothing (`isTxid` is a regex) and it is the difference between
+    // a tap anyone can open from a browser bar and one that at least requires a
+    // 64-hex transaction id. It duplicates the gate's own first act
+    // deliberately: the gate cannot run yet, because it needs a fee sized from
+    // the post count this read exists to discover.
+    if (!isTxid(url.searchParams.get("payment"))) {
+      return NextResponse.json({ ok: false, reason: "payment-required" }, { status: 402 });
+    }
+
     // One moment for the reserve/release pair, so they cannot land in different
     // UTC buckets across a midnight boundary.
     const now = new Date();
@@ -76,7 +87,18 @@ export async function GET(req: Request) {
       );
     }
 
-    const head = await fetchProfileHead(handle, token);
+    let head;
+    try {
+      head = await fetchProfileHead(handle, token);
+    } catch (error) {
+      // `fetchProfileHead` returns null for a non-ok STATUS but THROWS on a
+      // network rejection or a 200 carrying non-JSON. Both billed nothing — the
+      // read never completed — so the reservation must come back here too.
+      // Without this a flaky network ratchets the day's ceiling shut one
+      // half-cent at a time, and nothing ever hands those mils back.
+      await releaseHeadRead(now);
+      throw error;
+    }
     if (!head) {
       // Billed per resource RETURNED, and none came back. Holding the
       // reservation here would turn a money leak into a free way to pin the

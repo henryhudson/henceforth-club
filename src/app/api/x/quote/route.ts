@@ -60,7 +60,18 @@ export async function GET(req: Request) {
     );
   }
 
-  const head = await fetchProfileHead(handle, token);
+  let head;
+  try {
+    head = await fetchProfileHead(handle, token);
+  } catch (error) {
+    // `fetchProfileHead` returns null for a non-ok STATUS but THROWS on a
+    // network rejection or a 200 carrying non-JSON. Both billed nothing — the
+    // read never completed — so the reservation must come back here too.
+    // Without this a flaky network ratchets the day's ceiling shut one
+    // half-cent at a time, and nothing ever hands those mils back.
+    await releaseHeadRead(now);
+    throw error;
+  }
   if (!head) {
     // X bills per resource RETURNED and returned none, so this read cost
     // nothing. Keeping the reservation would let nonsense handles pin the day's

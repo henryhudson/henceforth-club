@@ -65,7 +65,21 @@ describe("headBudgetUsd", () => {
     // A NaN budget read as 0 would refuse every quote; read as Infinity it
     // would refuse none. Neither is acceptable, so it must fall back.
     expect(headBudgetUsd({ X_API_HEAD_BUDGET_USD: "not-a-number" })).toBe(DEFAULT_HEAD_BUDGET_USD);
+  });
+
+  it("treats a BLANK value as unset, not as a zero budget", () => {
+    // The likeliest misconfiguration is a deployment variable that exists but
+    // holds nothing. Number("") and Number(" ") are both 0, so coercing first
+    // would turn a blank setting into "refuse every quote" — the feature
+    // silently off, looking configured. Whitespace counts as blank: an earlier
+    // draft of this guard compared against "" only and let " " through as 0.
     expect(headBudgetUsd({ X_API_HEAD_BUDGET_USD: "" })).toBe(DEFAULT_HEAD_BUDGET_USD);
+    expect(headBudgetUsd({ X_API_HEAD_BUDGET_USD: " " })).toBe(DEFAULT_HEAD_BUDGET_USD);
+    expect(headBudgetUsd({ X_API_HEAD_BUDGET_USD: "\t\n" })).toBe(DEFAULT_HEAD_BUDGET_USD);
+  });
+
+  it("still reads a padded number, so a stray space in a deployment setting works", () => {
+    expect(headBudgetUsd({ X_API_HEAD_BUDGET_USD: " 1.5 " })).toBe(1.5);
   });
 
   it("honours an explicit override, including zero", () => {
