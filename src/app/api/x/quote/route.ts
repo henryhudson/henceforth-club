@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { fetchProfileHead, pagesForPostCount, X_TIMELINE_CEILING, POSTS_PER_PAGE } from "@/lib/xfetch";
 import { resourcesForPosts } from "@/lib/xGate";
 import { resourcesToUsd } from "@/lib/xSpend";
+import { releaseHeadRead, reserveHeadRead } from "@/lib/xHeadSpend";
 import { bsvUsd, satsForUsd } from "@/lib/xPrice";
 
 /**
@@ -15,8 +16,17 @@ import { bsvUsd, satsForUsd } from "@/lib/xPrice";
  * which rides along for free because X bills per resource RETURNED, not per
  * field.
  *
- * We eat that half-cent rather than gate it, because a quote a caller has to pay
- * for is not a quote. The per-address rate limiter is what stops it being abused.
+ * We eat that half-cent rather than charge for it, because a quote a caller has
+ * to pay for is not a quote. What we do NOT do is spend it uncounted: the read
+ * is booked against the unpaid head ceiling (lib/xHeadSpend) before it happens,
+ * and handed back when X returns nothing.
+ *
+ * That ceiling is deliberately its OWN bucket, not the paid one. Booking these
+ * against the customers' budget would bound the bill and break the product —
+ * four hundred anonymous quotes would exhaust the day and every paying archive
+ * would then be refused. This comment previously named a per-address rate
+ * limiter as the control; no limiter was ever applied to this route, and the
+ * archive route justified its identical read by pointing back here.
  *
  * The price is derived, never pinned: dollars X will charge us for THIS read,
  * converted at the live rate, plus margin (lib/xPrice). Fails closed on an
@@ -39,8 +49,23 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, reason: price.reason }, { status: 503 });
   }
 
+  // One moment for the reserve/release pair, so they cannot land in different
+  // UTC buckets across a midnight boundary.
+  const now = new Date();
+  const reserved = await reserveHeadRead(now);
+  if (!reserved.ok) {
+    return NextResponse.json(
+      { ok: false, reason: reserved.reason },
+      { status: reserved.reason === "budget-exhausted" ? 429 : 503 },
+    );
+  }
+
   const head = await fetchProfileHead(handle, token);
   if (!head) {
+    // X bills per resource RETURNED and returned none, so this read cost
+    // nothing. Keeping the reservation would let nonsense handles pin the day's
+    // ceiling for free.
+    await releaseHeadRead(now);
     return NextResponse.json({ ok: false, reason: "no-user" }, { status: 404 });
   }
 
