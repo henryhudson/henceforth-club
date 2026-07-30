@@ -83,7 +83,60 @@
 
 <div class="decision"><strong>Decision 4 &mdash; money is a decimal string, and arithmetic runs in integer pence.</strong> JavaScript numbers are IEEE-754 doubles. That is precisely the defect the spreadsheet carried: its 2023 total was stored as <code>2589.659999999998</code>. Putting <code>amount</code> in a <code>number</code> would reintroduce, in new code, the bug the conversion just removed &mdash; and it would do so silently, in a system whose entire purpose is producing figures a tax authority relies on.</div>
 
-<h2>5 &middot; The commitment</h2>
+<h2>5 &middot; The table</h2>
+
+<p>The page is a table, and it is the whole interface. Adding a transaction means adding a row.</p>
+
+<div class="decision"><strong>Decision 7 &mdash; the table is the editor; there is no separate entry form.</strong> Bookkeeping is repetitive by nature: a month of Gigaclear at &pound;19 differs from the previous month only in its date. Duplicating a row and changing one field is faster than refilling a form, and it preserves the one genuinely good property of the spreadsheet being replaced. A form would be a worse tool wearing a more modern shape.</div>
+
+<p>The working period, editable:</p>
+
+<div class="mock">/board/ledger
+┌────────────────────────────────────────────────────────────────┐
+│ LEDGER                            01 Jan 2025 – 31 Dec 2025 ▾  │
+│ 18 transactions · in £60.11 · out £857.75 · net −£797.64       │
+│ ○ not yet committed                                 [ COMMIT ] │
+├────────────┬──────────────┬──────────┬─────────────────────────┤
+│ DATE       │ ACCOUNT      │   AMOUNT │ DESCRIPTION             │
+├────────────┼──────────────┼──────────┼─────────────────────────┤
+│ 2025-01-02 │ NatWest      │   +20.91 │ PAYMENT FOR APP DOWNLO… │
+│ 2025-01-15 │ HSBC (debit) │   −49.95 │ IPHONE PAYMENT          │
+│ 2025-01-20 │ HSBC (debit) │   −19.00 │ GIGACLEAR WIFI          │
+│ 2025-02-12 │ Amex (credit)│  −429.00 │ APPLE IPAD              │
+│      ⋮     │              │          │                         │
+├────────────┴──────────────┴──────────┴─────────────────────────┤
+│ + add row                                     ⇥ paste many     │
+└────────────────────────────────────────────────────────────────┘</div>
+
+<p>Category and source are columns too, elided in the sketch for width. On a narrow screen the row becomes a stacked card rather than a scrolling table, since a ledger read sideways on a phone is a ledger nobody updates.</p>
+
+<h3>Validation is immediate, not deferred</h3>
+<p>The rules already enforced by <code>check.py</code> apply as the row is typed: the date is <code>YYYY-MM-DD</code>, the amount is a signed two-place figure, the description is not empty. A bad cell is marked where it is, rather than the whole period failing later at commit time with a line number.</p>
+
+<h3>The backlog affordance</h3>
+<div class="decision"><strong>Decision 8 &mdash; a paste target that accepts many rows at once.</strong> Roughly twelve months of transactions have to be transcribed from bank statements before the next filing. Row-at-a-time entry is the wrong instrument for that volume, and the difference is an evening rather than an hour. Pasted text is parsed, shown for review, and written only on confirmation. This earns its place solely because of the backlog; it would be hard to justify on a ledger that was already current.</div>
+
+<h2>6 &middot; What a committed period does to the table</h2>
+
+<p>This is the consequence that makes the interface different from a spreadsheet, and it follows directly from putting roots on chain.</p>
+
+<div class="decision"><strong>Decision 9 &mdash; a committed period is read-only.</strong> Once a root is broadcast, altering any transaction in that period silently invalidates every inclusion proof drawn against it. The table must therefore lock committed periods rather than trust the operator to remember. Changing a committed figure is a deliberate act with its own name &mdash; supersede &mdash; which re-commits the period and chains to the previous root, so the amendment is visible on chain instead of erasing what was claimed before.</div>
+
+<div class="mock">┌────────────────────────────────────────────────────────────────┐
+│ LEDGER                            01 Feb 2024 – 31 Dec 2024 ▾  │
+│ 17 transactions · out £526.27 · net −£526.27                   │
+│ ● committed 2026-07-30 · root 9f2c…a41b · a1b3…7e02  [ VERIFY ]│
+├────────────┬──────────────┬──────────┬─────────────────────────┤
+│ 2024-02-20 │ HSBC (debit) │   −19.00 │ GIGACLEAR WIFI       🔒 │
+│ 2024-03-08 │ HSBC (debit) │   −54.42 │ TALK TALK WIFI END   🔒 │
+│      ⋮     │              │          │                      🔒 │
+├────────────┴──────────────┴──────────┴─────────────────────────┤
+│ locked — this period is committed          ⤾ supersede period  │
+└────────────────────────────────────────────────────────────────┘</div>
+
+<p>Each locked row offers one action the working table does not: export this transaction's inclusion proof. That is selective disclosure reached from the place it is most obviously useful &mdash; standing on the row you want to prove.</p>
+
+<h2>7 &middot; The commitment</h2>
 
 <p>Committing a period is four steps, and each one has to be reproducible by someone holding only the data and this document.</p>
 
@@ -99,19 +152,19 @@
 <h3>What goes in the output</h3>
 <p>Marker, version, period start and end, the root, and the count. The count matters: without it a proof verifier cannot detect a set that has had transactions removed from its tail.</p>
 
-<h2>6 &middot; Selective disclosure</h2>
+<h2>8 &middot; Selective disclosure</h2>
 
 <p>Given a transaction, the page exports an inclusion proof: the leaf, its Merkle path, the root, and the transaction identifier on chain. Anyone can verify that this one transaction was in the set committed at that time, without learning anything about the others.</p>
 
 <p>That is the piece that carries into Scripted Supply unchanged. A buyer proving a single purchase order to a financier, a supplier proving one delivery attestation in a dispute, and Henceforth Bitcoin Limited proving one transaction to an inspector are the same operation over the same code.</p>
 
-<h2>7 &middot; What happens to the CSV</h2>
+<h2>9 &middot; What happens to the CSV</h2>
 
 <p>Upstash becomes the working store. <code>transactions.csv</code> becomes an export, regenerated on demand, and <code>check.py</code> and <code>summarise.py</code> keep working against it unchanged. One source of truth, one derived artifact, no divergence. The accountant continues to receive plain text.</p>
 
 <p>The existing <code>xlsx_to_csv.py</code> already refuses to overwrite the ledger without <code>--force</code>; the same guard reasoning applies to the export path, which must never overwrite an export that contains rows the store does not.</p>
 
-<h2>8 &middot; Error handling</h2>
+<h2>10 &middot; Error handling</h2>
 
 <table>
 <tr><th>Condition</th><th>Behaviour</th></tr>
@@ -122,7 +175,7 @@
 <tr><td>Period contains no transactions</td><td>Refused. An empty root is a claim about nothing and would be indistinguishable from an unrecorded period.</td></tr>
 </table>
 
-<h2>9 &middot; Testing</h2>
+<h2>11 &middot; Testing</h2>
 
 <p>Behaviour is not shipped until it is asserted. Repository convention is vitest beside the module, following <code>src/lib/*.test.ts</code>.</p>
 
@@ -136,11 +189,11 @@
 <li><strong>No test spends</strong> &mdash; broadcast is exercised only through the fake-output dry-run path that <code>render-pdf.mjs</code> already provides.</li>
 </ul>
 
-<h2>10 &middot; Out of scope</h2>
+<h2>12 &middot; Out of scope</h2>
 
 <p>Named so they are not smuggled in: multiple companies or tenants; double-entry or triple-entry bookkeeping, this being a cash ledger; delivery-versus-payment contracts; the zero-install supplier portal; X12 and EDIFACT translation; any Forth contract compilation. This spec builds a ledger and a commitment primitive, and stops.</p>
 
-<h2>11 &middot; Build order</h2>
+<h2>13 &middot; Build order</h2>
 
 <div class="decision"><strong>Decision 6 &mdash; the entry form ships before the commitment.</strong> The accounts for the year ended 31 December 2025 are due around 30 September 2026, and roughly twelve months of transactions are untyped: the ledger's last entry is 2025-07-03, HSBC statements end May 2025, NatWest June 2025, and the Amex folder is empty despite an Amex purchase recorded in February 2025. Cryptography does not file accounts. The entry surface is what unblocks the filing, so it goes first and the commitment follows.</div>
 
@@ -149,12 +202,12 @@
 <tr><td>1</td><td>Seed the store from <code>transactions.csv</code></td><td>96 transactions readable at <code>/board/ledger</code>, totals matching the filed figures</td></tr>
 <tr><td>2</td><td>Entry, edit and delete</td><td>A transaction can be added from a phone and survives a reload</td></tr>
 <tr><td>3</td><td>Period view and CSV export</td><td>Export round-trips through <code>check.py</code> with no errors</td></tr>
-<tr><td>4</td><td>Merkle module, pure and tested</td><td>Every test in section 9 passes, no network touched</td></tr>
+<tr><td>4</td><td>Merkle module, pure and tested</td><td>Every test in section 11 passes, no network touched</td></tr>
 <tr><td>5</td><td>Commit and broadcast</td><td>A period commits on the dry-run path, then once for real</td></tr>
 <tr><td>6</td><td>Inclusion proof export</td><td>A single transaction verifies against the chain independently</td></tr>
 </table>
 
-<h2>12 &middot; Statutory context</h2>
+<h2>14 &middot; Statutory context</h2>
 
 <p>Henceforth Bitcoin Limited, registration 13829963, England and Wales. Micro-entity accounts under Financial Reporting Standard 105. Tax district 623, tax reference 4739614570. Losses carried forward at 31 December 2024: &pound;1,643.</p>
 
