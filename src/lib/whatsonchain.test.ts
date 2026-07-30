@@ -233,7 +233,10 @@ describe("BananaBlocks mirror fallback", () => {
 
   it("never touches the mirror when WhatsOnChain answers", async () => {
     // Declare the parameter even though it is unused: without it the mock's call
-    // tuple types as [] and `mock.calls[0][0]` below fails to compile.
+    // tuple types as [] and `mock.calls[0][0]` below fails to compile. The lint
+    // rule has no underscore exemption configured, so the exemption is stated
+    // here rather than widened across the project for one deliberate case.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const fetchFn = vi.fn(async (_input: RequestInfo | URL) => new Response(rawTx([p2pkh]), { status: 200 }));
     expect(await fetchTxScripts("b".repeat(64), fetchFn)).toEqual([p2pkh]);
     expect(fetchFn).toHaveBeenCalledTimes(1);

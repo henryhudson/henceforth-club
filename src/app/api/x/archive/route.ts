@@ -3,6 +3,8 @@ import { fetchXArchive, fetchProfileHead, pagesForPostCount, X_TIMELINE_CEILING 
 import { selectRefs } from "@/lib/xArchive";
 import { payAndReserve, resourcesForPosts } from "@/lib/xGate";
 import { releaseXApiSpend } from "@/lib/xSpend";
+import { releaseHeadRead, reserveHeadRead } from "@/lib/xHeadSpend";
+import { isTxid } from "@/lib/xPayment";
 
 /**
  * GET /api/x/archive?handle=<h>&payment=<txid>&images=1&videos=1&full=1
@@ -48,13 +50,60 @@ export async function GET(req: Request) {
 
   // How big is this read? A full archive is priced from the profile's real post
   // count, so the gate demands a fee that covers what X will actually charge us.
-  // The head costs ONE resource and is not gated — the same half-cent /api/x/quote
-  // spends, and the price of knowing the price.
+  //
+  // This head read happens BEFORE any payment is checked, and it is billed. It
+  // used to be justified by pointing at /api/x/quote ("the same half-cent
+  // /api/x/quote spends") — which pointed back here, so neither was bounded by
+  // anything. It is now booked against the unpaid head ceiling
+  // (lib/xHeadSpend), a bucket separate from the paid one so that anonymous
+  // sizing requests cannot exhaust the budget paying callers depend on.
+  //
+  // Note this reservation is NOT the same resource as the +1 inside
+  // `resourcesForPosts`: `fetchXArchive` reads the head AGAIN internally
+  // (lib/xfetch), so a full archive genuinely bills two user objects. The gate's
+  // reservation covers one; this covers the other. It does not change the FEE —
+  // `payAndReserve` derives that from its own argument, which is untouched.
   let maxPages = 1;
   let billedPosts = 100;
   if (full) {
-    const head = await fetchProfileHead(handle, token);
+    // A well-formed payment id is demanded BEFORE the billed read, not after.
+    // This costs nothing (`isTxid` is a regex) and it is the difference between
+    // a tap anyone can open from a browser bar and one that at least requires a
+    // 64-hex transaction id. It duplicates the gate's own first act
+    // deliberately: the gate cannot run yet, because it needs a fee sized from
+    // the post count this read exists to discover.
+    if (!isTxid(url.searchParams.get("payment"))) {
+      return NextResponse.json({ ok: false, reason: "payment-required" }, { status: 402 });
+    }
+
+    // One moment for the reserve/release pair, so they cannot land in different
+    // UTC buckets across a midnight boundary.
+    const now = new Date();
+    const reserved = await reserveHeadRead(now);
+    if (!reserved.ok) {
+      return NextResponse.json(
+        { ok: false, reason: reserved.reason },
+        { status: reserved.reason === "budget-exhausted" ? 429 : 503 },
+      );
+    }
+
+    let head;
+    try {
+      head = await fetchProfileHead(handle, token);
+    } catch (error) {
+      // `fetchProfileHead` returns null for a non-ok STATUS but THROWS on a
+      // network rejection or a 200 carrying non-JSON. Both billed nothing — the
+      // read never completed — so the reservation must come back here too.
+      // Without this a flaky network ratchets the day's ceiling shut one
+      // half-cent at a time, and nothing ever hands those mils back.
+      await releaseHeadRead(now);
+      throw error;
+    }
     if (!head) {
+      // Billed per resource RETURNED, and none came back. Holding the
+      // reservation here would turn a money leak into a free way to pin the
+      // day's ceiling, because the handle pattern admits any short string.
+      await releaseHeadRead(now);
       return NextResponse.json({ ok: false, reason: "no-user" }, { status: 404 });
     }
     maxPages = pagesForPostCount(head.postCount);
