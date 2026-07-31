@@ -15,39 +15,54 @@
     "questions": [],
     "bills": [
       {
-        "id": 4140,
-        "title": "National Security (State Threats) Act 2026",
-        "house": "Commons",
-        "stage": "Royal Assent",
-        "lastUpdate": "2026-07-22"
+        "row": {
+          "id": 4140,
+          "title": "National Security (State Threats) Act 2026",
+          "house": "Commons",
+          "stage": "Royal Assent",
+          "lastUpdate": "2026-07-22"
+        },
+        "blurb": "The only bill on this list to finish the journey: Royal Assent closes its passage, and the state-threats package leaves for the statute book just as Parliament leaves for summer."
       },
       {
-        "id": 4129,
-        "title": "Financial Services and Markets Bill [HL]",
-        "house": "Lords",
-        "stage": "Report stage",
-        "lastUpdate": "2026-07-23"
+        "row": {
+          "id": 4129,
+          "title": "Financial Services and Markets Bill [HL]",
+          "house": "Lords",
+          "stage": "Report stage",
+          "lastUpdate": "2026-07-23"
+        },
+        "blurb": "Report stage in the Lords, paused by the recess with sittings already booked for 7 and 9 September — the autumn resumes exactly where the summer left off."
       },
       {
-        "id": 4065,
-        "title": "Armed Forces Bill",
-        "house": "Commons",
-        "stage": "Committee stage",
-        "lastUpdate": "2026-07-23"
+        "row": {
+          "id": 4065,
+          "title": "Armed Forces Bill",
+          "house": "Commons",
+          "stage": "Committee stage",
+          "lastUpdate": "2026-07-23"
+        },
+        "blurb": "In committee when the House rose; the clause-by-clause work has return dates of 2 and 8 September."
       },
       {
-        "id": 4030,
-        "title": "Railways Bill",
-        "house": "Commons",
-        "stage": "Committee stage",
-        "lastUpdate": "2026-07-22"
+        "row": {
+          "id": 4030,
+          "title": "Railways Bill",
+          "house": "Commons",
+          "stage": "Committee stage",
+          "lastUpdate": "2026-07-22"
+        },
+        "blurb": "The heaviest workload of anything here: committee sittings are already booked from 8 September through 26 October — this one will be argued clause by clause all autumn."
       },
       {
-        "id": 4279,
-        "title": "Co-operative Capital Bill [HL]",
-        "house": "Lords",
-        "stage": "2nd reading",
-        "lastUpdate": "2026-07-23"
+        "row": {
+          "id": 4279,
+          "title": "Co-operative Capital Bill [HL]",
+          "house": "Lords",
+          "stage": "2nd reading",
+          "lastUpdate": "2026-07-23"
+        },
+        "blurb": "At second reading in the Lords with no sitting yet on the calendar — the one bill on this list whose autumn is still unwritten."
       }
     ]
   },
