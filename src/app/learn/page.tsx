@@ -6,7 +6,7 @@ import { episodes } from "@/lib/episodes";
 export const metadata: Metadata = {
   title: "Learn",
   description:
-    "Starting Henceforth — a video series teaching FORTH and the Henceforth Bitcoin wallet from first principles, ending in Bitcoin Script. Plus Leo Brodie's classic FORTH books.",
+    "Starting Henceforth taught FORTH and the Henceforth Bitcoin wallet from first principles. Thinking Henceforth continues the story every Sunday — money, on the same terminal. Plus Leo Brodie's classic FORTH books.",
 };
 
 const books = [
@@ -42,19 +42,49 @@ export default function LearnPage() {
             Learn
           </h1>
           <p className="mt-6 text-lg leading-relaxed text-muted">
-            Starting Henceforth — a video series teaching FORTH and the
-            Henceforth Bitcoin wallet from first principles. Watch an episode,
-            then code along in the app.
+            Two seasons of short episodes — watch one, then code along in the
+            app. Starting Henceforth taught the words; Thinking Henceforth,
+            the Sunday series, puts them to work on money.
           </p>
         </FadeIn>
 
-        <div className="mt-12 grid gap-4 sm:grid-cols-2">
-          {episodes.map((episode, i) => (
+        <FadeIn>
+          <p className="mt-12 text-xs uppercase tracking-widest text-accent-warm/70">
+            Season one · Starting Henceforth
+          </p>
+          <p className="mt-3 text-sm leading-relaxed text-muted">
+            Ten episodes from first principles to Bitcoin Script.
+          </p>
+        </FadeIn>
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          {episodes.filter((e) => e.number <= 10).map((episode, i) => (
             <FadeIn key={episode.slug} delay={0.1 + i * 0.08} className="h-full">
               <EpisodeCard episode={episode} />
             </FadeIn>
           ))}
         </div>
+
+        {episodes.some((e) => e.number >= 11) && (
+          <>
+            <FadeIn>
+              <p className="mt-16 text-xs uppercase tracking-widest text-accent-warm/70">
+                Season two · Thinking Henceforth
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-muted">
+                The Sunday series. Spending Henceforth moves money — address,
+                transaction, chain, trust — ending in one real spend, on
+                camera, on the ledger forever.
+              </p>
+            </FadeIn>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              {episodes.filter((e) => e.number >= 11).map((episode, i) => (
+                <FadeIn key={episode.slug} delay={0.1 + i * 0.08} className="h-full">
+                  <EpisodeCard episode={episode} />
+                </FadeIn>
+              ))}
+            </div>
+          </>
+        )}
 
         <div className="mt-24">
           <div className="section-line" />
