@@ -6,6 +6,20 @@ records that sweep's **rejections and dismissals**, newest first, so a later run
 re-flag what a prior run already refuted. Confirmed findings go to the Morning Board, not
 here. Cite `file:line` (or the live probe) so each verdict is independently re-derivable.
 
+## 2026-08-01 — nothing rejected; the emergency repair verified live, and two candidates killed before filing
+
+**Range.** `origin/main` since the 2026-07-31 review of record: two commits — `da68abe` (this ledger) and `b4a63b6`, which changed exactly one file, `content/this-week/2026-07-29.json` (+41/−26). No TypeScript changed. Plus a full live production sweep.
+
+**Yesterday's emergency repair is live and correct.** `GET /api/hansard/digests/2026-07-29` returns `highlights.bills` as five elements, **every one carrying exactly the keys `[row, blurb]`** — the wrapped shape the app's type requires. All ten published issues were audited: bills, votes and questions are now uniformly `{row, blurb}` or empty everywhere, so **no sibling issue carries the same defect**. The index endpoint returns ten rows with the newest at `2026-07-29`, mode `recess`.
+
+**Live gates all fail closed.** `POST /api/folklore/job` → 503 `{"ok":false,"reason":"not-available"}`. `/board` → 307 challenge. `/api/x/archive?handle=jack&full=1` → 402 `{"ok":false,"reason":"payment-required"}`, refusing **before** any billed read. `/api/x/quote` with an impossible handle → 400 `bad-handle`. Root 200 in 0.286 / 0.072 / 0.098s; `/folklore` 200 in 1.894 / 0.457 / 0.425s, the first being the documented cold hit — the escalation condition is a warm hit above one second, which was not met.
+
+**Two candidates killed by their own falsification checks, before filing.** First: `highlights.questions` is empty in all ten published issues, which reads like a producer defect. It is deliberate — `generate.ts:69` passes `questions: []` into the narrator and `:87` emits `questions: []` into highlights; questions feed the statistics and the department histogram instead. Second: the two recess issues (2026-05-27 and 2026-07-29) omit `headline`, `body`, `feature`, `qa` and `topTopics`, but those fields are optional in `types.ts:68-70`, and the 2026-05-27 recess issue has served that exact shape for months without incident.
+
+**One finding confirmed and carded, and it is the lesson of the whole episode.** The emergency was repaired in **data only**. `store.ts:25` casts with `as DigestData`, an assertion erased at runtime; the route checks only the slug regex and the published status before serving; and the sole content gate, `content-integrity.test.ts`, is thirty-three lines whose two assertions both scope to `votes` — the words `bills` and `questions` do not appear in the file. Nothing in the repository stops the same shape shipping again.
+
+**Standing rejections re-affirmed, not re-filed.** Open pull request #47 (the word rename) remains held pending the app release window, per the 2026-07-31 entry; #59 is a two-day-old draft specification, not finished work. Neither was reported as a stale-pull-request finding.
+
 ## 2026-07-31 — two rejections, both about the new head ceiling's edges; the robots.txt override and the blank-budget coercion re-confirmed
 
 **Range.** `a8ed5e2..9a82797` — two commits, one documentation (`c64625e`, the 2026-07-30 ledger) and one code (`9a82797`, "The unpaid X head reads get a ceiling of their own", #58) — plus the full live production sweep and the open pull requests. Four findings; two confirmed, two rejected.
