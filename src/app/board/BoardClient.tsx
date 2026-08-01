@@ -265,6 +265,9 @@ export default function BoardClient({
               <Link href="/board/docs" className="mb-chip-btn">
                 plans
               </Link>
+              <Link href="/board/taxes" className="mb-chip-btn">
+                taxes
+              </Link>
             </div>
           </div>
         </header>
