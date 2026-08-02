@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { txExplorerUrl } from "@/lib/explorer";
 import type { FolkloreLink } from "../linkRecord";
+import FeedKudos from "./FeedKudos";
 import { shortTxid } from "./PostCard";
 
 /**
@@ -9,6 +10,14 @@ import { shortTxid } from "./PostCard";
  * submitter when a bound handle claimed the post, the kudos total, and the
  * comment count linking through to the thread; the txid links out to the
  * block explorer.
+ *
+ * The kudos total is the CONTROL when the link has a bound submitter: the tip
+ * route pays a link's kudos to its verified `by` and bumps the link's own
+ * board card (recordTip → isBoardLink → linkMember), so the count and the
+ * gesture are one element. An anonymous link names no earner — the route
+ * refuses it by design, because debiting a giver with nothing to accrue
+ * against would break the float's conservation invariant — so it keeps the
+ * static total rather than offering a control that must always refuse.
  */
 export default function LinkCard({
   txid,
@@ -39,7 +48,13 @@ export default function LinkCard({
         <p className="mt-0.5 font-mono text-[11px] text-muted">
           {domain}
           {record.by && ` · by @${record.by}`}
-          {` · ${kudos.toLocaleString("en-GB")} kudos · `}
+          {" · "}
+          {record.by ? (
+            <FeedKudos handle={record.by} postId={txid} count={kudos} />
+          ) : (
+            `${kudos.toLocaleString("en-GB")} kudos`
+          )}
+          {" · "}
           <Link
             href={`/folklore/tx/${txid}`}
             className="transition-colors hover:text-accent hover:underline"
