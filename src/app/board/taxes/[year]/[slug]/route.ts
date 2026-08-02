@@ -23,15 +23,35 @@ export async function GET(
   if (!redis) return NextResponse.json({ error: "no store" }, { status: 503 });
 
   const { year, slug } = await params;
+
+  // The index decides what is published; the document key only holds bytes.
+  // The publisher never deletes, so a filing removed from the source folder
+  // drops out of the index while its key lives on — served from the key alone,
+  // a withdrawn document stayed retrievable at its URL forever. An absent
+  // index fails closed for the same reason: "is this published?" going
+  // unanswered must not serve a private filing.
+  const index = await redis.get<{
+    periods?: { year: string; files?: { slug: string }[] }[];
+  }>("board:taxes:index");
+  const published = (index?.periods ?? []).some(
+    (p) => p.year === year && (p.files ?? []).some((f) => f.slug === slug),
+  );
+  if (!published) return NextResponse.json({ error: "not found" }, { status: 404 });
+
   const file = await redis.get<{ name: string; b64: string }>(
     `board:taxes:file:${year}:${slug}`,
   );
   if (!file?.b64) return NextResponse.json({ error: "not found" }, { status: 404 });
 
+  // Both periods hold a file named …CT6002024.pdf and they are different
+  // documents — saving both links wrote one over the other. The period
+  // qualifies the download; the stored name is left untouched.
+  const filename = `${year}-${file.name.replace(/"/g, "")}`;
+
   return new NextResponse(new Uint8Array(Buffer.from(file.b64, "base64")), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="${file.name.replace(/"/g, "")}"`,
+      "Content-Disposition": `inline; filename="${filename}"`,
       "Cache-Control": "private, no-store",
     },
   });
