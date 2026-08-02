@@ -6,6 +6,22 @@ records that sweep's **rejections and dismissals**, newest first, so a later run
 re-flag what a prior run already refuted. Confirmed findings go to the Morning Board, not
 here. Cite `file:line` (or the live probe) so each verdict is independently re-derivable.
 
+## 2026-08-02 — nothing rejected; the new access-control change earned a clean bill, and two low findings survived
+
+**Range.** `b4a63b6..a782341` — two commits, one of them this ledger. The code commit is `072fca2`, "The company's tax filings move behind the board sign-in": five files, +286/−0.
+
+**The primary target passed, and that is the substantive result of the run.** Every question was checked against a definition rather than a call site, and it is recorded here because a clean bill is a result worth not re-deriving tomorrow:
+
+- **Gate coverage.** `src/middleware.ts:8` matches `["/board", "/board/:path*"]`, covering both the listing page and the nested document route, and `src/app/board/taxes/[year]/[slug]/route.ts:16-20` re-verifies in-handler — so a matcher regression alone cannot expose the documents.
+- **Fails closed on every input.** `verifySession` (`src/lib/board-auth.ts:55-71`) returns false for an absent token (`:59`), a token with no `.` separator (`:61`), a bad signature (`:64`, constant-time via `timingSafeEqual` at `:36-41`) and an expired or unparseable payload (`:65-70`). The signature is verified **before** the payload is parsed, so there is no unauthenticated `JSON.parse`.
+- **Live sweep agrees.** `/board` challenges to `/board/login`; `/` and `/folklore` answer 200 in 0.15–0.55 s across three samples each.
+
+**Nothing rejected today.** Two low findings were filed and both survived adversarial refutation, both one-line fixes: the document route never consults `board:taxes:index` and nothing ever deletes a key (so unpublishing does not unpublish), and both accounting periods' filings are served under the same `Content-Disposition` filename (verified genuinely distinct: `md5` `1a5262e7…` versus `18f1b8ef…`). Both are carded.
+
+**Recorded so it is not filed as a one-off:** `scripts/board/sync-docs.mjs:91-92` uses the byte-identical set-only publish pattern, so the missing-prune shape is a house convention across the board scripts rather than a defect unique to the tax publisher.
+
+**Live gate sweep, run this morning.** `POST /api/folklore/job` → 503 `not-available`; `POST /api/x/register` → 400 `bad-input`; `/api/x/archive` is a GET-only route so POST → 405; `POST /api/board/publish` → 404, no such route. All fail closed. One note for future sweeps: the apex redirects to `www` with a 307, so an unfollowed curl reports 307 on **every** route and tells you nothing — follow redirects before drawing any conclusion.
+
 ## 2026-08-01 — nothing rejected; the emergency repair verified live, and two candidates killed before filing
 
 **Range.** `origin/main` since the 2026-07-31 review of record: two commits — `da68abe` (this ledger) and `b4a63b6`, which changed exactly one file, `content/this-week/2026-07-29.json` (+41/−26). No TypeScript changed. Plus a full live production sweep.
