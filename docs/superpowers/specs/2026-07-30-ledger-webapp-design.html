@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A ledger that can prove itself — the accounts design</title>
+<style>
+  :root { --bg:#f4ecd8; --ink:#2a2318; --muted:#6b5d45; --rule:#c9b98f; --accent:#8b3a1a; --card:#faf4e4; --shadow:0 1px 3px rgba(60,40,10,0.15); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.68;}
+  .wrap{max-width:860px;margin:0 auto;padding:56px 32px;}
+  header.doc{margin-bottom:40px;border-bottom:3px double var(--rule);padding-bottom:26px;}
+  .eyebrow{font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:33px;line-height:1.16;margin:0 0 12px;font-weight:700;}
+  h2{font-size:24px;margin:46px 0 12px;padding-top:18px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 8px;}
+  .lede{font-size:19px;color:var(--muted);margin:0;font-style:italic;}
+  p{margin:13px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(120,90,30,0.12);padding:2px 6px;border-radius:4px;}
+  pre{background:#2a2318;color:#f0e6cf;padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;background:var(--card);}
+  th,td{text-align:left;padding:9px 12px;border:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .decision{background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 18px;margin:18px 0;box-shadow:var(--shadow);}
+  .decision strong{color:var(--accent);}
+  ul{margin:12px 0;padding-left:26px;} li{margin:6px 0;}
+  .flow{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px 20px;margin:16px 0;box-shadow:var(--shadow);}
+  .mock{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:12.5px;line-height:1.5;white-space:pre;background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px 18px;overflow-x:auto;box-shadow:var(--shadow);}
+  .pair{display:flex;gap:18px;flex-wrap:wrap;} .pair > div{flex:1 1 320px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Design spec &middot; 2026-07-30 &middot; henceforth.club/board/ledger &middot; status: DRAFT for Henry's review</div>
+<h1>A ledger that can prove itself</h1>
+<p class="lede">Henceforth Bitcoin Limited's accounts move off a spreadsheet and onto a gated page, and every accounting period ends with a Merkle root on chain. The bookkeeping is the excuse; the commitment primitive is the point.</p>
+</header>
+
+<p><strong>What exists.</strong> <code>~/Henceforth/ANNUAL ACCOUNTS.xlsx</code> held four year-sheets and 96 transactions running 2022-01-06 to 2025-07-03. On 2026-07-30 those were converted to a flat, reconciled ledger at <code>~/Henceforth/ledger/transactions.csv</code>, with <code>check.py</code> to validate edits and <code>summarise.py</code> to cut totals by period. Every sheet reconciled exactly against its own stated total. The spreadsheet is now a frozen historical record.</p>
+
+<p><strong>The ask.</strong> Henry, 2026-07-30: <em>&ldquo;lets make it a web app and ensure it is able to be uploaded to bitcoin this can be the begining of our scripted supply journey&rdquo;</em>.</p>
+
+<div class="decision"><strong>Decision 0 &mdash; the ledger does not go on chain. Its hash does.</strong> &ldquo;Uploaded to Bitcoin&rdquo; read literally means publishing the company's bank accounts, vendors and amounts permanently and publicly. Scripted Supply's own page already rejects that pattern &mdash; <em>&ldquo;Encrypted payloads live off chain; only their SHA-256 hash is committed on chain&rdquo;</em> &mdash; and the reasoning applies harder to accounting records than to purchase orders. A commitment buys tamper-evidence and provable existence at a point in time, which is exactly what an accounting record wants. Publication buys nothing and cannot be undone.</div>
+
+<h2>1 &middot; Why this is not merely bookkeeping</h2>
+
+<p>The Scripted Supply research notes name the differentiator plainly: a <em>legible</em> contract that compiles byte-for-byte to the Script the chain enforces, hash-commit rather than payload-on-chain, local-first rather than server-and-SQL. Nothing in that thesis has yet been built as working web software. The supplier portal is described as greenfield.</p>
+
+<p>A company ledger is the smallest honest instance of the same shape: a set of records held privately, committed publicly, and later proved selectively to a third party who must not see the rest. Build that once here and a purchase order commits by exactly the same path.</p>
+
+<h2>2 &middot; The three decisions taken</h2>
+
+<div class="decision"><strong>Decision 1 &mdash; a gated route on henceforth.club, data in Upstash.</strong> Chosen over local-first storage. The trade-off was raised and accepted: the company's transaction history sits on hosted third-party infrastructure rather than only on Henry's machine. What it buys is entry from any device, which matters because the binding constraint on this project is typing, not architecture.</div>
+
+<div class="decision"><strong>Decision 2 &mdash; a Merkle root per accounting period.</strong> Chosen over a single snapshot hash and over a per-save hash chain. Each transaction is a leaf, so a single transaction can later be proved to have been in the filed set without disclosing the other ninety-five. Selective disclosure is the property Scripted Supply needs for purchase orders, so it gets built once, here.</div>
+
+<div class="decision"><strong>Decision 3 &mdash; server-side broadcast reusing the board archive key.</strong> Chosen over signing in the Henceforth app and over a browser-held key. The pattern already works in this repository at <code>scripts/board/render-pdf.mjs:81</code>. Roughly four transactions a year at fractions of a penny each. The key stays in Henry's <code>.env.local</code> and is never handled in conversation.</div>
+
+<h2>3 &middot; Route and gate</h2>
+
+<p><code>/board/ledger</code>, inside the existing gated board world. It reuses <code>src/lib/board-auth.ts</code> and the <code>board_session</code> cookie, so no new authentication surface is written and none can be got wrong. Data lives in Upstash under <code>ledger:*</code> and is never committed, matching the discipline already applied to <code>board:latest</code>.</p>
+
+<table>
+<tr><th>Key</th><th>Holds</th></tr>
+<tr><td><code>ledger:transactions</code></td><td>The working set, one record per transaction</td></tr>
+<tr><td><code>ledger:commit:&lt;period&gt;</code></td><td>Root, leaf hashes, the record identifiers they came from, the on-chain transaction identifier, broadcast timestamp</td></tr>
+</table>
+
+<h2>4 &middot; The record</h2>
+
+<p>The shape is deliberately identical to the CSV columns, so the two stay interchangeable and the accountant's plain-text artifact never drifts from what the page shows.</p>
+
+<pre><code>type Transaction = {
+  id: string           // stable; identifies the leaf as well as the row
+  date: string         // YYYY-MM-DD
+  account: string      // HSBC (debit) | HSBC (credit) | NatWest | Amex (credit)
+  amount: string       // signed decimal, two places — never a JavaScript number
+  description: string  // verbatim from the bank statement
+  category: string
+  source: string       // which statement it came from
+}</code></pre>
+
+<div class="decision"><strong>Decision 4 &mdash; money is a decimal string, and arithmetic runs in integer pence.</strong> JavaScript numbers are IEEE-754 doubles. That is precisely the defect the spreadsheet carried: its 2023 total was stored as <code>2589.659999999998</code>. Putting <code>amount</code> in a <code>number</code> would reintroduce, in new code, the bug the conversion just removed &mdash; and it would do so silently, in a system whose entire purpose is producing figures a tax authority relies on.</div>
+
+<h2>5 &middot; The table</h2>
+
+<p>The page is a table, and it is the whole interface. Adding a transaction means adding a row.</p>
+
+<div class="decision"><strong>Decision 7 &mdash; the table is the editor; there is no separate entry form.</strong> Bookkeeping is repetitive by nature: a month of Gigaclear at &pound;19 differs from the previous month only in its date. Duplicating a row and changing one field is faster than refilling a form, and it preserves the one genuinely good property of the spreadsheet being replaced. A form would be a worse tool wearing a more modern shape.</div>
+
+<p>The working period, editable:</p>
+
+<div class="mock">/board/ledger
+┌────────────────────────────────────────────────────────────────┐
+│ LEDGER                            01 Jan 2025 – 31 Dec 2025 ▾  │
+│ 18 transactions · in £60.11 · out £857.75 · net −£797.64       │
+│ ○ not yet committed                                 [ COMMIT ] │
+├────────────┬──────────────┬──────────┬─────────────────────────┤
+│ DATE       │ ACCOUNT      │   AMOUNT │ DESCRIPTION             │
+├────────────┼──────────────┼──────────┼─────────────────────────┤
+│ 2025-01-02 │ NatWest      │   +20.91 │ PAYMENT FOR APP DOWNLO… │
+│ 2025-01-15 │ HSBC (debit) │   −49.95 │ IPHONE PAYMENT          │
+│ 2025-01-20 │ HSBC (debit) │   −19.00 │ GIGACLEAR WIFI          │
+│ 2025-02-12 │ Amex (credit)│  −429.00 │ APPLE IPAD              │
+│      ⋮     │              │          │                         │
+├────────────┴──────────────┴──────────┴─────────────────────────┤
+│ + add row                                     ⇥ paste many     │
+└────────────────────────────────────────────────────────────────┘</div>
+
+<p>Category and source are columns too, elided in the sketch for width. On a narrow screen the row becomes a stacked card rather than a scrolling table, since a ledger read sideways on a phone is a ledger nobody updates.</p>
+
+<h3>Validation is immediate, not deferred</h3>
+<p>The rules already enforced by <code>check.py</code> apply as the row is typed: the date is <code>YYYY-MM-DD</code>, the amount is a signed two-place figure, the description is not empty. A bad cell is marked where it is, rather than the whole period failing later at commit time with a line number.</p>
+
+<h3>The backlog affordance</h3>
+<div class="decision"><strong>Decision 8 &mdash; a paste target that accepts many rows at once.</strong> Roughly twelve months of transactions have to be transcribed from bank statements before the next filing. Row-at-a-time entry is the wrong instrument for that volume, and the difference is an evening rather than an hour. Pasted text is parsed, shown for review, and written only on confirmation. This earns its place solely because of the backlog; it would be hard to justify on a ledger that was already current.</div>
+
+<h2>6 &middot; What a committed period does to the table</h2>
+
+<p>This is the consequence that makes the interface different from a spreadsheet, and it follows directly from putting roots on chain.</p>
+
+<div class="decision"><strong>Decision 9 &mdash; a committed period is read-only.</strong> Once a root is broadcast, altering any transaction in that period silently invalidates every inclusion proof drawn against it. The table must therefore lock committed periods rather than trust the operator to remember. Changing a committed figure is a deliberate act with its own name &mdash; supersede &mdash; which re-commits the period and chains to the previous root, so the amendment is visible on chain instead of erasing what was claimed before.</div>
+
+<div class="mock">┌────────────────────────────────────────────────────────────────┐
+│ LEDGER                            01 Feb 2024 – 31 Dec 2024 ▾  │
+│ 17 transactions · out £526.27 · net −£526.27                   │
+│ ● committed 2026-07-30 · root 9f2c…a41b · a1b3…7e02  [ VERIFY ]│
+├────────────┬──────────────┬──────────┬─────────────────────────┤
+│ 2024-02-20 │ HSBC (debit) │   −19.00 │ GIGACLEAR WIFI       🔒 │
+│ 2024-03-08 │ HSBC (debit) │   −54.42 │ TALK TALK WIFI END   🔒 │
+│      ⋮     │              │          │                      🔒 │
+├────────────┴──────────────┴──────────┴─────────────────────────┤
+│ locked — this period is committed          ⤾ supersede period  │
+└────────────────────────────────────────────────────────────────┘</div>
+
+<p>Each locked row offers one action the working table does not: export this transaction's inclusion proof. That is selective disclosure reached from the place it is most obviously useful &mdash; standing on the row you want to prove.</p>
+
+<h2>7 &middot; The commitment</h2>
+
+<p>Committing a period is four steps, and each one has to be reproducible by someone holding only the data and this document.</p>
+
+<div class="flow">
+<strong>1. Canonicalise.</strong> Each transaction serialises to a fixed-field-order byte string with no whitespace or encoding latitude. Two implementations must agree byte-for-byte or the root is worthless.<br>
+<strong>2. Hash.</strong> Leaf is the SHA-256 of that canonical form. Leaves sort by <code>(date, id)</code>, so the tree is a function of the set, not of insertion order.<br>
+<strong>3. Build.</strong> Pairwise SHA-256 up to a single root.<br>
+<strong>4. Broadcast.</strong> One <code>OP_FALSE OP_RETURN</code> carrying a marker, the root, the period bounds and the transaction count.
+</div>
+
+<div class="decision"><strong>Decision 5 &mdash; an odd node is carried up unchanged, never duplicated.</strong> The familiar Merkle construction duplicates a lone final node to complete a level. That admits the well-known duplicate-leaf ambiguity, in which two different transaction sets produce an identical root &mdash; which would let a set be misrepresented as the committed one. Carrying the odd node up instead costs nothing to implement now and cannot be retrofitted later, because by then the roots are on chain and immutable. This is the single decision in the document with no second chance.</div>
+
+<h3>What goes in the output</h3>
+<p>Marker, version, period start and end, the root, and the count. The count matters: without it a proof verifier cannot detect a set that has had transactions removed from its tail.</p>
+
+<h2>8 &middot; Selective disclosure</h2>
+
+<p>Given a transaction, the page exports an inclusion proof: the leaf, its Merkle path, the root, and the transaction identifier on chain. Anyone can verify that this one transaction was in the set committed at that time, without learning anything about the others.</p>
+
+<p>That is the piece that carries into Scripted Supply unchanged. A buyer proving a single purchase order to a financier, a supplier proving one delivery attestation in a dispute, and Henceforth Bitcoin Limited proving one transaction to an inspector are the same operation over the same code.</p>
+
+<h2>9 &middot; What happens to the CSV</h2>
+
+<p>Upstash becomes the working store. <code>transactions.csv</code> becomes an export, regenerated on demand, and <code>check.py</code> and <code>summarise.py</code> keep working against it unchanged. One source of truth, one derived artifact, no divergence. The accountant continues to receive plain text.</p>
+
+<p>The existing <code>xlsx_to_csv.py</code> already refuses to overwrite the ledger without <code>--force</code>; the same guard reasoning applies to the export path, which must never overwrite an export that contains rows the store does not.</p>
+
+<h2>10 &middot; Error handling</h2>
+
+<table>
+<tr><th>Condition</th><th>Behaviour</th></tr>
+<tr><td>A transaction fails validation</td><td>The period refuses to commit. Same rules as <code>check.py</code>: date is <code>YYYY-MM-DD</code>, amount is a signed two-place figure, description is non-empty.</td></tr>
+<tr><td>Broadcast fails or is rejected</td><td>No commitment record is written. A transaction identifier is stored only after the broadcast is accepted, never optimistically.</td></tr>
+<tr><td>Period already committed</td><td>Refused unless explicitly superseding, and a supersede chains to the previous root so an amendment is visible rather than silent.</td></tr>
+<tr><td>Archive key unfunded</td><td>The existing message from the print-edition path, which already distinguishes an unfunded key from change still propagating.</td></tr>
+<tr><td>Period contains no transactions</td><td>Refused. An empty root is a claim about nothing and would be indistinguishable from an unrecorded period.</td></tr>
+</table>
+
+<h2>11 &middot; Testing</h2>
+
+<p>Behaviour is not shipped until it is asserted. Repository convention is vitest beside the module, following <code>src/lib/*.test.ts</code>.</p>
+
+<ul>
+<li><strong>Canonicalisation is stable</strong> &mdash; the same record produces the same bytes across runs and field orderings.</li>
+<li><strong>The root is a function of the set</strong> &mdash; shuffling insertion order does not change it.</li>
+<li><strong>Inclusion proofs verify</strong> &mdash; every leaf in a fixture set proves against the root.</li>
+<li><strong>Tampering fails</strong> &mdash; altering one amount by one penny invalidates that leaf's proof.</li>
+<li><strong>The duplicate-leaf attack cannot forge a root</strong> &mdash; the classic odd-node collision is constructed explicitly and must produce distinct roots.</li>
+<li><strong>Penny arithmetic</strong> &mdash; period totals computed from fixtures match the figures already filed: &pound;586.43 to 31 January 2023, &pound;2,596.67 to 31 January 2024, &pound;526.27 for the eleven-month period to 31 December 2024.</li>
+<li><strong>No test spends</strong> &mdash; broadcast is exercised only through the fake-output dry-run path that <code>render-pdf.mjs</code> already provides.</li>
+</ul>
+
+<h2>12 &middot; Out of scope</h2>
+
+<p>Named so they are not smuggled in: multiple companies or tenants; double-entry or triple-entry bookkeeping, this being a cash ledger; delivery-versus-payment contracts; the zero-install supplier portal; X12 and EDIFACT translation; any Forth contract compilation. This spec builds a ledger and a commitment primitive, and stops.</p>
+
+<h2>13 &middot; Build order</h2>
+
+<div class="decision"><strong>Decision 6 &mdash; the entry form ships before the commitment.</strong> The accounts for the year ended 31 December 2025 are due around 30 September 2026, and roughly twelve months of transactions are untyped: the ledger's last entry is 2025-07-03, HSBC statements end May 2025, NatWest June 2025, and the Amex folder is empty despite an Amex purchase recorded in February 2025. Cryptography does not file accounts. The entry surface is what unblocks the filing, so it goes first and the commitment follows.</div>
+
+<table>
+<tr><th>Order</th><th>Piece</th><th>Done when</th></tr>
+<tr><td>1</td><td>Seed the store from <code>transactions.csv</code></td><td>96 transactions readable at <code>/board/ledger</code>, totals matching the filed figures</td></tr>
+<tr><td>2</td><td>Entry, edit and delete</td><td>A transaction can be added from a phone and survives a reload</td></tr>
+<tr><td>3</td><td>Period view and CSV export</td><td>Export round-trips through <code>check.py</code> with no errors</td></tr>
+<tr><td>4</td><td>Merkle module, pure and tested</td><td>Every test in section 11 passes, no network touched</td></tr>
+<tr><td>5</td><td>Commit and broadcast</td><td>A period commits on the dry-run path, then once for real</td></tr>
+<tr><td>6</td><td>Inclusion proof export</td><td>A single transaction verifies against the chain independently</td></tr>
+</table>
+
+<h2>14 &middot; Statutory context</h2>
+
+<p>Henceforth Bitcoin Limited, registration 13829963, England and Wales. Micro-entity accounts under Financial Reporting Standard 105. Tax district 623, tax reference 4739614570. Losses carried forward at 31 December 2024: &pound;1,643.</p>
+
+<p>The accounting reference date has moved twice, so calendar years do not correspond to filing periods. Any period arithmetic must take its bounds from this table rather than from a year.</p>
+
+<table>
+<tr><th>Period</th><th>Ledger spend</th><th>Status</th></tr>
+<tr><td>incorporation to 31 January 2023</td><td>&pound;586.43</td><td>filed</td></tr>
+<tr><td>01 February 2023 to 31 January 2024</td><td>&pound;2,596.67</td><td>filed, amended</td></tr>
+<tr><td>01 February 2024 to 31 December 2024</td><td>&pound;526.27</td><td>filed; loss per accounts &pound;598.00</td></tr>
+<tr><td>01 January 2025 to 31 December 2025</td><td>&pound;797.64 net, incomplete</td><td>not yet filed</td></tr>
+</table>
+
+<p>The &pound;71.73 difference between the ledger's figure for the eleven-month period and the loss in the filed accounts is unexplained and most likely an accruals adjustment. It is recorded here so that a future reconciliation does not mistake it for a defect introduced by this work.</p>
+
+</div>
+</body>
+</html>
