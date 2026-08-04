@@ -118,13 +118,43 @@ export default function LedgerClient({ initialTransactions, commits }: Props) {
   }
 
   function download() {
-    const blob = new Blob([toCsv(rows)], { type: "text/csv" });
+    saveFile(toCsv(rows), `ledger-${period.start}_${period.end}.csv`, "text/csv");
+  }
+
+  function saveFile(content: string, name: string, type: string) {
+    const blob = new Blob([content], { type });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `ledger-${period.start}_${period.end}.csv`;
+    a.download = name;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  /**
+   * The proof endpoint returns hashes and period metadata only; the transaction
+   * itself is added here, from the row already on screen, so the exported file
+   * is self-contained — recompute the leaf from the transaction, walk the
+   * sibling path, compare to the root the chain carries.
+   */
+  async function exportProof(t: Transaction) {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const res = await fetch(`/api/ledger/proof?id=${encodeURIComponent(t.id)}`);
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMessage(body.error ?? `exporting the proof failed (${res.status})`);
+        return;
+      }
+      saveFile(
+        JSON.stringify({ transaction: t, ...body }, null, 2) + "\n",
+        `ledger-proof-${t.id}.json`,
+        "application/json",
+      );
+    } finally {
+      setBusy(false);
+    }
   }
 
   const cellClass = (bad: boolean) =>
@@ -251,7 +281,7 @@ export default function LedgerClient({ initialTransactions, commits }: Props) {
             <th className="py-2">Description</th>
             <th className="py-2">Category</th>
             <th className="py-2">Source</th>
-            {!locked && <th className="py-2" />}
+            <th className="py-2" />
           </tr>
         </thead>
         <tbody>
@@ -265,7 +295,18 @@ export default function LedgerClient({ initialTransactions, commits }: Props) {
               <td className="py-1">{t.description}</td>
               <td className="py-1 text-muted">{t.category}</td>
               <td className="py-1 text-xs text-muted">{t.source}</td>
-              {!locked && (
+              {locked ? (
+                <td className="py-1 text-right whitespace-nowrap">
+                  <button
+                    onClick={() => exportProof(t)}
+                    disabled={busy}
+                    title="Export this transaction's inclusion proof — it verifies against the committed root without disclosing any other row"
+                    className="px-2 text-xs text-accent-green"
+                  >
+                    proof
+                  </button>
+                </td>
+              ) : (
                 <td className="py-1 text-right whitespace-nowrap">
                   <button onClick={() => setDraft({ ...t })} className="px-2 text-xs text-muted">edit</button>
                   <button

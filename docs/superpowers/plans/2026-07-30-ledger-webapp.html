@@ -851,10 +851,10 @@ git commit -m "Make the ledger table an editor, with a paste path for the backlo
 <div class="note">This script spends. It runs on Henry's machine with <code>BOARD_ARCHIVE_WIF</code> from <code>.env.local</code>, never on Vercel. Every run defaults to a dry run; broadcasting requires <code>--broadcast</code> explicitly.</div>
 
 <ul class="steps">
-<li><input type="checkbox"> <strong>Step 1 &mdash; build the tree offline.</strong> Load the period's transactions, validate every one, refuse on any error or on an empty period, hash the leaves, sort them, build the root. Print the root, the count and the period. No network.</li>
-<li><input type="checkbox"> <strong>Step 2 &mdash; verify the root by hand</strong> against the same figures the page shows. The count must equal the row count for that period.</li>
-<li><input type="checkbox"> <strong>Step 3 &mdash; refuse an already-committed period</strong> unless <code>--supersede</code> is passed, in which case the previous root is carried into the new commitment's <code>supersedes</code> field.</li>
-<li><input type="checkbox"> <strong>Step 4 &mdash; build the output,</strong> following <code>render-pdf.mjs:131-134</code>.
+<li><input type="checkbox" checked> <strong>Step 1 &mdash; build the tree offline.</strong> Load the period's transactions, validate every one, refuse on any error or on an empty period, hash the leaves, sort them, build the root. Print the root, the count and the period. No network.</li>
+<li><input type="checkbox" checked> <strong>Step 2 &mdash; verify the root by hand</strong> against the same figures the page shows. The count must equal the row count for that period.</li>
+<li><input type="checkbox" checked> <strong>Step 3 &mdash; refuse an already-committed period</strong> unless <code>--supersede</code> is passed, in which case the previous root is carried into the new commitment's <code>supersedes</code> field.</li>
+<li><input type="checkbox" checked> <strong>Step 4 &mdash; build the output,</strong> following <code>render-pdf.mjs:131-134</code>.
 <pre><code>import { LockingScript, OP, Utils } from "@bsv/sdk";
 
 const push = (s, text) =&gt; s.writeBin(Utils.toArray(text, "utf8"));
@@ -870,10 +870,10 @@ function commitmentScript({ periodId, root, count, supersedes }) {
   return s;
 }</code></pre>
 <p class="effort">The count is not decoration: without it, a verifier cannot detect a set that has had transactions removed from its tail, because a shorter set still produces a valid-looking root.</p></li>
-<li><input type="checkbox"> <strong>Step 5 &mdash; dry run.</strong> Follow <code>render-pdf.mjs</code>: a fabricated ten-thousand-satoshi output, transaction built and signed, hex printed, nothing broadcast. Confirm the hex decodes and the output script contains the root.</li>
+<li><input type="checkbox" checked> <strong>Step 5 &mdash; dry run.</strong> Follow <code>render-pdf.mjs</code>: a fabricated ten-thousand-satoshi output, transaction built and signed, hex printed, nothing broadcast. Confirm the hex decodes and the output script contains the root.</li>
 <li><input type="checkbox"> <strong>Step 6 &mdash; broadcast once, for real,</strong> on the earliest filed period. Record the transaction identifier. Confirm on a block explorer that the output carries the expected root.</li>
 <li><input type="checkbox"> <strong>Step 7 &mdash; write the commitment back</strong> to <code>ledger:commit:&lt;period&gt;</code> only after the broadcast is accepted, and confirm the page now shows that period locked.</li>
-<li><input type="checkbox"> <strong>Step 8 &mdash; commit.</strong>
+<li><input type="checkbox" checked> <strong>Step 8 &mdash; commit.</strong>
 <pre><code>git add scripts/ledger/commit.mjs
 git commit -m "Commit an accounting period's Merkle root to the chain"</code></pre></li>
 </ul>
@@ -886,12 +886,12 @@ git commit -m "Commit an accounting period's Merkle root to the chain"</code></p
 <p><strong>Consumes:</strong> <code>buildProof</code>, <code>verifyProof</code>, <code>loadCommit</code>. <strong>Produces:</strong> <code>GET /api/ledger/proof?id=&lt;transaction&gt;</code>.</p>
 
 <ul class="steps">
-<li><input type="checkbox"> <strong>Step 1 &mdash; write the failing test</strong> for the round trip: a stored commitment plus a transaction identifier yields a proof that <code>verifyProof</code> accepts against the stored root, and that a one-penny alteration causes to fail.</li>
-<li><input type="checkbox"> <strong>Step 2 &mdash; implement the route,</strong> gated the same way as Task 6. It returns the leaf, the sibling path, the root, the on-chain transaction identifier and the period label — and never the other transactions.</li>
-<li><input type="checkbox"> <strong>Step 3 &mdash; assert the disclosure boundary.</strong> A test that the response body contains no description, amount or account from any <em>other</em> transaction. This is the property the whole design exists for; assert it rather than assuming it.</li>
-<li><input type="checkbox"> <strong>Step 4 &mdash; add the row action</strong> on locked rows: export this transaction's proof as a small text file.</li>
+<li><input type="checkbox" checked> <strong>Step 1 &mdash; write the failing test</strong> for the round trip: a stored commitment plus a transaction identifier yields a proof that <code>verifyProof</code> accepts against the stored root, and that a one-penny alteration causes to fail.</li>
+<li><input type="checkbox" checked> <strong>Step 2 &mdash; implement the route,</strong> gated the same way as Task 6. It returns the leaf, the sibling path, the root, the on-chain transaction identifier and the period label — and never the other transactions.</li>
+<li><input type="checkbox" checked> <strong>Step 3 &mdash; assert the disclosure boundary.</strong> A test that the response body contains no description, amount or account from any <em>other</em> transaction. This is the property the whole design exists for; assert it rather than assuming it.</li>
+<li><input type="checkbox" checked> <strong>Step 4 &mdash; add the row action</strong> on locked rows: export this transaction's proof as a small text file.</li>
 <li><input type="checkbox"> <strong>Step 5 &mdash; verify one proof independently</strong> — recompute the leaf from the exported transaction, walk the path, compare to the root read back from the chain rather than from the store.</li>
-<li><input type="checkbox"> <strong>Step 6 &mdash; <code>npm test</code> and <code>npm run build</code>, then commit.</strong>
+<li><input type="checkbox" checked> <strong>Step 6 &mdash; <code>npm test</code> and <code>npm run build</code>, then commit.</strong>
 <pre><code>git add src/app/api/ledger/proof/route.ts src/app/board/ledger/LedgerClient.tsx
 git commit -m "Prove one transaction was committed without showing the others"</code></pre></li>
 </ul>
