@@ -84,7 +84,7 @@ To stop the worker: `launchctl unload ~/Library/LaunchAgents/club.henceforth.xte
 ## The go-live gate
 
 The web archive page (`/folklore/archive`) is built and tested behind a
-mechanical gate — `XTEXT_WEB_ARCHIVE_ENABLED` — that stays unset in
+mechanical gate — `XFOLKLORE_WEB_ARCHIVE_ENABLED` — that stays unset in
 production until every item below has actually happened. This is a
 checklist for Henry, not something a task can tick off by itself.
 
@@ -103,7 +103,7 @@ checklist for Henry, not something a task can tick off by itself.
       `/folklore/<handle>` and appears in the directory; and, separately, a
       deliberately underpaid job is swept back automatically.
 - [ ] **Henry has signed off**, and only then does
-      `XTEXT_WEB_ARCHIVE_ENABLED=true` go into the production environment and
+      `XFOLKLORE_WEB_ARCHIVE_ENABLED=true` go into the production environment and
       the "archive yours" call to action on `/folklore` start meaning something.
       Setting the variable alone changes nothing: the page reads the flag at
       build time and is prerendered static, so after setting it, trigger a

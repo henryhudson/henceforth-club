@@ -31,7 +31,7 @@ describe("the showroom never reaches X", () => {
   });
 
   it("costs nothing to run: no file under src/app/folklore reads an environment variable, other than the in-house feature flags", () => {
-    // XTEXT_WEB_ARCHIVE_ENABLED (task 10, src/app/folklore/archive/page.tsx),
+    // XFOLKLORE_WEB_ARCHIVE_ENABLED (task 10, src/app/folklore/archive/page.tsx),
     // KUDOS_ENABLED (the kudos economy's own gate, same page), and
     // FOLKLORE_SUBMIT_ENABLED (the submit page's gate, the same flag the
     // submit route fails closed on) are in-house feature flags, never
@@ -39,7 +39,7 @@ describe("the showroom never reaches X", () => {
     // interface — the only allowed exceptions to this invariant.
     const offenders = files.filter((f) => {
       const content = readFileSync(f, "utf8")
-        .replaceAll("process.env.XTEXT_WEB_ARCHIVE_ENABLED", "")
+        .replaceAll("process.env.XFOLKLORE_WEB_ARCHIVE_ENABLED", "")
         .replaceAll("process.env.KUDOS_ENABLED", "")
         .replaceAll("process.env.FOLKLORE_SUBMIT_ENABLED", "");
       return content.includes("process.env");

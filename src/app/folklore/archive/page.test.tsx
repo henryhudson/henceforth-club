@@ -12,7 +12,7 @@ describe("ArchivePage — the mechanical gate", () => {
   });
 
   it("renders only the stub when the flag is unset", async () => {
-    vi.stubEnv("XTEXT_WEB_ARCHIVE_ENABLED", undefined);
+    vi.stubEnv("XFOLKLORE_WEB_ARCHIVE_ENABLED", undefined);
     const html = renderToStaticMarkup(await ArchivePage());
     expect(html).toContain("Archive yours");
     expect(html).toContain("arrives shortly");
@@ -21,14 +21,14 @@ describe("ArchivePage — the mechanical gate", () => {
   });
 
   it("renders only the stub for any value other than the exact string true", async () => {
-    vi.stubEnv("XTEXT_WEB_ARCHIVE_ENABLED", "1");
+    vi.stubEnv("XFOLKLORE_WEB_ARCHIVE_ENABLED", "1");
     const html = renderToStaticMarkup(await ArchivePage());
     expect(html).toContain("arrives shortly");
     expect(html).not.toContain("Choose or drop");
   });
 
   it("renders the real flow once the flag is exactly \"true\"", async () => {
-    vi.stubEnv("XTEXT_WEB_ARCHIVE_ENABLED", "true");
+    vi.stubEnv("XFOLKLORE_WEB_ARCHIVE_ENABLED", "true");
     const html = renderToStaticMarkup(await ArchivePage());
     expect(html).not.toContain("arrives shortly");
     expect(html).toContain("Choose or drop");
@@ -37,7 +37,7 @@ describe("ArchivePage — the mechanical gate", () => {
   });
 
   it("names the kudos float in the header only when KUDOS_ENABLED is exactly \"true\"", async () => {
-    vi.stubEnv("XTEXT_WEB_ARCHIVE_ENABLED", "true");
+    vi.stubEnv("XFOLKLORE_WEB_ARCHIVE_ENABLED", "true");
     vi.stubEnv("KUDOS_ENABLED", "true");
     const withKudos = renderToStaticMarkup(await ArchivePage());
     expect(withKudos).toContain("kudos float");
@@ -54,19 +54,19 @@ describe("generateMetadata — rides the same gate", () => {
   });
 
   it("describes the stub while the flag is off", () => {
-    vi.stubEnv("XTEXT_WEB_ARCHIVE_ENABLED", undefined);
+    vi.stubEnv("XFOLKLORE_WEB_ARCHIVE_ENABLED", undefined);
     const metadata = generateMetadata();
     expect(metadata.title).toBe("Archive yours");
     expect(metadata.description).toContain("arriving shortly");
   });
 
   it("still describes the stub for any value other than the exact string true", () => {
-    vi.stubEnv("XTEXT_WEB_ARCHIVE_ENABLED", "1");
+    vi.stubEnv("XFOLKLORE_WEB_ARCHIVE_ENABLED", "1");
     expect(generateMetadata().description).toContain("arriving shortly");
   });
 
   it("describes the live flow once the flag is exactly \"true\"", () => {
-    vi.stubEnv("XTEXT_WEB_ARCHIVE_ENABLED", "true");
+    vi.stubEnv("XFOLKLORE_WEB_ARCHIVE_ENABLED", "true");
     const metadata = generateMetadata();
     expect(metadata.title).toBe("Archive yours");
     expect(metadata.description).not.toContain("arriving shortly");

@@ -68,7 +68,7 @@ const JOB = {
 
 beforeEach(() => {
   vi.unstubAllEnvs();
-  vi.stubEnv("XTEXT_WEB_ARCHIVE_ENABLED", "true");
+  vi.stubEnv("XFOLKLORE_WEB_ARCHIVE_ENABLED", "true");
   mockParseXExport.mockReset();
   mockQuoteArchive.mockReset();
   mockGbpPerBsv.mockReset();
@@ -83,7 +83,7 @@ beforeEach(() => {
 
 describe("POST /api/folklore/job", () => {
   it("refuses when the web-archive flag is not enabled — the pay pipeline stays unreachable", async () => {
-    vi.stubEnv("XTEXT_WEB_ARCHIVE_ENABLED", "false");
+    vi.stubEnv("XFOLKLORE_WEB_ARCHIVE_ENABLED", "false");
     const res = await POST(multipartRequest());
     expect(res.status).toBe(503);
     expect(await res.json()).toEqual({ ok: false, reason: "not-available" });
@@ -92,7 +92,7 @@ describe("POST /api/folklore/job", () => {
   });
 
   it("proceeds when the web-archive flag is exactly \"true\"", async () => {
-    vi.stubEnv("XTEXT_WEB_ARCHIVE_ENABLED", "true");
+    vi.stubEnv("XFOLKLORE_WEB_ARCHIVE_ENABLED", "true");
     const res = await POST(multipartRequest());
     expect(res.status).toBe(200);
   });

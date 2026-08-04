@@ -9,7 +9,7 @@ import ArchiveFlow from "./ArchiveFlow";
  * exists. Evaluated at build time, exactly like the page itself.
  */
 export function generateMetadata(): Metadata {
-  return process.env.XTEXT_WEB_ARCHIVE_ENABLED === "true"
+  return process.env.XFOLKLORE_WEB_ARCHIVE_ENABLED === "true"
     ? {
         title: "Archive yours",
         description:
@@ -52,13 +52,13 @@ function ArchiveStub() {
 /**
  * The mechanical gate. Everything the paid archive flow can do — upload,
  * quote, checkboxes, the payment code that can receive real money — stays
- * entirely unreachable until XTEXT_WEB_ARCHIVE_ENABLED is exactly "true". The flag
+ * entirely unreachable until XFOLKLORE_WEB_ARCHIVE_ENABLED is exactly "true". The flag
  * stays unset in production until the five-point go-live gate
  * (scripts/xtext-worker/README.md) passes and Henry signs off; until then
  * this route renders only the stub above, exactly as it always has.
  */
 export default async function ArchivePage() {
-  if (process.env.XTEXT_WEB_ARCHIVE_ENABLED !== "true") {
+  if (process.env.XFOLKLORE_WEB_ARCHIVE_ENABLED !== "true") {
     return <ArchiveStub />;
   }
 

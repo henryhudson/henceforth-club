@@ -1,5 +1,5 @@
 /**
- * What an xtext archive costs, mirroring the app's ArchiveCostEstimator exactly.
+ * What an xfolklore archive costs, mirroring the app's ArchiveCostEstimator exactly.
  *
  * The user pays the miner fee AND the developer reward. Quoting the miner fee
  * alone understates the price threefold, and a price on a web page that the

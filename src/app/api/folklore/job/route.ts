@@ -35,7 +35,7 @@ export async function POST(req: Request) {
   // request time rather than baked in at build. While it is off, the whole pay
   // pipeline — quote, job creation, the address that receives real money —
   // stays unreachable even though the page renders only its stub.
-  if (process.env.XTEXT_WEB_ARCHIVE_ENABLED !== "true") {
+  if (process.env.XFOLKLORE_WEB_ARCHIVE_ENABLED !== "true") {
     return refusal("not-available", 503);
   }
 

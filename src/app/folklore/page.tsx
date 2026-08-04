@@ -75,7 +75,7 @@ export default async function FolklorePage() {
   // primary action must not lead to a stub that tells a warmed-up visitor to
   // leave (the accent button did exactly that — the top finding of the
   // 2026-07-14 smoothness research).
-  const webArchiveOpen = process.env.XTEXT_WEB_ARCHIVE_ENABLED === "true";
+  const webArchiveOpen = process.env.XFOLKLORE_WEB_ARCHIVE_ENABLED === "true";
   // The whole archive, hot-ranked, then CURATED: the owner's picks — the
   // tutorials, which are why the showroom exists — hold the front seats,
   // and the hot fold fills the rest. Curation is honest here because the

@@ -22,7 +22,7 @@ import { logRefusal } from "@/lib/xRefusalLog";
  * stays reachable by its own txid — nothing on Bitcoin is destroyed).
  *
  * CONTRACT WITH THE SHIPPED APP — how to pick a status for a NEW reason.
- * The app (xtextWord.swift, `xRegistrationOutcome`) classifies refusals by
+ * The app (xfolkloreWord.swift, `xRegistrationOutcome`) classifies refusals by
  * reason first; a reason it has never heard of falls back to the status
  * band: 4xx = permanent (the registration is dropped from the app's durable
  * retry queue, forever), 5xx = transient (kept and replayed on the next run).
