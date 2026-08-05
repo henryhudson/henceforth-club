@@ -43,6 +43,10 @@ export interface BriefItem { title: string; when: string; note: string }
 /** One post in the government of the day. `great` lifts a post into the top
  *  band of the cabinet graphic — the offices a reader looks for first. */
 export interface CabinetPost { office: string; name: string; great?: boolean }
+
+/** One directly-elected regional mayoralty. Coordinates travel with the data
+ *  so the map component stays free of geography it would otherwise hardcode. */
+export interface MayorSeat { authority: string; name: string; party: string; lon: number; lat: number }
 export interface MostActiveEntry { name: string; party: string; count: number }
 export interface OverviewBlock {
   headline: string
@@ -50,6 +54,8 @@ export interface OverviewBlock {
   brief?: BriefItem[]
   /** The government as it stands, rendered as a graphic rather than prose. */
   cabinet?: { title: string; note?: string; posts: CabinetPost[] }
+  /** England's regional mayors as a party-coloured map, cabinet-style. */
+  mayors?: { title: string; note?: string; seats: MayorSeat[] }
   feature?: { title: string; summary: string }
   mostActive?: { asker: MostActiveEntry; answerer: MostActiveEntry }
 }

@@ -4,6 +4,7 @@ import A4Sheet from './A4Sheet'
 import Masthead from './Masthead'
 import WeekInBrief from './WeekInBrief'
 import Cabinet from './Cabinet'
+import Mayors from './Mayors'
 import DivisionsBlock from './DivisionsBlock'
 import DepartmentChart from './DepartmentChart'
 import MostAskedSubjects from './MostAskedSubjects'
@@ -49,6 +50,9 @@ export default function Overview({ digest, week }: { digest: DigestData; week: s
       {ov?.cabinet && (
         <Cabinet title={ov.cabinet.title} note={ov.cabinet.note} posts={ov.cabinet.posts} />
       )}
+      {ov?.mayors && (
+        <Mayors title={ov.mayors.title} note={ov.mayors.note} seats={ov.mayors.seats} />
+      )}
       {hasData && (
         <div className={s.cols2}>
           <div>
@@ -63,7 +67,9 @@ export default function Overview({ digest, week }: { digest: DigestData; week: s
       )}
       {hasData && <MostAskedSubjects topics={digest.topTopics} cap={topicsCap} />}
       {hasData && qa.length > 0 && <TopQuestions qa={qa} />}
-      {hasData && feature && <Feature feature={feature} />}
+      {/* A recess issue has no data sections yet can still carry a feature —
+          the story the week produced outside the chamber. */}
+      {feature && <Feature feature={feature} />}
       {hasData && ov?.mostActive && <MostActiveFooter mostActive={ov.mostActive} />}
       <div className={s.credit}>Every figure checked against the official Parliament record. henceforth.club</div>
     </A4Sheet>
