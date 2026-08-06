@@ -1,0 +1,159 @@
+{
+  "week": "2026-08-05",
+  "windowLabel": "29 Jul – 5 Aug 2026",
+  "mode": "recess",
+  "generatedAt": "2026-08-05T14:05:00.000Z",
+  "recessReturnISO": "2026-09-01T00:00:00.000Z",
+  "stats": {
+    "divisions": 0,
+    "questions": 0,
+    "distinctAskers": 0
+  },
+  "departments": [],
+  "intro": "Greater Manchester replaced its mayor this week, and the man it lost curbed his own government's early-release scheme — both decided, in the summer manner of this administration, entirely outside the chamber. On Thursday 30 July some 2,142,779 electors were entitled to choose Andy Burnham's successor, the largest by-election electorate this country has ever assembled; 538,659 of them took part, a turnout of 25.14 per cent, and after a count of roughly fifteen hours Bev Craig, leader of Manchester City Council, was declared at Co-op Live on Friday night — 47.1 per cent on first preferences, 66.3 in the runoff against Reform UK's Sian Astley, the Conservative candidate fifth on 7.7. Then on Tuesday the Prime Minister she succeeds announced, by press release, that rape, serious child sexual offences and grooming offences are barred from the Sentencing Act's early-release changes: roughly 5,000 prisoners now release across ten months instead of 6,000 in September, the start pushed to 1 October, prisons standing at 98 per cent. The exclusions do not reach manslaughter, so two of PC Andrew Harper's killers remain eligible — his widow called it an utter betrayal, and the new Justice Secretary, Alex Norris, said he was deeply sorry while defending the line he drew. The Commons that would ordinarily test all of this returns on 1 September; until then the score is kept in writing, where 126 answers arrived this week, twelve of them explaining what the Department for Education does with artificial intelligence, and one what Great British Railways intends by way of biometrics at stations.",
+  "overview": {
+    "headline": "Manchester picks a mayor while the mayor it lost curbs his own release scheme",
+    "intro": "Greater Manchester elected Bev Craig as its mayor on Thursday 30 July. She led Manchester City Council and won 47.1% of first preferences, then 66.3% in the runoff against Reform UK. The electorate of 2,142,779 was the largest any by-election in this country has had. Turnout was 25.14%. The contest happened because Andy Burnham had to give up the mayoralty to enter the Commons and become Prime Minister. On Tuesday his government barred rape, serious child sexual offences and grooming offences from its early-release scheme, cut the September cohort from about 6,000 prisoners to about 5,000 spread over ten months, and delayed the start to 1 October. Parliament was away for all of it and returns on 1 September.",
+    "brief": [
+      {
+        "title": "Greater Manchester elects Bev Craig",
+        "when": "Thursday 30 July, declared Friday 31 July",
+        "note": "Seven candidates stood for the mayoralty Andy Burnham vacated. Bev Craig took 251,449 first preferences and won the runoff with 66.3% against Sian Astley of Reform UK. The count ran about fifteen hours and the declaration came at Co-op Live. She promised to fight for a better life for all of Greater Manchester."
+      },
+      {
+        "title": "Rape and grooming offences barred from early release",
+        "when": "Tuesday 4 August",
+        "note": "The Prime Minister and the new Justice Secretary Alex Norris excluded rape, serious child sexual offences and grooming offences from the Sentencing Act changes. About 5,000 prisoners will now release over ten months instead of about 6,000 in September. The start moves to 1 October and prisons stand at 98% of capacity."
+      },
+      {
+        "title": "The exclusions stop short of manslaughter",
+        "when": "Tuesday 4 August",
+        "note": "Two of the men who killed PC Andrew Harper stay eligible for earlier release because manslaughter was not added to the list. His widow Lissie Harper called the decision an utter betrayal. Alex Norris said he was deeply sorry. The shadow justice secretary Nick Timothy called the wider change a victory for victims that does not go far enough."
+      },
+      {
+        "title": "126 written answers arrive during recess",
+        "when": "Across the window",
+        "note": "Nobody could table a question and ministers answered anyway. The Department for Education sent 58 replies of which twelve concern its use of artificial intelligence. Transport sent 45 including one on biometric technology at railway stations. Nine covered childcare fees."
+      },
+      {
+        "title": "When Parliament comes back",
+        "when": "Tuesday 1 September",
+        "note": "The summer recess runs to 31 August. Every decision in this issue was made by declaration or press release. The first chance to question any of it from the floor of either House comes when Members of Parliament return."
+      }
+    ],
+    "mayors": {
+      "title": "The mayors of England, as they stand tonight",
+      "note": "Fourteen directly elected regional mayoralties after Thursday's by-election. Ten are Labour or Labour and Co-operative, two Conservative, two Reform UK.",
+      "seats": [
+        {
+          "authority": "North East",
+          "name": "Kim McGuinness",
+          "party": "Labour and Co-operative",
+          "lon": -1.6,
+          "lat": 54.97
+        },
+        {
+          "authority": "Tees Valley",
+          "name": "Ben Houchen",
+          "party": "Conservative",
+          "lon": -1.25,
+          "lat": 54.55
+        },
+        {
+          "authority": "York and North Yorkshire",
+          "name": "David Skaith",
+          "party": "Labour and Co-operative",
+          "lon": -1.2,
+          "lat": 54.1
+        },
+        {
+          "authority": "Hull and East Yorkshire",
+          "name": "Luke Campbell",
+          "party": "Reform UK",
+          "lon": -0.45,
+          "lat": 53.8
+        },
+        {
+          "authority": "West Yorkshire",
+          "name": "Tracy Brabin",
+          "party": "Labour and Co-operative",
+          "lon": -1.65,
+          "lat": 53.75
+        },
+        {
+          "authority": "Greater Manchester",
+          "name": "Bev Craig",
+          "party": "Labour and Co-operative",
+          "lon": -2.3,
+          "lat": 53.5
+        },
+        {
+          "authority": "South Yorkshire",
+          "name": "Oliver Coppard",
+          "party": "Labour and Co-operative",
+          "lon": -1.35,
+          "lat": 53.45
+        },
+        {
+          "authority": "Liverpool City Region",
+          "name": "Steve Rotheram",
+          "party": "Labour",
+          "lon": -2.9,
+          "lat": 53.42
+        },
+        {
+          "authority": "Greater Lincolnshire",
+          "name": "Andrea Jenkyns",
+          "party": "Reform UK",
+          "lon": -0.3,
+          "lat": 53.25
+        },
+        {
+          "authority": "East Midlands",
+          "name": "Claire Ward",
+          "party": "Labour and Co-operative",
+          "lon": -1.3,
+          "lat": 53.0
+        },
+        {
+          "authority": "West Midlands",
+          "name": "Richard Parker",
+          "party": "Labour and Co-operative",
+          "lon": -1.95,
+          "lat": 52.5
+        },
+        {
+          "authority": "Cambridgeshire and Peterborough",
+          "name": "Paul Bristow",
+          "party": "Conservative",
+          "lon": -0.1,
+          "lat": 52.4
+        },
+        {
+          "authority": "London",
+          "name": "Sadiq Khan",
+          "party": "Labour",
+          "lon": -0.12,
+          "lat": 51.51
+        },
+        {
+          "authority": "West of England",
+          "name": "Helen Godwin",
+          "party": "Labour",
+          "lon": -2.55,
+          "lat": 51.45
+        }
+      ]
+    },
+    "feature": {
+      "title": "A justice climbdown conducted entirely by press release",
+      "summary": "The early-release scheme was the last government's answer to prisons at 98% of capacity. The new Prime Minister paused it within days of taking office and this week cut it back. Offenders convicted of rape, serious child sexual offences and grooming offences will serve their full custodial term. Those released early will be fewer and slower, about 5,000 over ten months rather than 6,000 in one. More than 18,000 offenders were already excluded. The change arrived with £10 million for victim support and £700 million for probation with 1,300 more officers. None of it was announced to Parliament because Parliament is not sitting. The victims' commissioner says exclusions alone cannot guarantee safety. The domestic abuse commissioner says the list leaves abusers inside the scheme. The first minister to answer for the balance struck will do so in September."
+    }
+  },
+  "highlights": {
+    "votes": [],
+    "questions": [],
+    "bills": []
+  },
+  "status": "published"
+}
