@@ -30,6 +30,7 @@ export default function ProfileView({
   eloByPost,
   header = "profile",
   defaultMode,
+  curatedSeed,
 }: {
   archive: XArchive;
   postCount?: number;
@@ -51,6 +52,9 @@ export default function ProfileView({
   header?: "profile" | "ledger";
   /** Pass-through for SSR tests that assert Best-tab ranking. */
   defaultMode?: "latest" | "best" | "hot";
+  /** The seed is the owner's showcase seating, not the stream's own head —
+   * FeedControls then pages from the server's rank top (see streamPaging.ts). */
+  curatedSeed?: boolean;
 }) {
   const { profile } = archive;
   const posts = dedupePosts(archive.posts);
@@ -144,6 +148,7 @@ export default function ProfileView({
           tipsByPost={tipsByPost}
           eloByPost={eloByPost}
           defaultMode={defaultMode}
+          curatedSeed={curatedSeed}
         />
       </div>
     </div>
