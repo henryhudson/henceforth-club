@@ -1,4 +1,5 @@
 import { getRedis } from "./redis";
+import { fetchTxArchive as fetchTxArchiveDefault } from "./whatsonchain";
 import type { SocialArchive } from "@/app/folklore/onchain";
 
 // Per-transaction digest cache. An archive transaction is immutable, so the
@@ -49,4 +50,25 @@ export async function setTxDigest(txid: string, digest: TxDigest): Promise<void>
   const redis = getRedis();
   if (!redis) return;
   await redis.set(key(txid), digest);
+}
+
+/**
+ * A transaction's digest: from the forever-cache when present, otherwise
+ * derived from a fresh fetch and written back to the cache. Null only when the
+ * transaction cannot be resolved as an archive at all. Because a digest is
+ * only ever written for a transaction that actually parses as a SocialArchive,
+ * this doubles as the "is this txid one of our archive transactions?" question
+ * the media route gates its paid cache on.
+ */
+export async function resolveTxDigest(
+  txid: string,
+  fetchTxArchive: typeof fetchTxArchiveDefault = fetchTxArchiveDefault,
+): Promise<TxDigest | null> {
+  const cached = await getTxDigest(txid);
+  if (cached) return cached;
+  const archive = await fetchTxArchive(txid);
+  if (!archive) return null;
+  const digest = archiveDigest(archive);
+  await setTxDigest(txid, digest);
+  return digest;
 }

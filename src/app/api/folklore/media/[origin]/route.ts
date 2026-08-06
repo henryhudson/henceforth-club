@@ -2,8 +2,10 @@ import { head, put } from "@vercel/blob";
 import { createReadStream } from "node:fs";
 import { open, rename, stat, writeFile, readFile } from "node:fs/promises";
 import { Readable } from "node:stream";
+import { resolveTxDigest } from "@/lib/xDigest";
 import { parseRange } from "../range";
 import { readSlice } from "../readSlice";
+import { MAX_MEDIA_BYTES, readCapped, safeMediaType } from "../safety";
 
 /**
  * Range-honouring reader over an inscription's bytes.
@@ -33,6 +35,18 @@ export async function GET(request: Request, { params }: { params: Promise<{ orig
   const { origin } = await params;
   if (!ORIGIN_SHAPE.test(origin)) return new Response("not found", { status: 404 });
 
+  // The caches are paid-for, permanent, and public, so shape alone must not
+  // open them: only media the archive store actually knows may enter. The
+  // origin's transaction has to be a registered archive transaction — the
+  // same forever-cached digest /api/x/archived trusts, one Redis read on the
+  // hit path. The digest records post ids, not vouts, so the vout goes
+  // unchecked; every output of a genuine archive transaction is the
+  // archiver's own paid inscription, and the transaction is the boundary
+  // that matters.
+  if ((await resolveTxDigest(origin.slice(0, 64))) === null) {
+    return new Response("not found", { status: 404 });
+  }
+
   // Two store shapes: the classic static token, or the newer integration
   // that installs BLOB_STORE_ID and lets the SDK authenticate at runtime.
   const token = process.env.BLOB_READ_WRITE_TOKEN;
@@ -58,11 +72,12 @@ async function viaBlob(origin: string, token: string | undefined): Promise<Respo
   }
   const upstream = await fetch(GATEWAY + origin);
   if (!upstream.ok) return new Response("unavailable", { status: 502 });
-  const bytes = await upstream.arrayBuffer();
+  const bytes = await readCapped(upstream, MAX_MEDIA_BYTES);
+  if (bytes === "too-large") return new Response("too large", { status: 413 });
   const stored = await put(pathname, bytes, {
     access: "public",
     addRandomSuffix: false,
-    contentType: upstream.headers.get("content-type") ?? "application/octet-stream",
+    contentType: safeMediaType(upstream.headers.get("content-type")),
     ...auth,
   });
   return redirect(stored.url);
@@ -89,8 +104,9 @@ async function viaTmp(request: Request, origin: string): Promise<Response> {
   } catch {
     const upstream = await fetch(GATEWAY + origin);
     if (!upstream.ok) return new Response("unavailable", { status: 502 });
-    const bytes = Buffer.from(await upstream.arrayBuffer());
-    meta = { type: upstream.headers.get("content-type") ?? "application/octet-stream", size: bytes.length };
+    const bytes = await readCapped(upstream, MAX_MEDIA_BYTES);
+    if (bytes === "too-large") return new Response("too large", { status: 413 });
+    meta = { type: safeMediaType(upstream.headers.get("content-type")), size: bytes.length };
     // Partial-write safety under concurrent first touches: land whole, then rename.
     const scratch = `${file}.partial-${process.pid}-${Math.floor(performance.now() * 1000)}`;
     await writeFile(scratch, bytes);
@@ -98,7 +114,17 @@ async function viaTmp(request: Request, origin: string): Promise<Response> {
     await writeFile(metaFile, JSON.stringify(meta));
   }
 
-  const shared = { "content-type": meta.type, "accept-ranges": "bytes", "cache-control": IMMUTABLE };
+  // The type is clamped again on the way out — the meta file is an input read
+  // back off disk, and a warm instance may still hold one written before the
+  // clamp existed. nosniff + inline keep even the opaque fallback from being
+  // sniffed into something a browser would execute from this origin.
+  const shared = {
+    "content-type": safeMediaType(meta.type),
+    "accept-ranges": "bytes",
+    "cache-control": IMMUTABLE,
+    "x-content-type-options": "nosniff",
+    "content-disposition": "inline",
+  };
   const range = parseRange(request.headers.get("range"), meta.size);
   if (range === "invalid") {
     return new Response(null, {

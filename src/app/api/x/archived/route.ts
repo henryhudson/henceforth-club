@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getXTxids } from "@/lib/xIndex";
-import { fetchTxArchive } from "@/lib/whatsonchain";
-import { archiveDigest, getTxDigest, setTxDigest, type TxDigest } from "@/lib/xDigest";
+import { resolveTxDigest } from "@/lib/xDigest";
 
 /**
  * GET /api/x/archived?handle=<handle>
@@ -27,7 +26,7 @@ export async function GET(req: Request) {
   // needs both sets to compute what a new archive would actually add.
   const mediaPostIds = new Set<string>();
   for (const txid of txids) {
-    const digest = await resolveDigest(txid);
+    const digest = await resolveTxDigest(txid);
     if (!digest) {
       // Never present a partial union as authoritative. A dropped transaction
       // would make the app think its tweets are not yet on chain and inscribe
@@ -49,19 +48,4 @@ export async function GET(req: Request) {
     mediaPostIds: [...mediaPostIds],
     count: tweetIds.size,
   });
-}
-
-/**
- * A transaction's digest: from the forever-cache when present, otherwise derived
- * from a fresh fetch and written back to the cache. Null only when the
- * transaction cannot be resolved at all.
- */
-async function resolveDigest(txid: string): Promise<TxDigest | null> {
-  const cached = await getTxDigest(txid);
-  if (cached) return cached;
-  const archive = await fetchTxArchive(txid);
-  if (!archive) return null;
-  const digest = archiveDigest(archive);
-  await setTxDigest(txid, digest);
-  return digest;
 }
