@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { fetchXArchive } from "@/lib/xfetch";
+import { fetchProfileHead, fetchXArchive } from "@/lib/xfetch";
 import { payAndReserve, RESOURCES_TEXT_ONLY } from "@/lib/xGate";
 
 /**
@@ -36,10 +36,14 @@ export async function GET(req: Request) {
   const gate = await payAndReserve(params.get("payment"), RESOURCES_TEXT_ONLY);
   if (!gate.ok) return gate.response;
 
-  const result = await fetchXArchive(handle, token);
-  if (!result) {
+  // The head is read here and handed to `fetchXArchive`, which takes it as an
+  // argument precisely so it cannot read it again (2026-08-06). One head plus
+  // one page — the exact read RESOURCES_TEXT_ONLY reserved above.
+  const head = await fetchProfileHead(handle, token);
+  if (!head) {
     return NextResponse.json({ ok: false, reason: "no-user" }, { status: 404 });
   }
+  const result = await fetchXArchive(head, token);
   // Return the SocialArchive JSON directly — the app decodes it as-is. This is
   // the wire contract the SHIPPED 4.46 app depends on, so it keeps its shape
   // even though fetchXArchive now also returns media refs: unwrap, do not leak
