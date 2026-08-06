@@ -7,6 +7,7 @@ import type { XPost } from "../parseArchive";
 import { buildThreadContext } from "./threadContext";
 import { computeShowParent } from "./PostCard";
 import { sortPostsByElo, sortPostsByScore } from "../sortPosts";
+import { absorbPage, initialStreamState, type StreamState } from "./streamPaging";
 import PostEntry from "./PostEntry";
 
 type Mode = "hot" | "latest" | "best" | "videos" | "photos";
@@ -35,12 +36,14 @@ type PostsResponse = {
  * independently — the server ranks (hot) or pages (latest) the whole archive
  * and the client only appends, because a client-side reorder over
  * incrementally-loaded pages can only ever rank what happened to be scrolled
- * past. The default stream's first page arrives server-rendered; the other
- * stream starts empty and pages from the top on first opening. Best is a
- * client sort over every post loaded so far (both streams, deduplicated) —
- * a view of the loaded subset, which its footer does not pretend otherwise.
- * Videos / Photos fetch their complete match list in one request (the
- * server scans the whole archive).
+ * past. The default stream's first page arrives server-rendered — either the
+ * stream's own head, or (with `curatedSeed`) a hand-picked seating that the
+ * stream then fills in behind (see streamPaging.ts for the cursor rules).
+ * The other stream starts empty and pages from the top on first opening.
+ * Best is a client sort over every post loaded so far (both streams,
+ * deduplicated) — a view of the loaded subset, which its footer does not
+ * pretend otherwise. Videos / Photos fetch their complete match list in one
+ * request (the server scans the whole archive).
  */
 export default function FeedControls({
   posts: initialPosts,
@@ -56,6 +59,7 @@ export default function FeedControls({
   tipsByPost,
   eloByPost,
   defaultMode = "latest",
+  curatedSeed = false,
 }: {
   posts: readonly XPost[];
   txTimes: Record<string, number>;
@@ -70,9 +74,16 @@ export default function FeedControls({
   kudosEnabled?: boolean;
   tipsByPost?: Record<string, number>;
   eloByPost?: RatingTable;
-  /** The tab the feed opens on. "hot" ONLY where the initial posts arrived
-   * hot-ranked from the server — the seeded stream must match its order. */
+  /** The tab the feed opens on. "hot" either with the server's own hot head
+   * (a prefix — paging carries on from its length) or, with `curatedSeed`,
+   * any hand-picked subset of the archive. */
   defaultMode?: Mode;
+  /** The seeded posts are a CURATION (the owner's showcase seats), not the
+   * stream's own head: paging then starts from the server's rank top and
+   * deduplicates against the seats, so a genuinely hot post outside the
+   * picks still arrives — deliberately relaxed from the old "hot may only
+   * be seeded with server-hot-ordered posts" contract. */
+  curatedSeed?: boolean;
 }) {
   const seededStream: StreamMode = isStreamMode(defaultMode) ? defaultMode : "latest";
   const totalKnown = postCount ?? initialPosts.length;
@@ -80,9 +91,16 @@ export default function FeedControls({
 
   const [mode, setMode] = useState<Mode>(defaultMode);
   const [selectedWindow, setSelectedWindow] = useState<ScoreWindow>(DEFAULT_WINDOW);
-  const [streams, setStreams] = useState<Record<StreamMode, { extra: XPost[]; exhausted: boolean }>>({
-    hot: { extra: [], exhausted: !pageable || (seededStream === "hot" && initialPosts.length >= totalKnown) },
-    latest: { extra: [], exhausted: !pageable || (seededStream === "latest" && initialPosts.length >= totalKnown) },
+  const [streams, setStreams] = useState<Record<StreamMode, StreamState<XPost>>>(() => {
+    const seedStream = (stream: StreamMode) =>
+      initialStreamState<XPost>({
+        pageable,
+        seeded: seededStream === stream,
+        curatedSeed,
+        seedCount: initialPosts.length,
+        totalKnown,
+      });
+    return { hot: seedStream("hot"), latest: seedStream("latest") };
   });
   const [mediaPosts, setMediaPosts] = useState<Partial<Record<MediaMode, XPost[]>>>({});
   const [mediaLoading, setMediaLoading] = useState(false);
@@ -90,7 +108,7 @@ export default function FeedControls({
   const [loadingMore, setLoadingMore] = useState(false);
 
   const streamPosts = useCallback(
-    (stream: StreamMode, state: Record<StreamMode, { extra: XPost[]; exhausted: boolean }>) =>
+    (stream: StreamMode, state: Record<StreamMode, StreamState<XPost>>) =>
       stream === seededStream ? [...initialPosts, ...state[stream].extra] : state[stream].extra,
     [initialPosts, seededStream],
   );
@@ -106,7 +124,9 @@ export default function FeedControls({
       if (!handle) return;
       const { streams: current, loadingMore: busy } = stateRef.current;
       if (busy || current[stream].exhausted) return;
-      const offset = streamPosts(stream, current).length;
+      // The SERVER cursor, never the shown count — a curated seed and dropped
+      // duplicates both make the two diverge (see streamPaging.ts).
+      const offset = current[stream].served;
       setLoadingMore(true);
       stateRef.current.loadingMore = true;
       try {
@@ -116,15 +136,9 @@ export default function FeedControls({
         const body = (await res.json()) as PostsResponse;
         setStreams((prev) => {
           const seen = new Set(streamPosts(stream, prev).map((p) => p.id));
-          const fresh = body.posts.filter((p) => !seen.has(p.id));
           const grown = {
             ...prev,
-            [stream]: {
-              extra: [...prev[stream].extra, ...fresh],
-              exhausted:
-                body.posts.length === 0 ||
-                streamPosts(stream, prev).length + body.posts.length >= body.postCount,
-            },
+            [stream]: absorbPage(prev[stream], seen, body.posts, body.postCount),
           };
           stateRef.current.streams = grown;
           return grown;

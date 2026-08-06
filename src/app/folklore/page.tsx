@@ -81,6 +81,9 @@ export default async function FolklorePage() {
   // and the hot fold fills the rest. Curation is honest here because the
   // fold cannot tell an expensive casual clip from an expensive tutorial;
   // only the owner can (Henry, 2026-07-26: "i dont see my tutorials").
+  // `curatedSeed` below tells the feed so: scrolling past the seats pages
+  // from the server's own rank top (deduplicating against them), so a
+  // genuinely hot post outside the picks still arrives.
   const witnessWhole = await getHotArchivePage(WITNESS_HANDLE, 0, 100_000);
   const witnessWindow = witnessWhole
     ? {
@@ -194,6 +197,7 @@ export default async function FolklorePage() {
           archiveSats={witnessSats}
           firstInscribedAt={witness.firstInscribedAt}
           defaultMode="hot"
+          curatedSeed
           txTimes={witness.txTimes}
           scoresByWindow={scoresByWindow}
           foundingByPost={foundingByPost}

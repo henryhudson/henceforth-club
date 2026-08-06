@@ -3,6 +3,7 @@ import { createReadStream } from "node:fs";
 import { open, rename, stat, writeFile, readFile } from "node:fs/promises";
 import { Readable } from "node:stream";
 import { parseRange } from "../range";
+import { readSlice } from "../readSlice";
 
 /**
  * Range-honouring reader over an inscription's bytes.
@@ -114,15 +115,23 @@ async function viaTmp(request: Request, origin: string): Promise<Response> {
   }
   const handle = await open(file, "r");
   try {
-    const length = range.end - range.start + 1;
-    const slice = Buffer.alloc(length);
-    await handle.read(slice, 0, length, range.start);
+    // Loop until the window fills — one read may legally come up short, and
+    // a short read served whole is a silently zero-filled tail (readSlice).
+    const slice = await readSlice(
+      (buffer, offset, length, position) => handle.read(buffer, offset, length, position),
+      range,
+    );
+    if (slice.length === 0) {
+      // The disk copy is shorter than its own meta claims — a corrupt
+      // cache, not an unsatisfiable request; refuse rather than lie.
+      return new Response("unavailable", { status: 502 });
+    }
     return new Response(new Uint8Array(slice), {
       status: 206,
       headers: {
         ...shared,
-        "content-length": String(length),
-        "content-range": `bytes ${range.start}-${range.end}/${meta.size}`,
+        "content-length": String(slice.length),
+        "content-range": `bytes ${range.start}-${range.start + slice.length - 1}/${meta.size}`,
       },
     });
   } finally {
