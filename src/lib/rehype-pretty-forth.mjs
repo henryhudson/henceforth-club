@@ -138,7 +138,7 @@ const FORTH_GRAMMAR = {
             // (e.g. data>script before >script; >scriptnum before >script;
             // checksig-fixture is explicit because script-[a-z-]+ would
             // not match the checksig- prefix).
-            "(?i)(?<=^|\\s)(tx-[a-z-]+|script-[a-z-]+|bap-[a-z-]+|hex>data|chars>data|data>hex|hex2data|data2hex|data>script|text>script|file>script|checksig-fixture|>scriptnum|scriptnum>|>data|>addr|>script|make-[a-z0-9-]+|pay|receive|price|send|send-many|balance|spv-verified\\?|sign-msg|verify-msg|encrypt-msg|decrypt-msg|xtext|xmedia|folklore-sync|todo|SCRIPT-BEGIN|SCRIPT-END|woc[a-z]+|op_[a-z0-9_]+|OP_[A-Z0-9_]+)(?=\\s|$)",
+            "(?i)(?<=^|\\s)(tx-[a-z-]+|script-[a-z-]+|bap-[a-z-]+|hex>data|chars>data|data>hex|hex2data|data2hex|data>script|text>script|file>script|checksig-fixture|>scriptnum|scriptnum>|>data|>addr|>script|make-[a-z0-9-]+|pay|receive|price|send|send-many|balance|spv-verified\\?|sign-msg|verify-msg|encrypt-msg|decrypt-msg|xfolklore|xtext|xmedia|folklore-sync|todo|SCRIPT-BEGIN|SCRIPT-END|woc[a-z]+|op_[a-z0-9_]+|OP_[A-Z0-9_]+)(?=\\s|$)",
         },
       ],
     },
