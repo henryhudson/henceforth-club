@@ -68,36 +68,38 @@ export async function fetchProfileHead(
 }
 
 /**
- * A profile, its posts, AND their media references — in ONE read.
+ * A profile's posts AND their media references — in ONE read.
  *
- * Two things this deliberately no longer does, both of which were expensive and
- * between them are why only the most recent ~100 posts ever had their photos
- * and videos archived (2026-07-12):
+ * Three things this deliberately no longer does, all of which were expensive:
  *
- * 1. It does not read the timeline TWICE. The media expansions ride the same
- *    request as the text, because X bills per RESOURCE returned, not per field
- *    — `expansions=attachments.media_keys` and `media.fields` are FREE. A
- *    separate media pass doubled the bill to fetch what this read could always
- *    have returned for nothing, and being capped at one page it could only ever
- *    see the newest hundred posts.
+ * 1. It does not read the timeline TWICE (2026-07-12). The media expansions ride
+ *    the same request as the text, because X bills per RESOURCE returned, not
+ *    per field — `expansions=attachments.media_keys` and `media.fields` are
+ *    FREE. A separate media pass doubled the bill to fetch what this read could
+ *    always have returned for nothing, and being capped at one page it could
+ *    only ever see the newest hundred posts.
  *
- * 2. It does not download the media BYTES. It returns REFERENCES — X's own
- *    public CDN URLs — and the client fetches the bytes itself, free and
+ * 2. It does not download the media BYTES (2026-07-12). It returns REFERENCES —
+ *    X's own public CDN URLs — and the client fetches the bytes itself, free and
  *    without a credential. Base64-ing every photo and video through this route
  *    is what made a whole-profile media archive impossible to serve at all.
+ *
+ * 3. It does not read the profile HEAD (2026-08-06). Every caller has already
+ *    read it — the full-archive route to size the fee, the one-page routes right
+ *    behind their gate — so it arrives as an argument. When this function read
+ *    the head again internally, a full archive billed TWO user objects for one
+ *    profile; taking the head as a parameter makes the double read
+ *    unrepresentable.
  *
  * `maxPages` is the unit of cost and so is explicit: one page is 100 posts, and
  * the caller has paid a fee priced for exactly this many.
  */
 export async function fetchXArchive(
-  handle: string,
+  head: XProfileHead,
   token: string,
   maxPages: number = 1,
   fetchFn: typeof fetch = fetch,
-): Promise<{ archive: SocialArchive; mediaRefs: MediaRef[] } | null> {
-  const head = await fetchProfileHead(handle, token, fetchFn);
-  if (!head) return null;
-
+): Promise<{ archive: SocialArchive; mediaRefs: MediaRef[] }> {
   const { data: tweets, media } = await fetchAllUserTweets<{
     id: string;
     created_at?: string;

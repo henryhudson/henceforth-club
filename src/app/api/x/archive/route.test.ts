@@ -6,6 +6,8 @@ const state = {
   /** When set, the head read THROWS instead of resolving. */
   headThrows: null as Error | null,
   fetchResult: null as { archive: { posts: unknown[] }; mediaRefs: unknown[] } | null,
+  /** What the route handed to the archive read — the head must PASS THROUGH. */
+  archiveArgs: [] as { head: unknown; maxPages: number }[],
   gateOk: true,
   gatedResources: [] as number[],
   released: [] as number[],
@@ -23,12 +25,16 @@ vi.mock("@/lib/xfetch", () => ({
     if (state.headThrows) throw state.headThrows;
     return state.head;
   },
-  fetchXArchive: async () => state.fetchResult,
+  fetchXArchive: async (head: unknown, _token: string, maxPages: number) => {
+    state.archiveArgs.push({ head, maxPages });
+    return state.fetchResult;
+  },
   pagesForPostCount: (n: number) => Math.max(1, Math.ceil(n / 100)),
   X_TIMELINE_CEILING: 3200,
 }));
 vi.mock("@/lib/xGate", () => ({
   payAndReserve: async (_payment: string | null, resources: number) => {
+    state.calls.push("gate");
     state.gatedResources.push(resources);
     return state.gateOk
       ? { ok: true, sats: 1, reservedUsd: 1 }
@@ -67,6 +73,7 @@ beforeEach(() => {
   state.head = { postCount: 500 };
   state.headThrows = null;
   state.fetchResult = null;
+  state.archiveArgs.length = 0;
   state.gateOk = true;
   state.gatedResources.length = 0;
   state.released.length = 0;
@@ -77,18 +84,20 @@ beforeEach(() => {
 });
 
 describe("GET /api/x/archive — budget settlement", () => {
-  it("hands the reservation back when the read fails AFTER the gate (the post-burn no-user arm)", async () => {
-    state.fetchResult = null; // X refused the timeline after a successful head
-    const res = await get(`handle=henryhudson6&${PAID}&full=1`);
+  it("hands the reservation back when the head read fails AFTER the gate (the post-burn no-user arm)", async () => {
+    // The one-page path sizes nothing in advance, so its single head read lands
+    // behind the gate — and when X returns no user there, the payment is already
+    // burned and the budget already reserved.
+    state.head = null;
+    const res = await get(`handle=henryhudson6&${PAID}`);
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ ok: false, reason: "no-user" });
-    // The reservation the gate took (posts + 1 = 501) is released in full —
+    // The reservation the gate took (posts + 1 = 101) is released in full —
     // the day's budget must not shrink for a read that never happened.
-    expect(state.gatedResources).toEqual([501]);
-    expect(state.released).toEqual([501]);
-    // The head reservation is NOT handed back here: that head really was read
-    // and really was billed, whatever the timeline did afterwards.
-    expect(state.headReserved).toBe(1);
+    expect(state.gatedResources).toEqual([101]);
+    expect(state.released).toEqual([101]);
+    // The head ceiling is the FULL path's bucket; this path never touches it.
+    expect(state.headReserved).toBe(0);
     expect(state.headReleased).toBe(0);
   });
 
@@ -151,14 +160,15 @@ describe("GET /api/x/archive — the unpaid head ceiling", () => {
     expect(state.calls).not.toContain("head-read");
   });
 
-  it("does not touch the head ceiling at all without full=1 — that path reads no head of its own", async () => {
+  it("does not touch the head ceiling at all without full=1 — that path's head read waits for the gate", async () => {
     state.fetchResult = { archive: { posts: [] }, mediaRefs: [] };
     const res = await get(`handle=henryhudson6&${PAID}`);
     expect(res.status).toBe(200);
     expect(state.headReserved).toBe(0);
     expect(state.calls).not.toContain("head-reserve");
-    // Its single head read happens inside fetchXArchive and is covered by the
-    // gate's own reservation (RESOURCES_TEXT_ONLY includes the user object).
+    // Its single head read happens in the route AFTER the gate and is covered by
+    // the gate's own reservation (`resourcesForPosts` includes the user object).
+    expect(state.calls).toEqual(["gate", "head-read"]);
     expect(state.gatedResources).toEqual([101]);
   });
 
@@ -191,5 +201,31 @@ describe("GET /api/x/archive — the unpaid head ceiling", () => {
     await expect(get(`handle=henryhudson6&${PAID}&full=1`)).rejects.toThrow("fetch failed");
     expect(state.headReserved).toBe(1);
     expect(state.headReleased).toBe(1);
+  });
+});
+
+describe("GET /api/x/archive — one head read per archive", () => {
+  // Until 2026-08-06 fetchXArchive re-read the head internally, so a full
+  // archive billed TWO user objects for one profile — the route's own comments
+  // admitted it. The head is now an ARGUMENT to fetchXArchive; these tests pin
+  // both halves: exactly one read, and the read's result passed through.
+  it("a full archive reads the head EXACTLY once and hands that head to the timeline read", async () => {
+    state.fetchResult = { archive: { posts: [] }, mediaRefs: [] };
+    const res = await get(`handle=henryhudson6&${PAID}&full=1`);
+    expect(res.status).toBe(200);
+    expect(state.calls.filter((c) => c === "head-read")).toHaveLength(1);
+    expect(state.archiveArgs).toHaveLength(1);
+    expect(state.archiveArgs[0].head).toBe(state.head); // the same object, not a re-fetch
+    expect(state.archiveArgs[0].maxPages).toBe(5); // 500 posts, 100 a page
+  });
+
+  it("a one-page archive reads the head exactly once too", async () => {
+    state.fetchResult = { archive: { posts: [] }, mediaRefs: [] };
+    const res = await get(`handle=henryhudson6&${PAID}`);
+    expect(res.status).toBe(200);
+    expect(state.calls.filter((c) => c === "head-read")).toHaveLength(1);
+    expect(state.archiveArgs).toHaveLength(1);
+    expect(state.archiveArgs[0].head).toBe(state.head);
+    expect(state.archiveArgs[0].maxPages).toBe(1);
   });
 });

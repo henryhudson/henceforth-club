@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { fetchXArchive, fetchProfileHead, pagesForPostCount, X_TIMELINE_CEILING } from "@/lib/xfetch";
+import {
+  fetchXArchive,
+  fetchProfileHead,
+  pagesForPostCount,
+  X_TIMELINE_CEILING,
+  type XProfileHead,
+} from "@/lib/xfetch";
 import { selectRefs } from "@/lib/xArchive";
 import { payAndReserve, resourcesForPosts } from "@/lib/xGate";
 import { releaseXApiSpend } from "@/lib/xSpend";
@@ -58,13 +64,18 @@ export async function GET(req: Request) {
   // (lib/xHeadSpend), a bucket separate from the paid one so that anonymous
   // sizing requests cannot exhaust the budget paying callers depend on.
   //
-  // Note this reservation is NOT the same resource as the +1 inside
-  // `resourcesForPosts`: `fetchXArchive` reads the head AGAIN internally
-  // (lib/xfetch), so a full archive genuinely bills two user objects. The gate's
-  // reservation covers one; this covers the other. It does not change the FEE —
-  // `payAndReserve` derives that from its own argument, which is untouched.
+  // This is the ONLY head read a full archive makes (2026-08-06). It used to be
+  // one of two: `fetchXArchive` read the head AGAIN internally, so a full
+  // archive genuinely billed two user objects for one profile. The head is now
+  // handed to `fetchXArchive` as an argument, which cannot re-read it. The +1
+  // inside `resourcesForPosts` still stands — it is the fee's floor and it
+  // covers the one-page path's single head read below — so on THIS path the
+  // paid bucket over-reserves by one resource: half a cent of conservatism,
+  // erring closed. The FEE is untouched — `payAndReserve` derives that from its
+  // own argument, which is unchanged.
   let maxPages = 1;
   let billedPosts = 100;
+  let head: XProfileHead | null = null;
   if (full) {
     // A well-formed payment id is demanded BEFORE the billed read, not after.
     // This costs nothing (`isTxid` is a regex) and it is the difference between
@@ -87,7 +98,6 @@ export async function GET(req: Request) {
       );
     }
 
-    let head;
     try {
       head = await fetchProfileHead(handle, token);
     } catch (error) {
@@ -116,18 +126,24 @@ export async function GET(req: Request) {
   );
   if (!gate.ok) return gate.response;
 
-  const result = await fetchXArchive(handle, token, maxPages);
-  if (!result) {
-    // The gate reserved budget and burned the payment for a read X then
-    // failed to serve. The payment's fate is the client's to settle (the app
-    // holds it; a truly burned fee answers "replayed" next run and is
-    // released loudly there). The RESERVATION is ours, and keeping it would
-    // shrink the day's budget by a read that never happened — hand it back,
-    // the same settlement the gate's own replayed arm makes (lib/xGate).
-    await releaseXApiSpend(resourcesForPosts(billedPosts));
-    return NextResponse.json({ ok: false, reason: "no-user" }, { status: 404 });
+  if (!head) {
+    // The one-page path sizes nothing in advance, so its single head read lands
+    // here — behind the gate, covered by the +1 user object inside
+    // `resourcesForPosts`. Still exactly one head read per archive.
+    head = await fetchProfileHead(handle, token);
+    if (!head) {
+      // The gate reserved budget and burned the payment for a read X then
+      // failed to serve. The payment's fate is the client's to settle (the app
+      // holds it; a truly burned fee answers "replayed" next run and is
+      // released loudly there). The RESERVATION is ours, and keeping it would
+      // shrink the day's budget by a read that never happened — hand it back,
+      // the same settlement the gate's own replayed arm makes (lib/xGate).
+      await releaseXApiSpend(resourcesForPosts(billedPosts));
+      return NextResponse.json({ ok: false, reason: "no-user" }, { status: 404 });
+    }
   }
 
+  const result = await fetchXArchive(head, token, maxPages);
   const media = selectRefs(result.mediaRefs, includeImages, includeVideos);
 
   return Response.json({
