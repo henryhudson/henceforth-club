@@ -1,36 +1,10 @@
-import type { MediaRef, Tweet, TweetsWithMedia } from "./xMedia";
-import { fetchAllUserTweets } from "./xPaginate";
+import type { MediaRef } from "./xMedia";
 
 export type MediaItemDTO = {
   postId: string;
   contentType: string;
   base64: string;
 };
-
-/**
- * Fetches a user's recent tweets together with the media (photos and videos)
- * attached to them, using the X API's media expansions. Mirrors the tweets
- * request in `xfetch.ts`, but also asks for attachments so the archive route
- * can pull original-quality media without a second call per post.
- */
-export async function fetchTweetsWithMedia(
-  userId: string,
-  token: string,
-  fetchFn: typeof fetch = fetch
-): Promise<TweetsWithMedia> {
-  // One page of posts, media included, unless a caller asks for more. This used
-  // to page to the ~3200-post ceiling — a second full timeline read on top of the
-  // one fetchXArchive already made, so a single /api/x/archive call could cost $32.
-  const { data, media } = await fetchAllUserTweets<Tweet>(
-    userId,
-    token,
-    "tweet.fields=created_at,in_reply_to_user_id,attachments" +
-      "&expansions=attachments.media_keys" +
-      "&media.fields=type,url,variants",
-    fetchFn
-  );
-  return { data, includes: { media } };
-}
 
 export function selectRefs(
   refs: MediaRef[],

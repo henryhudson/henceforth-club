@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { selectRefs, downloadItems, fetchTweetsWithMedia } from "./xArchive";
+import { readFileSync } from "node:fs";
+import * as xArchive from "./xArchive";
+import { selectRefs, downloadItems } from "./xArchive";
 
 const refs = [
   { postId: "p1", contentType: "image/jpeg", url: "https://pbs/x.jpg" },
@@ -43,20 +45,16 @@ describe("downloadItems", () => {
   });
 });
 
-describe("fetchTweetsWithMedia", () => {
-  it("requests the media expansions with the bearer token, no network", async () => {
-    let requestedUrl = "";
-    let requestedHeaders: HeadersInit | undefined;
-    const fakeFetch = async (url: string | URL | Request, init?: RequestInit) => {
-      requestedUrl = url.toString();
-      requestedHeaders = init?.headers;
-      return { ok: true, json: async () => ({ data: [], includes: { media: [] } }) } as unknown as Response;
-    };
+describe("xArchive stays off the billed X API", () => {
+  // fetchTweetsWithMedia was deleted here: its only caller was this test, and it
+  // handed any future caller an ungated timeline read (up to 100 posts, $0.50)
+  // with no payAndReserve. Re-adding a fetcher to this module must trip both
+  // assertions and force a conscious gating decision.
+  it("exports only the pure media helpers — no timeline fetcher", () => {
+    expect(Object.keys(xArchive).sort()).toEqual(["downloadItems", "selectRefs"]);
+  });
 
-    await fetchTweetsWithMedia("42", "secret-token", fakeFetch as unknown as typeof fetch);
-
-    expect(requestedUrl).toContain("/users/42/tweets");
-    expect(requestedUrl).toContain("expansions=attachments.media_keys");
-    expect(new Headers(requestedHeaders).get("Authorization")).toBe("Bearer secret-token");
+  it("never imports the timeline-paging module", () => {
+    expect(readFileSync("src/lib/xArchive.ts", "utf8")).not.toContain("xPaginate");
   });
 });
