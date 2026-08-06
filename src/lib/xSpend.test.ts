@@ -61,6 +61,15 @@ describe("dailyBudgetUsd", () => {
     expect(dailyBudgetUsd({ X_API_DAILY_BUDGET_USD: "-1" })).toBe(DEFAULT_DAILY_BUDGET_USD);
   });
 
+  it("treats a BLANK value as unset, not as a zero budget", () => {
+    // Number("") is 0 — finite and >= 0 — so coercing before validating would
+    // read a present-but-empty variable as a ZERO budget and answer 429
+    // budget-exhausted from the first paid read, indistinguishable from
+    // genuine exhaustion. Whitespace counts as blank too.
+    expect(dailyBudgetUsd({ X_API_DAILY_BUDGET_USD: "" })).toBe(DEFAULT_DAILY_BUDGET_USD);
+    expect(dailyBudgetUsd({ X_API_DAILY_BUDGET_USD: "   " })).toBe(DEFAULT_DAILY_BUDGET_USD);
+  });
+
   it("honours an explicit zero — a way to switch the endpoints off", () => {
     expect(dailyBudgetUsd({ X_API_DAILY_BUDGET_USD: "0" })).toBe(0);
   });

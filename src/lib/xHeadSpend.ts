@@ -84,15 +84,12 @@ const KEY_TTL_SECONDS = 48 * 3600;
 /**
  * Reads only the one variable it needs, so a test can pass a bare object.
  *
- * BLANK IS UNSET, deliberately, and this differs from the sibling
- * `dailyBudgetUsd` on purpose. `Number("")` and `Number(" ")` are both 0, so
- * coercing first reads a variable that exists but holds nothing as a ZERO
- * budget — which refuses every read rather than falling back to the default. A
- * blank value is the most likely way this is misconfigured (a deployment
- * setting present but empty), and it must not be the way the feature turns
- * itself off. `dailyBudgetUsd` has that bug today for the PAID ceiling; it is
- * left alone here rather than changed as a drive-by, because altering what a
- * blank budget means on the paid path deserves its own change and its own test.
+ * BLANK IS UNSET, deliberately, matching the sibling `dailyBudgetUsd`.
+ * `Number("")` and `Number(" ")` are both 0, so coercing first reads a
+ * variable that exists but holds nothing as a ZERO budget — which refuses
+ * every read rather than falling back to the default. A blank value is the
+ * most likely way this is misconfigured (a deployment setting present but
+ * empty), and it must not be the way the feature turns itself off.
  */
 export function headBudgetUsd(
   env: Record<string, string | undefined> = process.env,

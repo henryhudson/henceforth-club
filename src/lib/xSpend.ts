@@ -28,12 +28,24 @@ const KEY_TTL_SECONDS = 48 * 3600;
 
 export const DEFAULT_DAILY_BUDGET_USD = 2;
 
-/** Reads only the one variable it needs, so a test can pass a bare object. */
+/**
+ * Reads only the one variable it needs, so a test can pass a bare object.
+ *
+ * BLANK IS UNSET, matching `headBudgetUsd`. `Number("")` and `Number(" ")` are
+ * both 0, so coercing before validating would read a variable that exists but
+ * holds nothing as a ZERO budget — refusing every paid read from the first
+ * call, indistinguishable from genuine exhaustion. A blank value is the most
+ * likely way this is misconfigured (a deployment setting present but empty),
+ * and it must not be the way the paid path turns itself off. An explicit "0"
+ * still means zero: that is the deliberate off switch.
+ */
 export function dailyBudgetUsd(
   env: Record<string, string | undefined> = process.env,
 ): number {
-  const raw = Number(env.X_API_DAILY_BUDGET_USD);
-  return Number.isFinite(raw) && raw >= 0 ? raw : DEFAULT_DAILY_BUDGET_USD;
+  const raw = env.X_API_DAILY_BUDGET_USD?.trim();
+  if (!raw) return DEFAULT_DAILY_BUDGET_USD;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : DEFAULT_DAILY_BUDGET_USD;
 }
 
 /** Pure. What X will charge for `resources` returned rows. */
