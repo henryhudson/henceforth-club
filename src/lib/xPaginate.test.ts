@@ -76,6 +76,64 @@ describe("fetchAllUserTweets mechanics", () => {
   });
 });
 
+// The since bound. X bills per resource returned, so the bound is what keeps a
+// re-archive from re-buying posts already on chain.
+describe("fetchAllUserTweets since_id", () => {
+  it("threads since_id onto EVERY page — a cursor without it would walk back into paid-for territory", async () => {
+    const urls: string[] = [];
+    const fetchFn = pagedFetch(
+      [
+        { data: [{ id: "3" }], meta: { next_token: "T" } },
+        { data: [{ id: "2" }], meta: {} },
+      ],
+      urls,
+    );
+    await fetchAllUserTweets("u", "t", "x", fetchFn, 2, "1500");
+    expect(urls).toHaveLength(2);
+    for (const url of urls) expect(url).toContain("since_id=1500");
+    expect(urls[1]).toContain("pagination_token=T");
+  });
+
+  it("omits since_id entirely when no bound is given", async () => {
+    const urls: string[] = [];
+    await fetchAllUserTweets("u", "t", "x", pagedFetch([{ data: [], meta: {} }], urls));
+    expect(urls[0]).not.toContain("since_id");
+  });
+});
+
+// The exhaustion report. The completeness watermark (lib/xWatermark) may only
+// be written from a read X itself declared finished, so the WHY of the loop's
+// stop is a money-path contract, not a diagnostic nicety.
+describe("fetchAllUserTweets exhaustion report", () => {
+  it("exhausted when a successful page has no next_token — X said there is nothing further", async () => {
+    const fetchFn = pagedFetch([
+      { data: [{ id: "2" }], meta: { next_token: "A" } },
+      { data: [{ id: "1" }], meta: {} },
+    ]);
+    const { exhausted } = await fetchAllUserTweets("u", "t", "x", fetchFn, 5);
+    expect(exhausted).toBe(true);
+  });
+
+  it("NOT exhausted when the page budget ends the read with a cursor still offered", async () => {
+    const counter = { calls: 0 };
+    const { exhausted } = await fetchAllUserTweets("u", "t", "", endlessFetch(counter), 3);
+    expect(counter.calls).toBe(3);
+    expect(exhausted).toBe(false);
+  });
+
+  it("NOT exhausted when a page fails mid-walk — the read has holes it cannot see", async () => {
+    const fetchFn = pagedFetch([{ data: [{ id: "1" }], meta: { next_token: "A" } }, { ok: false }]);
+    const { exhausted } = await fetchAllUserTweets("u", "t", "x", fetchFn, 5);
+    expect(exhausted).toBe(false);
+  });
+
+  it("an empty timeline is still an exhausted one — no data and no cursor", async () => {
+    const { data, exhausted } = await fetchAllUserTweets("u", "t", "x", pagedFetch([{ meta: {} }]));
+    expect(data).toEqual([]);
+    expect(exhausted).toBe(true);
+  });
+});
+
 // The COST cap. X bills per resource returned, so a page is the unit of money.
 describe("fetchAllUserTweets page cap", () => {
   it("reads ONE page by default, however many the timeline offers", async () => {

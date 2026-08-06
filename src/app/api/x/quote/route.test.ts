@@ -14,6 +14,8 @@ const state = {
   headReserve: null as null | { ok: false; reason: "budget-exhausted" | "accounting-unavailable" },
   headReserved: 0,
   headReleased: 0,
+  /** The read bound lib/xWatermark resolves for the handle. */
+  bound: { watermark: null, sinceId: null } as { watermark: unknown; sinceId: string | null },
   /** The ORDER of the billed side effects. */
   calls: [] as string[],
 };
@@ -49,6 +51,12 @@ vi.mock("@/lib/xHeadSpend", () => ({
     state.headReleased += 1;
   },
 }));
+vi.mock("@/lib/xWatermark", () => ({
+  resolveReadBound: async () => {
+    state.calls.push("bound-resolve");
+    return state.bound;
+  },
+}));
 
 import { GET } from "./route";
 
@@ -62,6 +70,7 @@ beforeEach(() => {
   state.headReserve = null;
   state.headReserved = 0;
   state.headReleased = 0;
+  state.bound = { watermark: null, sinceId: null };
   state.calls.length = 0;
 });
 
@@ -85,6 +94,23 @@ describe("GET /api/x/quote — the quote itself", () => {
     const body = await (await get("handle=big")).json();
     expect(body.postCount).toBe(99_000);
     expect(body.readablePosts).toBe(3200);
+  });
+});
+
+describe("GET /api/x/quote — one plan with the archive route", () => {
+  it("an unbounded quote is exactly what it always was", async () => {
+    const body = await (await get("handle=henryhudson6")).json();
+    expect(body.pages).toBe(15);
+    expect(body.resources).toBe(1499); // 1498 posts + the head, per the mocks
+    expect(body.sinceBounded).toBe(false);
+  });
+
+  it("a bounded quote prices the page budget's worst case — the same number the archive gate will demand", async () => {
+    state.bound = { watermark: { completeThroughId: "1500" }, sinceId: "1500" };
+    const body = await (await get("handle=henryhudson6")).json();
+    expect(body.pages).toBe(15);
+    expect(body.resources).toBe(1501); // 15 pages * 100 + the head — never the delta estimate
+    expect(body.sinceBounded).toBe(true);
   });
 });
 

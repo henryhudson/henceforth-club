@@ -5,9 +5,13 @@ const state = {
   head: null as { postCount: number } | null,
   /** When set, the head read THROWS instead of resolving. */
   headThrows: null as Error | null,
-  fetchResult: null as { archive: { posts: unknown[] }; mediaRefs: unknown[] } | null,
+  fetchResult: null as {
+    archive: { posts: unknown[] };
+    mediaRefs: { postId: string }[];
+    exhausted?: boolean;
+  } | null,
   /** What the route handed to the archive read — the head must PASS THROUGH. */
-  archiveArgs: [] as { head: unknown; maxPages: number }[],
+  archiveArgs: [] as { head: unknown; maxPages: number; sinceId: string | undefined }[],
   gateOk: true,
   gatedResources: [] as number[],
   released: [] as number[],
@@ -15,6 +19,10 @@ const state = {
   headReserve: null as null | { ok: false; reason: "budget-exhausted" | "accounting-unavailable" },
   headReserved: 0,
   headReleased: 0,
+  /** The read bound lib/xWatermark resolves for the handle. */
+  bound: { watermark: null, sinceId: null } as { watermark: unknown; sinceId: string | null },
+  /** Watermark recordings: (handle, read, prior) triples the route made. */
+  recorded: [] as { handle: string; read: unknown; prior: unknown }[],
   /** The ORDER of the billed side effects, because the order is the contract. */
   calls: [] as string[],
 };
@@ -25,12 +33,29 @@ vi.mock("@/lib/xfetch", () => ({
     if (state.headThrows) throw state.headThrows;
     return state.head;
   },
-  fetchXArchive: async (head: unknown, _token: string, maxPages: number) => {
-    state.archiveArgs.push({ head, maxPages });
+  fetchXArchive: async (
+    head: unknown,
+    _token: string,
+    maxPages: number,
+    _fetchFn: unknown,
+    sinceId: string | undefined,
+  ) => {
+    state.archiveArgs.push({ head, maxPages, sinceId });
     return state.fetchResult;
   },
   pagesForPostCount: (n: number) => Math.max(1, Math.ceil(n / 100)),
   X_TIMELINE_CEILING: 3200,
+  POSTS_PER_PAGE: 100,
+}));
+vi.mock("@/lib/xWatermark", () => ({
+  resolveReadBound: async (handle: string) => {
+    state.calls.push(`bound-resolve:${handle}`);
+    return state.bound;
+  },
+  recordWatermark: async (handle: string, read: unknown, prior: unknown) => {
+    state.calls.push("watermark-record");
+    state.recorded.push({ handle, read, prior });
+  },
 }));
 vi.mock("@/lib/xGate", () => ({
   payAndReserve: async (_payment: string | null, resources: number) => {
@@ -80,6 +105,8 @@ beforeEach(() => {
   state.headReserve = null;
   state.headReserved = 0;
   state.headReleased = 0;
+  state.bound = { watermark: null, sinceId: null };
+  state.recorded.length = 0;
   state.calls.length = 0;
 });
 
@@ -227,5 +254,77 @@ describe("GET /api/x/archive — one head read per archive", () => {
     expect(state.archiveArgs).toHaveLength(1);
     expect(state.archiveArgs[0].head).toBe(state.head);
     expect(state.archiveArgs[0].maxPages).toBe(1);
+  });
+});
+
+describe("GET /api/x/archive — the since bound", () => {
+  const WATERMARK = { completeThroughId: "1500" };
+
+  it("an unbounded full read stays exactly as it was: no sinceId, billed at the estimate", async () => {
+    state.head = { postCount: 450 };
+    state.fetchResult = { archive: { posts: [] }, mediaRefs: [], exhausted: true };
+    const res = await get(`handle=henryhudson6&${PAID}&full=1`);
+    expect(res.status).toBe(200);
+    expect(state.archiveArgs[0].sinceId).toBeUndefined();
+    expect(state.gatedResources).toEqual([451]);
+    expect(Object.keys(await res.json())).not.toContain("sinceId");
+  });
+
+  it("a consumable watermark bounds the read — and the fee covers the page budget's worst case, not the delta estimate", async () => {
+    state.head = { postCount: 450 };
+    state.bound = { watermark: WATERMARK, sinceId: "1500" };
+    state.fetchResult = { archive: { posts: [{ id: "1600" }] }, mediaRefs: [], exhausted: true };
+    const res = await get(`handle=henryhudson6&${PAID}&full=1`);
+    expect(res.status).toBe(200);
+    // The bound reached the fetch layer, with the FULL page budget.
+    expect(state.archiveArgs[0].sinceId).toBe("1500");
+    expect(state.archiveArgs[0].maxPages).toBe(5);
+    // Priced at 1 + maxPages * 100, never the estimate — the floor-0 probe
+    // under-reserved ~100x, and this is what closed it.
+    expect(state.gatedResources).toEqual([501]);
+    // The response says the delta is a delta.
+    expect((await res.json()).sinceId).toBe("1500");
+  });
+
+  it("the bound is resolved AFTER the head read and BEFORE the gate — the fee is priced from the plan", async () => {
+    state.bound = { watermark: WATERMARK, sinceId: "1500" };
+    state.fetchResult = { archive: { posts: [] }, mediaRefs: [], exhausted: true };
+    await get(`handle=henryhudson6&${PAID}&full=1`);
+    const boundAt = state.calls.findIndex((c) => c.startsWith("bound-resolve"));
+    expect(boundAt).toBeGreaterThan(state.calls.indexOf("head-read"));
+    expect(boundAt).toBeLessThan(state.calls.indexOf("gate"));
+  });
+
+  it("a full read hands its outcome to the watermark recorder, prior record and unfiltered media included", async () => {
+    state.head = { postCount: 450 };
+    state.bound = { watermark: WATERMARK, sinceId: "1500" };
+    state.fetchResult = {
+      archive: { posts: [{ id: "1600" }] },
+      mediaRefs: [{ postId: "1600" }, { postId: "1600" }],
+      exhausted: true,
+    };
+    // videos=0: the RESPONSE filters refs, the watermark must not.
+    await get(`handle=henryhudson6&${PAID}&full=1&videos=0`);
+    expect(state.recorded).toEqual([
+      {
+        handle: "henryhudson6",
+        read: {
+          posts: [{ id: "1600" }],
+          mediaPostIds: ["1600"],
+          exhausted: true,
+          sinceId: "1500",
+        },
+        prior: WATERMARK,
+      },
+    ]);
+  });
+
+  it("a one-page read records NOTHING — only a full read can testify about completeness", async () => {
+    state.fetchResult = { archive: { posts: [{ id: "1" }] }, mediaRefs: [], exhausted: true };
+    await get(`handle=henryhudson6&${PAID}`);
+    expect(state.recorded).toEqual([]);
+    expect(state.calls).not.toContain("watermark-record");
+    // Nor does it consult the bound: the one-page default read stays untouched.
+    expect(state.calls.some((c) => c.startsWith("bound-resolve"))).toBe(false);
   });
 });

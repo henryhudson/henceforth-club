@@ -37,6 +37,18 @@ type TweetsPage<T> = {
  * this loops the cursor until it is absent, a page fails, or the page cap is hit.
  * The caller supplies the query params (tweet fields, expansions) and may inject a
  * fetch for testing. Pure of app state.
+ *
+ * `sinceId` bounds the read to tweets NEWER than that id. X bills per resource
+ * returned, so the bound is what keeps a re-archive from re-buying posts already
+ * on chain — and it rides EVERY page, because a cursor without it would walk back
+ * into paid-for territory on page two.
+ *
+ * `exhausted` reports WHY the loop stopped, and the distinction is load-bearing
+ * for the completeness watermark (lib/xWatermark): true only when a successful
+ * page came back without a `next_token` — X itself said there is nothing further
+ * to serve. A read that stopped because the page budget ran out, or because a
+ * page failed mid-walk, has holes it cannot see, and must never be recorded as
+ * having reached the end of the timeline.
  */
 export async function fetchAllUserTweets<T = unknown>(
   userId: string,
@@ -44,15 +56,18 @@ export async function fetchAllUserTweets<T = unknown>(
   params: string,
   fetchFn: typeof fetch = fetch,
   maxPages: number = DEFAULT_MAX_PAGES,
-): Promise<{ data: T[]; media: XMedia[] }> {
+  sinceId?: string,
+): Promise<{ data: T[]; media: XMedia[]; exhausted: boolean }> {
   const data: T[] = [];
   const media: XMedia[] = [];
   let paginationToken: string | undefined;
+  let exhausted = false;
   const pages = Math.max(1, Math.min(Math.floor(maxPages), PAGE_CEILING));
 
   for (let page = 0; page < pages; page++) {
     const url =
       `${BASE}/users/${userId}/tweets?max_results=100&${params}` +
+      (sinceId ? `&since_id=${sinceId}` : "") +
       (paginationToken ? `&pagination_token=${paginationToken}` : "");
     const res = await fetchFn(url, {
       headers: { Authorization: `Bearer ${token}` },
@@ -64,8 +79,11 @@ export async function fetchAllUserTweets<T = unknown>(
     if (Array.isArray(body.data)) data.push(...body.data);
     if (Array.isArray(body.includes?.media)) media.push(...body.includes.media);
     paginationToken = body.meta?.next_token;
-    if (!paginationToken) break;
+    if (!paginationToken) {
+      exhausted = true;
+      break;
+    }
   }
 
-  return { data, media };
+  return { data, media, exhausted };
 }

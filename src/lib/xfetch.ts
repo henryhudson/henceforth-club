@@ -93,14 +93,21 @@ export async function fetchProfileHead(
  *
  * `maxPages` is the unit of cost and so is explicit: one page is 100 posts, and
  * the caller has paid a fee priced for exactly this many.
+ *
+ * `sinceId` bounds the read to posts newer than that id (lib/xWatermark decides
+ * when a bound is sound — this function only carries it), and `exhausted`
+ * reports whether X itself said the read reached the end of what it would
+ * serve — the only condition under which a completeness watermark may be
+ * recorded or advanced.
  */
 export async function fetchXArchive(
   head: XProfileHead,
   token: string,
   maxPages: number = 1,
   fetchFn: typeof fetch = fetch,
-): Promise<{ archive: SocialArchive; mediaRefs: MediaRef[] }> {
-  const { data: tweets, media } = await fetchAllUserTweets<{
+  sinceId?: string,
+): Promise<{ archive: SocialArchive; mediaRefs: MediaRef[]; exhausted: boolean }> {
+  const { data: tweets, media, exhausted } = await fetchAllUserTweets<{
     id: string;
     created_at?: string;
     text: string;
@@ -114,9 +121,11 @@ export async function fetchXArchive(
       "&media.fields=type,url,variants",
     fetchFn,
     maxPages,
+    sinceId,
   );
 
   return {
+    exhausted,
     archive: {
       v: 1,
       source: "x",

@@ -1,16 +1,12 @@
 import { NextResponse } from "next/server";
-import {
-  fetchXArchive,
-  fetchProfileHead,
-  pagesForPostCount,
-  X_TIMELINE_CEILING,
-  type XProfileHead,
-} from "@/lib/xfetch";
+import { fetchXArchive, fetchProfileHead, type XProfileHead } from "@/lib/xfetch";
 import { selectRefs } from "@/lib/xArchive";
 import { payAndReserve, resourcesForPosts } from "@/lib/xGate";
 import { releaseXApiSpend } from "@/lib/xSpend";
 import { releaseHeadRead, reserveHeadRead } from "@/lib/xHeadSpend";
 import { isTxid } from "@/lib/xPayment";
+import { recordWatermark, resolveReadBound, type XWatermark } from "@/lib/xWatermark";
+import { archiveReadPlan } from "@/lib/xReadPlan";
 
 /**
  * GET /api/x/archive?handle=<h>&payment=<txid>&images=1&videos=1&full=1
@@ -29,10 +25,18 @@ import { isTxid } from "@/lib/xPayment";
  *    free and without a credential. Base64-ing every photo and video through this
  *    route is what made a whole-profile media response impossible to serve.
  *
- * `full=1` buys the whole reachable timeline. The fee is priced from the posts
- * actually read (lib/xGate `resourcesForPosts`), so a large profile pays for a
- * large read — a flat price would sell a 1,500-post archive for the price of a
- * 100-post one. Ask /api/x/quote first; it is free.
+ * `full=1` buys the whole reachable timeline — bounded, when and ONLY when the
+ * handle holds a consumable completeness watermark (lib/xWatermark), to the
+ * posts newer than it. The watermark is explicit data written by a previous
+ * full read that exhausted the timeline, weighed against what is actually on
+ * chain; anything less falls back to the full unbounded read, because on this
+ * money path uncertainty pays for the expensive-but-correct option. The bound
+ * is derived SERVER-side — a client-supplied bound would let a caller lower
+ * its own bill. The fee is priced from the read the page budget permits
+ * (lib/xReadPlan, shared with /api/x/quote so quote and gate cannot drift),
+ * so a large profile pays for a large read — a flat price would sell a
+ * 1,500-post archive for the price of a 100-post one. Ask /api/x/quote first;
+ * it is free.
  */
 
 function flag(value: string | null, defaultValue: boolean): boolean {
@@ -75,7 +79,9 @@ export async function GET(req: Request) {
   // own argument, which is unchanged.
   let maxPages = 1;
   let billedPosts = 100;
+  let sinceId: string | undefined;
   let head: XProfileHead | null = null;
+  let priorWatermark: XWatermark | null = null;
   if (full) {
     // A well-formed payment id is demanded BEFORE the billed read, not after.
     // This costs nothing (`isTxid` is a regex) and it is the difference between
@@ -116,8 +122,15 @@ export async function GET(req: Request) {
       await releaseHeadRead(now);
       return NextResponse.json({ ok: false, reason: "no-user" }, { status: 404 });
     }
-    maxPages = pagesForPostCount(head.postCount);
-    billedPosts = Math.min(head.postCount, X_TIMELINE_CEILING);
+    // The read bound, or null for the full unbounded read. Resolved AFTER the
+    // head read so a dead handle costs no index lookups, and BEFORE the gate
+    // because the fee is priced from the plan the bound produces.
+    const bound = await resolveReadBound(handle);
+    priorWatermark = bound.watermark;
+    const plan = archiveReadPlan(head.postCount, bound.sinceId);
+    maxPages = plan.maxPages;
+    billedPosts = plan.billedPosts;
+    sinceId = plan.sinceId;
   }
 
   const gate = await payAndReserve(
@@ -143,8 +156,29 @@ export async function GET(req: Request) {
     }
   }
 
-  const result = await fetchXArchive(head, token, maxPages);
+  const result = await fetchXArchive(head, token, maxPages, fetch, sinceId);
   const media = selectRefs(result.mediaRefs, includeImages, includeVideos);
+
+  if (full) {
+    // Record (or advance) the completeness watermark this read justifies. Only
+    // an EXHAUSTED read records anything — a read stopped by the page budget or
+    // a failed page proves nothing about completeness and must never masquerade
+    // as if it did. Best-effort: the paid read is already served, and a lost
+    // write only means the next read stays unbounded — the safe direction.
+    // The media set is the UNFILTERED one — refs the caller chose not to take
+    // this run are still not on chain, and the watermark must keep offering
+    // them (the media-backfill guard reads this field).
+    await recordWatermark(
+      handle,
+      {
+        posts: result.archive.posts,
+        mediaPostIds: [...new Set(result.mediaRefs.map((ref) => ref.postId))],
+        exhausted: result.exhausted,
+        sinceId,
+      },
+      priorWatermark,
+    );
+  }
 
   return Response.json({
     archive: result.archive,
@@ -153,5 +187,10 @@ export async function GET(req: Request) {
     media,
     pagesRead: maxPages,
     postsRead: result.archive.posts.length,
+    // Present only when the read was since-bounded: archive.posts then holds
+    // the posts NEWER than this id, and everything at or below it is already
+    // on chain (the bound is only consumable when the chain confirms that).
+    // Stated so nobody mistakes a delta for a whole profile.
+    ...(sinceId !== undefined ? { sinceId } : {}),
   });
 }

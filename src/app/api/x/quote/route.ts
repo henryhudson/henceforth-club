@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
-import { fetchProfileHead, pagesForPostCount, X_TIMELINE_CEILING, POSTS_PER_PAGE } from "@/lib/xfetch";
+import { fetchProfileHead, X_TIMELINE_CEILING, POSTS_PER_PAGE } from "@/lib/xfetch";
 import { resourcesForPosts } from "@/lib/xGate";
 import { resourcesToUsd } from "@/lib/xSpend";
 import { releaseHeadRead, reserveHeadRead } from "@/lib/xHeadSpend";
 import { bsvUsd, satsForUsd } from "@/lib/xPrice";
+import { resolveReadBound } from "@/lib/xWatermark";
+import { archiveReadPlan } from "@/lib/xReadPlan";
 
 /**
  * GET /api/x/quote?handle=<h>
@@ -80,11 +82,15 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, reason: "no-user" }, { status: 404 });
   }
 
-  // X will not read further back than its own ceiling, so a bigger account is
-  // quoted for what is actually reachable — never for posts we cannot fetch.
+  // The SAME plan /api/x/archive will charge for (lib/xReadPlan over
+  // lib/xWatermark's bound): quote and gate deriving from one function is what
+  // stops the quoted price and the demanded fee drifting apart. X will not
+  // read further back than its own ceiling, so a bigger account is quoted for
+  // what is actually reachable — never for posts we cannot fetch.
+  const bound = await resolveReadBound(handle);
+  const plan = archiveReadPlan(head.postCount, bound.sinceId);
   const readablePosts = Math.min(head.postCount, X_TIMELINE_CEILING);
-  const pages = pagesForPostCount(head.postCount);
-  const resources = resourcesForPosts(readablePosts);
+  const resources = resourcesForPosts(plan.billedPosts);
   const sats = satsForUsd(resourcesToUsd(resources), price.bsvUsd);
 
   return NextResponse.json({
@@ -92,8 +98,12 @@ export async function GET(req: Request) {
     handle: head.username,
     postCount: head.postCount,
     readablePosts,
-    pages,
+    pages: plan.maxPages,
     resources,
+    /** True when a full read would be since-bounded: the fee still covers the
+     * worst case the page budget permits, but X only bills what the delta
+     * actually returns. */
+    sinceBounded: plan.sinceId !== undefined,
     /** The floor. Pay at least this to the archive reward address. */
     sats,
     usd: resourcesToUsd(resources),
