@@ -7,6 +7,7 @@ import {
   headSpendKey,
   releaseHeadRead,
   reserveHeadRead,
+  settleHeadReadAsPaid,
 } from "./xHeadSpend";
 import { spendKey } from "./xSpend";
 
@@ -178,6 +179,73 @@ describe("releaseHeadRead", () => {
     await releaseHeadRead(NOON, redis);
     await releaseHeadRead(NOON, redis);
     expect(store.get(headSpendKey(NOON)) ?? 0).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe("settleHeadReadAsPaid — a verified payment's head read moves to the paid bucket", () => {
+  it("sustained paid traffic LARGER than the whole unpaid budget is never refused — each settle hands the front back", async () => {
+    const { redis, store } = fakeRedis();
+    const budget = 0.02; // 20 mils = four one-resource reads: the whole ceiling
+    // Ten paid cycles against a four-read ceiling. Without settlement the
+    // fifth reserve would refuse 429 and the paying caller would be locked out
+    // until the UTC day turned — the isolation gap this function closes.
+    for (let i = 0; i < 10; i++) {
+      const reserved = await reserveHeadRead(NOON, redis, budget);
+      expect(reserved.ok).toBe(true);
+      await settleHeadReadAsPaid(NOON, redis);
+    }
+    expect(store.get(headSpendKey(NOON))).toBe(0);
+  });
+
+  it("decrements ONLY the unpaid bucket — the increment half of the move is the gate's own +1 reservation", async () => {
+    // On the full-archive path `resourcesForPosts` books one user object the
+    // post-gate code never reads; that spare resource IS the head read's paid
+    // booking. Incrementing the paid bucket here as well would book the same
+    // half-cent twice and shut the paid ceiling early.
+    const { redis, store } = fakeRedis();
+    await reserveHeadRead(NOON, redis);
+    await settleHeadReadAsPaid(NOON, redis);
+    expect(store.get(headSpendKey(NOON))).toBe(0);
+    expect(store.get(spendKey(NOON))).toBeUndefined();
+  });
+
+  it("a duplicated settle cannot mint unpaid budget — floored at zero like the release", async () => {
+    // The double-refund the route must never make. Even if it did, the floor
+    // means the bucket cannot go negative — a negative bucket is a ceiling
+    // LARGER than the budget, the one way this system could overspend.
+    const { redis, store } = fakeRedis();
+    await reserveHeadRead(NOON, redis);
+    await settleHeadReadAsPaid(NOON, redis);
+    await settleHeadReadAsPaid(NOON, redis);
+    expect(store.get(headSpendKey(NOON))).toBe(0);
+  });
+
+  it("UNVERIFIED traffic still spends the bucket — only a settle hands it back, so the ceiling still bounds abuse", async () => {
+    const { redis } = fakeRedis();
+    const budget = 0.02;
+    // Four reads whose payment never verified: no settle. The half-cents
+    // stand, and the fifth read is refused — settlement isolates paid traffic
+    // without unbounding the unpaid ceiling.
+    for (let i = 0; i < 4; i++) {
+      expect((await reserveHeadRead(NOON, redis, budget)).ok).toBe(true);
+    }
+    expect(await reserveHeadRead(NOON, redis, budget)).toEqual({
+      ok: false,
+      reason: "budget-exhausted",
+    });
+  });
+
+  it("settles against the day it is given, so a gate that straddles midnight cannot corrupt tomorrow's bucket", async () => {
+    const { redis, store } = fakeRedis();
+    const beforeMidnight = new Date("2026-07-30T23:59:59.900Z");
+    await reserveHeadRead(beforeMidnight, redis);
+    await settleHeadReadAsPaid(beforeMidnight, redis);
+    expect(store.get(headSpendKey(beforeMidnight))).toBe(0);
+    expect(store.get(headSpendKey(new Date("2026-07-31T00:00:00Z")))).toBeUndefined();
+  });
+
+  it("is a silent no-op without a store, so a lost settle can never throw into a route after the payment burned", async () => {
+    await expect(settleHeadReadAsPaid(NOON, null)).resolves.toBeUndefined();
   });
 });
 

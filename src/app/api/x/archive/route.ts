@@ -3,7 +3,7 @@ import { fetchXArchive, fetchProfileHead, type XProfileHead } from "@/lib/xfetch
 import { selectRefs } from "@/lib/xArchive";
 import { payAndReserve, resourcesForPosts } from "@/lib/xGate";
 import { releaseXApiSpend } from "@/lib/xSpend";
-import { releaseHeadRead, reserveHeadRead } from "@/lib/xHeadSpend";
+import { releaseHeadRead, reserveHeadRead, settleHeadReadAsPaid } from "@/lib/xHeadSpend";
 import { isTxid } from "@/lib/xPayment";
 import { recordWatermark, resolveReadBound, type XWatermark } from "@/lib/xWatermark";
 import { archiveReadPlan } from "@/lib/xReadPlan";
@@ -64,24 +64,29 @@ export async function GET(req: Request) {
   // This head read happens BEFORE any payment is checked, and it is billed. It
   // used to be justified by pointing at /api/x/quote ("the same half-cent
   // /api/x/quote spends") — which pointed back here, so neither was bounded by
-  // anything. It is now booked against the unpaid head ceiling
-  // (lib/xHeadSpend), a bucket separate from the paid one so that anonymous
-  // sizing requests cannot exhaust the budget paying callers depend on.
+  // anything. It is now FRONTED from the unpaid head ceiling (lib/xHeadSpend),
+  // a bucket separate from the paid one so that anonymous sizing requests
+  // cannot exhaust the budget paying callers depend on — and once the payment
+  // verifies below, the front is settled INTO the paid budget, so paid traffic
+  // cannot exhaust the unpaid ceiling either (2026-08-08).
   //
   // This is the ONLY head read a full archive makes (2026-08-06). It used to be
   // one of two: `fetchXArchive` read the head AGAIN internally, so a full
   // archive genuinely billed two user objects for one profile. The head is now
   // handed to `fetchXArchive` as an argument, which cannot re-read it. The +1
   // inside `resourcesForPosts` still stands — it is the fee's floor and it
-  // covers the one-page path's single head read below — so on THIS path the
-  // paid bucket over-reserves by one resource: half a cent of conservatism,
-  // erring closed. The FEE is untouched — `payAndReserve` derives that from its
+  // covers the one-page path's single head read below — and on THIS path it is
+  // what the fronted head read settles into: the gate books one user object
+  // the post-gate code never reads, and that spare resource becomes the head
+  // read's paid booking the moment `settleHeadReadAsPaid` hands the unpaid
+  // front back. The FEE is untouched — `payAndReserve` derives that from its
   // own argument, which is unchanged.
   let maxPages = 1;
   let billedPosts = 100;
   let sinceId: string | undefined;
   let head: XProfileHead | null = null;
   let priorWatermark: XWatermark | null = null;
+  let headFrontedAt: Date | null = null;
   if (full) {
     // A well-formed payment id is demanded BEFORE the billed read, not after.
     // This costs nothing (`isTxid` is a regex) and it is the difference between
@@ -122,6 +127,11 @@ export async function GET(req: Request) {
       await releaseHeadRead(now);
       return NextResponse.json({ ok: false, reason: "no-user" }, { status: 404 });
     }
+    // The read completed and was billed: the front now stands, awaiting the
+    // gate's verdict. Recorded at the reserve's own moment so the settle below
+    // lands in the same UTC bucket. The failure arms above returned already,
+    // so exactly one of {refund, settle, stand-as-unpaid} happens per request.
+    headFrontedAt = now;
     // The read bound, or null for the full unbounded read. Resolved AFTER the
     // head read so a dead handle costs no index lookups, and BEFORE the gate
     // because the fee is priced from the plan the bound produces.
@@ -138,6 +148,18 @@ export async function GET(req: Request) {
     resourcesForPosts(billedPosts),
   );
   if (!gate.ok) return gate.response;
+
+  if (headFrontedAt) {
+    // The payment has verified and the gate's reservation is booked — a
+    // reservation that includes the one user object this path's post-gate code
+    // never reads, so the fronted head read is covered by the PAID budget from
+    // this moment. Hand the unpaid front back: this settle, exactly once per
+    // verified payment, is what keeps sustained paid traffic from exhausting
+    // the unpaid ceiling and refusing the next paying caller at the entrance.
+    // A refused gate returns above WITHOUT settling, so a read whose payment
+    // never verified stays on the unpaid ledger where it belongs.
+    await settleHeadReadAsPaid(headFrontedAt);
+  }
 
   if (!head) {
     // The one-page path sizes nothing in advance, so its single head read lands

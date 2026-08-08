@@ -19,6 +19,11 @@ const state = {
   headReserve: null as null | { ok: false; reason: "budget-exhausted" | "accounting-unavailable" },
   headReserved: 0,
   headReleased: 0,
+  /** Settles: fronted head reads moved to the paid bucket after the gate. */
+  headSettled: 0,
+  /** The moments the route passed to reserve and settle — must be the SAME. */
+  reserveMoments: [] as Date[],
+  settleMoments: [] as Date[],
   /** The read bound lib/xWatermark resolves for the handle. */
   bound: { watermark: null, sinceId: null } as { watermark: unknown; sinceId: string | null },
   /** Watermark recordings: (handle, read, prior) triples the route made. */
@@ -76,15 +81,21 @@ vi.mock("@/lib/xSpend", () => ({
   },
 }));
 vi.mock("@/lib/xHeadSpend", () => ({
-  reserveHeadRead: async () => {
+  reserveHeadRead: async (now: Date) => {
     state.calls.push("head-reserve");
     if (state.headReserve) return state.headReserve;
     state.headReserved += 1;
+    state.reserveMoments.push(now);
     return { ok: true, reservedUsd: 0.005 };
   },
   releaseHeadRead: async () => {
     state.calls.push("head-release");
     state.headReleased += 1;
+  },
+  settleHeadReadAsPaid: async (now: Date) => {
+    state.calls.push("head-settle");
+    state.headSettled += 1;
+    state.settleMoments.push(now);
   },
 }));
 
@@ -105,6 +116,9 @@ beforeEach(() => {
   state.headReserve = null;
   state.headReserved = 0;
   state.headReleased = 0;
+  state.headSettled = 0;
+  state.reserveMoments.length = 0;
+  state.settleMoments.length = 0;
   state.bound = { watermark: null, sinceId: null };
   state.recorded.length = 0;
   state.calls.length = 0;
@@ -228,6 +242,63 @@ describe("GET /api/x/archive — the unpaid head ceiling", () => {
     await expect(get(`handle=henryhudson6&${PAID}&full=1`)).rejects.toThrow("fetch failed");
     expect(state.headReserved).toBe(1);
     expect(state.headReleased).toBe(1);
+  });
+});
+
+describe("GET /api/x/archive — the fronted head read settles into the paid budget", () => {
+  // The unpaid ceiling bounds the bill but must not tax PAYING callers: the
+  // head read is fronted from the unpaid bucket (the fee cannot be verified
+  // before the size it discovers), then moved to the paid bucket once the
+  // payment verifies. These tests pin the wiring; xHeadSpend.test.ts pins the
+  // accounting (paid cycles net zero, unverified reads still bounded).
+  it("settles EXACTLY ONCE per verified payment — after the gate, and never via the failure refund", async () => {
+    state.fetchResult = { archive: { posts: [] }, mediaRefs: [] };
+    const res = await get(`handle=henryhudson6&${PAID}&full=1`);
+    expect(res.status).toBe(200);
+    expect(state.headSettled).toBe(1);
+    // The settle is a recategorization, not a refund: the failure-arm release
+    // must not fire alongside it, or the bucket would be handed back twice.
+    expect(state.headReleased).toBe(0);
+    expect(state.calls.indexOf("head-settle")).toBeGreaterThan(state.calls.indexOf("gate"));
+  });
+
+  it("passes the reservation's OWN moment to the settle, so the pair cannot straddle a UTC midnight", async () => {
+    state.fetchResult = { archive: { posts: [] }, mediaRefs: [] };
+    await get(`handle=henryhudson6&${PAID}&full=1`);
+    expect(state.settleMoments).toHaveLength(1);
+    expect(state.settleMoments[0]).toBe(state.reserveMoments[0]); // same Date object
+  });
+
+  it("an unverified or failed payment leaves the unpaid spend IN PLACE — the gate's refusal settles nothing", async () => {
+    state.gateOk = false;
+    const res = await get(`handle=henryhudson6&${PAID}&full=1`);
+    expect(res.status).toBe(402);
+    // The head read happened and no payment bought it: its half-cent stands on
+    // the unpaid ledger, which is what keeps the ceiling meaningful.
+    expect(state.headSettled).toBe(0);
+    expect(state.headReleased).toBe(0);
+  });
+
+  it("the pre-gate failure arms refund rather than settle — a read that billed nothing moves nothing", async () => {
+    state.head = null;
+    await get(`handle=nosuchuser&${PAID}&full=1`);
+    expect(state.headSettled).toBe(0);
+    expect(state.headReleased).toBe(1);
+  });
+
+  it("a throwing head read refunds rather than settles too", async () => {
+    state.headThrows = new Error("fetch failed");
+    await expect(get(`handle=henryhudson6&${PAID}&full=1`)).rejects.toThrow("fetch failed");
+    expect(state.headSettled).toBe(0);
+    expect(state.headReleased).toBe(1);
+  });
+
+  it("the one-page path settles nothing — it fronted nothing", async () => {
+    state.fetchResult = { archive: { posts: [] }, mediaRefs: [] };
+    const res = await get(`handle=henryhudson6&${PAID}`);
+    expect(res.status).toBe(200);
+    expect(state.headSettled).toBe(0);
+    expect(state.calls).not.toContain("head-settle");
   });
 });
 

@@ -47,12 +47,21 @@ import { resourcesToUsd, usdToMils, type Reservation } from "./xSpend";
  * That is a real limitation and it is accepted deliberately, because the
  * alternative is worse in kind rather than degree: today the same requests are
  * unbounded and simply cost money, with no ceiling at any price. What is bought
- * here is a bound; what is not bought is isolation. Two things narrow it — the
- * archive route now demands a well-formed transaction id BEFORE the read, so the
- * bucket is no longer reachable from a bare browser request, and the budget is
- * tunable. Full isolation needs the head read for a VERIFIED payment to draw on
- * the paid budget instead, which cannot be done without solving the ordering
- * problem above, and is tracked separately rather than pretended away here.
+ * here is a bound. Isolation from PAID traffic is bought by SETTLEMENT
+ * (`settleHeadReadAsPaid` below, 2026-08-08): the ordering problem — the fee
+ * cannot be verified before the head read that sizes it — is solved by
+ * accounting rather than ordering. The archive route fronts its head read from
+ * this bucket exactly as before, and once the payment verifies it moves that
+ * half-cent to the paid budget, so sustained paid traffic nets ZERO against
+ * this ceiling and cannot lock the entrance for the next paying caller.
+ *
+ * What remains true, stated so this comment does not oversell in the other
+ * direction: reads whose payment never verifies — quotes, and archive taps
+ * carrying a well-formed but worthless transaction id — still spend this
+ * bucket, and exhausting it still refuses the NEXT full archive at its
+ * entrance until the UTC day turns. The archive route demanding a well-formed
+ * id BEFORE the read keeps the bucket out of reach of a bare browser request,
+ * and the budget is tunable if genuine volume ever gets there.
  *
  * `submitThrottle` puts the rule this comment now obeys: a comment that
  * oversells a protection is worse than none, because the next reader stops
@@ -160,4 +169,41 @@ export async function releaseHeadRead(
   const key = headSpendKey(now);
   const after = await redis.decrby(key, mils);
   if (after < 0) await redis.incrby(key, -after);
+}
+
+/**
+ * Move a VERIFIED payment's head read from the unpaid bucket to the paid one.
+ *
+ * `/api/x/archive?full=1` must front its head read from the unpaid bucket,
+ * because the fee cannot be verified before the post count the head discovers.
+ * Without settlement every paid archive therefore consumed a slot of the
+ * unpaid ceiling, and a hundred paid reads a day locked the entrance for the
+ * next paying caller — the isolation gap the module comment above names.
+ * Settling after the gate makes paid traffic net zero here: the ceiling is
+ * spent only by reads that never verified a payment.
+ *
+ * This is deliberately HALF the move — the decrement. The increment is not
+ * made here because the paid bucket already holds it: on the full-archive
+ * path the gate reserves `resourcesForPosts(billedPosts)` = one user object
+ * plus the posts, and that one user object books a head read the post-gate
+ * code no longer makes (the head is handed to `fetchXArchive` as an argument,
+ * 2026-08-06). That spare resource IS the fronted head read's paid booking.
+ * Incrementing the paid bucket here as well would book the same half-cent
+ * twice and shut the paid ceiling early.
+ *
+ * `now` has NO default, unlike its siblings: the settle is only correct at
+ * the reservation's own moment, and forcing the caller to pass it is what
+ * keeps the pair inside one UTC bucket — a settle that straddled midnight
+ * would decrement a day that was never incremented.
+ *
+ * Call it exactly once per request, only after `payAndReserve` succeeds. It
+ * shares `releaseHeadRead`'s floor at zero, so even a duplicated settle
+ * cannot drive the bucket negative — a negative bucket is a ceiling LARGER
+ * than the budget, the one way this system could overspend.
+ */
+export async function settleHeadReadAsPaid(
+  now: Date,
+  redis: Redis | null = getRedis(),
+): Promise<void> {
+  await releaseHeadRead(now, redis);
 }
