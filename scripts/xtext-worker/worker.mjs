@@ -53,6 +53,7 @@ const warnedRefundless = new Set();
 const warnedMissingKey = new Set();
 const warnedLateStraggler = new Set();
 const warnedFolklorePayload = new Set();
+const warnedEndowedUnwired = new Set();
 
 function warnOnce(seen, jobId, message) {
   if (seen.has(jobId)) return;
@@ -158,6 +159,17 @@ function isFolkloreJob(job, payload) {
 async function publishKeys({ listJobsInState, advance, wrapKey, jobsDir, nowMs }) {
   const quoted = await listJobsInState("quoted");
   for (const job of quoted) {
+    // An endowed (pass-redeemed) job is priced at zero: no payment UTXO will
+    // ever arrive, so inscribing it needs the standing hot-float wallet that
+    // does not exist yet — a new custody surface the card requires its own
+    // money-path adversarial review for. Until that leg is built and
+    // reviewed, refuse here, before an address is ever published: the job
+    // expires unfunded via the payment watch's quoted-expiry sweep, nothing
+    // is inscribed, and no visitor is ever shown an address for a free job.
+    if (job.endowed) {
+      warnOnce(warnedEndowedUnwired, job.jobId, `xtext-worker: endowed job ${job.jobId} refused — float-funded inscription is not built yet; the job will expire unfunded`);
+      continue;
+    }
     if (nowMs >= job.expiresAtMs) continue;
     await guarded("key publish", job.jobId, async () => {
       const created = createJobKey(job.jobId, wrapKey, jobsDir);
@@ -253,6 +265,16 @@ async function registerInscribed({ listJobsInState, advance, getPayload, registe
   const inscribed = await listJobsInState("inscribed");
   for (const job of inscribed) {
     await guarded("register", job.jobId, async () => {
+      // A pass purchase completes at inscription: the endowment record is on
+      // chain, and the pass itself is recorded site-side at the poll edge
+      // (src/lib/folkloreJob/pass.ts). There is no handle registration and no
+      // board index write to do — routing it into either would refuse forever
+      // and hold a custody slot for good.
+      if (job.kind === "pass") {
+        await advance(job.jobId, { kind: "registered" }, nowMs);
+        return;
+      }
+
       // A folklore job completes by feeding the board index, not the handle
       // registry — and it knows which it is from its own `kind`, so a payload
       // that has gone missing can no longer misroute it into registration.

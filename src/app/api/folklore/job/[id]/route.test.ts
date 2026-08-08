@@ -2,12 +2,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockGetJob = vi.fn();
 const mockIssueFloatOnCompletion = vi.fn();
+const mockRecordPassOnCompletion = vi.fn();
 
 vi.mock("@/lib/folkloreJob/jobStore", () => ({
   getJob: (...args: unknown[]) => mockGetJob(...args),
 }));
 vi.mock("@/lib/folkloreJob/floatFunding", () => ({
   issueFloatOnCompletion: (...args: unknown[]) => mockIssueFloatOnCompletion(...args),
+}));
+vi.mock("@/lib/folkloreJob/pass", () => ({
+  recordPassOnCompletion: (...args: unknown[]) => mockRecordPassOnCompletion(...args),
 }));
 
 import { GET } from "./route";
@@ -33,6 +37,8 @@ beforeEach(() => {
   mockGetJob.mockReset();
   mockIssueFloatOnCompletion.mockReset();
   mockIssueFloatOnCompletion.mockResolvedValue({ kind: "issued", token: "recovery-1", kudos: 2000 });
+  mockRecordPassOnCompletion.mockReset();
+  mockRecordPassOnCompletion.mockResolvedValue({ kind: "recorded", pass: { handle: "henry" } });
 });
 
 describe("GET /api/folklore/job/[id]", () => {
@@ -153,6 +159,53 @@ describe("GET /api/folklore/job/[id]", () => {
       const res = await get(DONE_JOB.jobId);
       expect(res.status).toBe(200);
       expect(await res.json()).not.toHaveProperty("kudosFloat");
+    });
+  });
+
+  describe("pass recording on completion", () => {
+    const DONE_PASS_JOB = { ...BASE_JOB, kind: "pass" as const, state: "done" as const };
+
+    it("never records while FOLKLORE_ENDOWED_PASS_ENABLED is unset — the whole pass surface stays unreachable", async () => {
+      mockGetJob.mockResolvedValue(DONE_PASS_JOB);
+      const res = await get(DONE_PASS_JOB.jobId);
+      expect(res.status).toBe(200);
+      expect(mockRecordPassOnCompletion).not.toHaveBeenCalled();
+    });
+
+    it("never records for any flag value other than the exact string true", async () => {
+      vi.stubEnv("FOLKLORE_ENDOWED_PASS_ENABLED", "1");
+      mockGetJob.mockResolvedValue(DONE_PASS_JOB);
+      await get(DONE_PASS_JOB.jobId);
+      expect(mockRecordPassOnCompletion).not.toHaveBeenCalled();
+    });
+
+    it("records the pass once the purchase job is done, with the flag on", async () => {
+      vi.stubEnv("FOLKLORE_ENDOWED_PASS_ENABLED", "true");
+      mockGetJob.mockResolvedValue(DONE_PASS_JOB);
+      const res = await get(DONE_PASS_JOB.jobId);
+      expect(res.status).toBe(200);
+      expect(mockRecordPassOnCompletion).toHaveBeenCalledWith(DONE_PASS_JOB, expect.any(Number));
+    });
+
+    it("never records before the job is done, even with the flag on", async () => {
+      vi.stubEnv("FOLKLORE_ENDOWED_PASS_ENABLED", "true");
+      mockGetJob.mockResolvedValue({ ...DONE_PASS_JOB, state: "inscribed" as const });
+      await get(DONE_PASS_JOB.jobId);
+      expect(mockRecordPassOnCompletion).not.toHaveBeenCalled();
+    });
+
+    it("never records for a done job of any other kind", async () => {
+      vi.stubEnv("FOLKLORE_ENDOWED_PASS_ENABLED", "true");
+      mockGetJob.mockResolvedValue({ ...BASE_JOB, kind: "archive" as const, state: "done" as const });
+      await get(BASE_JOB.jobId);
+      expect(mockRecordPassOnCompletion).not.toHaveBeenCalled();
+    });
+
+    it("surfaces the endowed marker on a redeemed job's status", async () => {
+      mockGetJob.mockResolvedValue({ ...BASE_JOB, endowed: true as const, priceSats: 0 });
+      const body = await (await get(BASE_JOB.jobId)).json();
+      expect(body.endowed).toBe(true);
+      expect(body.priceSats).toBe(0);
     });
   });
 });

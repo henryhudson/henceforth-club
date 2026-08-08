@@ -738,3 +738,82 @@ describe("runWorkerTick — the late watch and the reaper (keys outlive swept, b
     }
   });
 });
+
+describe("runWorkerTick — the endowed-handle pass (purchase completes; zero-price redemption refuses)", () => {
+  it("a pass-kind inscribed job completes at inscription: done, with no handle registration and no board write", async () => {
+    const jobsDir = mkdtempSync(path.join(tmpdir(), "xtext-worker-pass-"));
+    try {
+      const address = PrivateKey.fromRandom().toAddress();
+      const store = makeStore(
+        [
+          {
+            jobId: "pass-done",
+            kind: "pass",
+            handle: "henry",
+            state: "inscribed",
+            feeSats: 36,
+            premiumSats: 30_000_000,
+            priceSats: 30_000_036,
+            expiresAtMs: 10_000,
+            address,
+            inscriptionTxid: "aa".repeat(32),
+          },
+        ],
+        { "pass-done": { v: 1, app: "folklore-pass", handle: "henry", address: "1Bound" } },
+      );
+      const fetchFn = vi.fn(async (url) => {
+        if (url.includes("/unspent")) return { ok: true, json: async () => [] };
+        throw new Error(`unexpected fetch: ${url}`);
+      });
+
+      await runWorkerTick(sweepDeps(store, fetchFn, jobsDir, 2_000));
+
+      expect(store.jobs.get("pass-done").state).toBe("done");
+      const urls = fetchFn.mock.calls.map(([url]) => url);
+      expect(urls.some((u) => u.includes("/api/x/register"))).toBe(false);
+    } finally {
+      rmSync(jobsDir, { recursive: true, force: true });
+    }
+  });
+
+  it("an endowed (zero-price) job is refused before an address exists: no key is ever published, and it expires unfunded to swept", async () => {
+    const jobsDir = mkdtempSync(path.join(tmpdir(), "xtext-worker-endowed-"));
+    try {
+      const store = makeStore(
+        [
+          {
+            jobId: "endowed-1",
+            kind: "archive",
+            endowed: true,
+            handle: "henry",
+            state: "quoted",
+            feeSats: 148,
+            premiumSats: 0,
+            priceSats: 0,
+            expiresAtMs: 10_000,
+          },
+        ],
+        { "endowed-1": { v: 1, source: "x", handle: "henry", profile: {}, posts: [] } },
+      );
+      const fetchFn = vi.fn(async (url) => {
+        throw new Error(`no network expected for an endowed job: ${url}`);
+      });
+
+      // Before expiry: the job is skipped, not keyed — a visitor polling it
+      // can never be shown an address for a job that is free.
+      await runWorkerTick(sweepDeps(store, fetchFn, jobsDir, 2_000));
+      expect(store.jobs.get("endowed-1").state).toBe("quoted");
+      expect(store.jobs.get("endowed-1").address).toBeUndefined();
+      expect(loadJobKey("endowed-1", WRAP_KEY, jobsDir)).toBeNull();
+      expect(fetchFn).not.toHaveBeenCalled();
+
+      // Past expiry: the ordinary quoted-expiry sweep resolves it — swept,
+      // nothing inscribed, no custody ever created. Fail closed end to end.
+      await runWorkerTick(sweepDeps(store, fetchFn, jobsDir, 10_001));
+      expect(store.jobs.get("endowed-1").state).toBe("swept");
+      expect(loadJobKey("endowed-1", WRAP_KEY, jobsDir)).toBeNull();
+    } finally {
+      rmSync(jobsDir, { recursive: true, force: true });
+    }
+  });
+});
