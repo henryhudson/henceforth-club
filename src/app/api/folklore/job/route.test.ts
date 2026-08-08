@@ -4,6 +4,9 @@ const mockParseXExport = vi.fn();
 const mockQuoteArchive = vi.fn();
 const mockGbpPerBsv = vi.fn();
 const mockGetOwner = vi.fn();
+const mockReadOwner = vi.fn();
+const mockVerifyClaim = vi.fn();
+const mockReadPass = vi.fn();
 const mockCreateJob = vi.fn();
 
 vi.mock("@/lib/folkloreJob/parseExport", () => ({
@@ -17,12 +20,23 @@ vi.mock("@/lib/xPrice", () => ({
 }));
 vi.mock("@/lib/xOwner", () => ({
   getOwner: (...args: unknown[]) => mockGetOwner(...args),
+  readOwner: (...args: unknown[]) => mockReadOwner(...args),
+}));
+vi.mock("@/lib/xBinding", () => ({
+  verifyClaim: (...args: unknown[]) => mockVerifyClaim(...args),
 }));
 vi.mock("@/lib/folkloreJob/jobStore", () => ({
   createJob: (...args: unknown[]) => mockCreateJob(...args),
 }));
+// Only the store read is mocked; the pure pass module (the zero-price quote,
+// the redeem message) runs for real so the test pins the actual pricing.
+vi.mock("@/lib/folkloreJob/pass", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/folkloreJob/pass")>()),
+  readPass: (...args: unknown[]) => mockReadPass(...args),
+}));
 
 import { POST } from "./route";
+import { estimateSingleOpReturn } from "@/lib/archiveCost";
 
 function multipartRequest(fields: Record<string, string> = { zip: "present" }): Request {
   const form = new FormData();
@@ -74,10 +88,16 @@ beforeEach(() => {
   mockGbpPerBsv.mockReset();
   mockGbpPerBsv.mockResolvedValue(10.76375);
   mockGetOwner.mockReset();
+  mockReadOwner.mockReset();
+  mockVerifyClaim.mockReset();
+  mockReadPass.mockReset();
   mockCreateJob.mockReset();
   mockParseXExport.mockReturnValue(PARSED_OK);
   mockQuoteArchive.mockReturnValue({ kind: "quoted", quote: QUOTE });
   mockGetOwner.mockResolvedValue(null);
+  mockReadOwner.mockResolvedValue({ kind: "absent" });
+  mockVerifyClaim.mockReturnValue(false);
+  mockReadPass.mockResolvedValue({ kind: "absent" });
   mockCreateJob.mockResolvedValue({ ok: true, job: JOB });
 });
 
@@ -214,5 +234,136 @@ describe("POST /api/folklore/job", () => {
     expect(res.status).toBe(503);
     const body = await res.json();
     expect(body).toEqual({ ok: false, reason: "at-capacity" });
+  });
+
+  describe("endowed-pass redemption — the £3 pass prices a bound handle's repeat archive at zero", () => {
+    const OWNER = {
+      address: "1CommittedAddr",
+      pubkey: "02abc",
+      boundAt: 1,
+      bindingTxid: "bindtx",
+      bindingPostId: "1",
+    };
+    const REDEEM_FIELDS = { zip: "present", passPubkey: "02abc", passSignature: "c2ln" };
+
+    function grantPass() {
+      mockReadOwner.mockResolvedValue({ kind: "owner", owner: OWNER });
+      mockReadPass.mockResolvedValue({
+        kind: "pass",
+        pass: { handle: "henry", jobId: "pass-job", purchasedAtMs: 1, priceSats: 1 },
+      });
+      mockVerifyClaim.mockReturnValue(true);
+    }
+
+    it("refuses a redemption attempt while FOLKLORE_ENDOWED_PASS_ENABLED is dark — never silently charges instead", async () => {
+      grantPass();
+      const res = await POST(multipartRequest(REDEEM_FIELDS));
+      expect(res.status).toBe(503);
+      expect(await res.json()).toEqual({ ok: false, reason: "not-available" });
+      expect(mockCreateJob).not.toHaveBeenCalled();
+      expect(mockReadPass).not.toHaveBeenCalled();
+    });
+
+    it("refuses for any pass-flag value other than the exact string true", async () => {
+      grantPass();
+      vi.stubEnv("FOLKLORE_ENDOWED_PASS_ENABLED", "1");
+      const res = await POST(multipartRequest(REDEEM_FIELDS));
+      expect(res.status).toBe(503);
+      expect(mockCreateJob).not.toHaveBeenCalled();
+    });
+
+    it("prices the repeat archive at ZERO for a bound handle with a pass and a verified signature", async () => {
+      vi.stubEnv("FOLKLORE_ENDOWED_PASS_ENABLED", "true");
+      grantPass();
+      const expectedFee = estimateSingleOpReturn(PARSED_OK.archiveBytes).minerFeeSats;
+      const endowedJob = { ...JOB, priceSats: 0, feeSats: expectedFee, endowed: true as const };
+      mockCreateJob.mockResolvedValue({ ok: true, job: endowedJob });
+
+      const res = await POST(multipartRequest(REDEEM_FIELDS));
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.priceSats).toBe(0);
+      expect(body.endowed).toBe(true);
+      expect(body.claimedHandle).toBe(true);
+
+      // The signature was checked over the redeem message pinned to this
+      // exact export's content hash, against the STORED committed address.
+      expect(mockVerifyClaim).toHaveBeenCalledWith({
+        message: `folklore-endow-redeem:henry:${PARSED_OK.contentHash}`,
+        signatureBase64: "c2ln",
+        pubkeyHex: "02abc",
+        committedAddress: "1CommittedAddr",
+      });
+
+      // The job carries the endowed marker and the zero-price quote: the fee
+      // is recorded honestly, nothing is charged, no pound leg was needed.
+      expect(mockCreateJob).toHaveBeenCalledWith(
+        { ...PARSED_OK, kind: "archive", endowed: true },
+        { feeSats: expectedFee, floatSats: 0, premiumSats: 0, priceSats: 0 },
+        expect.any(Number),
+      );
+      expect(mockQuoteArchive).not.toHaveBeenCalled();
+      expect(mockGbpPerBsv).not.toHaveBeenCalled();
+    });
+
+    it("refuses an UNBOUND handle's redemption — the pass rides the binding", async () => {
+      vi.stubEnv("FOLKLORE_ENDOWED_PASS_ENABLED", "true");
+      mockReadOwner.mockResolvedValue({ kind: "absent" });
+      const res = await POST(multipartRequest(REDEEM_FIELDS));
+      expect(res.status).toBe(403);
+      expect(await res.json()).toEqual({ ok: false, reason: "unbound-handle" });
+      expect(mockCreateJob).not.toHaveBeenCalled();
+    });
+
+    it("refuses a handle with no pass — refused outright, never quietly billed at full price", async () => {
+      vi.stubEnv("FOLKLORE_ENDOWED_PASS_ENABLED", "true");
+      mockReadOwner.mockResolvedValue({ kind: "owner", owner: OWNER });
+      mockReadPass.mockResolvedValue({ kind: "absent" });
+      const res = await POST(multipartRequest(REDEEM_FIELDS));
+      expect(res.status).toBe(403);
+      expect(await res.json()).toEqual({ ok: false, reason: "no-pass" });
+      expect(mockCreateJob).not.toHaveBeenCalled();
+    });
+
+    it("refuses a signature that does not verify", async () => {
+      vi.stubEnv("FOLKLORE_ENDOWED_PASS_ENABLED", "true");
+      grantPass();
+      mockVerifyClaim.mockReturnValue(false);
+      const res = await POST(multipartRequest(REDEEM_FIELDS));
+      expect(res.status).toBe(403);
+      expect(await res.json()).toEqual({ ok: false, reason: "bad-signature" });
+      expect(mockCreateJob).not.toHaveBeenCalled();
+    });
+
+    it("refuses a half-supplied redemption (signature without key) as bad-input", async () => {
+      vi.stubEnv("FOLKLORE_ENDOWED_PASS_ENABLED", "true");
+      const res = await POST(multipartRequest({ zip: "present", passSignature: "c2ln" }));
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ ok: false, reason: "bad-input" });
+    });
+
+    it("relays an unreachable store as 503, never a verdict on the pass", async () => {
+      vi.stubEnv("FOLKLORE_ENDOWED_PASS_ENABLED", "true");
+      mockReadOwner.mockResolvedValue({ kind: "unavailable" });
+      const res = await POST(multipartRequest(REDEEM_FIELDS));
+      expect(res.status).toBe(503);
+      expect(await res.json()).toEqual({ ok: false, reason: "store-unavailable" });
+    });
+
+    it("leaves a plain upload UNTOUCHED even with the pass flag on — an unbound handle with no redemption pays exactly what it always paid", async () => {
+      vi.stubEnv("FOLKLORE_ENDOWED_PASS_ENABLED", "true");
+      const res = await POST(multipartRequest());
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.priceSats).toBe(JOB.priceSats);
+      expect(body).not.toHaveProperty("endowed");
+      expect(mockQuoteArchive).toHaveBeenCalledWith(PARSED_OK.archiveBytes, 10.76375);
+      expect(mockReadPass).not.toHaveBeenCalled();
+      expect(mockCreateJob).toHaveBeenCalledWith(
+        { ...PARSED_OK, kind: "archive" },
+        QUOTE,
+        expect.any(Number),
+      );
+    });
   });
 });

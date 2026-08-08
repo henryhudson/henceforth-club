@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getJob } from "@/lib/folkloreJob/jobStore";
 import { issueFloatOnCompletion } from "@/lib/folkloreJob/floatFunding";
+import { recordPassOnCompletion } from "@/lib/folkloreJob/pass";
 
 /** The bearer cookie lives a year — the recovery string, shown once, is the
  * only other way back into a float, so the cookie errs long. */
@@ -32,11 +33,21 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     feeSats: job.feeSats,
     premiumSats: job.premiumSats,
     priceSats: job.priceSats,
+    ...(job.endowed ? { endowed: true } : {}),
     ...(job.address ? { address: job.address } : {}),
     ...(job.inscriptionTxid ? { inscriptionTxid: job.inscriptionTxid } : {}),
     ...(job.sweepTxid ? { sweepTxid: job.sweepTxid } : {}),
     ...(job.failureReason ? { failureReason: job.failureReason } : {}),
   };
+
+  // A completed pass purchase records its endowed-handle pass here, at the
+  // poll edge, exactly once (the recording is claimed atomically in the
+  // store) — the same completion seam the kudos float uses. Gated per
+  // request: while FOLKLORE_ENDOWED_PASS_ENABLED is dark, nothing
+  // pass-shaped happens even for a done job.
+  if (job.state === "done" && job.kind === "pass" && process.env.FOLKLORE_ENDOWED_PASS_ENABLED === "true") {
+    await recordPassOnCompletion(job, Date.now());
+  }
 
   if (job.state === "done" && process.env.KUDOS_ENABLED === "true") {
     const issued = await issueFloatOnCompletion(job);

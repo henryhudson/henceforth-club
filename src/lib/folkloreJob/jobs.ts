@@ -17,8 +17,11 @@ export type JobState =
   | "swept";
 
 /** What a job will inscribe, and therefore how it completes: an archive
- * registers against its handle, a folklore record lands on the board index. */
-export type JobKind = "archive" | "folklore";
+ * registers against its handle, a folklore record lands on the board index,
+ * and a pass (the £3 endowed-handle purchase) completes at inscription — the
+ * endowment record on chain is the whole job; the site records the pass at
+ * the poll edge (src/lib/folkloreJob/pass.ts). */
+export type JobKind = "archive" | "folklore" | "pass";
 
 export type TextJob = {
   jobId: string;
@@ -29,6 +32,14 @@ export type TextJob = {
    * `kind`; the worker falls back to the payload sniff for those, which is
    * exactly what it did before. */
   kind?: JobKind;
+  /** True only for a repeat archive redeemed against an endowed-handle pass:
+   * priced at ZERO to the visitor, so no payment UTXO will ever arrive and
+   * the worker must fund the inscription from a standing float — a custody
+   * surface that does not exist yet. Until it does (its own money-path
+   * adversarial review), the worker refuses to publish a key for an endowed
+   * job and the job expires unfunded: fail closed, nothing inscribed, no
+   * money moved. Absent on every other job. */
+  endowed?: true;
   handle: string;
   contentHash: string;
   feeSats: number;

@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { parseXExport } from "@/lib/folkloreJob/parseExport";
 import { quoteArchive } from "@/lib/folkloreJob/quote";
-import { getOwner } from "@/lib/xOwner";
+import { getOwner, readOwner } from "@/lib/xOwner";
+import { verifyClaim } from "@/lib/xBinding";
 import { createJob } from "@/lib/folkloreJob/jobStore";
 import { MAX_ARCHIVE_BYTES } from "@/lib/folkloreJob/constants";
+import { quoteEndowedRepeat, readPass, redeemMessage } from "@/lib/folkloreJob/pass";
 import { gbpPerBsv } from "@/lib/xPrice";
 
 // The whole multipart body, not just the archive JSON the parser will later
@@ -65,6 +67,71 @@ export async function POST(req: Request) {
   const parsed = parseXExport(bytes, MAX_ARCHIVE_BYTES);
   if (!parsed.ok) {
     return refusal(parsed.reason, 422);
+  }
+
+  // An endowed-pass redemption: the visitor claims the handle's £3 pass, so
+  // the repeat archive is priced at ZERO. Explicitly requested (both fields),
+  // explicitly refused when it cannot hold — a claim is never quietly
+  // stripped back to full price, for the same reason the link route never
+  // silently drops an attribution: nobody should pay after asking not to.
+  const passPubkey = form.get("passPubkey");
+  const passSignature = form.get("passSignature");
+  if (passPubkey !== null || passSignature !== null) {
+    // The pass flag is its own gate, read per request like the archive flag
+    // above: while it is dark, a redemption attempt refuses outright and no
+    // zero-price job can exist anywhere in the pipeline.
+    if (process.env.FOLKLORE_ENDOWED_PASS_ENABLED !== "true") {
+      return refusal("not-available", 503);
+    }
+    if (typeof passPubkey !== "string" || typeof passSignature !== "string") {
+      return refusal("bad-input", 400);
+    }
+
+    // The pass rides the binding: only the handle's bound key redeems it, and
+    // an unreachable store is not a verdict on either record.
+    const owner = await readOwner(parsed.handle);
+    if (owner.kind === "unavailable") return refusal("store-unavailable", 503);
+    if (owner.kind === "absent") return refusal("unbound-handle", 403);
+
+    const pass = await readPass(parsed.handle);
+    if (pass.kind === "unavailable") return refusal("store-unavailable", 503);
+    if (pass.kind === "absent") return refusal("no-pass", 403);
+
+    // Signing over the content hash pins the redemption to this exact export:
+    // a captured signature can only re-archive identical content.
+    const verified = verifyClaim({
+      message: redeemMessage(parsed.handle, parsed.contentHash),
+      signatureBase64: passSignature,
+      pubkeyHex: passPubkey,
+      committedAddress: owner.owner.address,
+    });
+    if (!verified) return refusal("bad-signature", 403);
+
+    // Zero-priced and rate-free: nothing is charged, so no pound leg exists
+    // to fail closed on. The fee is recorded honestly for the worker's
+    // (future) float leg; until that leg exists the worker refuses endowed
+    // jobs and they expire unfunded — fail closed, nothing inscribed.
+    const endowedQuote = quoteEndowedRepeat(parsed.archiveBytes);
+    const endowedJob = await createJob(
+      { ...parsed, kind: "archive", endowed: true },
+      endowedQuote,
+      Date.now(),
+    );
+    if (!endowedJob.ok) {
+      return refusal(endowedJob.refused, 503);
+    }
+
+    return NextResponse.json({
+      jobId: endowedJob.job.jobId,
+      priceSats: endowedJob.job.priceSats,
+      feeSats: endowedJob.job.feeSats,
+      premiumSats: endowedJob.job.premiumSats,
+      floatSats: endowedQuote.floatSats,
+      kudosEnabled: process.env.KUDOS_ENABLED === "true",
+      expiresAtMs: endowedJob.job.expiresAtMs,
+      claimedHandle: true,
+      endowed: true,
+    });
   }
 
   // The price — inscription fee plus the £2 kudos float leg — converts at

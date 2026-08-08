@@ -6,6 +6,7 @@
 import { getRedis } from "@/lib/redis";
 import type { FolkloreRecord } from "@/app/folklore/linkRecord";
 import { applyEvent, type JobEvent, type JobKind, type JobState, type TextJob } from "./jobs";
+import type { EndowmentRecord } from "./pass";
 import type { ParsedExport } from "./parseExport";
 import type { Quote } from "./quote";
 import { MAX_CONCURRENT_JOBS, QUOTE_EXPIRY_MINUTES, RESERVED_ARCHIVE_JOBS } from "./constants";
@@ -13,11 +14,12 @@ import { MAX_CONCURRENT_JOBS, QUOTE_EXPIRY_MINUTES, RESERVED_ARCHIVE_JOBS } from
 type Redis = NonNullable<ReturnType<typeof getRedis>>;
 type Ok = { ok: true; job: TextJob };
 type Refused = { ok: false; refused: string };
-// A job's stashed payload: an archive from the export path, or — since the
-// link board — a single validated folklore record. Same rails either way;
-// what a job IS lives on the job record (`kind`), not in this payload, which
-// is deleted the moment the job reaches done or swept.
-type Archive = Extract<ParsedExport, { ok: true }>["archive"] | FolkloreRecord;
+// A job's stashed payload: an archive from the export path, a single
+// validated folklore record from the link board, or — since the endowed pass
+// — the £3 endowment record. Same rails every way; what a job IS lives on
+// the job record (`kind`), not in this payload, which is deleted the moment
+// the job reaches done or swept.
+type Archive = Extract<ParsedExport, { ok: true }>["archive"] | FolkloreRecord | EndowmentRecord;
 
 const JOB_PREFIX = "x:job:";
 const PAYLOAD_PREFIX = "x:job:payload:";
@@ -77,7 +79,7 @@ async function allStoredJobs(redis: Redis): Promise<StoredJob[]> {
 }
 
 export async function createJob(
-  parsed: { kind: JobKind; handle: string; contentHash: string; archive: Archive },
+  parsed: { kind: JobKind; handle: string; contentHash: string; archive: Archive; endowed?: boolean },
   quote: Quote,
   nowMs: number,
 ): Promise<Ok | { ok: false; refused: "at-capacity" | "store-unavailable" }> {
@@ -109,6 +111,10 @@ export async function createJob(
   const job: TextJob = {
     jobId: crypto.randomUUID(),
     kind: parsed.kind,
+    // The endowed marker is written once here and never changed — the worker
+    // reads it to refuse the (not-yet-built) float-funded path, so it must
+    // ride the record, not the deletable payload.
+    ...(parsed.endowed ? { endowed: true as const } : {}),
     handle: parsed.handle,
     contentHash: parsed.contentHash,
     feeSats: quote.feeSats,
