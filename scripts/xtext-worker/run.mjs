@@ -13,7 +13,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { register } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { wrappingKeyFromKeychain } from "./keystore.mjs";
+import { wrapKeyProbeError, wrappingKeyFromKeychain } from "./keystore.mjs";
 import { FEE_PER_KB, REVENUE_ADDRESS, floatPoolAddressError, revenueAddressError, runWorkerTick } from "./worker.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -52,12 +52,27 @@ if (floatPoolError) {
   console.warn(`xtext-worker: ${floatPoolError} — until then a job carrying a kudos float leg refuses to inscribe and refunds itself.`);
 }
 
+const jobsDir = path.join(HERE, "jobs");
+
 let wrapKey;
 try {
   wrapKey = wrappingKeyFromKeychain();
 } catch (err) {
   console.error("xtext-worker refusing to start: could not read the Keychain wrapping key.", err.message);
-  console.error("Seed it first: security add-generic-password -s xtext-worker-wrap -w <32 random bytes hex>");
+  console.error("If NO wrapped custody keys exist yet (scripts/xtext-worker/jobs/ is empty), seed one:");
+  console.error("  security add-generic-password -s xtext-worker-wrap -w <32 random bytes hex>");
+  console.error(
+    "If wrapped custody keys EXIST there, do NOT seed a fresh key — a new key cannot open them and every fund-linked key would be stranded. Restore the original wrapping key from backup.",
+  );
+  process.exit(1);
+}
+
+// The lifecycle probe (money-path review F2, 2026-08-09): a wrapping key that
+// reads fine but is not the key that wrapped the custody keys already on disk
+// would silently read every fund-linked key as absent. Refuse to run instead.
+const probeError = wrapKeyProbeError(wrapKey, jobsDir);
+if (probeError) {
+  console.error(`xtext-worker refusing to start: ${probeError}`);
   process.exit(1);
 }
 
@@ -84,7 +99,6 @@ const { addCommentToIndex, addLinkToBoard } = await import(
 );
 const folklore = { encodeRecord, recordFromValue, addLinkToBoard, addCommentToIndex };
 
-const jobsDir = path.join(HERE, "jobs");
 const registerBaseUrl = process.env.XTEXT_REGISTER_BASE_URL ?? "https://www.henceforth.club";
 
 let ticking = false;

@@ -175,6 +175,7 @@ describe("applyEvent — terminal states accept nothing", () => {
     { kind: "broadcast-failed", reason: "x" },
     { kind: "sweep-broadcast", txid: "t" },
     { kind: "sweep-confirmed" },
+    { kind: "inscription-found", txid: "t" },
   ];
 
   it.each(EVENTS)("done + $kind is refused", (event) => {
@@ -209,6 +210,7 @@ describe("applyEvent — total: every pair returns a value, never throws", () =>
     { kind: "broadcast-failed", reason: "x" },
     { kind: "sweep-broadcast", txid: "t" },
     { kind: "sweep-confirmed" },
+    { kind: "inscription-found", txid: "t" },
   ];
 
   it("every (state, event) pair returns an ok-or-refused result, never throws", () => {
@@ -221,6 +223,65 @@ describe("applyEvent — total: every pair returns a value, never throws", () =>
         }).not.toThrow();
         expect(typeof result?.ok).toBe("boolean");
       }
+    }
+  });
+});
+
+describe("the false-failure heal (money-path review F4, 2026-08-09)", () => {
+  it("broadcast-failed records the attempted txid on the way into sweeping", () => {
+    const job = makeJob({ state: "funded" });
+    const result = applyEvent(job, { kind: "broadcast-failed", reason: "gorillapool: 503", attemptedTxid: "aa11" }, NOW);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected ok");
+    expect(result.job.state).toBe("sweeping");
+    expect(result.job.attemptedInscriptionTxid).toBe("aa11");
+  });
+
+  it("broadcast-failed without an attempted txid stores none (a build refusal has nothing to find)", () => {
+    const job = makeJob({ state: "funded" });
+    const result = applyEvent(job, { kind: "broadcast-failed", reason: "underfunded" }, NOW);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected ok");
+    expect(result.job.attemptedInscriptionTxid).toBeUndefined();
+  });
+
+  it("sweeping + inscription-found with the recorded txid -> inscribed, failure reason cleared", () => {
+    const job = makeJob({ state: "sweeping", attemptedInscriptionTxid: "aa11", failureReason: "gorillapool: 503" });
+    const result = applyEvent(job, { kind: "inscription-found", txid: "aa11" }, NOW);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected ok");
+    expect(result.job.state).toBe("inscribed");
+    expect(result.job.inscriptionTxid).toBe("aa11");
+    expect(result.job.failureReason).toBeUndefined();
+  });
+
+  it("an arbitrary txid never resurrects a sweeping job", () => {
+    const job = makeJob({ state: "sweeping", attemptedInscriptionTxid: "aa11" });
+    const result = applyEvent(job, { kind: "inscription-found", txid: "bb22" }, NOW);
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("expected refusal");
+    expect(result.refused).toBe("txid-mismatch");
+  });
+
+  it("a sweeping job with NO recorded attempt refuses inscription-found", () => {
+    const job = makeJob({ state: "sweeping" });
+    const result = applyEvent(job, { kind: "inscription-found", txid: "aa11" }, NOW);
+    expect(result.ok).toBe(false);
+  });
+
+  it("inscription-found refuses while a sweep is already broadcast — two live spends must resolve on the sweep rails", () => {
+    const job = makeJob({ state: "sweeping", attemptedInscriptionTxid: "aa11", sweepTxid: "cc33" });
+    const result = applyEvent(job, { kind: "inscription-found", txid: "aa11" }, NOW);
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("expected refusal");
+    expect(result.refused).toBe("sweep-in-flight");
+  });
+
+  it("inscription-found is refused outside sweeping", () => {
+    for (const state of ["quoted", "awaiting-payment", "funded", "inscribed", "done", "swept"] as const) {
+      const job = makeJob({ state, attemptedInscriptionTxid: "aa11" });
+      const result = applyEvent(job, { kind: "inscription-found", txid: "aa11" }, NOW);
+      expect(result.ok).toBe(false);
     }
   });
 });

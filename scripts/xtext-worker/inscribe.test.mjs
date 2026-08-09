@@ -177,6 +177,78 @@ describe("buildInscriptionTx — the £2 kudos float leg", () => {
   });
 });
 
+describe("buildInscriptionTx — the overpayment refund (money-path review, 2026-08-09)", () => {
+  const payerRefundAddress = PrivateKey.fromRandom().toAddress();
+
+  it("a material overpay returns home: the surplus rides a change output to the payer", async () => {
+    // funding.sats is 1,000,000 against a 5,000-sat premium — a huge surplus
+    // that previously burned whole as miner fee.
+    const built = await buildInscriptionTx({
+      jobKey,
+      funding,
+      archiveJson: archive,
+      premiumSats,
+      revenueAddress,
+      payerRefundAddress,
+      feeRate,
+    });
+    expect(built.ok).toBe(true);
+
+    const tx = Transaction.fromHex(built.hex);
+    expect(tx.outputs).toHaveLength(3); // archive + premium + the refund
+    const refundOut = tx.outputs[2];
+    expect(refundOut.lockingScript.toHex()).toBe(new P2PKH().lock(payerRefundAddress).toHex());
+
+    // The refund carries exactly the surplus: input minus premium minus the
+    // size-based fee — the fee stays honest, nothing extra burns.
+    const inputSats = funding.sats;
+    const outputSats = tx.outputs.reduce((sum, o) => sum + o.satoshis, 0);
+    const paidFee = inputSats - outputSats;
+    const sizeKb = tx.toBinary().length / 1000;
+    expect(paidFee).toBeGreaterThanOrEqual(Math.floor(sizeKb * feeRate));
+    expect(paidFee).toBeLessThan(Math.ceil(sizeKb * feeRate) + 2);
+    expect(refundOut.satoshis).toBe(inputSats - premiumSats - paidFee);
+  });
+
+  it("a small overpay still burns as fee — no dust-scale change output", async () => {
+    // 1,500 sats over the premium: comfortably above the ~65-sat size fee,
+    // comfortably below the 2,000-sat refund threshold — the surplus burns.
+    const smallOverpay = { ...funding, sats: premiumSats + 1_500 };
+    const built = await buildInscriptionTx({
+      jobKey,
+      funding: smallOverpay,
+      archiveJson: archive,
+      premiumSats,
+      revenueAddress,
+      payerRefundAddress,
+      feeRate,
+    });
+    expect(built.ok).toBe(true);
+    const tx = Transaction.fromHex(built.hex);
+    expect(tx.outputs).toHaveLength(2); // archive + premium — the surplus burns, as before
+  });
+
+  it("without a payer refund address the shape is unchanged — surplus burns as documented", async () => {
+    const built = await buildInscriptionTx({
+      jobKey,
+      funding,
+      archiveJson: archive,
+      premiumSats,
+      revenueAddress,
+      feeRate,
+    });
+    expect(built.ok).toBe(true);
+    expect(Transaction.fromHex(built.hex).outputs).toHaveLength(2);
+  });
+
+  it("the refund decision is deterministic — the same funding rebuilds the same txid", async () => {
+    const args = { jobKey, funding, archiveJson: archive, premiumSats, revenueAddress, payerRefundAddress, feeRate };
+    const first = await buildInscriptionTx(args);
+    const second = await buildInscriptionTx(args);
+    expect(first.txid).toBe(second.txid);
+  });
+});
+
 // A minimal ARC accept response, mirroring the wire shape ARCService reads.
 const arcAccept = (txid) => ({
   ok: true,

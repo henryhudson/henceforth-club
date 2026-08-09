@@ -31,6 +31,15 @@ const ARC_HEADERS = {
 // 200/201 with a txid is the network having taken the bytes.
 const REJECTED_STATUSES = new Set(["REJECTED", "DOUBLE_SPEND_ATTEMPTED"]);
 
+// A visitor who materially overpays gets the surplus back: when the funding
+// exceeds the priced outputs plus the size-based fee by at least this much,
+// the excess returns to the payer's own refund address as a change output
+// instead of burning as miner fee (money-path review, 2026-08-09). Below the
+// threshold the surplus stays fee — a small change output costs more to
+// track and spend than it carries, and tiny overpays were the documented
+// v1 behaviour.
+const OVERPAY_REFUND_MIN_SATS = 2_000;
+
 /**
  * Build the archive inscription transaction: one input (the visitor's funding
  * output at the job's custody address) and up to three outputs — the archive
@@ -52,7 +61,7 @@ const REJECTED_STATUSES = new Set(["REJECTED", "DOUBLE_SPEND_ATTEMPTED"]);
  * revenueAddress and floatPoolAddress are arguments, never read from
  * constants — the worker owns the true values and gates on them.
  */
-export async function buildInscriptionTx({ jobKey, funding, archiveJson, premiumSats, revenueAddress, floatSats = 0, floatPoolAddress = null, feeRate }) {
+export async function buildInscriptionTx({ jobKey, funding, archiveJson, premiumSats, revenueAddress, floatSats = 0, floatPoolAddress = null, payerRefundAddress = null, feeRate }) {
   if (floatSats > 0 && !floatPoolAddress) {
     return { ok: false, reason: "float-pool-unconfigured" };
   }
@@ -85,8 +94,27 @@ export async function buildInscriptionTx({ jobKey, funding, archiveJson, premium
     tx.addOutput({ lockingScript: new P2PKH().lock(floatPoolAddress), satoshis: floatSats });
   }
 
+  // Overpayment refund: price the transaction WITH the refund output; if the
+  // surplus at that (slightly larger) size clears the threshold, the output
+  // is real and carries exactly the surplus. Otherwise it is removed and the
+  // small surplus burns as fee, exactly as before. Deterministic either way —
+  // the same funding always rebuilds the same transaction, which the retry
+  // contract depends on.
+  let overpayRefundSats = 0;
+  if (payerRefundAddress) {
+    tx.addOutput({ lockingScript: new P2PKH().lock(payerRefundAddress), satoshis: 0 });
+    const feeWithRefund = await new SatoshisPerKilobyte(feeRate).computeFee(tx);
+    const surplus = funding.sats - premiumSats - floatSats - feeWithRefund;
+    if (surplus >= OVERPAY_REFUND_MIN_SATS) {
+      tx.outputs[tx.outputs.length - 1].satoshis = surplus;
+      overpayRefundSats = surplus;
+    } else {
+      tx.outputs.pop();
+    }
+  }
+
   const requiredFee = await new SatoshisPerKilobyte(feeRate).computeFee(tx);
-  const availableFee = funding.sats - premiumSats - floatSats; // no change output — everything left is fee
+  const availableFee = funding.sats - premiumSats - floatSats - overpayRefundSats;
   if (availableFee < requiredFee) {
     return { ok: false, reason: "underfunded" };
   }

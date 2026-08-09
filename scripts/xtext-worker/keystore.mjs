@@ -10,7 +10,7 @@
 
 import { execFileSync } from "node:child_process";
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { PrivateKey } from "@bsv/sdk";
@@ -81,15 +81,57 @@ export function createJobKey(jobId, wrapKey, jobsDir = DEFAULT_JOBS_DIR) {
 }
 
 /**
+ * Loads and decrypts jobId's key with the failure mode made explicit:
+ * { key } on success, { missing: true } when no file exists (or the jobId is
+ * refused), { authFailed: true } when a file EXISTS but the wrapping key
+ * cannot open it. The two nulls are operationally opposite — a missing file
+ * is a routine "this job never had a key", an authentication failure on a
+ * present file means the wrapping key is wrong and someone must look before
+ * anything is reaped (money-path review F2, 2026-08-09).
+ */
+export function loadJobKeyDetailed(jobId, wrapKey, jobsDir = DEFAULT_JOBS_DIR) {
+  if (!validJobId(jobId)) return { missing: true };
+  const filePath = keyFilePath(jobId, jobsDir);
+  if (!existsSync(filePath)) return { missing: true };
+  const wif = unwrapWif(readFileSync(filePath), wrapKey);
+  if (wif === null) return { authFailed: true };
+  return { key: PrivateKey.fromWif(wif) };
+}
+
+/**
  * Loads and decrypts jobId's key, or null if the jobId is refused, the file
- * is missing, or the payload fails authentication.
+ * is missing, or the payload fails authentication. Callers who need to tell
+ * those apart use loadJobKeyDetailed.
  */
 export function loadJobKey(jobId, wrapKey, jobsDir = DEFAULT_JOBS_DIR) {
-  if (!validJobId(jobId)) return null;
-  const filePath = keyFilePath(jobId, jobsDir);
-  if (!existsSync(filePath)) return null;
-  const wif = unwrapWif(readFileSync(filePath), wrapKey);
-  return wif === null ? null : PrivateKey.fromWif(wif);
+  const loaded = loadJobKeyDetailed(jobId, wrapKey, jobsDir);
+  return loaded.key ?? null;
+}
+
+/**
+ * Whether the wrapping key can open the custody keys already on disk — the
+ * startup probe. Answers null when there is nothing to verify (no wrapped
+ * keys exist) or when the first wrapped key opens; answers a refusal message
+ * when wrapped keys exist that this wrapping key cannot open. The worker
+ * refuses to start on that message: running would read every fund-linked key
+ * as absent, and the operator's instinct — seed a fresh wrapping key — would
+ * strand them all. The only correct move is restoring the original key.
+ */
+export function wrapKeyProbeError(wrapKey, jobsDir = DEFAULT_JOBS_DIR) {
+  let names;
+  try {
+    names = readdirSync(jobsDir).filter((name) => name.endsWith(".key"));
+  } catch {
+    return null; // no jobs directory yet — nothing to verify
+  }
+  if (names.length === 0) return null;
+  const wif = unwrapWif(readFileSync(path.join(jobsDir, names[0])), wrapKey);
+  if (wif !== null) return null;
+  return (
+    `${names.length} wrapped custody key(s) exist on disk but the wrapping key cannot open them. ` +
+    "The keychain item does not match the key that wrapped them. Do NOT seed a fresh wrapping key — " +
+    "that would strand every fund-linked custody key for good. Restore the original wrapping key."
+  );
 }
 
 /** Removes jobId's key file. A no-op if the jobId is refused or the file is already gone. */
@@ -98,10 +140,55 @@ export function deleteJobKey(jobId, jobsDir = DEFAULT_JOBS_DIR) {
   rmSync(keyFilePath(jobId, jobsDir), { force: true });
 }
 
-/** The worker's wrapping key, held in the macOS keychain — never in the repo, never on the website. */
+/** Removes jobId's late-sweep marker alongside its key. */
+export function clearLateSweep(jobId, jobsDir = DEFAULT_JOBS_DIR) {
+  if (!validJobId(jobId)) return;
+  rmSync(lateSweepFilePath(jobId, jobsDir), { force: true });
+}
+
+function lateSweepFilePath(jobId, jobsDir) {
+  return path.join(jobsDir, `${jobId}.late-sweep`);
+}
+
+/**
+ * Records the txid of a late-straggler sweep broadcast for jobId — durable,
+ * so a worker restart cannot forget that a spend of this address is in
+ * flight. The reaper refuses to delete the custody key while this marker's
+ * transaction is unconfirmed: an unconfirmed sweep hides the address's
+ * outputs from the unspent read, and if that sweep were later dropped the
+ * outputs would reappear with no key left to spend them (money-path review
+ * F3, 2026-08-09).
+ */
+export function recordLateSweep(jobId, txid, jobsDir = DEFAULT_JOBS_DIR) {
+  if (!validJobId(jobId)) return;
+  mkdirSync(jobsDir, { recursive: true });
+  writeFileSync(lateSweepFilePath(jobId, jobsDir), txid, { mode: 0o600 });
+}
+
+/** The recorded late-sweep txid for jobId, or null when none was recorded. */
+export function readLateSweep(jobId, jobsDir = DEFAULT_JOBS_DIR) {
+  if (!validJobId(jobId)) return null;
+  const filePath = lateSweepFilePath(jobId, jobsDir);
+  if (!existsSync(filePath)) return null;
+  const txid = readFileSync(filePath, "utf8").trim();
+  return txid.length > 0 ? txid : null;
+}
+
+/**
+ * The worker's wrapping key, held in the macOS keychain — never in the repo,
+ * never on the website. Throws when the keychain answer does not decode to
+ * exactly 32 bytes: a truncated or mis-pasted secret would otherwise ride
+ * silently into createCipheriv and fail at the first mint, far from its cause.
+ */
 export function wrappingKeyFromKeychain() {
   const hex = execFileSync("security", ["find-generic-password", "-s", "xtext-worker-wrap", "-w"], {
     encoding: "utf8",
   }).trim();
-  return Buffer.from(hex, "hex");
+  const key = Buffer.from(hex, "hex");
+  if (key.length !== 32) {
+    throw new Error(
+      `the keychain wrapping key decodes to ${key.length} bytes, not 32 — the item is truncated or mis-seeded`,
+    );
+  }
+  return key;
 }

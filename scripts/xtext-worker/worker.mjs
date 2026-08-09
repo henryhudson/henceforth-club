@@ -21,7 +21,7 @@
 
 import { pathToFileURL } from "node:url";
 import { P2PKH } from "@bsv/sdk";
-import { createJobKey, deleteJobKey, loadJobKey } from "./keystore.mjs";
+import { clearLateSweep, createJobKey, deleteJobKey, loadJobKey, loadJobKeyDetailed, readLateSweep, recordLateSweep } from "./keystore.mjs";
 import { fetchRawTxHex, fetchTxConfirmed, fetchUnspentOutputs, readUnspentOutputs, refundAddressOf, runWatchTick } from "./payments.mjs";
 import { broadcastArchive, buildInscriptionTx, registerHandle } from "./inscribe.mjs";
 import { buildSweepTx } from "./sweep.mjs";
@@ -236,6 +236,7 @@ async function inscribeFunded({ listJobsInState, advance, getPayload, wrapKey, j
         revenueAddress,
         floatSats,
         floatPoolAddress,
+        payerRefundAddress: job.payerRefundAddress ?? null,
         feeRate,
       });
       if (!built.ok) {
@@ -245,7 +246,23 @@ async function inscribeFunded({ listJobsInState, advance, getPayload, wrapKey, j
 
       const broadcast = await broadcastArchive(built.hex, { fetchFn, taalApiKey });
       if (!broadcast.ok) {
-        await advance(job.jobId, { kind: "broadcast-failed", reason: broadcast.reason }, nowMs);
+        // A refusal can be a lie: a response lost after acceptance (a gateway
+        // timeout, a dropped connection) reports failure for a transaction
+        // the network took. Believing it would route the job into a sweep
+        // with nothing left to sweep — wedged forever while the visitor's
+        // archive sits on chain unregistered. Probe by txid before believing;
+        // and when the probe also misses, record the attempted txid so the
+        // sweep phase can discover a late-propagating truth and self-heal.
+        const seenHex = await fetchRawTxHex(built.txid, fetchFn);
+        if (seenHex) {
+          await advance(job.jobId, { kind: "inscribed", txid: built.txid }, nowMs);
+          return;
+        }
+        await advance(
+          job.jobId,
+          { kind: "broadcast-failed", reason: broadcast.reason, attemptedTxid: built.txid },
+          nowMs,
+        );
         return;
       }
 
@@ -355,7 +372,24 @@ async function sweepSweeping({ listJobsInState, advance, wrapKey, jobsDir, fetch
       }
 
       const utxos = await fetchUnspentOutputs(job.address, fetchFn);
-      if (utxos.length === 0) return; // nothing on the address yet — retry next tick
+      if (utxos.length === 0) {
+        // An empty address can mean the funding was already SPENT — by the
+        // very inscription whose broadcast reported failure. Only the job
+        // key could have spent it, so when the recorded attempted txid is
+        // visible on the network, the failure report was a lie: route the
+        // job back to the inscribed rails (inscription-found) so
+        // registration completes and the visitor gets what they paid for.
+        // Never while a sweep is in flight — two live spends of the same
+        // funding must resolve on the sweep rails.
+        if (job.attemptedInscriptionTxid && !job.sweepTxid) {
+          const seenHex = await fetchRawTxHex(job.attemptedInscriptionTxid, fetchFn);
+          if (seenHex) {
+            await advance(job.jobId, { kind: "inscription-found", txid: job.attemptedInscriptionTxid }, nowMs);
+            return;
+          }
+        }
+        return; // nothing on the address yet — retry next tick
+      }
 
       // The refund goes to the funding transaction's first input. On the
       // broadcast-failed path that address was already resolved and recorded at
@@ -376,11 +410,18 @@ async function sweepSweeping({ listJobsInState, advance, wrapKey, jobsDir, fetch
         return;
       }
 
-      const jobKey = loadJobKey(job.jobId, wrapKey, jobsDir);
-      if (!jobKey) {
-        warnOnce(warnedMissingKey, job.jobId, `xtext-worker: sweeping job ${job.jobId} has no custody key on disk — flagged for ops`);
+      const loaded = loadJobKeyDetailed(job.jobId, wrapKey, jobsDir);
+      if (!loaded.key) {
+        warnOnce(
+          warnedMissingKey,
+          job.jobId,
+          loaded.authFailed
+            ? `xtext-worker: sweeping job ${job.jobId} has a custody key the wrapping key CANNOT OPEN — the wrapping key is wrong; restore it, do not reseed — flagged for ops`
+            : `xtext-worker: sweeping job ${job.jobId} has no custody key on disk — flagged for ops`,
+        );
         return;
       }
+      const jobKey = loaded.key;
 
       const built = await buildSweepTx({ jobKey, fundings: utxos, refundAddress, feeRate });
       if (built.ok === false) {
@@ -420,7 +461,18 @@ async function lateWatchAndReap({ listJobsInState, wrapKey, jobsDir, fetchFn, ta
       if (nowMs - job.expiresAtMs >= LATE_WATCH_MS) {
         const read = await readUnspentOutputs(job.address, fetchFn);
         if (read.ok && read.utxos.length === 0) {
+          // An empty read is NOT enough while a late-straggler sweep is
+          // unconfirmed: its unbroadcast-yet-unmined spend hides the outputs
+          // from the unspent view, and if that sweep were later dropped the
+          // outputs would reappear with no key left to spend them. The
+          // durable marker (written at broadcast, below) survives restarts;
+          // the reap waits for the marker's transaction to confirm.
+          const lateSweepTxid = readLateSweep(job.jobId, jobsDir);
+          if (lateSweepTxid && !(await fetchTxConfirmed(lateSweepTxid, fetchFn))) {
+            return; // sweep in flight — postpone the reap until it confirms
+          }
           deleteJobKey(job.jobId, jobsDir); // affirmatively empty and past the window — custody ends here
+          clearLateSweep(job.jobId, jobsDir);
         }
         return; // a failed read, or funds still present, postpones the reap to a later tick
       }
@@ -435,11 +487,18 @@ async function lateWatchAndReap({ listJobsInState, wrapKey, jobsDir, fetchFn, ta
         return;
       }
 
-      const jobKey = loadJobKey(job.jobId, wrapKey, jobsDir);
-      if (!jobKey) {
-        warnOnce(warnedLateStraggler, job.jobId, `xtext-worker: late straggler on terminal job ${job.jobId} but its key was already reaped — flagged for ops`);
+      const loaded = loadJobKeyDetailed(job.jobId, wrapKey, jobsDir);
+      if (!loaded.key) {
+        warnOnce(
+          warnedLateStraggler,
+          job.jobId,
+          loaded.authFailed
+            ? `xtext-worker: late straggler on terminal job ${job.jobId} but its custody key CANNOT BE OPENED — the wrapping key is wrong; restore it, do not reseed — flagged for ops`
+            : `xtext-worker: late straggler on terminal job ${job.jobId} but its key was already reaped — flagged for ops`,
+        );
         return;
       }
+      const jobKey = loaded.key;
 
       const built = await buildSweepTx({ jobKey, fundings: utxos, refundAddress, feeRate });
       if (built.ok === false) {
@@ -452,6 +511,10 @@ async function lateWatchAndReap({ listJobsInState, wrapKey, jobsDir, fetchFn, ta
       const broadcast = await broadcastArchive(built.hex, { fetchFn, taalApiKey });
       if (!broadcast.ok) return; // retry next tick
 
+      // Durable, BEFORE anything else can observe the empty address: the
+      // reaper must never delete this job's key while this sweep is
+      // unconfirmed, and a worker restart must not forget it exists.
+      recordLateSweep(job.jobId, built.txid, jobsDir);
       console.log(`xtext-worker: late straggler swept for job ${job.jobId} -> ${built.txid}`);
     });
   }

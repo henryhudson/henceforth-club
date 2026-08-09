@@ -2,7 +2,16 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { createJobKey, loadJobKey, deleteJobKey } from "./keystore.mjs";
+import {
+  clearLateSweep,
+  createJobKey,
+  deleteJobKey,
+  loadJobKey,
+  loadJobKeyDetailed,
+  readLateSweep,
+  recordLateSweep,
+  wrapKeyProbeError,
+} from "./keystore.mjs";
 
 // Fixed 32-byte key standing in for wrappingKeyFromKeychain — the real function shells out to
 // the macOS keychain and is never called from a test.
@@ -97,5 +106,54 @@ describe("worker keystore", () => {
 
     expect(readdirSync(root).sort()).toEqual(rootEntriesBefore); // nothing appeared outside the jobs directory
     expect(readdirSync(nestedJobsDir)).toEqual([]); // and nothing inside it either
+  });
+});
+
+describe("wrapping-key lifecycle (money-path review F2, 2026-08-09)", () => {
+  const OTHER_KEY = Buffer.from("22".repeat(32), "hex");
+  let jobsDir;
+
+  beforeEach(() => {
+    jobsDir = mkdtempSync(path.join(tmpdir(), "xtext-worker-lifecycle-"));
+  });
+
+  afterEach(() => {
+    rmSync(jobsDir, { recursive: true, force: true });
+  });
+
+  it("loadJobKeyDetailed tells a missing file apart from a wrapping-key mismatch", () => {
+    expect(loadJobKeyDetailed("never-existed", WRAP_KEY, jobsDir)).toEqual({ missing: true });
+
+    createJobKey("job-mismatch", WRAP_KEY, jobsDir);
+    expect(loadJobKeyDetailed("job-mismatch", OTHER_KEY, jobsDir)).toEqual({ authFailed: true });
+    expect(loadJobKeyDetailed("job-mismatch", WRAP_KEY, jobsDir).key).toBeDefined();
+  });
+
+  it("the probe passes an empty jobs directory and a matching key, refuses a mismatched one", () => {
+    expect(wrapKeyProbeError(WRAP_KEY, jobsDir)).toBeNull(); // nothing to verify
+    expect(wrapKeyProbeError(WRAP_KEY, path.join(jobsDir, "does-not-exist"))).toBeNull();
+
+    createJobKey("job-probe", WRAP_KEY, jobsDir);
+    expect(wrapKeyProbeError(WRAP_KEY, jobsDir)).toBeNull();
+
+    const refusal = wrapKeyProbeError(OTHER_KEY, jobsDir);
+    expect(refusal).toContain("Do NOT seed a fresh wrapping key");
+    expect(refusal).toContain("Restore the original");
+  });
+
+  it("late-sweep markers round-trip, survive by file, and clear with the key's lifecycle", () => {
+    expect(readLateSweep("job-late", jobsDir)).toBeNull();
+
+    recordLateSweep("job-late", "ab".repeat(32), jobsDir);
+    expect(readLateSweep("job-late", jobsDir)).toBe("ab".repeat(32));
+
+    clearLateSweep("job-late", jobsDir);
+    expect(readLateSweep("job-late", jobsDir)).toBeNull();
+  });
+
+  it("a hostile jobId never writes or reads a marker outside the jobs directory", () => {
+    recordLateSweep("../escape-marker", "ab".repeat(32), jobsDir);
+    expect(readLateSweep("../escape-marker", jobsDir)).toBeNull();
+    expect(readdirSync(jobsDir)).toEqual([]);
   });
 });

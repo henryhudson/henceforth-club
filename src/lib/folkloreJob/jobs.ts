@@ -56,6 +56,12 @@ export type TextJob = {
   inscriptionTxid?: string;
   sweepTxid?: string;
   failureReason?: string;
+  /** The txid of an inscription whose broadcast REPORTED failure — recorded so
+   * the sweep phase can later discover the report was a lie (the transaction
+   * reached the network and the response was lost) and route the job back to
+   * the inscribed rails via `inscription-found` instead of wedging in
+   * `sweeping` with nothing left to sweep. */
+  attemptedInscriptionTxid?: string;
 };
 
 export type JobEvent =
@@ -64,9 +70,10 @@ export type JobEvent =
   | { kind: "expired"; residueSats: number }
   | { kind: "inscribed"; txid: string }
   | { kind: "registered" }
-  | { kind: "broadcast-failed"; reason: string }
+  | { kind: "broadcast-failed"; reason: string; attemptedTxid?: string }
   | { kind: "sweep-broadcast"; txid: string }
-  | { kind: "sweep-confirmed" };
+  | { kind: "sweep-confirmed" }
+  | { kind: "inscription-found"; txid: string };
 
 type Result = { ok: true; job: TextJob } | { ok: false; refused: string };
 
@@ -135,7 +142,12 @@ export function applyEvent(job: TextJob, event: JobEvent, nowMs: number): Result
         case "inscribed":
           return ok({ ...job, state: "inscribed", inscriptionTxid: event.txid });
         case "broadcast-failed":
-          return ok({ ...job, state: "sweeping", failureReason: event.reason });
+          return ok({
+            ...job,
+            state: "sweeping",
+            failureReason: event.reason,
+            ...(event.attemptedTxid ? { attemptedInscriptionTxid: event.attemptedTxid } : {}),
+          });
         default:
           return refuse("invalid-transition");
       }
@@ -162,6 +174,23 @@ export function applyEvent(job: TextJob, event: JobEvent, nowMs: number): Result
           return ok({ ...job, sweepTxid: event.txid });
         case "sweep-confirmed":
           return ok({ ...job, state: "swept" });
+        case "inscription-found":
+          // The broadcast-failed report was a lie: the inscription is on the
+          // network after all (the sweep phase found its bytes by txid, with
+          // nothing left on the address to sweep). The job rejoins the
+          // inscribed rails so registration completes and the visitor gets
+          // what they paid for. Only the recorded attempted txid may heal —
+          // an arbitrary txid must never resurrect a job.
+          if (job.attemptedInscriptionTxid === undefined || event.txid !== job.attemptedInscriptionTxid) {
+            return refuse("txid-mismatch");
+          }
+          if (job.sweepTxid !== undefined) {
+            // A sweep is already broadcast for this job — two live spends of
+            // the same funding cannot both confirm; leave the sweep rails to
+            // resolve rather than flip states under an in-flight refund.
+            return refuse("sweep-in-flight");
+          }
+          return ok({ ...job, state: "inscribed", inscriptionTxid: event.txid, failureReason: undefined });
         default:
           return refuse("invalid-transition");
       }
