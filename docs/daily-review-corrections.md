@@ -6,6 +6,21 @@ records that sweep's **rejections and dismissals**, newest first, so a later run
 re-flag what a prior run already refuted. Confirmed findings go to the Morning Board, not
 here. Cite `file:line` (or the live probe) so each verdict is independently re-derivable.
 
+## 2026-08-09 — a clean live sweep, and one board-hygiene finding refuted because the card it proposed closing does not exist
+
+**Rejected 1 — "carded blank-budget defect is fixed on main by `5fbfbe1` — close the board card" (FACT, low).**
+The code half is accurate and welcome (`xSpend.ts:45-46` trims and treats a blank
+`XFOLKLORE_DAILY_BUDGET` as unset on `origin/main` `c4514df`; `xSpend.test.ts:69-70,74` pin the
+behaviour), but the operative claim fails: no board card for the blank-budget defect exists to
+close — the fix landed the same day the defect was found, so it never got carded. A finding whose
+action is "close card X" must first show card X exists. No action.
+
+**For the record.** The sweep itself was clean and both positives are logged as verified this run:
+`/` and `/folklore` well inside the sub-second bar; `POST /api/folklore/job` refused 503
+fail-closed (the gate is the route's first statement); `/board` challenged; the endowed pass
+(`4f745cd`) confirmed flag-dark at every consumption site (strict equality to `"true"`, defaults
+absent). No open pull requests; nothing unmerged.
+
 ## 2026-08-02 — nothing rejected; the new access-control change earned a clean bill, and two low findings survived
 
 **Range.** `b4a63b6..a782341` — two commits, one of them this ledger. The code commit is `072fca2`, "The company's tax filings move behind the board sign-in": five files, +286/−0.
