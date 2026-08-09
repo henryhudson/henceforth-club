@@ -36,12 +36,15 @@ const BUDGET = { daily: 2, week: 2 };
 const INSCRIPTION_MARKER = "HHRPT1";
 // Expected fees at 100 satoshis per kilobyte (the rate BOTH transaction
 // processors advertise — arc.taal.com/v1/policy and arc.gorillapool.io/v1/policy,
-// checked 2026-07-07): daily ≈ 5,250 satoshis, week ≈ 4,050. The ceiling is
-// generous headroom above that. The sdk's Transaction.fee() silently DELETES the
-// change output when change <= 0, so without the assertions below a pathological
-// fee rate or a low-balance key would burn the whole input as miner fee. Never
-// broadcast a transaction whose only output is the OP_RETURN.
-const FEE_CEILING_SATS = 10_000;
+// checked 2026-07-07): the ONE-page daily ran ≈ 5,250 satoshis; the TWO-page
+// budget (Henry's 2026-08-04 decision, see BUDGET above) roughly doubles the
+// artifact and the first two-page edition computed 24,840 (2026-08-09). The
+// ceiling is generous headroom above that two-page expectation — its job is
+// catching pathologies, not budgeting: the sdk's Transaction.fee() silently
+// DELETES the change output when change <= 0, so without the assertions below
+// a pathological fee rate or a low-balance key would burn the whole input as
+// miner fee. Never broadcast a transaction whose only output is the OP_RETURN.
+const FEE_CEILING_SATS = 30_000;
 
 function mintSession(secret, ttlMs = 10 * 60 * 1000) {
   const payload = Buffer.from(JSON.stringify({ exp: Date.now() + ttlMs })).toString("base64url");
