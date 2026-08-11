@@ -61,13 +61,25 @@ export function readCounter(ok, body) {
   return Number(body.result) || 0;
 }
 
+/** Pure: keep only the trailing seven days ending at `through`. The shape's
+ *  name is `week` and the report page renders it as one — but an Apple report
+ *  instance can restate FULL history in a single delivery (observed live
+ *  2026-08-11: one instance carried every date since January, ballooning the
+ *  map to ~220 entries), so the window is enforced here rather than trusted. */
+export function onlyTrailingWeek(days, through) {
+  if (!through) return days;
+  const floor = daysAgo(through, 6);
+  return Object.fromEntries(Object.entries(days).filter(([date]) => date >= floor && date <= through));
+}
+
 /** Pure: assemble the report page's `Reach` shape (src/lib/board-data.ts) —
  *  top-level dataThrough, per-app week maps, site totals. */
 export function buildReach(today, apps, site) {
   const entries = apps.map(({ app, instances, rating }) => {
-    const week = mergeByDate(instances);
+    const merged = mergeByDate(instances);
     const through = coverageThrough(instances);
-    const yesterday = through ? yesterdayCount(week, through, today) : { date: null, count: null };
+    const week = onlyTrailingWeek(merged, through);
+    const yesterday = through ? yesterdayCount(merged, through, today) : { date: null, count: null };
     return { through, entry: { app, yesterday, week, rating } };
   });
   return {

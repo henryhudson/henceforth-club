@@ -120,4 +120,16 @@ describe("buildReach", () => {
   it("omits the site block when there is none", () => {
     expect(buildReach("2026-07-26", [], null)).toEqual({ dataThrough: null, perApp: [] });
   });
+
+  it("caps the week map at the trailing seven days even when an instance restates full history", () => {
+    // Observed live 2026-08-11: one Apple instance delivered every date since
+    // January in a single report, ballooning `week` to ~220 entries.
+    const byDate = { "2026-01-05": 2, "2026-03-14": 4, "2026-07-20": 7, "2026-07-25": 3, "2026-07-26": 6 };
+    const reach = buildReach("2026-07-27", [
+      { app: "deck", instances: [{ processingDate: "2026-07-27", byDate }], rating },
+    ]);
+    expect(reach.perApp[0].week).toEqual({ "2026-07-20": 7, "2026-07-25": 3, "2026-07-26": 6 });
+    // The floor is through minus six days inclusive, so 07-20 survives and 03-14 does not.
+    expect(reach.perApp[0].yesterday).toEqual({ date: "2026-07-26", count: 6 });
+  });
 });
