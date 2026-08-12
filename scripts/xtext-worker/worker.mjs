@@ -508,13 +508,20 @@ async function lateWatchAndReap({ listJobsInState, wrapKey, jobsDir, fetchFn, ta
         return;
       }
 
-      const broadcast = await broadcastArchive(built.hex, { fetchFn, taalApiKey });
-      if (!broadcast.ok) return; // retry next tick
-
-      // Durable, BEFORE anything else can observe the empty address: the
-      // reaper must never delete this job's key while this sweep is
-      // unconfirmed, and a worker restart must not forget it exists.
+      // Durable BEFORE the broadcast — write-ahead, not write-behind. The
+      // build is deterministic, so built.txid is the txid the network will
+      // see; a crash between a successful broadcast and a later record would
+      // leave an in-flight spend the reaper cannot see (empty read, no
+      // marker → key deleted → a dropped sweep resurrects outputs with no
+      // key: the F3 loss). A marker whose broadcast is then refused is
+      // cleared on the spot; if that clear is itself lost to a crash, the
+      // cost is a postponed reap — never a lost key.
       recordLateSweep(job.jobId, built.txid, jobsDir);
+      const broadcast = await broadcastArchive(built.hex, { fetchFn, taalApiKey });
+      if (!broadcast.ok) {
+        clearLateSweep(job.jobId, jobsDir);
+        return; // retry next tick
+      }
       console.log(`xtext-worker: late straggler swept for job ${job.jobId} -> ${built.txid}`);
     });
   }

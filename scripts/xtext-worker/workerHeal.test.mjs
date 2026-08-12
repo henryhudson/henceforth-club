@@ -259,6 +259,7 @@ describe("runWorkerTick — the reaper and the unconfirmed late sweep (money-pat
       const store = makeStore([sweptJob(jobId, created.address)], {});
 
       let broadcastHex = null;
+      let markerAtBroadcast = null;
       const fetchFn = vi.fn(async (url, opts) => {
         if (url.includes("/unspent")) {
           return {
@@ -268,6 +269,10 @@ describe("runWorkerTick — the reaper and the unconfirmed late sweep (money-pat
         }
         if (url.includes(`/tx/${stragglerTxid}/hex`)) return { ok: true, text: async () => stragglerHex };
         if (url.includes("arc.gorillapool.io") || url.includes("arc.taal.com")) {
+          // Write-ahead is the property under test: the durable marker must
+          // already exist at the moment the wire first sees the transaction,
+          // else a crash inside this call loses the sweep record.
+          markerAtBroadcast = readLateSweep(jobId, jobsDir);
           broadcastHex = opts.body;
           const txid = Transaction.fromHex(opts.body).id("hex");
           return { ok: true, status: 200, json: async () => ({ txid, txStatus: "SEEN_ON_NETWORK", status: 200 }) };
@@ -278,7 +283,44 @@ describe("runWorkerTick — the reaper and the unconfirmed late sweep (money-pat
       // Within the window: the straggler is swept and the marker is recorded.
       await runWorkerTick(deps(store, fetchFn, jobsDir, 20_000));
       expect(broadcastHex).not.toBeNull();
+      expect(markerAtBroadcast).toBe(Transaction.fromHex(broadcastHex).id("hex"));
       expect(readLateSweep(jobId, jobsDir)).toBe(Transaction.fromHex(broadcastHex).id("hex"));
+      expect(loadJobKey(jobId, WRAP_KEY, jobsDir)).not.toBeNull();
+    } finally {
+      rmSync(jobsDir, { recursive: true, force: true });
+    }
+  });
+
+  it("a refused broadcast clears the write-ahead marker so the reap is not postponed forever", async () => {
+    const jobsDir = mkdtempSync(path.join(tmpdir(), "xtext-worker-reap-"));
+    try {
+      const jobId = "refused-straggler-job";
+      const created = createJobKey(jobId, WRAP_KEY, jobsDir);
+      const payerKey = PrivateKey.fromRandom();
+      const stragglerTxid = "cc".repeat(32);
+      const stragglerHex = fundingTxHex(standardP2pkhUnlock(payerKey));
+
+      const store = makeStore([sweptJob(jobId, created.address)], {});
+
+      let markerAtBroadcast = null;
+      const fetchFn = vi.fn(async (url) => {
+        if (url.includes("/unspent")) {
+          return { ok: true, json: async () => [{ tx_hash: stragglerTxid, tx_pos: 0, value: 50_000 }] };
+        }
+        if (url.includes(`/tx/${stragglerTxid}/hex`)) return { ok: true, text: async () => stragglerHex };
+        if (url.includes("arc.gorillapool.io") || url.includes("arc.taal.com")) {
+          markerAtBroadcast = readLateSweep(jobId, jobsDir);
+          return { ok: false, status: 465, json: async () => ({ status: 465, title: "fee too low" }), text: async () => "fee too low" };
+        }
+        throw new Error(`unexpected fetch: ${url}`);
+      });
+
+      await runWorkerTick(deps(store, fetchFn, jobsDir, 20_000));
+
+      // The marker was written ahead of the wire, then cleared on refusal —
+      // the key survives for the retry, and no stale marker postpones the reap.
+      expect(markerAtBroadcast).not.toBeNull();
+      expect(readLateSweep(jobId, jobsDir)).toBeNull();
       expect(loadJobKey(jobId, WRAP_KEY, jobsDir)).not.toBeNull();
     } finally {
       rmSync(jobsDir, { recursive: true, force: true });
