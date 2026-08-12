@@ -1,0 +1,57 @@
+{
+  "week": "2026-08-12",
+  "windowLabel": "5 Aug – 12 Aug 2026",
+  "mode": "recess",
+  "generatedAt": "2026-08-12T20:16:12.000Z",
+  "recessReturnISO": "2026-09-01T00:00:00.000Z",
+  "stats": {
+    "divisions": 0,
+    "questions": 0,
+    "distinctAskers": 0
+  },
+  "departments": [],
+  "topTopics": [],
+  "qa": [],
+  "intro": "For a third week this government has governed by press release, and this week the method reached the small print. On Sunday 9 August the Prime Minister announced that the ban on subscription traps — regulations owed under the Digital Markets, Competition and Consumers Act, passed by the last Parliament in 2024 and postponed ever since — will be in force by January 2027, three months earlier than last promised: clearer terms at sign-up, reminders before renewal, a cooling-off period of fourteen days after a free trial, and an exit as easy as the entrance. A consultation this autumn will consider adding “pretend prices” — the invented was-price, the discount that never was — to the Act’s list of banned practices; the department reckons unwanted subscriptions drain £1.6 billion a year from a nation carrying 155 million of them, which is to say most households are quietly renewing something they have forgotten. None of it touched a despatch box, because in August there is no despatch box. The score is instead kept in writing, where 56 answers arrived this week, 37 of them from Transport — a department that declined, across ten Heathrow replies, to put a money value on aircraft noise, and conceded in another that nobody in Whitehall counts defective train toilets, the Secretary of State merely expecting operators to deliver “facilities that passengers expect.” The gravest arithmetic came from Work and Pensions: 300,000 people waiting for their Personal Independence Payment award reviews, a figure drawn from unpublished management information and supplied to Jim Shannon seventy days after he asked, over the signature of Sir Stephen Timms — whose own review of the benefit reports in the autumn. The House that could press any of this returns on 1 September.",
+  "overview": {
+    "headline": "The subscription trap ban comes forward while Parliament sleeps",
+    "intro": "The Prime Minister spent Sunday 9 August on the small print of household life. He promised that new rules against subscription traps will be in force by January 2027, three months earlier than planned. The powers come from the Digital Markets, Competition and Consumers Act of 2024 and their start date had slipped repeatedly. Subscribers will get clearer terms at sign up, reminders before renewal, a cooling off period of fourteen days after a free trial and an easier way out. A consultation this autumn will consider banning pretend prices and invented discounts as well. The government says unwanted subscriptions cost consumers £1.6 billion a year. Parliament was away for all of it and returns on 1 September. In the meantime 56 written answers arrived, and the starkest told Jim Shannon that 300,000 people are waiting for their Personal Independence Payment award reviews.",
+    "brief": [
+      {
+        "title": "Subscription traps get a January deadline",
+        "when": "Sunday 9 August",
+        "note": "The Prime Minister brought the subscription rules forward to January 2027 after years of postponement. Companies must give clearer terms at sign up, remind customers before a renewal, allow a cooling off period of fourteen days after a free trial and make cancelling as easy as joining. Certain charitable memberships are exempt."
+      },
+      {
+        "title": "Pretend prices head for the banned list",
+        "when": "Sunday 9 August",
+        "note": "A consultation opening in the autumn will consider adding invented was prices, made up discounts and misleading recommended retail prices to the banned practices in the Digital Markets, Competition and Consumers Act 2024. Jonathan Reynolds, the Business, Innovation, Science and Trade Secretary, said there is nothing worse than realising you have been fleeced by a dodgy deal."
+      },
+      {
+        "title": "56 written answers arrive, two thirds of them from Transport",
+        "when": "Across the window",
+        "note": "The Department for Transport sent 37 of the week's 56 answers. Ten concerned Heathrow, where the department told Fleur Anderson it does not routinely put a money value on aircraft noise from existing flight paths. Another conceded that nobody in Whitehall counts defective train toilets, since the department merely expects operators to deliver facilities that passengers expect."
+      },
+      {
+        "title": "300,000 waiting for Personal Independence Payment reviews",
+        "when": "Answered Tuesday 11 August",
+        "note": "Jim Shannon of the Democratic Unionist Party asked on 2 June how many claimants await reassessment. The answer arrived seventy days later from Sir Stephen Timms. It puts the cases outstanding at the end of May at 300,000, a figure drawn from unpublished management information and rounded to the nearest 10,000. The review that carries the minister's own name reports in the autumn."
+      },
+      {
+        "title": "When Parliament comes back",
+        "when": "Tuesday 1 September",
+        "note": "The summer recess runs to 31 August. The subscription rules, the pricing consultation and the reassessment backlog all await their first examination from the floor of either House. No bill moved this week, and the Financial Services and Markets Bill resumes its report stage in the Lords on 7 September."
+      }
+    ],
+    "feature": {
+      "title": "Consumer protection at the speed of a press release",
+      "summary": "The powers against subscription traps were created by the Digital Markets, Competition and Consumers Act in 2024, under the previous Parliament. What has been missing ever since is commencement. The start date slipped from spring 2026 towards 2027 under two governments, and this week it moved the other way for the first time, to January 2027, by a prime ministerial announcement on a Sunday of recess. The regulations that will give the promise legal force still have to be made and laid before Parliament, and the consultation on pretend prices has not yet opened. Every substantial decision of this administration has now been announced with the chamber empty. The first minister to defend the timetable at the despatch box will do so in September, long after the deadline was set."
+    }
+  },
+  "highlights": {
+    "votes": [],
+    "questions": [],
+    "bills": []
+  },
+  "status": "draft"
+}
