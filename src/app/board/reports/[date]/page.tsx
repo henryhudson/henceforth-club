@@ -62,6 +62,9 @@ export default async function DailyEdition({ params }: { params: Promise<{ date:
 
   return (
     <main className="newspaper mx-auto max-w-4xl px-6 py-10">
+      <p className="pb-1.5 text-center font-serif text-[11px] font-bold uppercase tracking-[0.12em] text-foreground">
+        {longDate(report.date)}
+      </p>
       {/* ── Masthead ─────────────────────────────────────────────────────── */}
       <header className="border-y-4 border-double border-foreground py-3 text-center">
         <p className="font-serif text-[10px] uppercase tracking-[0.35em] text-muted">
@@ -76,7 +79,6 @@ export default async function DailyEdition({ params }: { params: Promise<{ date:
       </header>
 
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-foreground/60 py-1.5 font-serif text-[11px] uppercase tracking-[0.12em] text-muted">
-        <span className="font-bold text-foreground">{longDate(report.date)}</span>
         <span className="print:hidden flex gap-3 normal-case tracking-normal text-accent-green">
           <Link href="/board/reports" className="underline">Reports</Link>
           <Link href="/board" className="underline">Board</Link>
