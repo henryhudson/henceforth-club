@@ -6,6 +6,14 @@ records that sweep's **rejections and dismissals**, newest first, so a later run
 re-flag what a prior run already refuted. Confirmed findings go to the Morning Board, not
 here. Cite `file:line` (or the live probe) so each verdict is independently re-derivable.
 
+## 2026-08-14 — a sweep-brief correction and one intent question
+
+- PROCESS CORRECTION: the morning sweep checked `/this-week/<date>` and found 404 — the digest lives at `/hansard/this-week/<date>` (200 in 0.372s; git grep at origin/main confirms no `/this-week` route or redirect exists). Future sweeps use the `/hansard` path. The 2026-08-12 digest is live.
+- PENDING HENRY: the apex `https://henceforth.club/` now 307-redirects every path to `https://www.henceforth.club/` (method-preserving, so the POST money gate still lands and fails closed). Likely deliberate domain configuration; if confirmed, the sweep bar targets www going forward.
+- NOTED (low): `/folklore` breached the sub-second bar on 2 of 6 samples (1.78s, 1.08s cold; 0.53-0.67s warm).
+- FOLD-ON-NEXT-TOUCH (low): `asc-press.mjs`'s version-list fetch never checks `response.ok`, so an auth failure prints as "no PENDING_DEVELOPER_RELEASE record found" — misdiagnosis only; it still exits 1 and cannot release wrongly.
+- Both money gates fail closed (POST /api/folklore/job → 503; /board → 307 to login). No open pull requests.
+
 ## 2026-08-09 — a clean live sweep, and one board-hygiene finding refuted because the card it proposed closing does not exist
 
 **Rejected 1 — "carded blank-budget defect is fixed on main by `5fbfbe1` — close the board card" (FACT, low).**
