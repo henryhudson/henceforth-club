@@ -38,7 +38,7 @@ export async function GET(
   );
   if (!published) return NextResponse.json({ error: "not found" }, { status: 404 });
 
-  const file = await redis.get<{ name: string; b64: string }>(
+  const file = await redis.get<{ name: string; b64: string; type?: string }>(
     `board:taxes:file:${year}:${slug}`,
   );
   if (!file?.b64) return NextResponse.json({ error: "not found" }, { status: 404 });
@@ -48,9 +48,14 @@ export async function GET(
   // qualifies the download; the stored name is left untouched.
   const filename = `${year}-${file.name.replace(/"/g, "")}`;
 
+  // The store carries PDFs and, since the filings tree took over as the
+  // source, HTML working papers (the filing pack). Absent type means a
+  // document published before the field existed — always a PDF.
+  const contentType = file.type === "html" ? "text/html; charset=utf-8" : "application/pdf";
+
   return new NextResponse(new Uint8Array(Buffer.from(file.b64, "base64")), {
     headers: {
-      "Content-Type": "application/pdf",
+      "Content-Type": contentType,
       "Content-Disposition": `inline; filename="${filename}"`,
       "Cache-Control": "private, no-store",
     },

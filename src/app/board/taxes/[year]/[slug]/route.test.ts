@@ -108,4 +108,30 @@ describe("board taxes document route", () => {
       'filename="2024-HENCEFORTH_BITCOIN_LIMITED_CT6002024.pdf"',
     );
   });
+
+  // The filings tree carries HTML working papers (the filing pack) alongside
+  // the PDFs; the stored type decides the content type, and its absence means
+  // a pre-field PDF.
+  it("serves an HTML document as text/html when the stored type says so", async () => {
+    const html = "<!doctype html><title>pack</title>";
+    store.set("board:taxes:file:2025-12-31-fourth-period:filing-pack", {
+      name: "filing-pack.html",
+      b64: Buffer.from(html).toString("base64"),
+      type: "html",
+    });
+    store.set("board:taxes:index", {
+      generated: "2026-08-18T00:00:00.000Z",
+      periods: [
+        {
+          year: "2025-12-31-fourth-period",
+          period: "1 January 2025 to 31 December 2025",
+          files: [{ slug: "filing-pack", name: "filing-pack.html", title: "Filing pack" }],
+        },
+      ],
+    });
+    const res = await call("2025-12-31-fourth-period", "filing-pack");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe("text/html; charset=utf-8");
+    expect(Buffer.from(await res.arrayBuffer()).toString()).toBe(html);
+  });
 });

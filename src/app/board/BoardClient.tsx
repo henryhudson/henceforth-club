@@ -268,6 +268,9 @@ export default function BoardClient({
               <Link href="/board/taxes" className="mb-chip-btn">
                 taxes
               </Link>
+              <Link href="/board/ledger" className="mb-chip-btn">
+                ledger
+              </Link>
             </div>
           </div>
         </header>

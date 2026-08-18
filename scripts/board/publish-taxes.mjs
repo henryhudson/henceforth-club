@@ -1,75 +1,147 @@
-// publish-taxes.mjs — push the company's tax filing packs from
-// ~/Henceforth/TAXES into Upstash so the gated /board/taxes page can serve
-// them. henceforth-club is a PUBLIC repo: the documents NEVER touch git or a
+// publish-taxes.mjs — push the company's complete filing record from
+// ~/Henceforth/filings into Upstash so the gated /board/taxes page can serve
+// it. henceforth-club is a PUBLIC repo: the documents NEVER touch git or a
 // local mirror — they live only in Upstash, behind the board sign-in, same
 // rule as the rest of the board data.
 //
 //   node --env-file=.env.local scripts/board/publish-taxes.mjs
 //
 // Keys:
-//   board:taxes:index              -> { generated, periods: [{ year, period, files }] }
-//   board:taxes:file:<year>:<slug> -> { name, b64 }
+//   board:taxes:index               -> { generated, status, periods: [{ year, period, files }] }
+//   board:taxes:file:<year>:<slug>  -> { name, b64, type }
+//
+// `year` is the folder name under ~/Henceforth/filings (one folder per
+// accounting period, plus confirmation-statements and incorporation); the
+// field keeps its old name because the /board/taxes/[year]/[slug] route and
+// its index check are keyed on it. `status` is read verbatim from
+// filings/status.json — the machine-readable filing record (deadlines,
+// per-period status, the losses chain) maintained beside the documents.
 
 import { Redis } from "@upstash/redis";
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
-const SOURCE = path.join(process.env.HOME, "Henceforth/TAXES");
+const SOURCE = path.join(process.env.HOME, "Henceforth/filings");
 
-// Accounting periods read off each folder's CT600 (box 30/35) — the
-// accountant's filenames all say 2024, the folders are filing years.
-const PERIODS = {
-  2023: "1 February 2023 to 31 January 2024",
-  2024: "1 February 2024 to 31 December 2024",
-};
-
-// Filename -> document kind. Order fixes the listing order on the page.
+// Filename -> document kind, matched on the basename. Order fixes the listing
+// order on the page; unmatched files sort after these, titled from their name.
 const KINDS = [
-  { match: /CT600/i, slug: "ct600", title: "CT600 — Company Tax Return" },
-  { match: /Computation/i, slug: "computation", title: "Corporation Tax computation" },
-  { match: /HMRC_Accounts/i, slug: "hmrc-accounts", title: "Accounts filed with HMRC" },
-  { match: /CH_Accounts/i, slug: "companies-house-accounts", title: "Accounts filed at Companies House" },
-  { match: /Trialbalance/i, slug: "trial-balance", title: "Trial balance" },
+  { match: /accounts-AMENDED/i, title: "Accounts as amended (public record)" },
+  { match: /accounts-as-first-filed/i, title: "Accounts as first filed (public record)" },
+  { match: /accounts-filed/i, title: "Accounts as filed (public record)" },
+  { match: /period-shortened/i, title: "Accounting period change notice (form AA01)" },
+  { match: /filing-pack/i, title: "Filing pack — decisions and draft figures" },
+  { match: /taxes-.*-brief/i, title: "Taxes day brief" },
+  { match: /CT600/i, title: "Company tax return (form CT600)" },
+  { match: /Computation/i, title: "Corporation tax computation" },
+  { match: /HMRC_Accounts/i, title: "Accounts filed with the tax office" },
+  { match: /CH_Accounts/i, title: "Accounts filed at Companies House" },
+  { match: /Trialbalance/i, title: "Trial balance" },
+  { match: /confirmation-statement/i, title: "Confirmation statement" },
+  { match: /incorporation/i, title: "Certificate of incorporation" },
+  { match: /statement-of-capital/i, title: "Statement of capital (form SH01)" },
 ];
 
-const years = (await readdir(SOURCE)).filter((d) => /^\d{4}$/.test(d)).sort().reverse();
-if (!years.length) {
-  console.error(`no year folders under ${SOURCE}`);
+function prettify(basename) {
+  return basename.replace(/\.(pdf|html)$/i, "").replace(/[-_]+/g, " ").trim();
+}
+
+function slugify(relPath) {
+  return relPath
+    .replace(/\.(pdf|html)$/i, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+async function collectFiles(dir, rel = "") {
+  const out = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const relPath = rel ? `${rel}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) {
+      out.push(...(await collectFiles(path.join(dir, entry.name), relPath)));
+      continue;
+    }
+    if (!/\.(pdf|html)$/i.test(entry.name)) continue;
+    out.push({ relPath, full: path.join(dir, entry.name), basename: entry.name });
+  }
+  return out;
+}
+
+const statusRaw = await readFile(path.join(SOURCE, "status.json"), "utf8").catch(() => null);
+if (!statusRaw) {
+  console.error(`missing ${SOURCE}/status.json — the machine-readable filing record is required`);
+  process.exit(1);
+}
+const status = JSON.parse(statusRaw);
+if (!Array.isArray(status.deadlines) || !Array.isArray(status.periods)) {
+  console.error("status.json must carry deadlines[] and periods[] — refusing to publish a partial record");
+  process.exit(1);
+}
+
+const labelByFolder = new Map(status.periods.map((p) => [p.folder, p.label]));
+const EXTRA_LABELS = {
+  "confirmation-statements": "Every filed confirmation statement",
+  incorporation: "Incorporation and capital",
+};
+
+const entries = await readdir(SOURCE, { withFileTypes: true });
+const periodDirs = entries
+  .filter((e) => e.isDirectory() && /^\d{4}-\d{2}-\d{2}-/.test(e.name))
+  .map((e) => e.name)
+  .sort()
+  .reverse();
+const extraDirs = entries
+  .filter((e) => e.isDirectory() && e.name in EXTRA_LABELS)
+  .map((e) => e.name)
+  .sort();
+const dirs = [...periodDirs, ...extraDirs];
+if (!dirs.length) {
+  console.error(`no period folders under ${SOURCE}`);
   process.exit(1);
 }
 
 const periods = [];
 const files = [];
-for (const year of years) {
-  const dir = path.join(SOURCE, year);
-  const entries = [];
-  for (const name of await readdir(dir)) {
-    if (!name.toLowerCase().endsWith(".pdf")) continue;
-    const kindIndex = KINDS.findIndex((k) => k.match.test(name));
-    const kind = KINDS[kindIndex] ?? {
-      slug: name.replace(/\.pdf$/i, "").toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-      title: name.replace(/\.pdf$/i, ""),
-    };
-    const full = path.join(dir, name);
-    const bytes = (await stat(full)).size;
-    entries.push({
+for (const dirName of dirs) {
+  const found = await collectFiles(path.join(SOURCE, dirName));
+  const rows = [];
+  for (const f of found) {
+    const kindIndex = KINDS.findIndex((k) => k.match.test(f.basename));
+    const nested = f.relPath.includes("/");
+    const baseTitle = kindIndex >= 0 ? KINDS[kindIndex].title : prettify(f.basename);
+    const title = nested && !/^working papers/i.test(baseTitle) && f.relPath.startsWith("working-papers/")
+      ? `Working papers · ${baseTitle}`
+      : baseTitle;
+    const type = f.basename.toLowerCase().endsWith(".html") ? "html" : "pdf";
+    rows.push({
       order: kindIndex < 0 ? KINDS.length : kindIndex,
-      meta: { slug: kind.slug, name, title: kind.title, bytes },
-      b64: (await readFile(full)).toString("base64"),
+      nested: nested ? 1 : 0,
+      meta: {
+        slug: slugify(f.relPath),
+        name: f.basename,
+        title,
+        bytes: (await stat(f.full)).size,
+        type,
+      },
+      b64: (await readFile(f.full)).toString("base64"),
     });
   }
-  entries.sort((a, b) => a.order - b.order);
+  rows.sort((a, b) => a.nested - b.nested || a.order - b.order || a.meta.slug.localeCompare(b.meta.slug));
   periods.push({
-    year,
-    period: PERIODS[year] ?? `filing year ${year}`,
-    files: entries.map((e) => e.meta),
+    year: dirName,
+    period: labelByFolder.get(dirName) ?? EXTRA_LABELS[dirName] ?? dirName,
+    files: rows.map((r) => r.meta),
   });
-  for (const e of entries) {
-    files.push({ key: `board:taxes:file:${year}:${e.meta.slug}`, value: { name: e.meta.name, b64: e.b64 } });
+  for (const r of rows) {
+    files.push({
+      key: `board:taxes:file:${dirName}:${r.meta.slug}`,
+      value: { name: r.meta.name, b64: r.b64, type: r.meta.type },
+    });
   }
 }
 
-const index = { generated: new Date().toISOString(), periods };
+const index = { generated: new Date().toISOString(), status, periods };
 
 const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -82,7 +154,5 @@ const pipe = redis.pipeline();
 pipe.set("board:taxes:index", index);
 for (const f of files) pipe.set(f.key, f.value);
 await pipe.exec();
-console.log(
-  `published ${files.length} documents across ${periods.length} periods → Upstash`,
-);
+console.log(`published ${files.length} documents across ${periods.length} folders → Upstash`);
 for (const p of periods) console.log(`  ${p.year} (${p.period}): ${p.files.length} files`);
