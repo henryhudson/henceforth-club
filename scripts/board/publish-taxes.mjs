@@ -31,6 +31,7 @@ const KINDS = [
   { match: /accounts-filed/i, title: "Accounts as filed (public record)" },
   { match: /period-shortened/i, title: "Accounting period change notice (form AA01)" },
   { match: /filing-pack/i, title: "Filing pack — decisions and draft figures" },
+  { match: /submission-runsheet/i, title: "Submission runsheet — every number to type" },
   { match: /taxes-.*-brief/i, title: "Taxes day brief" },
   { match: /CT600/i, title: "Company tax return (form CT600)" },
   { match: /Computation/i, title: "Corporation tax computation" },
