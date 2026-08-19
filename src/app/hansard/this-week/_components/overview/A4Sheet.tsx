@@ -2,10 +2,14 @@
 import { useEffect, useRef } from 'react'
 import s from './overview.module.css'
 
+// The newspaper measure (design spec 2026-08-19): 7pt body on the sheet root,
+// every content size in em so this loop scales the whole hierarchy together.
+// The floor is the trade's 600-dots-per-inch legibility limit; the ceiling
+// keeps a light recess week from swelling back to book size.
 const A4_PX = 297 * 96 / 25.4
-const START_PT = 10.5
-const FLOOR_PT = 6.6
-const CEIL_PT = 14
+const START_PT = 7
+const FLOOR_PT = 6
+const CEIL_PT = 8.5
 
 export default function A4Sheet({ children }: { children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null)

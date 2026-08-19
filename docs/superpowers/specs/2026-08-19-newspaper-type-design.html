@@ -107,7 +107,9 @@
 <li>Verify with <code>--out</code> renders of three recent dates before any live morning runs it; the 987px height cliff and the block-measure scripts still apply, at the new scale.</li>
 </ul>
 
-<div class="decision"><strong>Awaiting Henry's word on four things.</strong> (1) Adopt the measure for both editions, or trial the Hansard digest first (it publishes nothing, so it is the free trial). (2) The blackletter nameplate for the daily — it needs one web font at render time (UnifrakturMaguntia, Georgia fallback); the alternative is Times-of-London roman capitals and zero new dependencies. (3) Bring the daily back to a one-page budget once the measure lands. (4) The folio's satoshi price line — a true figure, worn as a newspaper price; keep or drop. The prototype is the ballot paper: print it, take a glass to it, and mark it up.</div>
+<div class="decision"><strong>Decided (Henry, 19 August, "fantastic — lets put the hansard in the same font as the morning paper and ensure we do it like this from now on"):</strong> the measure is adopted as the standing format, and both nameplates wear the blackletter (UnifrakturMaguntia, Georgia fallback). <strong>Implemented the same day for The Hansard digest</strong> — <code>Overview.tsx</code>, <code>Masthead.tsx</code>, <code>Feature.tsx</code> and <code>overview.module.css</code> re-cut to the modular measure, the <code>A4Sheet</code> fit loop re-bounded to 6–8.5pt about a 7pt start with every content size in em so the hierarchy scales as one voice. Verified against the live pipeline: the 12–19 August recess issue and the heavy 15–22 July week both render to exactly one sheet; 154 of 154 test files green; production build clean.</div>
+
+<div class="decision"><strong>Still open — the Morning Edition's own pass.</strong> The daily's print stylesheet re-cut (<code>globals.css</code> lines 608 to 705 plus the report page), the return to a one-page budget, and the folio's satoshi price line. It rides the inscription path, so it gets its own careful session with every test render through <code>--out</code>.</div>
 
 </div>
 </body>

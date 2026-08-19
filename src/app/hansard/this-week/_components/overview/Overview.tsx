@@ -12,29 +12,45 @@ import TopQuestions from './TopQuestions'
 import Feature from './Feature'
 import MostActiveFooter from './MostActiveFooter'
 
-// One-A4 space budget: a page carrying the week-in-brief, or a week with a
-// heavy division count, runs denser, so the aggregate sections tighten. The
-// heavy-week caps are new, more conservative values verified by the visual gate.
-const CHART_CAP_WITH_BRIEF = 6
-const CHART_CAP_HEAVY = 6
-const TOPICS_CAP_WITH_BRIEF = 6
-const TOPICS_CAP_HEAVY = 6
+// The modular page (design spec 2026-08-19): one big lead module across three
+// legs with a boxed sidebar, then bands of ruled squares of varying widths,
+// the feature square anchored at the page foot. The A4Sheet fit loop scales
+// the whole hierarchy (6–8.5pt about a 7pt start) to fill exactly one sheet.
+const CHART_CAP = 8
 const TOPICS_CAP = 10
-const QA_MAX_DENSE = 1
-const QA_MAX = 3
-const HEAVY_DIVISIONS_THRESHOLD = 6
+const SIDE_BRIEF_MAX = 2
 
 export default function Overview({ digest, week }: { digest: DigestData; week: string }) {
   const ov = digest.overview
   const headline = ov?.headline || digest.headline || (digest.mode === 'recess' ? 'Parliament in recess' : digest.windowLabel)
-  const intro = ov?.intro || digest.intro || ''
-  const hasBrief = Boolean(ov?.brief?.length)
+  const intro = digest.intro || ov?.intro || ''
+  const brief = ov?.brief ?? []
   const hasData = Boolean(digest.highlights?.votes?.length || digest.departments?.length)
-  const dense = hasBrief || digest.highlights.votes.length > HEAVY_DIVISIONS_THRESHOLD
-  const chartCap = hasBrief ? CHART_CAP_WITH_BRIEF : dense ? CHART_CAP_HEAVY : undefined
-  const topicsCap = hasBrief ? TOPICS_CAP_WITH_BRIEF : dense ? TOPICS_CAP_HEAVY : TOPICS_CAP
-  const qa = (digest.qa ?? []).slice(0, dense ? QA_MAX_DENSE : QA_MAX)
+  // A recess week has no divisions to box beside the lead, so the sidebar
+  // takes the first briefs instead — the register changes, usually.
+  const sideBrief = !hasData ? brief.slice(0, SIDE_BRIEF_MAX) : []
+  const restBrief = brief.slice(sideBrief.length)
+  const qa = (digest.qa ?? []).slice(0, 1)
   const feature = ov?.feature ?? digest.feature
+  const credit = 'Every figure checked against the official Parliament record. henceforth.club'
+
+  const footSquares = [
+    qa.length > 0 && (
+      <div key="qa" className={s.mod1}>
+        <div className={s.sq}>
+          <TopQuestions qa={qa} />
+        </div>
+      </div>
+    ),
+    ov?.mostActive && (
+      <div key="active" className={s.mod1}>
+        <div className={s.sq}>
+          <h3 className={s.sectionTitle}>The most active</h3>
+          <MostActiveFooter mostActive={ov.mostActive} />
+        </div>
+      </div>
+    ),
+  ].filter(Boolean)
 
   return (
     <A4Sheet>
@@ -43,35 +59,86 @@ export default function Overview({ digest, week }: { digest: DigestData; week: s
         windowLabel={digest.windowLabel}
         headline={headline}
         stats={digest.stats}
+        mode={digest.mode}
+        recessReturnISO={digest.recessReturnISO}
         hasFull={Boolean(digest.body?.length)}
       />
-      {intro && <p className={s.topstory}>{intro}</p>}
-      {hasBrief && <WeekInBrief items={ov!.brief!} />}
-      {ov?.cabinet && (
-        <Cabinet title={ov.cabinet.title} note={ov.cabinet.note} posts={ov.cabinet.posts} />
-      )}
-      {ov?.mayors && (
-        <Mayors title={ov.mayors.title} note={ov.mayors.note} seats={ov.mayors.seats} />
-      )}
-      {hasData && (
-        <div className={s.cols2}>
-          <div>
-            <h3 className={s.sectionTitle}>The divisions, closest first</h3>
-            <DivisionsBlock votes={digest.highlights.votes} />
+
+      {/* Band A — the big lead module + boxed sidebar */}
+      <div className={s.band}>
+        <div className={s.lead}>
+          <div className={s.legs3}>
+            <p className={s.drop}>{intro}</p>
           </div>
-          <div>
-            <h3 className={s.sectionTitle}>Written questions, by department</h3>
-            <DepartmentChart departments={digest.departments} cap={chartCap} />
+        </div>
+        <aside className={s.side}>
+          {hasData ? (
+            <>
+              <h3 className={s.sectionTitle}>The divisions, closest first</h3>
+              <DivisionsBlock votes={digest.highlights.votes} />
+            </>
+          ) : (
+            sideBrief.map((item, i) => (
+              <div key={i}>
+                <h3 className={s.sectionTitle}>{item.title}</h3>
+                <p className={s.sideNote}><b>{item.when}.</b> {item.note}</p>
+              </div>
+            ))
+          )}
+        </aside>
+      </div>
+
+      {/* The government of the day, when the week redrew it */}
+      {(ov?.cabinet || ov?.mayors) && (
+        <div className={s.band}>
+          <div className={s.modFull}>
+            {ov?.cabinet && <Cabinet title={ov.cabinet.title} note={ov.cabinet.note} posts={ov.cabinet.posts} />}
+            {ov?.mayors && <Mayors title={ov.mayors.title} note={ov.mayors.note} seats={ov.mayors.seats} />}
           </div>
         </div>
       )}
-      {hasData && <MostAskedSubjects topics={digest.topTopics} cap={topicsCap} />}
-      {hasData && qa.length > 0 && <TopQuestions qa={qa} />}
-      {/* A recess issue has no data sections yet can still carry a feature —
-          the story the week produced outside the chamber. */}
-      {feature && <Feature feature={feature} />}
-      {hasData && ov?.mostActive && <MostActiveFooter mostActive={ov.mostActive} />}
-      <div className={s.credit}>Every figure checked against the official Parliament record. henceforth.club</div>
+
+      {/* Band B — the week in brief beside the department listings */}
+      {(restBrief.length > 0 || hasData) && (
+        <div className={s.band}>
+          {restBrief.length > 0 && (
+            <div className={hasData ? s.mod2 : s.modFull}>
+              <WeekInBrief items={restBrief} />
+            </div>
+          )}
+          {hasData && (
+            <div className={restBrief.length > 0 ? s.mod2 : s.modFull}>
+              <h3 className={s.sectionTitle}>Written questions, by department</h3>
+              <DepartmentChart departments={digest.departments} cap={CHART_CAP} />
+              <MostAskedSubjects topics={digest.topTopics} cap={TOPICS_CAP} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Band C — the squares at the page foot, the feature the big one */}
+      {(feature || footSquares.length > 0) && (
+        <div className={`${s.band} ${s.bandLast}`}>
+          {feature && (
+            <div className={footSquares.length === 0 ? s.mod3 : s.mod2}>
+              <Feature feature={feature} />
+            </div>
+          )}
+          {footSquares}
+          {feature && footSquares.length < 2 && (
+            <div className={s.mod1}>
+              <div className={s.sq}>
+                <h3 className={s.sectionTitle}>The record</h3>
+                <p className={s.sideNote}>Every figure checked against the official Parliament record. Compiled from the Official Report, the written question record and the division lists, and rendered to one sheet for the week.</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className={s.credit}>
+        Set in Georgia, seven point upon eight, the listings in agate · {credit}
+      </div>
     </A4Sheet>
   )
 }
