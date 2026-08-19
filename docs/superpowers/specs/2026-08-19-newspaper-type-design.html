@@ -72,7 +72,8 @@
 <table>
 <tr><th>Role</th><th>Setting</th><th>Rationale</th></tr>
 <tr><td>Body</td><td><strong>Georgia 7pt on 8pt</strong>, justified, hyphenated, first-line indents, no paragraph spacing</td><td>Below newsprint's floor, above the laser printer's; Georgia's big x-height is built for small sizes</td></tr>
-<tr><td>Columns</td><td><strong>Four to the sheet, 43.5mm wide, 4mm gutters, 0.5pt hairline rules</strong></td><td>The trade's 11-pica measure, landed on A4 inside the existing 12mm margins</td></tr>
+<tr><td>Columns</td><td><strong>43.5mm legs, 4mm gutters, 0.5pt hairline rules</strong> — four to the sheet</td><td>The trade's 11-pica measure, landed on A4 inside the existing 12mm margins</td></tr>
+<tr><td>Page cut</td><td><strong>Modular, not a uniform four-column run</strong>: one big lead module across three legs with a boxed sidebar, then bands of ruled and boxed squares of varying widths (three-and-one, two-and-two), the big feature square anchoring the foot of the page</td><td>Henry's direction (19 August): "the newspapers use a lot of squares at the bottom and a big one for the main story"</td></tr>
 <tr><td>Agate</td><td><strong>5.5pt on 6.6pt</strong>, the system sans, tabular figures</td><td>For every listing: downloads, divisions, departments, ship list, decisions — the Wall Street Journal's stock-table size</td></tr>
 <tr><td>Headlines</td><td>Lead about 25pt tight (1.03), italic deck at 8.6pt, section rubrics 6pt capitals under a 1.5pt cut-off rule</td><td>Scaled from broadsheet convention to the A4 sheet</td></tr>
 <tr><td>Furniture</td><td>Folio line between hairline rules; three-line drop caps; boxed feature; full-width colophon at the foot</td><td>The page furniture that makes a paper read as a paper</td></tr>
@@ -83,7 +84,7 @@
 
 <h2>4 · The prototype — built, rendered, verified</h2>
 
-<p>A finished true-scale prototype sits beside this spec: <code>docs/superpowers/specs/2026-08-19-newspaper-type-prototype.html</code>, with its print-ready render <code>2026-08-19-newspaper-type-prototype.pdf</code>. Two A4 sheets, every word real: sheet one re-sets the Morning Edition of 19 August (No. 57, the screenshot-uploader review) from <code>content/board/reports/2026-08-19.json</code>; sheet two re-sets the Hansard digest of 15 to 22 July (Andy Burnham takes office) from <code>content/this-week/2026-07-22.json</code>.</p>
+<p>A finished true-scale prototype sits beside this spec: <code>docs/superpowers/specs/2026-08-19-newspaper-type-prototype.html</code>, with its print-ready render <code>2026-08-19-newspaper-type-prototype.pdf</code>. Three A4 sheets, every word real, all cut modular: sheet one re-sets the Morning Edition of 19 August (No. 57, the screenshot-uploader review) from <code>content/board/reports/2026-08-19.json</code>; sheet two re-sets <strong>this week's</strong> Hansard digest — the 12 to 19 August recess issue, the Clacton by-election — from its live draft <code>content/this-week/2026-08-19.json</code>, with standing matter (the last sitting week, the bills waiting for the return) filling what recess leaves quiet; sheet three keeps the heavy 15 to 22 July week (Andy Burnham takes office) as the stress demonstration.</p>
 
 <div class="flow"><strong>The magnifier test.</strong> Print the PDF at 100 percent with printer margins off (it is margin-exact A4). Naked eye: the headlines, decks and 7pt body should read at arm's length in good light. With a 2x to 3x glass: the 5.5pt agate — the downloads table, the divisions, the department listings — should resolve crisply, serifs intact. If the agate smudges, the printer is below 600 dots to the inch; the spec then keeps 7pt body but lifts agate to 6pt.</div>
 
