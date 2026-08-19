@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Newspaper type prototype — two sheets at true scale</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap" rel="stylesheet">
+<style>
+  /* ————— screen chrome (stripped in print) ————— */
+  body { margin:0; background:#dedbd4; font-family:Georgia,serif; }
+  .explain { max-width:210mm; margin:0 auto; padding:10mm 4mm 2mm; font:10.5pt/1.5 Georgia,serif; color:#333; }
+  .explain b { color:#111; }
+  @media print {
+    .explain { display:none; }
+    body { background:#fff; }
+    .sheet { margin:0 !important; box-shadow:none !important; page-break-after:always; }
+    @page { size:A4; margin:0; }
+  }
+
+  /* ————— the newspaper type system ————— */
+  .sheet {
+    width:210mm; height:297mm; box-sizing:border-box;
+    padding:9mm 12mm 8mm;
+    margin:6mm auto; background:#fff; color:#111;
+    font:7pt/8pt Georgia,serif;
+    box-shadow:0 2px 16px rgba(0,0,0,.35);
+    overflow:hidden; position:relative;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+  .folio {
+    font:5.5pt/1 -apple-system,'Helvetica Neue',Helvetica,sans-serif;
+    letter-spacing:.06em; text-transform:uppercase; color:#111;
+    display:flex; justify-content:space-between; gap:4mm;
+    border-top:.5pt solid #111; border-bottom:.5pt solid #111;
+    padding:1.1mm 0;
+  }
+  .folio span { white-space:nowrap; }
+  .nameplate { text-align:center; margin:1.8mm 0 1.2mm; }
+  .nameplate.black { font-family:'UnifrakturMaguntia',Georgia,serif; font-size:37pt; line-height:1; font-weight:400; }
+  .nameplate.roman { font-family:Georgia,serif; font-size:30pt; line-height:1; font-weight:700; letter-spacing:.14em; text-transform:uppercase; }
+  .subtitle {
+    font:5.5pt/1 -apple-system,'Helvetica Neue',Helvetica,sans-serif;
+    letter-spacing:.14em; text-transform:uppercase; text-align:center;
+    border-top:.5pt solid #111; border-bottom:1.5pt solid #111;
+    padding:1.1mm 0; margin-bottom:1.6mm;
+  }
+
+  .stoppress { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0 3mm; border-bottom:.5pt solid #111; padding:0 0 1.4mm; margin-bottom:1.8mm; }
+  .stoppress .item { font:5.5pt/6.6pt -apple-system,'Helvetica Neue',Helvetica,sans-serif; color:#222; }
+  .stoppress .item + .item { border-left:.5pt solid #999; padding-left:3mm; }
+  .stoppress b.tag { color:#0e7490; letter-spacing:.1em; }
+  .hansard .stoppress b.tag { color:#6b2b6b; }
+
+  .headline { font:700 25pt/1.03 Georgia,serif; letter-spacing:-.015em; text-align:center; margin:1mm 0 1.4mm; }
+  .deckline { font:italic 8.6pt/1.28 Georgia,serif; text-align:center; max-width:152mm; margin:0 auto 2.2mm; }
+
+  .cols {
+    column-count:4; column-gap:4mm; column-rule:.5pt solid #999;
+    column-fill:auto; height:100%;
+    text-align:justify; hyphens:auto; -webkit-hyphens:auto;
+  }
+  .colwrap { border-top:.5pt solid #111; padding-top:1.6mm; }
+
+  p { margin:0; }
+  p + p { text-indent:3mm; }
+  .cols section { break-inside:auto; }
+
+  .rubric {
+    font:700 6pt/1 -apple-system,'Helvetica Neue',Helvetica,sans-serif;
+    letter-spacing:.15em; text-transform:uppercase; text-align:left;
+    border-top:1.5pt solid #111; padding-top:1mm; margin:2.6mm 0 1mm;
+    break-after:avoid; text-indent:0;
+  }
+  .cols > .rubric:first-child, .cols section:first-child .rubric { margin-top:0; border-top:none; padding-top:0; }
+
+  .drop::first-letter {
+    font-size:21.5pt; line-height:.83; font-weight:700;
+    float:left; padding:.4mm 1.1mm 0 0;
+  }
+  .hansard .drop::first-letter { color:#6b2b6b; }
+  .daily .drop::first-letter { color:#111; }
+
+  .byline { font:6pt/7pt -apple-system,'Helvetica Neue',Helvetica,sans-serif; letter-spacing:.08em; text-transform:uppercase; text-align:center; margin:0 0 1.2mm; text-indent:0; }
+
+  .agate { font:5.5pt/6.6pt -apple-system,'Helvetica Neue',Helvetica,sans-serif; font-variant-numeric:tabular-nums; text-align:left; hyphens:none; }
+  .agate b { letter-spacing:.02em; }
+  table.agate { width:100%; border-collapse:collapse; margin:.6mm 0 1mm; break-inside:avoid; }
+  table.agate th { font-weight:700; text-transform:uppercase; letter-spacing:.06em; text-align:left; border-bottom:.5pt solid #111; padding:.3mm 0; }
+  table.agate td { padding:.28mm 0; vertical-align:top; }
+  table.agate .n { text-align:right; padding-left:1mm; white-space:nowrap; }
+
+  .brefitem { margin:0 0 .9mm; text-indent:0 !important; }
+  .brefitem b { font-family:-apple-system,'Helvetica Neue',Helvetica,sans-serif; font-size:6pt; }
+
+  .feature {
+    border:.5pt solid #111; padding:1.6mm 2mm; margin:1.4mm 0;
+    break-inside:avoid; background:#f6f3ee; text-align:justify;
+  }
+  .feature .fkick { font:700 5.5pt/1 -apple-system,'Helvetica Neue',Helvetica,sans-serif; letter-spacing:.14em; text-transform:uppercase; color:#6b2b6b; margin-bottom:.8mm; }
+  .daily .feature .fkick { color:#0e7490; }
+  .feature h4 { font:700 9.5pt/1.1 Georgia,serif; margin:0 0 .8mm; text-align:left; }
+  .feature p { text-indent:0; }
+  .feature p + p { text-indent:3mm; }
+
+  .verdicts { list-style:none; margin:.4mm 0 1mm; padding:0; }
+  .verdicts li { text-indent:0; padding-left:2.4mm; position:relative; margin-bottom:.5mm; text-align:left; font:5.5pt/6.6pt -apple-system,'Helvetica Neue',Helvetica,sans-serif; }
+  .verdicts li::before { content:'■'; position:absolute; left:0; font-size:3.5pt; top:.9pt; }
+
+  .colophon {
+    font:italic 5.5pt/6.8pt Georgia,serif; text-align:center; color:#333;
+    border-top:.5pt solid #111; padding-top:1.2mm; text-indent:0 !important;
+    position:absolute; left:12mm; right:12mm; bottom:8mm; margin:0;
+  }
+  .notices { border-top:1pt solid #111; border-bottom:1pt solid #111; padding:1.2mm 0; margin:1.4mm 0; break-inside:avoid; }
+  .notices p { text-indent:0; margin:0 0 .7mm; text-align:left; }
+  .notices .nhead { font:700 5.5pt/1 -apple-system,'Helvetica Neue',Helvetica,sans-serif; letter-spacing:.14em; text-transform:uppercase; text-align:center; margin-bottom:1mm; }
+  .housead {
+    break-before:column; height:97%; box-sizing:border-box;
+    border:.5pt solid #111; outline:.5pt solid #111; outline-offset:-1.2mm;
+    display:flex; flex-direction:column; justify-content:center; gap:2mm;
+    padding:5mm 4mm; text-align:center;
+  }
+  .housead .hkick { font:700 5.5pt/1 -apple-system,'Helvetica Neue',Helvetica,sans-serif; letter-spacing:.2em; text-transform:uppercase; }
+  .housead h4 { font:700 13pt/1.15 Georgia,serif; margin:0; }
+  .housead p { font:italic 7pt/9pt Georgia,serif; text-indent:0 !important; text-align:center; margin:0; }
+</style>
+</head>
+<body>
+
+<div class="explain">
+  <p><b>Two sheets, true A4 scale, entirely real copy.</b> Sheet one re-sets the Morning Edition of Wednesday 19 August (No.&nbsp;57) in newspaper measure: Georgia 7pt on 8pt leading, four justified columns of 43.5mm, hairline rules, agate listings at 5.5pt — the Wall Street Journal's stock-table size. Sheet two gives The Hansard digest of 15–22 July the same treatment. Print this file (or the PDF beside it) at 100% with margins off, then read the agate with a magnifying glass. On a 600 dots-per-inch laser these sheets resolve finer than the Financial Times does on newsprint.</p>
+</div>
+
+<!-- ═══════════════════ SHEET ONE — THE MORNING EDITION ═══════════════════ -->
+<div class="sheet daily">
+  <div class="folio">
+    <span>No. 57 · Wednesday 19th of August 2026</span>
+    <span>Deck of Cards · Henceforth · The Hansard · henceforth.club</span>
+    <span>Inscribed daily upon Bitcoin SV · Price 3,966 satoshis</span>
+  </div>
+  <div class="nameplate black">The Morning Edition</div>
+  <div class="subtitle">The state of the four, and what would most improve each today</div>
+
+  <div class="stoppress agate">
+    <div class="item"><b class="tag">SHIP ·</b> <b>Ship day: approve the App Store Connect writes, then all three apps go.</b> Deck 1.30, Henceforth 4.52 and Hansard 1.8 are merged, green, and fully staged: listing decks regenerated and validated, release notes drafted, the new uploader reviewed and hardened this morning.</div>
+    <div class="item"><b class="tag">TODAY ·</b> <b>Submit the company accounts and tax return.</b> Last night's runsheet carries every number for the joint filing service and the confirmation statement; the chosen day is today, alongside the app submissions.</div>
+    <div class="item"><b class="tag">GATE ·</b> <b>Screenshot gate.</b> Deck measured: 46 screens captured, all 46 moved, none identical, a pattern consistent with this morning's new simulator runtime rather than interface change; the code window since last Wednesday was test-only.</div>
+  </div>
+
+  <h2 class="headline">The review catches the tool the ship was about to lean on</h2>
+  <p class="deckline">Ship day arrives with three candidates staged end to end and, for the first time, machinery that puts fresh screenshots on the store without dragging them by hand. The morning review's only real code window was that machinery, and it found five ways the tool could bite. Every one was fixed and pinned before its first live run.</p>
+
+  <div class="colwrap" style="height:186mm;">
+  <div class="cols">
+
+    <section>
+      <p class="byline">From the morning review · henceforth.club</p>
+      <p class="drop">The three apps had nothing to review, two docs-only windows and one empty one, each verified commit by commit, so the whole morning's scrutiny fell on the website, where yesterday's work landed: the taxes filing record and the new screenshot uploader. Six verdicts came back and all six survived adversarial refutation. Five were defects in day-old code: a mixed-orientation screenshot set would have crashed the upload mid-way, a failure at the wrong moment would have stranded a set beyond the tool's own recovery, a filename collision could have cross-wired one app's images into another's listing, a slug collision could have doubled a document key, and a rendered filing pack carried more of the signed-in reader's authority than a document should. All five were fixed, tested, and pushed before nine, and the sixth verdict was a clean bill on the taxes route's fail-closed behaviour. This is the routine doing precisely what it is for: fresh eyes on yesterday's code before today depends on it.</p>
+    </section>
+
+    <section>
+      <div class="rubric">The six verdicts, in brief</div>
+      <ul class="verdicts">
+        <li>Screenshot planner emitted duplicate assignments for a mixed-orientation set; apply would double-delete and crash.</li>
+        <li>Delete-first erased a set's only identity: a failure before the first upload stranded it beyond rerun.</li>
+        <li>Files keyed by basename across directories could silently cross-wire one deck's bytes into another's set.</li>
+        <li>The taxes publisher had no within-period slug-collision guard.</li>
+        <li>Inline HTML packs rendered with the signed-in reader's ambient authority.</li>
+        <li>Clean bill: the taxes route still fails closed after the content-type change.</li>
+      </ul>
+      <p class="agate" style="text-indent:0">Three reviews ran this morning; five findings confirmed, none rejected, none abstained, none already resolved.</p>
+    </section>
+
+    <section>
+      <div class="rubric">The board</div>
+      <p>The three release cards reopened for ship day, each carrying its staged state: decks regenerated and validated for all three apps, release notes drafted, the listing descriptions verified still accurate against what ships. Four cards wait in review on one-line answers, the Twetch notification road now on its third day. The taxes card stands ready to close out with this afternoon's submissions.</p>
+    </section>
+
+    <section>
+      <div class="rubric">Today</div>
+      <p>Two jobs, both staged to the last command. The ship: one approval unlocks the version drafts and the screenshot upload, then it is three version bumps, three archives, and three submissions, a second consecutive clean sweep if all goes as last week did. The taxes: the runsheet from last night walks the joint filing service screen by screen, with the confirmation statement after it. Nothing else competes; the review answers can wait for the gaps between builds.</p>
+    </section>
+
+    <section>
+      <div class="rubric">The plan of the day</div>
+      <p style="text-indent:0"><i>Ship day with three candidates and the taxes submission. Everything is staged; the day is approvals, archives, and forms.</i></p>
+      <p><b>Approve the App Store Connect writes and run the staged pipeline.</b> One approval creates the three version drafts; the uploader, hardened this morning, puts the fresh decks on them; then version bumps, archives, notes to every locale, and submissions. The crib has every command in order.</p>
+      <p><b>File the company accounts and return.</b> The runsheet carries every number: the joint filing service screens, the balance sheet fields, the losses note to paste, and the confirmation statement step. One pre-check: the December Monzo balance.</p>
+      <p><b>Answer the four standing review-card questions.</b> The Twetch notification road, third day waiting; the Deck test tighten; the Henceforth probe fix; and the stall-seams park. Each is one line.</p>
+    </section>
+
+    <section>
+      <div class="rubric">Not today, by choice</div>
+      <div class="agate">
+        <p style="text-indent:0">The Henceforth Mac listing deck (needs twenty-five foreground minutes; current screenshots stand). · The probe fix riding 4.52 (not merged; ships next week rather than rushing the archive). · The Banana Blocks sealing test (waits for the next funded run). · The stale FORTHapp work tree on the mini (worth deleting at source; it re-extracts daily).</p>
+      </div>
+    </section>
+
+    <section>
+      <div class="rubric">The ship list</div>
+      <div class="agate">
+        <p style="text-indent:0"><b>Deck of Cards</b> · live 1.29, seven days. Ready: 1.30 with the multiplayer shuffle fix; listing deck regenerated this morning and self-validated; note drafted; description verified accurate.</p>
+        <p style="text-indent:0"><b>Henceforth</b> · live 4.51, seven days. Ready: 4.52 with the Twetch scan back-off and the stuck-quote remedy; iPhone and iPad decks regenerated from last night's captures; the Mac listing keeps its current screenshots by choice.</p>
+        <p style="text-indent:0"><b>The Hansard</b> · live 1.7, six days. Ready: 1.8 with the card-surface adoption across 52 sites and notification single-homing; deck regenerated with two iPad division frames reused from July.</p>
+        <p style="text-indent:0">Blocker, common to all three: one App Store Connect approval, then the version bump, archive and submit.</p>
+      </div>
+    </section>
+
+    <section>
+      <div class="rubric">The numbers</div>
+      <p>Apple's processed data now runs through Monday the seventeenth. Deck took 55 downloads across the six processed days, with Monday itself at ten and Thursday's sixteen still the week's peak; its rating holds at 4.4 across seven reviews. Henceforth and Hansard recorded no downloads in the window, the standing miss that tomorrow's listing and keyword pass exists to work, and their five-star ratings stand on two reviews and one. The site took seven views yesterday and 52 across the week.</p>
+      <table class="agate">
+        <tr><th>Downloads</th><th class="n">W</th><th class="n">T</th><th class="n">F</th><th class="n">S</th><th class="n">S</th><th class="n">M</th></tr>
+        <tr><td>Deck of Cards</td><td class="n">6</td><td class="n">16</td><td class="n">10</td><td class="n">10</td><td class="n">3</td><td class="n">10</td></tr>
+        <tr><td>Henceforth</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td></tr>
+        <tr><td>The Hansard</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td></tr>
+      </table>
+      <p class="agate" style="text-indent:0">Ratings: Deck 4.43 on seven reviews · Henceforth 5.0 on two · The Hansard 5.0 on one. The site: 7 yesterday · 52 this week · 1,137 all-time.</p>
+    </section>
+
+    <section>
+      <div class="rubric">Decisions before the house</div>
+      <div class="agate">
+        <p style="text-indent:0"><b>Today.</b> Approve the App Store Connect writes: the one word that unlocks the whole staged ship. · <b>Today.</b> The Twetch notification road, third day waiting on one line: background app refresh, the spec's recommendation, or a push service. · <b>Today.</b> The Deck shuffle-test tighten: test-only, lands between builds with the fast unit gate. · <b>Schedule the 20th.</b> The Henceforth probe fix: a product one-liner not yet merged, better in next week's 4.53 than rushed into today's archive. · <b>Park.</b> The stall sibling seams: one-run wrong-copy robustness, fold both at the next Henceforth session.</p>
+      </div>
+    </section>
+
+    <section>
+      <div class="notices">
+        <div class="nhead">Notices</div>
+        <p><b>The cadence.</b> Every Wednesday one app ships an update. Done beats perfect.</p>
+        <p><b>The ledger.</b> The board is the ledger, not the objective; each item leads with its outcome. Live store state is read from the storefront itself, never from the repositories.</p>
+        <p><b>The archive.</b> This edition is rendered to a single sheet by the morning routine and inscribed upon Bitcoin SV; back numbers are served from the chain at henceforth.club/board.</p>
+      </div>
+    </section>
+
+    <div class="housead">
+      <div class="hkick">A notice from the composing room</div>
+      <h4>Room to grow</h4>
+      <p>Set at book size, this edition ran to two sheets. Set at newspaper measure, the whole of it, the plan, the listings, the decisions and the notices, stands in three columns and a quarter.</p>
+      <p>This quarter page is the difference: headroom for the week planner, the review backlog, or a Saturday long read, without a second sheet and without a second inscription.</p>
+      <p class="hkick" style="font-style:normal">One page · one inscription · every morning</p>
+    </div>
+
+  </div>
+  </div>
+  <p class="colophon">Set in Georgia, seven point upon eight, four columns to the sheet; agate matter at five and a half point, the size the Wall Street Journal keeps for its stock tables. Printed at six hundred dots to the inch this page carries no ink gain, and so resolves finer than the Financial Times on newsprint. Rendered by the morning routine and inscribed, one page, upon the chain.</p>
+</div>
+
+<!-- ═══════════════════ SHEET TWO — THE HANSARD ═══════════════════ -->
+<div class="sheet hansard">
+  <div class="folio">
+    <span>This Week in Parliament · 15 – 22 July 2026</span>
+    <span>2 divisions · 823 written questions · 115 distinct askers</span>
+    <span>The Commons rose 16 July · returns 31 August</span>
+  </div>
+  <div class="nameplate roman">The Hansard</div>
+  <div class="subtitle">A weekly digest of the proceedings of the Parliament of the United Kingdom</div>
+
+  <h2 class="headline">Andy Burnham takes office, and rewires the state</h2>
+  <p class="deckline">Britain changed Prime Minister while the House of Commons was in recess. The machinery of government was redrawn by written statement, the elected House unable to ask a single question of it; the only question put came from a peer.</p>
+
+  <div class="colwrap" style="height:212mm;">
+  <div class="cols">
+
+    <section>
+      <p class="drop">Britain changed Prime Minister with its elected House on holiday. The Commons rose on Thursday 16 July for a recess that runs to 31 August; Sir Keir Starmer had taken his last Prime Minister's Questions the day before, and the Speaker announced it from the Chair as "the final Prime Minister's questions with the right hon. and learned Member for Holborn and St Pancras (Keir Starmer) as Prime Minister." On Monday 20 July Andy Burnham became Prime Minister. On Tuesday 21 July a written statement, laid in the House of Lords in the name of the Lord Privy Seal and made on the Prime Minister's behalf, informed Parliament that "Today, we are fundamentally rewiring the state, changing the geography of government." Only one House was sitting to be told, and it was the unelected one.</p>
+      <p>The rewiring is not modest, and the only question put on it came from a peer. A new Office for the Prime Minister and the Cabinet, led by the Cabinet Secretary, will house No.10, the Cabinet Office teams serving the Prime Minister directly, and a new "No.10 North" built to run devolution and local growth. The Department for Science, Innovation and Technology is abolished outright: artificial-intelligence strategy and the AI Security Institute to the Cabinet Office, the digital brief to a strengthened Culture department, science and innovation to the Department for Business and Trade, renamed the Department for Business, Innovation, Science and Trade. On the afternoon of 21 July Lord Clement-Jones put a Private Notice Question asking what that meant for the AI Safety Institute, the sovereign AI fund, the Government Digital Service and UK Research and Innovation. Baroness Anderson of Stoke-on-Trent, for the Cabinet Office, confirmed that UKRI and the sovereign fund go to the new business department, that UKRI's £9.22 billion for research in 2026-27 continues, and that the Government Digital Service goes to Culture. Asked about the shape of the ministry itself, she said what a minister in a half-made Government must: "there are ongoing appointments in government, so I cannot possibly talk about any further roles and appointments that are being made, including my own." Lord Waldegrave of North Hill, himself a former science minister, called it "the abolition and fragmentation of DSIT"; Lord Clement-Jones spoke of "the very regrettable resignation of the noble Lord, Lord Vallance," and the Minister did not demur.</p>
+      <p>What the Commons did with its last two days was heavier than its two divisions suggest. On 15 July, without a division, it approved the first use of the designation power created by the state-threats Act that reached the statute book a week earlier. The draft National Security Act 2023 (Designated Bodies) Regulations 2026 designate the Islamic Revolutionary Guard Corps, the Islamic Movement of Companions of the Right and the GRU Volunteer Corps, making it an offence punishable by up to fourteen years to support, assist or take material benefit from any of them. "This debate is a significant moment," Dame Angela Eagle told the House, "because this is the first use of a new power introduced by this Government." The Opposition supported it and complained it had taken too long. It followed a general debate on Iran in which the Minister for Veterans and People, Calvin Bailey, told Members that Iranian forces had struck two UAE tankers in the strait of Hormuz, "killing an Indian crew member and injuring eight others," and that the United Kingdom had "surged air power into the Gulf." Four Acts received Royal Assent the same afternoon, and the King sent a Message inviting the Commons to consider the provision made for the financial support of the Sovereign. The week's only divisions were deferred ones, taken on slips: a trade-union balloting order and its companion code of practice, each carried by 330 to 109.</p>
+      <p>Then, out of hours, the Government nationalised British Steel — and had to apologise for the manner of it. The Steel Industry (Nationalisation) Act had received Royal Assent on 15 July; the transfer into public ownership was executed "outside of working hours," and the regulations were not laid before Parliament before they came into force. Facing an Urgent Question on the morning of 16 July from the Liberal Democrat Joshua Reynolds, the Under-Secretary Blair McDougall opened with "regret and apologies … that we were not able to lay the regulations before Parliament before they came into force." On the final morning Steve Reed announced the largest redrawing of English local government in a generation — 38 councils in place of 134 across the areas decided, nearly 3,000 fewer councillors, and a net saving that councils themselves project at about £1 billion by 2032-33 — and Stephen Doughty reported the UK-EU treaty on Gibraltar signed in Brussels on 14 July, with the last pieces of the frontier fence gone.</p>
+    </section>
+
+    <section>
+      <div class="rubric">The week in brief</div>
+      <p class="brefitem"><b>Prime Minister's Questions, 15 July.</b> Sir Keir Starmer took his last session as Prime Minister. The Speaker told the House from the Chair that it was the final Prime Minister's Questions with him in office. Kemi Badenoch turned to what she called this Prime Minister's final questions and paid her own tribute to Ann Widdecombe. There has been no session since, because the Commons rose the next day.</p>
+      <p class="brefitem"><b>National security designations, 15 July.</b> The Commons approved regulations designating the Islamic Revolutionary Guard Corps, the Islamic Movement of Companions of the Right and the GRU Volunteer Corps. Supporting or taking material benefit from a designated body now carries up to fourteen years in prison. There was no division.</p>
+      <p class="brefitem"><b>British Steel, 15 and 16 July.</b> The Steel Industry (Nationalisation) Act received Royal Assent on 15 July. The Government used it overnight to take British Steel into public ownership. The regulations were not laid before Parliament before they came into force. Answering an urgent question the next morning, the business minister Blair McDougall offered regret and apologies for that, and said the transfer had been done outside of working hours.</p>
+      <p class="brefitem"><b>Local government reorganisation, 16 July.</b> Steve Reed announced decisions for the remaining two-tier areas of England. Across those areas 38 councils will replace 134. He told the House there would be nearly 3,000 fewer councillors, and that councils themselves project net savings of about £1 billion by 2032-33. Elections to the new councils are due in May 2027.</p>
+    </section>
+
+    <section>
+      <div class="feature">
+        <div class="fkick">The feature · 18 written questions</div>
+        <h4>The Basildon file: eighteen questions in two days</h4>
+        <p>On 15 July the Housing Secretary told the House, in a written statement on Best Value, that four new Best Value Notices had been issued, and that in the case of Basildon Borough Council his concerns related to "serious cultural and governance issues," with an independent external assurance review commissioned to report by the end of October 2026. James McMurdock (Independent, South Basildon and East Thurrock) had two sitting days left. He used them to file eighteen questions on that single notice, eight on the day it was issued and ten on the last day before the rise. He asked what specific evidence led Ministers to conclude the notice was required; which Ministers and officials took the decision; on what date the Department first received the information that contributed to it; whether the review will examine procurement and contract management; what it will cost the public purse; and whether its findings will be published in full. It is the written question used as a preservation order: not to change the outcome, which is already announced, but to fix the sequence of events in the record before six weeks of recess close over it.</p>
+      </div>
+    </section>
+
+    <section>
+      <div class="rubric">Divisions of the week</div>
+      <table class="agate">
+        <tr><th>Question</th><th class="n">Ayes</th><th class="n">Noes</th></tr>
+        <tr><td>Draft Trade Unions (Permissible Means of Voting) and Employment Rights (Unfair Dismissal) (Amendment) Order 2026 · deferred, 15 July</td><td class="n">330</td><td class="n">109</td></tr>
+        <tr><td>Draft Code of Practice on Electronic and Workplace Ballots for Statutory Trade Union Ballots · deferred, 15 July</td><td class="n">330</td><td class="n">109</td></tr>
+      </table>
+      <p class="agate" style="text-indent:0">The last two divisions before the rise, both taken on slips rather than in the lobbies.</p>
+    </section>
+
+    <section>
+      <div class="rubric">In the bill office</div>
+      <div class="agate">
+        <p style="text-indent:0"><b>Steel Industry (Nationalisation) Bill</b>: Royal Assent 15 July, and used the same night. · <b>Supply and Appropriation (Main Estimates) Bill</b>: the year's money, Royal Assent 15 July with the Commons a day from rising. · <b>Public Office (Accountability) Bill</b>: the Hillsborough Law took its first reading in the Lords on 16 July; second reading 1 September. · <b>Social Housing Bill</b>: reached Lords report stage on 20 July, the day the new Prime Minister took office. · <b>Co-operative Capital Bill</b>: first reading in the Lords on 22 July, one House still legislating six days into the other's recess.</p>
+      </div>
+    </section>
+
+    <section>
+      <div class="rubric">Written questions, by department</div>
+      <div class="agate">
+        <p style="text-indent:0">Health and Social Care, 110 · Defence, 107 · Home Office, 75 · Housing, Communities and Local Government, 62 · Transport, 51 · Environment, Food and Rural Affairs, 48 · Education, 47 · Business and Trade, 45 · Cabinet Office, 39 · Treasury, 37 · Foreign, Commonwealth and Development Office, 36 · Energy Security and Net Zero, 34 · Eleven other departments took 132 between them; 823 in all from 115 askers.</p>
+      </div>
+    </section>
+
+    <section>
+      <div class="rubric">Most asked subjects</div>
+      <div class="agate">
+        <p style="text-indent:0">Basildon Council: Best Value, 8 · Body Searches, 7 · Defence: Space Technology, 7 · Gaza: Development Aid, 7 · Special Educational Needs, 6 · Educational Institutions: Industrial Disputes, 5 · Prisoners' Release, 5 · Schools: Temperature, 5 · Civil Service: Gender Recognition, 4 · Council Tax: Valuation, 4</p>
+      </div>
+    </section>
+
+    <section>
+      <div class="rubric">From the written answers</div>
+      <div class="agate">
+        <p style="text-indent:0"><b>Schools: Temperature.</b> Damian Hinds (Conservative, East Hampshire) asked the Education Secretary what steps her Department is taking to ensure that schools remain safe and operational during periods of extreme heat. The answer: the department takes periods of hot weather and heatwaves seriously and has published a climate risk assessment. In most cases, schools are the safest place for children during hot weather, as staff can actively monitor pupils, ensure regular hydration, and make adjustments to keep them cool. Children may also not be any cooler at home than in school.</p>
+      </div>
+    </section>
+
+  </div>
+  </div>
+  <p class="colophon">Set in Georgia, seven point upon eight, four columns to the sheet; the listings in agate, five and a half point. Compiled from the Official Report, the written question record and the division lists, and rendered to one sheet for the week.</p>
+</div>
+
+</body>
+</html>
