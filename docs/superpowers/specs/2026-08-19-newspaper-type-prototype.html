@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Newspaper type prototype — two sheets at true scale</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap" rel="stylesheet">
+<style>
+  /* ————— screen chrome (stripped in print) ————— */
+  body { margin:0; background:#dedbd4; font-family:Georgia,serif; }
+  .explain { max-width:210mm; margin:0 auto; padding:10mm 4mm 2mm; font:10.5pt/1.5 Georgia,serif; color:#333; }
+  .explain b { color:#111; }
+  @media print {
+    .explain { display:none; }
+    body { background:#fff; }
+    .sheet { margin:0 !important; box-shadow:none !important; page-break-after:always; }
+    @page { size:A4; margin:0; }
+  }
+
+  /* ————— the newspaper type system ————— */
+  .sheet {
+    width:210mm; height:297mm; box-sizing:border-box;
+    padding:9mm 12mm 21mm;
+    margin:6mm auto; background:#fff; color:#111;
+    font:7pt/8pt Georgia,serif;
+    box-shadow:0 2px 16px rgba(0,0,0,.35);
+    overflow:hidden; position:relative;
+    display:flex; flex-direction:column;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+  .folio {
+    font:5.5pt/1 -apple-system,'Helvetica Neue',Helvetica,sans-serif;
+    letter-spacing:.06em; text-transform:uppercase; color:#111;
+    display:flex; justify-content:space-between; gap:4mm;
+    border-top:.5pt solid #111; border-bottom:.5pt solid #111;
+    padding:1.1mm 0;
+  }
+  .folio span { white-space:nowrap; }
+  .nameplate { text-align:center; margin:1.8mm 0 1.2mm; }
+  .nameplate.black { font-family:'UnifrakturMaguntia',Georgia,serif; font-size:37pt; line-height:1; font-weight:400; }
+  .nameplate.roman { font-family:Georgia,serif; font-size:30pt; line-height:1; font-weight:700; letter-spacing:.14em; text-transform:uppercase; }
+  .subtitle {
+    font:5.5pt/1 -apple-system,'Helvetica Neue',Helvetica,sans-serif;
+    letter-spacing:.14em; text-transform:uppercase; text-align:center;
+    border-top:.5pt solid #111; border-bottom:1.5pt solid #111;
+    padding:1.1mm 0; margin-bottom:1.6mm;
+  }
+
+  .stoppress { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0 3mm; border-bottom:.5pt solid #111; padding:0 0 1.4mm; margin-bottom:1.8mm; }
+  .stoppress .item { font:5.5pt/6.6pt -apple-system,'Helvetica Neue',Helvetica,sans-serif; color:#222; }
+  .stoppress .item + .item { border-left:.5pt solid #999; padding-left:3mm; }
+  .stoppress b.tag { color:#0e7490; letter-spacing:.1em; }
+  .hansard .stoppress b.tag { color:#6b2b6b; }
+
+  .headline { font:700 25pt/1.03 Georgia,serif; letter-spacing:-.015em; text-align:center; margin:1.6mm 0 1.8mm; }
+  .deckline { font:italic 8.6pt/1.28 Georgia,serif; text-align:center; max-width:152mm; margin:0 auto 3mm; }
+
+  /* ————— modular page: bands of modules, mosaic widths ————— */
+  .band { display:grid; grid-template-columns:repeat(4,1fr); gap:0 4mm; border-top:1.5pt solid #111; padding-top:1.6mm; margin-bottom:3.2mm; }
+  .band:last-of-type { margin-top:auto; margin-bottom:0; }
+  .band.light { border-top:.5pt solid #111; }
+  .mod { min-width:0; }
+  .mod + .mod { border-left:.5pt solid #999; padding-left:4mm; margin-left:-4mm; }
+  .span2 { grid-column:span 2; } .span3 { grid-column:span 3; } .span4 { grid-column:span 4; }
+
+  .legs2 { column-count:2; column-gap:4mm; column-rule:.5pt solid #999; text-align:justify; hyphens:auto; -webkit-hyphens:auto; }
+  .legs3 { column-count:3; column-gap:4mm; column-rule:.5pt solid #999; text-align:justify; hyphens:auto; -webkit-hyphens:auto; }
+  .mod > p, .boxed > p { text-align:justify; hyphens:auto; -webkit-hyphens:auto; }
+
+  p { margin:0; }
+  p + p { text-indent:3mm; }
+
+  .rubric {
+    font:700 6pt/1 -apple-system,'Helvetica Neue',Helvetica,sans-serif;
+    letter-spacing:.15em; text-transform:uppercase; text-align:left;
+    padding-top:0; margin:0 0 1mm;
+    break-after:avoid; text-indent:0;
+  }
+  .rubric.mid { border-top:1.5pt solid #111; padding-top:1mm; margin-top:2mm; }
+
+  .boxed { border:.5pt solid #111; padding:2.4mm 2.4mm; }
+  .boxed .rubric { text-align:left; }
+
+  .drop::first-letter {
+    font-size:21.5pt; line-height:.83; font-weight:700;
+    float:left; padding:.4mm 1.1mm 0 0;
+  }
+  .hansard .drop::first-letter { color:#6b2b6b; }
+  .daily .drop::first-letter { color:#111; }
+
+  .byline { font:6pt/7pt -apple-system,'Helvetica Neue',Helvetica,sans-serif; letter-spacing:.08em; text-transform:uppercase; text-align:center; margin:0 0 1.2mm; text-indent:0; }
+
+  .agate { font:5.5pt/6.6pt -apple-system,'Helvetica Neue',Helvetica,sans-serif; font-variant-numeric:tabular-nums; text-align:left; hyphens:none; }
+  .agate b { letter-spacing:.02em; }
+  .agate p { text-indent:0; margin:0 0 .8mm; text-align:left; }
+  table.agate { width:100%; border-collapse:collapse; margin:.6mm 0 1mm; break-inside:avoid; }
+  table.agate th { font-weight:700; text-transform:uppercase; letter-spacing:.06em; text-align:left; border-bottom:.5pt solid #111; padding:.3mm 0; }
+  table.agate td { padding:.28mm 0; vertical-align:top; }
+  table.agate .n { text-align:right; padding-left:1mm; white-space:nowrap; }
+
+  .brefitem { margin:0 0 .9mm; text-indent:0 !important; }
+  .brefitem b { font-family:-apple-system,'Helvetica Neue',Helvetica,sans-serif; font-size:6pt; }
+
+  .feature {
+    border:.5pt solid #111; outline:.5pt solid #111; outline-offset:-1.2mm;
+    padding:2.6mm 3mm; margin:0;
+    background:#f6f3ee; text-align:justify; height:100%; box-sizing:border-box;
+  }
+  .feature .fkick { font:700 5.5pt/1 -apple-system,'Helvetica Neue',Helvetica,sans-serif; letter-spacing:.14em; text-transform:uppercase; color:#6b2b6b; margin-bottom:.8mm; }
+  .daily .feature .fkick { color:#0e7490; }
+  .feature h4 { font:700 11pt/1.1 Georgia,serif; margin:0 0 1mm; text-align:left; }
+  .feature p { text-indent:0; }
+  .feature p + p { text-indent:3mm; }
+  .feature .legs2 { column-rule:none; }
+
+  .verdicts { list-style:none; margin:.4mm 0 1mm; padding:0; }
+  .verdicts li { text-indent:0; padding-left:2.4mm; position:relative; margin-bottom:.6mm; text-align:left; font:5.5pt/6.6pt -apple-system,'Helvetica Neue',Helvetica,sans-serif; }
+  .verdicts li::before { content:'■'; position:absolute; left:0; font-size:3.5pt; top:.9pt; }
+
+  .noticestrip { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0 3mm; height:100%; align-content:start; }
+  .noticestrip > div + div { border-left:.5pt solid #999; padding-left:3mm; }
+
+  .colophon {
+    font:italic 5.5pt/6.8pt Georgia,serif; text-align:center; color:#333;
+    border-top:.5pt solid #111; padding-top:1.2mm; text-indent:0 !important;
+    position:absolute; left:12mm; right:12mm; bottom:8mm; margin:0;
+  }
+</style>
+</head>
+<body>
+
+<div class="explain">
+  <p><b>Three sheets, true A4 scale, entirely real copy — cut modular.</b> The lead story takes one big module across three legs with a boxed sidebar; the rest of each page breaks into bands of ruled and boxed squares of varying widths, the way a real front page is cut. Sheet one is the Morning Edition of 19 August; sheet two is The Hansard for <b>this week</b> (12–19 August, the recess issue, from its live draft data); sheet three is the heavy July week kept as a stress demonstration. The type: Georgia 7pt on 8pt, 43.5mm legs, hairline rules, agate listings at 5.5pt. Print at 100% with margins off, then read the agate with a magnifying glass.</p>
+</div>
+
+<!-- ═══════════════════ SHEET ONE — THE MORNING EDITION ═══════════════════ -->
+<div class="sheet daily">
+  <div class="folio">
+    <span>No. 57 · Wednesday 19th of August 2026</span>
+    <span>Deck of Cards · Henceforth · The Hansard · henceforth.club</span>
+    <span>Inscribed daily upon Bitcoin SV · Price 3,966 satoshis</span>
+  </div>
+  <div class="nameplate black">The Morning Edition</div>
+  <div class="subtitle">The state of the four, and what would most improve each today</div>
+
+  <div class="stoppress agate">
+    <div class="item"><b class="tag">SHIP ·</b> <b>Ship day: approve the App Store Connect writes, then all three apps go.</b> Deck 1.30, Henceforth 4.52 and Hansard 1.8 are merged, green, and fully staged: listing decks regenerated and validated, release notes drafted, the new uploader reviewed and hardened this morning.</div>
+    <div class="item"><b class="tag">TODAY ·</b> <b>Submit the company accounts and tax return.</b> Last night's runsheet carries every number for the joint filing service and the confirmation statement; the chosen day is today, alongside the app submissions.</div>
+    <div class="item"><b class="tag">GATE ·</b> <b>Screenshot gate.</b> Deck measured: 46 screens captured, all 46 moved, none identical, a pattern consistent with this morning's new simulator runtime rather than interface change; the code window since last Wednesday was test-only.</div>
+  </div>
+
+  <h2 class="headline">The review catches the tool the ship was about to lean on</h2>
+  <p class="deckline">Ship day arrives with three candidates staged end to end and, for the first time, machinery that puts fresh screenshots on the store without dragging them by hand. The morning review's only real code window was that machinery, and it found five ways the tool could bite. Every one was fixed and pinned before its first live run.</p>
+
+  <!-- BAND A · the big lead module + boxed sidebar -->
+  <div class="band">
+    <div class="mod span3">
+      <p class="byline">From the morning review · henceforth.club</p>
+      <div class="legs3">
+        <p class="drop">The three apps had nothing to review, two docs-only windows and one empty one, each verified commit by commit, so the whole morning's scrutiny fell on the website, where yesterday's work landed: the taxes filing record and the new screenshot uploader. Six verdicts came back and all six survived adversarial refutation. Five were defects in day-old code: a mixed-orientation screenshot set would have crashed the upload mid-way, a failure at the wrong moment would have stranded a set beyond the tool's own recovery, a filename collision could have cross-wired one app's images into another's listing, a slug collision could have doubled a document key, and a rendered filing pack carried more of the signed-in reader's authority than a document should. All five were fixed, tested, and pushed before nine, and the sixth verdict was a clean bill on the taxes route's fail-closed behaviour. This is the routine doing precisely what it is for: fresh eyes on yesterday's code before today depends on it.</p>
+        <div class="rubric mid">The board</div>
+        <p style="text-indent:0">The three release cards reopened for ship day, each carrying its staged state: decks regenerated and validated for all three apps, release notes drafted, the listing descriptions verified still accurate against what ships. Four cards wait in review on one-line answers, the Twetch notification road now on its third day. The taxes card stands ready to close out with this afternoon's submissions.</p>
+        <div class="rubric mid">Today</div>
+        <p style="text-indent:0">Two jobs, both staged to the last command. The ship: one approval unlocks the version drafts and the screenshot upload, then it is three version bumps, three archives, and three submissions, a second consecutive clean sweep if all goes as last week did. The taxes: the runsheet from last night walks the joint filing service screen by screen, with the confirmation statement after it. Nothing else competes; the review answers can wait for the gaps between builds.</p>
+      </div>
+    </div>
+    <div class="mod">
+      <div class="boxed">
+        <div class="rubric">The six verdicts, in brief</div>
+        <ul class="verdicts">
+          <li>Screenshot planner emitted duplicate assignments for a mixed-orientation set; apply would double-delete and crash.</li>
+          <li>Delete-first erased a set's only identity: a failure before the first upload stranded it beyond rerun.</li>
+          <li>Files keyed by basename across directories could silently cross-wire one deck's bytes into another's set.</li>
+          <li>The taxes publisher had no within-period slug-collision guard.</li>
+          <li>Inline HTML packs rendered with the signed-in reader's ambient authority.</li>
+          <li>Clean bill: the taxes route still fails closed after the content-type change.</li>
+        </ul>
+        <p class="agate" style="text-indent:0">Three reviews ran this morning; five findings confirmed, none rejected, none abstained, none already resolved.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- BAND B · plan wide, numbers narrow -->
+  <div class="band">
+    <div class="mod span2">
+      <div class="rubric">The plan of the day</div>
+      <div class="legs2">
+        <p style="text-indent:0"><i>Ship day with three candidates and the taxes submission. Everything is staged; the day is approvals, archives, and forms.</i></p>
+        <p><b>Approve the App Store Connect writes and run the staged pipeline.</b> One approval creates the three version drafts; the uploader, hardened this morning, puts the fresh decks on them; then version bumps, archives, notes to every locale, and submissions. The crib has every command in order.</p>
+        <p><b>File the company accounts and return.</b> The runsheet carries every number: the joint filing service screens, the balance sheet fields, the losses note to paste, and the confirmation statement step. One pre-check: the December Monzo balance.</p>
+        <p><b>Answer the four standing review-card questions.</b> The Twetch notification road, third day waiting; the Deck test tighten; the Henceforth probe fix; and the stall-seams park. Each is one line.</p>
+      </div>
+    </div>
+    <div class="mod span2">
+      <div class="rubric">The numbers</div>
+      <div class="legs2">
+        <p style="text-indent:0">Apple's processed data now runs through Monday the seventeenth. Deck took 55 downloads across the six processed days, with Monday itself at ten and Thursday's sixteen still the week's peak; its rating holds at 4.4 across seven reviews. Henceforth and Hansard recorded no downloads in the window, the standing miss that tomorrow's listing and keyword pass exists to work, and their five-star ratings stand on two reviews and one. The site took seven views yesterday and 52 across the week.</p>
+        <table class="agate">
+          <tr><th>Downloads</th><th class="n">W</th><th class="n">T</th><th class="n">F</th><th class="n">S</th><th class="n">S</th><th class="n">M</th></tr>
+          <tr><td>Deck of Cards</td><td class="n">6</td><td class="n">16</td><td class="n">10</td><td class="n">10</td><td class="n">3</td><td class="n">10</td></tr>
+          <tr><td>Henceforth</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td></tr>
+          <tr><td>The Hansard</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td></tr>
+        </table>
+        <p class="agate" style="text-indent:0">Ratings: Deck 4.43 on seven reviews · Henceforth 5.0 on two · The Hansard 5.0 on one. The site: 7 yesterday · 52 this week · 1,137 all-time.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- BAND C · the squares -->
+  <div class="band light">
+    <div class="mod span2">
+      <div class="boxed agate" style="height:100%; box-sizing:border-box;">
+        <div class="rubric">The ship list</div>
+        <p><b>Deck of Cards</b> · live 1.29, seven days. Ready: 1.30 with the multiplayer shuffle fix; listing deck regenerated this morning and self-validated; note drafted; description verified accurate.</p>
+        <p><b>Henceforth</b> · live 4.51, seven days. Ready: 4.52 with the Twetch scan back-off and the stuck-quote remedy; iPhone and iPad decks regenerated from last night's captures; the Mac listing keeps its current screenshots by choice.</p>
+        <p><b>The Hansard</b> · live 1.7, six days. Ready: 1.8 with the card-surface adoption across 52 sites and notification single-homing; deck regenerated with two iPad division frames reused from July.</p>
+        <p>Blocker, common to all three: one App Store Connect approval, then the version bump, archive and submit.</p>
+      </div>
+    </div>
+    <div class="mod">
+      <div class="boxed agate" style="height:100%; box-sizing:border-box;">
+        <div class="rubric">Decisions before the house</div>
+        <p><b>Today.</b> Approve the App Store Connect writes: the one word that unlocks the whole staged ship.</p>
+        <p><b>Today.</b> The Twetch notification road, third day waiting on one line: background app refresh, the spec's recommendation, or a push service.</p>
+        <p><b>Today.</b> The Deck shuffle-test tighten: test-only, lands between builds with the fast unit gate.</p>
+        <p><b>Schedule the 20th.</b> The Henceforth probe fix: better in next week's 4.53 than rushed into today's archive.</p>
+        <p><b>Park.</b> The stall sibling seams: fold both at the next Henceforth session.</p>
+      </div>
+    </div>
+    <div class="mod">
+      <div class="boxed agate" style="height:100%; box-sizing:border-box;">
+        <div class="rubric">Not today, by choice</div>
+        <p>The Henceforth Mac listing deck (needs twenty-five foreground minutes; current screenshots stand).</p>
+        <p>The probe fix riding 4.52 (not merged; ships next week rather than rushing the archive).</p>
+        <p>The Banana Blocks sealing test (waits for the next funded run).</p>
+        <p>The stale FORTHapp work tree on the mini (worth deleting at source; it re-extracts daily).</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- BAND D · notices strip -->
+  <div class="band light">
+    <div class="mod span3">
+      <div class="rubric">Notices</div>
+      <div class="noticestrip">
+        <div><p style="text-indent:0"><b>The cadence.</b> Every Wednesday one app ships an update. Done beats perfect.</p><p style="text-indent:0; margin-top:1mm"><b>The ledger.</b> The board is the ledger, not the objective; each item leads with its outcome.</p></div>
+        <div><p style="text-indent:0"><b>The storefront.</b> Live store state is read from the storefront itself, never from the repositories, and never from the default lookup's stale cache.</p></div>
+        <div><p style="text-indent:0"><b>The archive.</b> This edition is rendered to a single sheet by the morning routine and inscribed upon Bitcoin SV; back numbers are served from the chain at henceforth.club/board.</p></div>
+      </div>
+    </div>
+    <div class="mod">
+      <div class="boxed" style="height:100%; box-sizing:border-box; text-align:center; display:flex; flex-direction:column; justify-content:center; gap:1.4mm;">
+        <div class="rubric" style="text-align:center; margin:0">From the composing room</div>
+        <p style="text-indent:0; text-align:center; font-style:italic;">Set at book size, this edition ran to two sheets. At newspaper measure the whole of it stands on one, with this corner to spare.</p>
+        <p class="agate" style="text-align:center; margin:0;"><b>ONE PAGE · ONE INSCRIPTION · EVERY MORNING</b></p>
+      </div>
+    </div>
+  </div>
+
+  <p class="colophon">Set in Georgia, seven point upon eight; agate matter at five and a half point, the size the Wall Street Journal keeps for its stock tables. Printed at six hundred dots to the inch this page carries no ink gain, and so resolves finer than the Financial Times on newsprint. Rendered by the morning routine and inscribed, one page, upon the chain.</p>
+</div>
+
+<!-- ═══════════════ SHEET TWO — THE HANSARD, THIS WEEK (12–19 AUGUST) ═══════════════ -->
+<div class="sheet hansard">
+  <div class="folio">
+    <span>This Week in Parliament · 12 – 19 August 2026</span>
+    <span>In recess · 0 divisions · 51 written answers</span>
+    <span>The Commons returns 1 September</span>
+  </div>
+  <div class="nameplate black">The Hansard</div>
+  <div class="subtitle">A weekly digest of the proceedings of the Parliament of the United Kingdom</div>
+
+  <h2 class="headline">The member for Clacton returns to an empty House</h2>
+  <p class="deckline">Nigel Farage resigned his seat on 7 July and won it back at a by-election on Thursday 13 August. Four days later the House changed shape again when Bayo Alaba had the Labour whip suspended. Parliament itself sat for none of it, and returns on 1 September.</p>
+
+  <!-- BAND A · the big lead module + boxed numbers sidebar -->
+  <div class="band">
+    <div class="mod span3">
+      <div class="legs3">
+        <p class="drop">Parliament was away, and yet the House changed shape twice. On Thursday 13 August the member for Clacton was returned to a chamber that is not sitting: Nigel Farage — who resigned the seat on 7 July, amid reported scrutiny of his personal finances and questions over undeclared support, to seek a fresh mandate — won his own by-election with 22,239 votes to the 9,455 of Count Binface, a majority of 12,784 on a 44% turnout, after Labour, the Conservatives, the Liberal Democrats and the Greens all declined to stand. Thirty-four names crowded the ballot, and the register now records a parliamentary membership that began on 13 August 2026, making him the only member elected by this year's electorate. Four days later the House changed again: on Monday 17 August Bayo Alaba, the member for Southend East and Rochford, had the Labour whip suspended and now sits as an independent while the party investigates a £50,000 taxpayer-backed Covid-era loan to one of his businesses — a matter he referred himself, after questions from The Times, and one the party stresses implies no wrongdoing at this stage.</p>
+        <p>The week's written record kept its own score. James Cartlidge put four plain questions about Stratus, the deep-strike missile at the heart of June's Defence Investment Plan, and received four courtly refusals — stockpile withheld "for operational and security reasons", range classified (though "significantly greater than the Storm Shadow and Harpoon weapons that it is replacing"), unit cost a commercial secret, first full-scale tests "from 2028" — each prefaced, with departmental politeness, "as he will recall from his time as a Defence Minister." The money, by contrast, is published to the pound: £3 billion for Deep Precision Strike by 2030, £190 million towards the Precision Strike Missile, a twelve-nation Ankara initiative worth over $50 billion. And when Helen Morgan and Munira Wilson asked, separately, what the NHS capital budget gave up to fund that Plan, both waited forty-nine days and received the same answer word for word — £15 billion by 2029/30, neither the cut nor the Plan mentioned. Among the week's 51 written answers: 27,748 hospital admissions of children aged five to ten for dental procedures last year, up from 12,702 in the pandemic year of 2020/21, with no record kept of what each admission costs. The House that could press any of this returns on 1 September.</p>
+      </div>
+    </div>
+    <div class="mod">
+      <div class="boxed agate" style="height:100%; box-sizing:border-box;">
+        <div class="rubric">The by-election, in numbers</div>
+        <table class="agate">
+          <tr><td>Nigel Farage, Reform UK</td><td class="n">22,239</td></tr>
+          <tr><td>Count Binface</td><td class="n">9,455</td></tr>
+          <tr><td>Majority</td><td class="n">12,784</td></tr>
+          <tr><td>Turnout</td><td class="n">44%</td></tr>
+          <tr><td>Candidates on the ballot</td><td class="n">34</td></tr>
+        </table>
+        <p style="text-indent:0">Labour, the Conservatives, the Liberal Democrats and the Greens all declined to stand.</p>
+        <div class="rubric" style="margin-top:2mm">The register this week</div>
+        <p style="text-indent:0"><b>Returned:</b> Clacton, 13 August. Membership begins 13 August 2026 — the only member elected by this year's electorate.</p>
+        <p style="text-indent:0"><b>Whip suspended:</b> Southend East and Rochford, 17 August. Sits as an independent while the party investigates; no wrongdoing implied at this stage.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- BAND B · brief wide, feature square wide -->
+  <div class="band">
+    <div class="mod span2">
+      <div class="rubric">The week in brief</div>
+      <div class="legs2">
+        <p class="brefitem"><b>Farage wins the by-election he called on himself, Thursday 13 August.</b> Nigel Farage resigned Clacton on 7 July, amid reported scrutiny of his personal finances, and stood again for a fresh mandate. The major parties declined to contest it, leaving Count Binface as the principal challenger among thirty-four candidates. Reform UK held the seat with 22,239 votes to 9,455, a majority of 12,784, on a turnout of 44%.</p>
+        <p class="brefitem"><b>The whip suspended over a Covid loan, Monday 17 August.</b> Bayo Alaba, the Labour member for Southend East and Rochford, referred himself to the party after The Times asked about a £50,000 taxpayer backed loan issued to one of his businesses in the pandemic. The whip was suspended while an investigation runs and he sits as an independent.</p>
+        <p class="brefitem"><b>When Parliament comes back, Tuesday 1 September.</b> The summer recess runs to 31 August. Fifty-one written answers arrived this week, eighteen from Health and ten from Defence. The starkest told Vikki Slade that 27,748 children aged five to ten were admitted to hospital for dental procedures last year, up from 12,702 in the pandemic year of 2020/21, with no record kept of the cost.</p>
+      </div>
+    </div>
+    <div class="mod span2">
+      <div class="rubric">The written record</div>
+      <div class="legs2">
+        <p class="brefitem"><b>Four questions about Stratus, four refusals.</b> James Cartlidge of the Conservatives asked how many Stratus missiles will be bought, what one costs, what its range is and when it first flies. The Ministry of Defence withheld the number, the price and the range, and said full scale tests begin from 2028.</p>
+        <p class="brefitem"><b>Two questions about the NHS capital budget, one identical answer.</b> Helen Morgan of the Liberal Democrats asked about the impact of the one percent cut to the National Health Service capital budget. Her colleague Munira Wilson asked which hospital projects were cancelled, delayed or descoped to fund the Defence Investment Plan. Both waited forty-nine days and received the same answer word for word. It promises £15 billion of capital by 2029/30 and mentions neither the cut nor the Plan.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- BAND B2 · standing matter for a quiet week -->
+  <div class="band light">
+    <div class="mod span2">
+      <div class="boxed agate" style="height:100%; box-sizing:border-box;">
+        <div class="rubric">The last sitting week · 15 – 22 July</div>
+        <p>2 divisions · 823 written questions · 115 distinct askers. The heaviest desks: Health and Social Care 110 · Defence 107 · Home Office 75. The last two divisions before the rise, both deferred and both carried 330 to 109: the trade-union balloting order and its companion code of practice.</p>
+      </div>
+    </div>
+    <div class="mod span2">
+      <div class="boxed agate" style="height:100%; box-sizing:border-box;">
+        <div class="rubric">Waiting for the return</div>
+        <p>The Public Office (Accountability) Bill — the Hillsborough Law — has its Lords second reading on 1 September. The Social Housing Bill stands at Lords report stage. The Co-operative Capital Bill awaits its next stage after a first reading on 22 July. The Commons returns on 1 September.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- BAND C · the squares: the big feature square + two listings -->
+  <div class="band light">
+    <div class="mod span2">
+      <div class="feature">
+        <div class="fkick">The feature · a mandate, examined</div>
+        <h4>A mandate renewed against Count Binface</h4>
+        <div class="legs2">
+          <p>The by-election device is as old as the House, but its August form was new. A party leader resigned his seat while questions about his finances circulated, chose the date of his own re-examination, and faced an electorate his major opponents refused to contest. The result was emphatic and the turnout, at 44%, higher than most August contests could hope for. What the exercise proved is harder to say. A mandate renewed against a satirical candidate in a fancy dress helmet answers the question of Clacton's loyalty, not the questions that prompted the resignation. Those questions belong to the sitting House, its commissioner and its committees, and they resume on 1 September, facing a member whose membership is four weeks younger than everyone else's.</p>
+        </div>
+      </div>
+    </div>
+    <div class="mod">
+      <div class="boxed agate">
+        <div class="rubric">The money, to the pound</div>
+        <p>Deep Precision Strike by 2030 · <b>£3 billion</b></p>
+        <p>Precision Strike Missile programme · <b>£190 million</b></p>
+        <p>Twelve-nation Ankara initiative · <b>over $50 billion</b></p>
+        <p>NHS capital promised by 2029/30 · <b>£15 billion</b></p>
+        <p>What Stratus costs apiece · <b>withheld</b></p>
+      </div>
+    </div>
+    <div class="mod">
+      <div class="boxed agate">
+        <div class="rubric">The answers, counted</div>
+        <p>Written answers this week · <b>51</b></p>
+        <p>From Health · <b>18</b> · from Defence · <b>10</b></p>
+        <p>Children five to ten admitted for dental procedures last year · <b>27,748</b>, up from 12,702 in 2020/21; cost unrecorded</p>
+        <p>Staff on a compressed four-day week at Environment, Food and Rural Affairs · <b>exactly 301</b></p>
+      </div>
+    </div>
+  </div>
+
+  <p class="colophon">Set in Georgia, seven point upon eight; the listings in agate, five and a half point. Compiled from the members' register and the written answers of a House in recess, and rendered to one sheet for the week.</p>
+</div>
+
+<!-- ═══════════ SHEET THREE — THE HANSARD, A HEAVY WEEK (15–22 JULY, DEMONSTRATION) ═══════════ -->
+<div class="sheet hansard">
+  <div class="folio">
+    <span>This Week in Parliament · 15 – 22 July 2026</span>
+    <span>2 divisions · 823 written questions · 115 distinct askers</span>
+    <span>The Commons rose 16 July · returns 31 August</span>
+  </div>
+  <div class="nameplate black">The Hansard</div>
+  <div class="subtitle">A weekly digest of the proceedings of the Parliament of the United Kingdom</div>
+
+  <h2 class="headline">Andy Burnham takes office, and rewires the state</h2>
+  <p class="deckline">Britain changed Prime Minister while the House of Commons was in recess. The machinery of government was redrawn by written statement, the elected House unable to ask a single question of it; the only question put came from a peer.</p>
+
+  <!-- BAND A · the big lead module + boxed sidebar -->
+  <div class="band">
+    <div class="mod span3">
+      <div class="legs3">
+        <p class="drop">Britain changed Prime Minister with its elected House on holiday. The Commons rose on Thursday 16 July for a recess that runs to 31 August; Sir Keir Starmer had taken his last Prime Minister's Questions the day before, and the Speaker announced it from the Chair as "the final Prime Minister's questions with the right hon. and learned Member for Holborn and St Pancras (Keir Starmer) as Prime Minister." On Monday 20 July Andy Burnham became Prime Minister. On Tuesday 21 July a written statement, laid in the House of Lords in the name of the Lord Privy Seal and made on the Prime Minister's behalf, informed Parliament that "Today, we are fundamentally rewiring the state, changing the geography of government." Only one House was sitting to be told, and it was the unelected one.</p>
+        <p>The rewiring is not modest, and the only question put on it came from a peer. A new Office for the Prime Minister and the Cabinet, led by the Cabinet Secretary, will house No.10, the Cabinet Office teams serving the Prime Minister directly, and a new "No.10 North" built to run devolution and local growth. The Department for Science, Innovation and Technology is abolished outright: artificial-intelligence strategy and the AI Security Institute to the Cabinet Office, the digital brief to a strengthened Culture department, science and innovation to the Department for Business and Trade, renamed the Department for Business, Innovation, Science and Trade. On the afternoon of 21 July Lord Clement-Jones put a Private Notice Question asking what that meant for the AI Safety Institute, the sovereign AI fund, the Government Digital Service and UK Research and Innovation. Baroness Anderson of Stoke-on-Trent, for the Cabinet Office, confirmed that UKRI and the sovereign fund go to the new business department, that UKRI's £9.22 billion for research in 2026-27 continues, and that the Government Digital Service goes to Culture. Asked about the shape of the ministry itself, she said what a minister in a half-made Government must: "there are ongoing appointments in government, so I cannot possibly talk about any further roles and appointments that are being made, including my own." Lord Waldegrave of North Hill, himself a former science minister, called it "the abolition and fragmentation of DSIT"; Lord Clement-Jones spoke of "the very regrettable resignation of the noble Lord, Lord Vallance," and the Minister did not demur.</p>
+      </div>
+    </div>
+    <div class="mod">
+      <div class="boxed agate" style="height:100%; box-sizing:border-box;">
+        <div class="rubric">Divisions of the week</div>
+        <table class="agate">
+          <tr><th>Question</th><th class="n">Ayes</th><th class="n">Noes</th></tr>
+          <tr><td>Draft Trade Unions (Permissible Means of Voting) and Employment Rights (Unfair Dismissal) (Amendment) Order 2026 · deferred, 15 July</td><td class="n">330</td><td class="n">109</td></tr>
+          <tr><td>Draft Code of Practice on Electronic and Workplace Ballots for Statutory Trade Union Ballots · deferred, 15 July</td><td class="n">330</td><td class="n">109</td></tr>
+        </table>
+        <p style="text-indent:0">The last two divisions before the rise, both taken on slips rather than in the lobbies.</p>
+        <div class="rubric" style="margin-top:2mm">Most asked subjects</div>
+        <p style="text-indent:0">Basildon Council: Best Value, 8 · Body Searches, 7 · Defence: Space Technology, 7 · Gaza: Development Aid, 7 · Special Educational Needs, 6 · Educational Institutions: Industrial Disputes, 5 · Prisoners' Release, 5 · Schools: Temperature, 5 · Civil Service: Gender Recognition, 4 · Council Tax: Valuation, 4</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- BAND B · two wide modules -->
+  <div class="band">
+    <div class="mod span2">
+      <div class="rubric">The last two sitting days</div>
+      <div class="legs2">
+        <p style="text-indent:0">What the Commons did with its last two days was heavier than its two divisions suggest. On 15 July, without a division, it approved the first use of the designation power created by the state-threats Act that reached the statute book a week earlier. The draft National Security Act 2023 (Designated Bodies) Regulations 2026 designate the Islamic Revolutionary Guard Corps, the Islamic Movement of Companions of the Right and the GRU Volunteer Corps, making it an offence punishable by up to fourteen years to support, assist or take material benefit from any of them. "This debate is a significant moment," Dame Angela Eagle told the House, "because this is the first use of a new power introduced by this Government." The Opposition supported it and complained it had taken too long. It followed a general debate on Iran in which the Minister for Veterans and People, Calvin Bailey, told Members that Iranian forces had struck two UAE tankers in the strait of Hormuz, "killing an Indian crew member and injuring eight others," and that the United Kingdom had "surged air power into the Gulf." Four Acts received Royal Assent the same afternoon, and the King sent a Message inviting the Commons to consider the provision made for the financial support of the Sovereign. The week's only divisions were deferred ones, taken on slips: a trade-union balloting order and its companion code of practice, each carried by 330 to 109.</p>
+      </div>
+    </div>
+    <div class="mod span2">
+      <div class="rubric">The week in brief</div>
+      <div class="legs2">
+        <p class="brefitem"><b>Prime Minister's Questions, 15 July.</b> Sir Keir Starmer took his last session as Prime Minister. The Speaker told the House from the Chair that it was the final Prime Minister's Questions with him in office. Kemi Badenoch turned to what she called this Prime Minister's final questions and paid her own tribute to Ann Widdecombe. There has been no session since, because the Commons rose the next day.</p>
+        <p class="brefitem"><b>National security designations, 15 July.</b> The Commons approved regulations designating the Islamic Revolutionary Guard Corps, the Islamic Movement of Companions of the Right and the GRU Volunteer Corps. Supporting or taking material benefit from a designated body now carries up to fourteen years in prison. There was no division.</p>
+        <p class="brefitem"><b>British Steel, 15 and 16 July.</b> The Steel Industry (Nationalisation) Act received Royal Assent on 15 July. The Government used it overnight to take British Steel into public ownership. The regulations were not laid before Parliament before they came into force. Answering an urgent question the next morning, the business minister Blair McDougall offered regret and apologies for that, and said the transfer had been done outside of working hours.</p>
+        <p class="brefitem"><b>Local government reorganisation, 16 July.</b> Steve Reed announced decisions for the remaining two-tier areas of England. Across those areas 38 councils will replace 134. He told the House there would be nearly 3,000 fewer councillors, and that councils themselves project net savings of about £1 billion by 2032-33. Elections to the new councils are due in May 2027.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- BAND C · the squares: big feature square + listings -->
+  <div class="band light">
+    <div class="mod span2">
+      <div class="feature">
+        <div class="fkick">The feature · 18 written questions</div>
+        <h4>The Basildon file: eighteen questions in two days</h4>
+        <div class="legs2">
+          <p>On 15 July the Housing Secretary told the House, in a written statement on Best Value, that four new Best Value Notices had been issued, and that in the case of Basildon Borough Council his concerns related to "serious cultural and governance issues," with an independent external assurance review commissioned to report by the end of October 2026. James McMurdock (Independent, South Basildon and East Thurrock) had two sitting days left. He used them to file eighteen questions on that single notice, eight on the day it was issued and ten on the last day before the rise. He asked what specific evidence led Ministers to conclude the notice was required; which Ministers and officials took the decision; on what date the Department first received the information that contributed to it; whether the review will examine procurement and contract management; what it will cost the public purse; and whether its findings will be published in full. It is the written question used as a preservation order: not to change the outcome, which is already announced, but to fix the sequence of events in the record before six weeks of recess close over it.</p>
+        </div>
+      </div>
+    </div>
+    <div class="mod">
+      <div class="boxed agate" style="height:100%; box-sizing:border-box;">
+        <div class="rubric">In the bill office</div>
+        <p><b>Steel Industry (Nationalisation) Bill</b>: Royal Assent 15 July, and used the same night.</p>
+        <p><b>Supply and Appropriation (Main Estimates) Bill</b>: the year's money, Royal Assent 15 July with the Commons a day from rising.</p>
+        <p><b>Public Office (Accountability) Bill</b>: the Hillsborough Law took its first reading in the Lords on 16 July; second reading 1 September.</p>
+        <p><b>Social Housing Bill</b>: reached Lords report stage on 20 July, the day the new Prime Minister took office.</p>
+        <p><b>Co-operative Capital Bill</b>: first reading in the Lords on 22 July, one House still legislating six days into the other's recess.</p>
+      </div>
+    </div>
+    <div class="mod">
+      <div class="boxed agate" style="height:100%; box-sizing:border-box;">
+        <div class="rubric">Written questions, by department</div>
+        <p>Health and Social Care, 110 · Defence, 107 · Home Office, 75 · Housing, Communities and Local Government, 62 · Transport, 51 · Environment, Food and Rural Affairs, 48 · Education, 47 · Business and Trade, 45 · Cabinet Office, 39 · Treasury, 37 · Foreign, Commonwealth and Development Office, 36 · Energy Security and Net Zero, 34 · Eleven other departments took 132 between them; 823 in all from 115 askers.</p>
+      </div>
+    </div>
+  </div>
+
+  <p class="colophon">Set in Georgia, seven point upon eight; the listings in agate, five and a half point. Compiled from the Official Report, the written question record and the division lists, and rendered to one sheet for the week.</p>
+</div>
+
+</body>
+</html>

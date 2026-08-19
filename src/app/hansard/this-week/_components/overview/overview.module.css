@@ -1,282 +1,307 @@
+/* ── The newspaper measure (design spec 2026-08-19, Henry's sign-off) ──
+   Georgia 7pt on 8pt in 43.5mm justified legs, agate listings at 5.5pt,
+   hairline rules, modular bands: one big lead module across three legs with
+   a boxed sidebar, then bands of ruled squares, the feature square at the
+   page foot. Content sizes are in em so the A4Sheet fit loop (6–8.5pt about
+   a 7pt start) scales the whole hierarchy as one voice; only the masthead
+   furniture (folio, nameplate, subtitle) is pinned in pt, the way a real
+   nameplate never changes size with the news. */
+
 .sheet {
   width: 210mm;
   min-height: 297mm;
   margin: 0 auto;
   background: #fff;
-  color: #141414;
-  padding: 8mm 9mm 6mm;
-  font: 10.5pt/1.4 Georgia, serif;
+  color: #111;
+  padding: 9mm 12mm 8mm;
+  font: 7pt/1.143 Georgia, serif;
+  display: flex;
+  flex-direction: column;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
   box-sizing: border-box;
 }
 
-.badge {
-  float: right;
-  font: 600 7pt/1 -apple-system, sans-serif;
-  letter-spacing: .1em;
-  color: #8a6d00;
-  border: 1px solid #cbb35a;
-  border-radius: 3px;
-  padding: 3px 6px;
+/* ── masthead furniture (fixed pt — never scales with the news) ── */
+.folio {
+  font: 5.5pt/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #111;
+  display: flex;
+  justify-content: space-between;
+  gap: 4mm;
+  border-top: .5pt solid #111;
+  border-bottom: .5pt solid #111;
+  padding: 1.1mm 0;
+}
+.folio span { white-space: nowrap; }
+.folio a { color: inherit; text-decoration: none; }
+
+.nameplate {
+  font-family: 'UnifrakturMaguntia', Georgia, serif;
+  text-align: center;
+  font-size: 34pt;
+  line-height: 1;
+  font-weight: 400;
+  margin: 1.8mm 0 1.2mm;
 }
 
-.kicker {
-  font: 600 8.5pt/1 -apple-system, sans-serif;
-  letter-spacing: .18em;
+.subtitle {
+  font: 5.5pt/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  letter-spacing: .14em;
   text-transform: uppercase;
-  color: #6b2b6b;
+  text-align: center;
+  border-top: .5pt solid #111;
+  border-bottom: 1.5pt solid #111;
+  padding: 1.1mm 0;
+  margin-bottom: 1.6mm;
 }
 
 .headline {
-  font-size: 23pt;
-  line-height: 1.05;
-  margin: 3pt 0;
-  letter-spacing: -.01em;
+  font: 700 3.55em/1.03 Georgia, serif;
+  letter-spacing: -.015em;
+  text-align: center;
+  margin: 1.6mm 0 2.4mm;
 }
 
-.stats {
-  font: 8.7pt/1 -apple-system, sans-serif;
-  color: #555;
-  border-top: 2px solid #141414;
-  border-bottom: .5px solid #aaa;
-  padding: 4pt 0;
-  margin: 0 0 6pt;
+/* ── modular bands ── */
+.band {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0 4mm;
+  border-top: 1.5pt solid #111;
+  padding-top: 1.6mm;
+  margin: 0 0 3.2mm;
 }
-.stats b { color: #141414; }
+.band > * + * { border-left: .5pt solid #999; padding-left: 4mm; margin-left: -4mm; min-width: 0; }
+.band > * { min-width: 0; }
+.bandLast { margin-top: auto; margin-bottom: 0; }
 
-.topstory {
-  font-size: 10.4pt;
-  line-height: 1.37;
-  margin: 0 0 4pt;
+.lead { grid-column: span 3; }
+.side { grid-column: span 1; }
+.mod3 { grid-column: span 3; }
+.mod2 { grid-column: span 2; }
+.mod1 { grid-column: span 1; }
+.modFull { grid-column: span 4; }
+.mod3 .feature p { column-count: 3; }
+
+.legs3 {
+  column-count: 3;
+  column-gap: 4mm;
+  column-rule: .5pt solid #999;
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
 }
-.topstory::first-letter {
-  font-size: 220%;
+.legs3 p { margin: 0; }
+.legs3 p + p { text-indent: 3mm; }
+
+.drop::first-letter {
+  font-size: 3.07em;
+  line-height: .83;
   font-weight: 700;
-  line-height: .86;
   float: left;
-  padding: 3pt 5pt 0 0;
+  padding: .4mm 1.1mm 0 0;
   color: #6b2b6b;
 }
 
 .sectionTitle {
-  font: 700 8.3pt/1 -apple-system, sans-serif;
-  letter-spacing: .14em;
+  font: 700 .857em/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  letter-spacing: .15em;
   text-transform: uppercase;
-  color: #333;
-  margin: 8pt 0 5pt;
-  border-bottom: 1.5px solid #141414;
-  padding-bottom: 3pt;
+  color: #111;
+  border-top: 1.5pt solid #111;
+  padding-top: 1mm;
+  margin: 2.2mm 0 1mm;
+}
+.side .sectionTitle:first-child,
+.mod2 > .sectionTitle:first-child,
+.modFull > .sectionTitle:first-child,
+.sq > .sectionTitle:first-child { margin-top: 0; border-top: none; padding-top: 0; }
+
+/* a boxed square at the page foot */
+.sq {
+  border: .5pt solid #111;
+  padding: 2.2mm 2.4mm;
+  height: 100%;
+  box-sizing: border-box;
 }
 
-.cols2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8pt 10mm;
-  align-items: start;
+.sideNote {
+  font: .786em/1.2 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  color: #222;
+  margin: 0 0 1.2mm;
 }
+.sideNote b { font-size: 1.05em; }
 
-.divs {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 4.5pt;
-}
+/* ── the week in brief ── */
+.brief { column-count: 2; column-gap: 4mm; column-rule: .5pt solid #999; text-align: justify; hyphens: auto; -webkit-hyphens: auto; }
+.modFull .brief { column-count: 3; }
+.bitem { break-inside: avoid; font: 1em/1.15 Georgia, serif; color: #111; margin: 0 0 1mm; }
+.bitem .ih { font: 700 .857em/1.15 -apple-system, 'Helvetica Neue', Helvetica, sans-serif; }
 
-.dpill .dt { font: 600 8.7pt/1.2 Georgia, serif; margin-bottom: 2pt; }
-
+/* ── divisions (agate bars) ── */
+.none { font-style: italic; color: #555; font-size: .9em; }
+.divs { display: grid; grid-template-columns: 1fr; gap: 1.4mm; }
+.dpill .dt { font: 600 .9em/1.15 Georgia, serif; margin-bottom: .5mm; }
 .dbar {
   display: flex;
-  height: 13px;
-  border-radius: 7px;
+  height: 1.15em;
   overflow: hidden;
-  font: 700 7.5pt/13px -apple-system, sans-serif;
+  font: 700 .75em/1.55 -apple-system, sans-serif;
   color: #fff;
 }
-.dbar .ay { background: #2b7a44; text-align: left; padding-left: 5px; }
-.dbar .no { background: #b23b3b; text-align: right; padding-right: 5px; }
-
-.dr { font: 7.4pt/1 -apple-system, sans-serif; color: #666; margin-top: 2pt; }
+.dbar .ay { background: #2b7a44; text-align: left; padding-left: 2px; }
+.dbar .no { background: #b23b3b; text-align: right; padding-right: 2px; }
+.dr { font: .74em/1.1 -apple-system, sans-serif; color: #555; margin-top: .4mm; }
 .dr b { color: #2b7a44; }
 .dpill.no .dr b { color: #b23b3b; }
 
-.drows { display: flex; flex-direction: column; gap: 4.2pt; }
-
+.drows { display: flex; flex-direction: column; gap: 1.1mm; }
 .drow {
   display: grid;
-  grid-template-columns: 1fr 20mm max-content;
+  grid-template-columns: 1fr 9mm max-content;
   align-items: center;
-  gap: 8px;
-  font: 8.6pt/1.2 -apple-system, sans-serif;
+  gap: 1.4mm;
+  font: .786em/1.15 -apple-system, sans-serif;
 }
-
 .rt {
   min-width: 0;
-  color: #333;
+  color: #222;
   overflow: hidden;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
-  line-height: 1.18;
+  line-height: 1.15;
 }
-
-.rbar { display: flex; height: 9px; border-radius: 5px; overflow: hidden; background: #eee; }
-.rbar i { display: block; height: 9px; }
+.rbar { display: flex; height: .8em; overflow: hidden; background: #eee; }
+.rbar i { display: block; height: .8em; }
 .rbar .ay { background: #2b7a44; }
 .rbar .no { background: #b23b3b; }
+.rtl { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; color: #222; }
+.rtl .dash { color: #999; font-weight: 400; padding: 0 1px; }
+.drow.more { display: block; font-style: italic; color: #666; font-size: .74em; }
 
-.rtl {
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  white-space: nowrap;
-  color: #333;
-}
-.rtl .dash { color: #bbb; font-weight: 400; padding: 0 1px; }
-
-.drow.more { display: block; font-style: italic; color: #888; font-size: 7.8pt; }
-
+/* ── written questions by department (agate bars) ── */
 .chart {
   display: grid;
   grid-template-columns: max-content 1fr max-content;
-  gap: 3.6px 7px;
+  gap: .8mm 1.6mm;
   align-items: center;
 }
+.bl { font: .786em/1.15 -apple-system, sans-serif; color: #222; text-align: right; white-space: nowrap; }
+.bt { background: #eee; height: .7em; }
+.bt i { display: block; height: .7em; background: #6b2b6b; }
+.bv { font: 700 .786em/1 -apple-system, sans-serif; color: #111; text-align: right; font-variant-numeric: tabular-nums; }
 
-.bl { font: 8pt/1.2 -apple-system, sans-serif; color: #333; text-align: right; white-space: nowrap; }
-
-.bt { background: #eee; border-radius: 3px; height: 9px; }
-.bt i { display: block; height: 9px; background: #6b2b6b; border-radius: 3px; }
-
-.bv {
-  font: 8pt/1 -apple-system, sans-serif;
-  color: #111;
-  font-weight: 700;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
+/* ── most-asked subjects (agate run-in) ── */
 .tts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4pt 14px;
-  font: 8.4pt/1.3 -apple-system, sans-serif;
-  color: #444;
+  display: block;
+  font: .786em/1.2 -apple-system, sans-serif;
+  color: #222;
+  text-align: left;
 }
+.tt { display: inline; }
+.tt + .tt::before { content: ' · '; color: #999; }
 .tt b { color: #6b2b6b; font-variant-numeric: tabular-nums; }
 
+/* ── the feature: the big square at the page foot ── */
 .feature {
   break-inside: avoid;
   background: #f6f3ee;
-  border: .5px solid #d8d2c6;
-  border-radius: 4pt;
-  padding: 7pt 12pt;
-  margin: 7pt 0 0;
+  border: .5pt solid #111;
+  outline: .5pt solid #111;
+  outline-offset: -1.2mm;
+  padding: 2.6mm 3mm;
+  margin: 0;
+  height: 100%;
+  box-sizing: border-box;
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
 }
 .feature .fk {
-  font: 700 8pt/1 -apple-system, sans-serif;
-  letter-spacing: .06em;
+  font: 700 .786em/1 -apple-system, sans-serif;
+  letter-spacing: .14em;
   color: #6b2b6b;
   text-transform: uppercase;
 }
-.feature h4 { font: 700 11pt/1.2 Georgia, serif; margin: 2pt 0 3pt; }
-.feature p { margin: 0; font-size: 9.2pt; line-height: 1.38; }
+.feature h4 { font: 700 1.57em/1.1 Georgia, serif; margin: .8mm 0 1mm; text-align: left; }
+.feature p { margin: 0; font-size: 1em; line-height: 1.15; column-count: 2; column-gap: 4mm; }
 
-.brief { column-count: 2; column-gap: 9mm; }
-.bitem { break-inside: avoid; font: 8.6pt/1.32 Georgia, serif; color: #222; margin: 0 0 3pt; }
-.bitem .ih { font: 700 8.4pt/1.3 -apple-system, sans-serif; }
-
-.qa {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 0 9pt;
-  align-items: start;
-}
+/* ── a sample of the week's questions ── */
+.qa { display: grid; gap: 0 3mm; align-items: start; }
 .qitem { break-inside: avoid; }
-.qh { font: 700 8.6pt/1.25 -apple-system, sans-serif; margin-bottom: 1.5pt; }
-.qh .qwho { font-weight: 400; color: #666; }
-.qq { font-style: italic; font-size: 8.5pt; line-height: 1.35; color: #222; margin-bottom: 2.5pt; }
-.qans { font-size: 8.3pt; line-height: 1.38; color: #333; }
+.qh { font: 700 .857em/1.2 -apple-system, sans-serif; margin-bottom: .5mm; }
+.qh .qwho { font-weight: 400; color: #555; }
+.qq { font-style: italic; font-size: .857em; line-height: 1.2; color: #222; margin-bottom: .8mm; }
+.qans { font-size: .786em; line-height: 1.25; color: #222; }
 .qans b {
-  font: 700 7.4pt/1 -apple-system, sans-serif;
+  font: 700 .857em/1 -apple-system, sans-serif;
   letter-spacing: .05em;
   color: #6b2b6b;
   text-transform: uppercase;
   padding-right: 2px;
 }
 
-.none { font-style: italic; color: #777; }
+/* ── the most active ── */
+.funnote { font-size: .786em; line-height: 1.25; color: #222; font-family: -apple-system, 'Helvetica Neue', Helvetica, sans-serif; }
+.funnote p { margin: 0 0 .8mm; }
 
+/* ── colophon strip ── */
 .credit {
-  margin-top: 6pt;
-  padding-top: 4pt;
-  border-top: .5px solid #eee;
-  font: 7.3pt/1.35 -apple-system, sans-serif;
-  color: #8a8a8a;
+  margin-top: 2.2mm;
+  padding-top: 1.2mm;
+  border-top: .5pt solid #111;
+  font: italic 5.5pt/1.25 Georgia, serif;
+  color: #333;
   text-align: center;
 }
 
-.funnote {
-  margin-top: 6pt;
-  padding-top: 4pt;
-  border-top: 1px solid #ddd;
-  font-size: .92em;
-  color: #444;
-}
-
 .printBtn { position: fixed; right: 16px; top: 16px; font: 600 13px/1 -apple-system, sans-serif; padding: 8px 14px; border-radius: 8px; border: 1px solid #ccc; background: #fff; cursor: pointer; }
-
 @media print {
   .printBtn { display: none; }
 }
 
-/* ── The cabinet graphic ──────────────────────────────────────────────
-   Two bands. The great offices read at a glance; the rest is a dense
-   office-and-name list that fills the remaining column depth without
-   competing for attention. Both avoid breaking across the A4 fold. */
-.cabNote { font: italic 7.4pt/1.25 Georgia, serif; color: #555; margin: 0 0 3pt; }
-
+/* ── The cabinet graphic (machinery-of-government weeks) ── */
+.cabNote { font: italic .9em/1.2 Georgia, serif; color: #444; margin: 0 0 .8mm; }
 .cabGreat {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 3pt 9mm;
-  margin: 0 0 4pt;
+  gap: .8mm 4mm;
+  margin: 0 0 1.2mm;
 }
-.cabGreatItem {
-  break-inside: avoid;
-  border-left: 2.5px solid #6b2d5b;
-  padding-left: 5pt;
-}
-.cabGreatName { display: block; font: 700 9.2pt/1.12 Georgia, serif; color: #141414; }
+.cabGreatItem { break-inside: avoid; border-left: 2px solid #6b2d5b; padding-left: 1.4mm; }
+.cabGreatName { display: block; font: 700 1.1em/1.1 Georgia, serif; color: #111; }
 .cabGreatOffice {
   display: block;
-  font: 6.9pt/1.15 -apple-system, sans-serif;
+  font: .74em/1.15 -apple-system, sans-serif;
   letter-spacing: .04em;
   text-transform: uppercase;
   color: #6b2d5b;
-  margin-top: 1pt;
+  margin-top: .3mm;
 }
-
-.cabRest { column-count: 2; column-gap: 9mm; }
+.cabRest { column-count: 2; column-gap: 4mm; }
 .cabRow {
   break-inside: avoid;
   display: flex;
   justify-content: space-between;
-  gap: 6pt;
-  font: 7.7pt/1.28 Georgia, serif;
-  border-bottom: 0.5px dotted #cfcfcf;
-  padding: 0.3pt 0;
+  gap: 1.6mm;
+  font: .857em/1.25 Georgia, serif;
+  border-bottom: .5pt dotted #cfcfcf;
+  padding: .1mm 0;
 }
 .cabOffice { color: #444; }
-.cabName { font-weight: 700; color: #141414; white-space: nowrap; }
+.cabName { font-weight: 700; color: #111; white-space: nowrap; }
 
-/* Mayoral map: England drawn by its own constituency dots, the fourteen
-   mayoralties over it in party colour, the roll beside it north to south. */
+/* ── the mayoral map ── */
 .mayors {
   display: grid;
-  grid-template-columns: 44mm 1fr;
-  gap: 6mm;
+  grid-template-columns: 30mm 1fr;
+  gap: 3mm;
   align-items: center;
-  margin: 4pt 0 2pt;
+  margin: 1mm 0 .6mm;
 }
 .mayorsMap { width: 100%; height: auto; }
 .mayorsRoll { display: flex; flex-direction: column; }
@@ -284,18 +309,12 @@
   break-inside: avoid;
   display: flex;
   align-items: baseline;
-  gap: 5pt;
-  font: 7.7pt/1.42 Georgia, serif;
-  border-bottom: 0.5px dotted #cfcfcf;
-  padding: 0.4pt 0;
+  gap: 1.4mm;
+  font: .857em/1.3 Georgia, serif;
+  border-bottom: .5pt dotted #cfcfcf;
+  padding: .1mm 0;
 }
-.mayorDot {
-  width: 6pt;
-  height: 6pt;
-  border-radius: 50%;
-  flex: none;
-  align-self: center;
-}
+.mayorDot { width: .8em; height: .8em; border-radius: 50%; flex: none; align-self: center; }
 .mayorAuthority { color: #444; flex: 1; }
-.mayorName { font-weight: 700; color: #141414; white-space: nowrap; }
-.mayorTally { font: italic 7.4pt/1.3 Georgia, serif; color: #555; margin: 3pt 0 0; }
+.mayorName { font-weight: 700; color: #111; white-space: nowrap; }
+.mayorTally { font: italic .857em/1.25 Georgia, serif; color: #444; margin: .8mm 0 0; }

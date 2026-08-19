@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Newspaper Measure — small type, real columns, one sheet</title>
+<style>
+  :root { --bg:#f4ecd8; --ink:#2a2318; --muted:#6b5d45; --rule:#c9b98f; --accent:#8b3a1a; --card:#faf4e4; --shadow:0 1px 3px rgba(60,40,10,0.15); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.68;}
+  .wrap{max-width:860px;margin:0 auto;padding:56px 32px;}
+  header.doc{margin-bottom:40px;border-bottom:3px double var(--rule);padding-bottom:26px;}
+  .eyebrow{font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:33px;line-height:1.16;margin:0 0 12px;font-weight:700;}
+  h2{font-size:24px;margin:46px 0 12px;padding-top:18px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 8px;}
+  .lede{font-size:19px;color:var(--muted);margin:0;font-style:italic;}
+  p{margin:13px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(120,90,30,0.12);padding:2px 6px;border-radius:4px;}
+  pre{background:#2a2318;color:#f0e6cf;padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;background:var(--card);}
+  th,td{text-align:left;padding:9px 12px;border:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .decision{background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 18px;margin:18px 0;box-shadow:var(--shadow);}
+  .decision strong{color:var(--accent);}
+  ul{margin:12px 0;padding-left:26px;} li{margin:6px 0;}
+  .flow{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px 20px;margin:16px 0;box-shadow:var(--shadow);}
+  .src{font-size:13px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Design spec · 2026-08-19 · Newspaper measure for the print editions · The Morning Edition and The Hansard digest</div>
+<h1>The Newspaper Measure — small type, real columns, one sheet</h1>
+<p class="lede">Both print editions already wear a newspaper's clothes. This spec gives them a newspaper's body: type at the size the trade actually prints, columns at the width it actually cuts, and a page you lean into — on paper, with a magnifying glass if you like.</p>
+</header>
+
+<p><strong>The ask (2026-08-19):</strong> make the newspaper reports — The Hansard weekly digest and the daily Morning Edition — more newspaper-like: smaller type, denser, zoomed-into rather than read at arm's length, and still readable on paper with a magnifying glass. What follows is the research, the proposed measure, a finished true-scale prototype of both sheets built from entirely real copy, and the implementation plan. Nothing in the live renderers has been touched.</p>
+
+<h2>1 · What the papers actually print</h2>
+
+<table>
+<tr><th>Paper</th><th>Body face</th><th>Body size / leading</th><th>Note</th></tr>
+<tr><td>The Times of London</td><td>Times Classic, later Times Modern</td><td><strong>8.7pt on 9pt</strong></td><td>The 2002 redesign figure, from the paper's own account</td></tr>
+<tr><td>The Guardian</td><td>Guardian Egyptian Text</td><td><strong>8pt on 9.5pt</strong></td><td>The 2005 Berliner redesign</td></tr>
+<tr><td>Financial Times</td><td>Financier Text</td><td>10pt is the advertising floor for mono text: <strong>6pt</strong></td><td>Its own print spec allows 30 percent mid-tone ink gain</td></tr>
+<tr><td>Wall Street Journal</td><td>Exchange; Retina for listings</td><td>Agate: <strong>5.5pt</strong></td><td>Retina was drawn for 5.5pt stock tables; adopting it saved eight pages an issue</td></tr>
+<tr><td>Column measure</td><td colspan="2">about <strong>11 picas ≈ 46mm</strong>, 30-odd characters a line</td><td>Gutters about 4mm; hairline column rules at 0.5pt</td></tr>
+</table>
+
+<p>The trade's constants, across every masthead: body text between 8 and 10 point on leading only 105 to 115 percent of the size, <em>justified with hyphenation</em> in columns too narrow to lose your place in, first-line indents instead of paragraph spacing, a hard hierarchy of rules (heavy cut-off rules over section titles, hairlines between columns), and a separate, smaller universe — <strong>agate, 5.5pt</strong> — for everything tabular: scores, listings, markets, classifieds.</p>
+
+<p><strong>The decisive physics.</strong> Newspapers stop at 8pt not for the reader's eyes but for the press: newsprint drinks ink, and the Financial Times budgets for 30 percent dot gain. A home laser at 600 dots to the inch has essentially none, so an A4 report can print <em>below</em> newsprint sizes and stay sharper than the Financial Times does. Six point is the trade consensus floor for legibility on a 600 dot printer; agate at 5.5pt is exactly what a 2x to 3x magnifying glass is for — and the Guinness-record smallest newspaper (Terra Nostra, 2012) is sold to be read with a 6x to 8x glass. The magnifier is not a compromise here; it is the reading mode the brief asked for.</p>
+
+<p class="src">Key sources: Fonts In Use on the Times Modern redesign (fontsinuse.com/uses/3368), the Guardian 2005 house-style notes, the Financial Times commercial print specification (marketing.nikkei.com), Wikipedia on agate and on Retina, Fast Company on Retina's eight-page saving, Eye Magazine "Forensic types", Butterick's Practical Typography on point size, Guinness World Records "smallest newspaper". The oft-quoted "New York Times body is 8.7pt" could not be verified and appears to be a conflation with the London Times — not relied on.</p>
+
+<h2>2 · Where the two editions stand today</h2>
+
+<table>
+<tr><th></th><th>The Morning Edition (daily)</th><th>The Hansard digest (weekly)</th></tr>
+<tr><td>Body today</td><td>13px ≈ <strong>9.75pt</strong> on 1.45, two columns, 18px gutters</td><td><strong>10.5pt</strong> on 1.4, mostly single-column bands</td></tr>
+<tr><td>Where it lives</td><td><code>src/app/globals.css</code> print block + <code>board/reports/[date]/page.tsx</code></td><td><code>overview.module.css</code> + the <code>overview/</code> components</td></tr>
+<tr><td>Renderer</td><td><code>scripts/board/render-pdf.mjs</code> — <strong>inscribes on-chain</strong>; iterate only with <code>--out</code></td><td><code>scripts/this-week/render-draft.mjs</code> — local only, never publishes</td></tr>
+<tr><td>Page budget</td><td>Two sheets (was one until 4 August)</td><td>One sheet, enforced by the <code>A4Sheet</code> fit loop</td></tr>
+</table>
+
+<p>Both are set like a book, 40 to 50 percent larger than a paper. And the Hansard sheet has a live quirk worth naming: <code>A4Sheet.tsx</code> auto-fits by stepping the <em>root</em> font size between 6.6pt and 14pt, but nearly every other size in <code>overview.module.css</code> is pinned in points — so a light recess week balloons the body toward 14pt while the section titles stay frozen at 8.3pt, and the hierarchy drifts apart.</p>
+
+<h2>3 · The proposed measure</h2>
+
+<table>
+<tr><th>Role</th><th>Setting</th><th>Rationale</th></tr>
+<tr><td>Body</td><td><strong>Georgia 7pt on 8pt</strong>, justified, hyphenated, first-line indents, no paragraph spacing</td><td>Below newsprint's floor, above the laser printer's; Georgia's big x-height is built for small sizes</td></tr>
+<tr><td>Columns</td><td><strong>43.5mm legs, 4mm gutters, 0.5pt hairline rules</strong> — four to the sheet</td><td>The trade's 11-pica measure, landed on A4 inside the existing 12mm margins</td></tr>
+<tr><td>Page cut</td><td><strong>Modular, not a uniform four-column run</strong>: one big lead module across three legs with a boxed sidebar, then bands of ruled and boxed squares of varying widths (three-and-one, two-and-two), the big feature square anchoring the foot of the page</td><td>Henry's direction (19 August): "the newspapers use a lot of squares at the bottom and a big one for the main story"</td></tr>
+<tr><td>Agate</td><td><strong>5.5pt on 6.6pt</strong>, the system sans, tabular figures</td><td>For every listing: downloads, divisions, departments, ship list, decisions — the Wall Street Journal's stock-table size</td></tr>
+<tr><td>Headlines</td><td>Lead about 25pt tight (1.03), italic deck at 8.6pt, section rubrics 6pt capitals under a 1.5pt cut-off rule</td><td>Scaled from broadsheet convention to the A4 sheet</td></tr>
+<tr><td>Furniture</td><td>Folio line between hairline rules; three-line drop caps; boxed feature; full-width colophon at the foot</td><td>The page furniture that makes a paper read as a paper</td></tr>
+<tr><td>Nameplates</td><td>The Morning Edition in <strong>blackletter</strong> (UnifrakturMaguntia, Georgia fallback); The Hansard in letter-spaced roman capitals</td><td>The New York Times and Telegraph convention for the daily; The Times of London convention for the paper of record</td></tr>
+</table>
+
+<p><strong>What the measure buys.</strong> Going from 9.75pt on 1.45 in two columns to 7pt on 8pt in four is roughly a <strong>2.5-times gain in words per sheet</strong>. Concretely: today's two-sheet daily fits on one sheet with a quarter-page to spare — one page, one inscription, halving the daily inscription cost while carrying <em>more</em> than today's two pages. And the Hansard's fit loop stops ballooning recess weeks to 14pt; the reclaimed space takes standing agate matter instead — divisions in full, the new 650-member register sweep, the written-answer picks.</p>
+
+<h2>4 · The prototype — built, rendered, verified</h2>
+
+<p>A finished true-scale prototype sits beside this spec: <code>docs/superpowers/specs/2026-08-19-newspaper-type-prototype.html</code>, with its print-ready render <code>2026-08-19-newspaper-type-prototype.pdf</code>. Three A4 sheets, every word real, all cut modular: sheet one re-sets the Morning Edition of 19 August (No. 57, the screenshot-uploader review) from <code>content/board/reports/2026-08-19.json</code>; sheet two re-sets <strong>this week's</strong> Hansard digest — the 12 to 19 August recess issue, the Clacton by-election — from its live draft <code>content/this-week/2026-08-19.json</code>, with standing matter (the last sitting week, the bills waiting for the return) filling what recess leaves quiet; sheet three keeps the heavy 15 to 22 July week (Andy Burnham takes office) as the stress demonstration.</p>
+
+<div class="flow"><strong>The magnifier test.</strong> Print the PDF at 100 percent with printer margins off (it is margin-exact A4). Naked eye: the headlines, decks and 7pt body should read at arm's length in good light. With a 2x to 3x glass: the 5.5pt agate — the downloads table, the divisions, the department listings — should resolve crisply, serifs intact. If the agate smudges, the printer is below 600 dots to the inch; the spec then keeps 7pt body but lifts agate to 6pt.</div>
+
+<p>Verified this session: the render (Puppeteer against the file, the house pattern) produces exactly two A4 pages; a column-geometry probe confirms zero overflow in both axes on both sheets — nothing clipped, nothing stranded past column four. Render at any time with:</p>
+<pre><code>node /Users/henryhudson/.claude/jobs/5b4b80e0/tmp/render-proto.mjs   # or print the HTML from Chrome at 100%</code></pre>
+
+<h2>5 · Implementation, when the word is given</h2>
+
+<h3>5.1 The Hansard digest (safe to change freely — never publishes)</h3>
+<ul>
+<li>Re-cut <code>overview.module.css</code> to the measure: root at 7pt, four columns, agate listings; convert every pinned point size to <code>em</code> so the whole hierarchy scales as one voice.</li>
+<li>Re-bound the <code>A4Sheet.tsx</code> fit loop to the new world: start 7pt, floor 6pt, ceiling 8.5pt — dense weeks tighten a little, light weeks grow a little, and nothing balloons.</li>
+<li>Verify with <code>render-draft.mjs</code> against three recent weeks (a heavy one, 2026-07-22; a recess one, 2026-08-19) — one page each, visual pass on the PNG.</li>
+</ul>
+
+<h3>5.2 The Morning Edition (money-adjacent — every test render through <code>--out</code>)</h3>
+<ul>
+<li>Re-cut the print block of <code>globals.css</code> (lines 608 to 705): four columns at 4mm gutters with 0.5pt rules, body to 7pt on 8pt, listings and decisions to agate, rubric and folio treatment per the prototype.</li>
+<li>Return the daily budget to <strong>one page</strong> in <code>render-pdf.mjs</code> (<code>BUDGET.daily = 1</code>) — the 4 August reversal to two pages was about content not fitting; at this measure it fits with headroom, and the inscription cost halves.</li>
+<li>Verify with <code>--out</code> renders of three recent dates before any live morning runs it; the 987px height cliff and the block-measure scripts still apply, at the new scale.</li>
+</ul>
+
+<div class="decision"><strong>Decided (Henry, 19 August, "fantastic — lets put the hansard in the same font as the morning paper and ensure we do it like this from now on"):</strong> the measure is adopted as the standing format, and both nameplates wear the blackletter (UnifrakturMaguntia, Georgia fallback). <strong>Implemented the same day for The Hansard digest</strong> — <code>Overview.tsx</code>, <code>Masthead.tsx</code>, <code>Feature.tsx</code> and <code>overview.module.css</code> re-cut to the modular measure, the <code>A4Sheet</code> fit loop re-bounded to 6–8.5pt about a 7pt start with every content size in em so the hierarchy scales as one voice. Verified against the live pipeline: the 12–19 August recess issue and the heavy 15–22 July week both render to exactly one sheet; 154 of 154 test files green; production build clean.</div>
+
+<div class="decision"><strong>Still open — the Morning Edition's own pass.</strong> The daily's print stylesheet re-cut (<code>globals.css</code> lines 608 to 705 plus the report page), the return to a one-page budget, and the folio's satoshi price line. It rides the inscription path, so it gets its own careful session with every test render through <code>--out</code>.</div>
+
+</div>
+</body>
+</html>
