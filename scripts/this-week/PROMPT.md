@@ -17,6 +17,7 @@ Write the file to: content/this-week/{{WEEK_DATE}}.json   (overwrite if it exist
 - Written questions: questions-statements-api /api/writtenquestions/questions with tabledWhenFrom/To, house=Commons, expandMember=true — page all. The list endpoint TRUNCATES answerText; for any answer you quote, GET the single question /api/writtenquestions/questions/{id} for full text. For the Q&A section also query answeredWhenFrom/To to find questions actually answered this window.
 - Bills: bills-api /api/v1/Bills?SortOrder=DateUpdatedDescending, paging until lastUpdate < {{START_DATE}}.
 - Recess: whatson-api /calendar/events/nonsitting.json.
+- MEMBERS SWEEP (standing requirement, 2026-08-19): run `node scripts/this-week/members-snapshot.mjs` — it fetches all ~650 current Commons members and diffs against last week's committed snapshot. EVERY change it reports (departed, arrived, party-change, re-elected, seat-change) is a candidate story and at minimum a brief item; verify the mechanics via members-api and reporting. This is how the 13 August Clacton by-election and the 17 August whip suspension are caught deterministically — never rely on news search alone for membership changes. The script rewrites the snapshot; commit it with the digest.
 - Hansard (story discovery): hansard-api /search/contributions/Spoken.json?queryParameters.searchTerm=...&queryParameters.startDate={{START_DATE}}&queryParameters.endDate={{WEEK_DATE}}; full ordered transcript via /debates/debate/{DebateSectionExtId}.json.
 
 ## 2. Aggregate (match compute.ts + the published convention)

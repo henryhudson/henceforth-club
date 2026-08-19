@@ -1,0 +1,4555 @@
+{
+ "taken": "2026-08-19",
+ "members": [
+  {
+   "id": 39,
+   "name": "Sir John Whittingdale",
+   "party": "Conservative",
+   "constituency": "Maldon",
+   "membershipStartDate": "1992-04-09T00:00:00"
+  },
+  {
+   "id": 40,
+   "name": "Sir Bernard Jenkin",
+   "party": "Conservative",
+   "constituency": "Harwich and North Essex",
+   "membershipStartDate": "1992-04-09T00:00:00"
+  },
+  {
+   "id": 54,
+   "name": "Sir Julian Lewis",
+   "party": "Conservative",
+   "constituency": "New Forest East",
+   "membershipStartDate": "1997-05-01T00:00:00"
+  },
+  {
+   "id": 55,
+   "name": "Sir Desmond Swayne",
+   "party": "Conservative",
+   "constituency": "New Forest West",
+   "membershipStartDate": "1997-05-01T00:00:00"
+  },
+  {
+   "id": 87,
+   "name": "Sir Roger Gale",
+   "party": "Conservative",
+   "constituency": "Herne Bay and Sandwich",
+   "membershipStartDate": "1983-06-09T00:00:00"
+  },
+  {
+   "id": 146,
+   "name": "Barry Gardiner",
+   "party": "Labour",
+   "constituency": "Brent West",
+   "membershipStartDate": "1997-05-01T00:00:00"
+  },
+  {
+   "id": 152,
+   "name": "Sir Iain Duncan Smith",
+   "party": "Conservative",
+   "constituency": "Chingford and Woodford Green",
+   "membershipStartDate": "1992-04-09T00:00:00"
+  },
+  {
+   "id": 163,
+   "name": "Sir Stephen Timms",
+   "party": "Labour",
+   "constituency": "East Ham",
+   "membershipStartDate": "1994-06-09T00:00:00"
+  },
+  {
+   "id": 165,
+   "name": "Clive Efford",
+   "party": "Labour",
+   "constituency": "Eltham and Chislehurst",
+   "membershipStartDate": "1997-05-01T00:00:00"
+  },
+  {
+   "id": 172,
+   "name": "Ms Diane Abbott",
+   "party": "Labour",
+   "constituency": "Hackney North and Stoke Newington",
+   "membershipStartDate": "1987-06-11T00:00:00"
+  },
+  {
+   "id": 177,
+   "name": "Gareth Thomas",
+   "party": "Labour (Co-op)",
+   "constituency": "Harrow West",
+   "membershipStartDate": "1997-05-01T00:00:00"
+  },
+  {
+   "id": 178,
+   "name": "John McDonnell",
+   "party": "Labour",
+   "constituency": "Hayes and Harlington",
+   "membershipStartDate": "1997-05-01T00:00:00"
+  },
+  {
+   "id": 185,
+   "name": "Jeremy Corbyn",
+   "party": "Your Party",
+   "constituency": "Islington North",
+   "membershipStartDate": "1983-06-09T00:00:00"
+  },
+  {
+   "id": 188,
+   "name": "Ed Davey",
+   "party": "Liberal Democrat",
+   "constituency": "Kingston and Surbiton",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 193,
+   "name": "Dame Siobhain McDonagh",
+   "party": "Labour",
+   "constituency": "Mitcham and Morden",
+   "membershipStartDate": "1997-05-01T00:00:00"
+  },
+  {
+   "id": 206,
+   "name": "Mr David Lammy",
+   "party": "Labour",
+   "constituency": "Tottenham",
+   "membershipStartDate": "2000-06-22T00:00:00"
+  },
+  {
+   "id": 221,
+   "name": "Dan Norris",
+   "party": "Independent",
+   "constituency": "North East Somerset and Hanham",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 227,
+   "name": "Andrew George",
+   "party": "Liberal Democrat",
+   "constituency": "St Ives",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 242,
+   "name": "Sir Christopher Chope",
+   "party": "Conservative",
+   "constituency": "Christchurch",
+   "membershipStartDate": "1997-05-01T00:00:00"
+  },
+  {
+   "id": 249,
+   "name": "Sir Geoffrey Clifton-Brown",
+   "party": "Conservative",
+   "constituency": "North Cotswolds",
+   "membershipStartDate": "1992-04-09T00:00:00"
+  },
+  {
+   "id": 345,
+   "name": "Sir Edward Leigh",
+   "party": "Conservative",
+   "constituency": "Gainsborough",
+   "membershipStartDate": "1983-06-09T00:00:00"
+  },
+  {
+   "id": 350,
+   "name": "Sir John Hayes",
+   "party": "Conservative",
+   "constituency": "South Holland and The Deepings",
+   "membershipStartDate": "1997-05-01T00:00:00"
+  },
+  {
+   "id": 373,
+   "name": "David Davis",
+   "party": "Conservative",
+   "constituency": "Goole and Pocklington",
+   "membershipStartDate": "2008-07-10T00:00:00"
+  },
+  {
+   "id": 394,
+   "name": "Mr Clive Betts",
+   "party": "Labour",
+   "constituency": "Sheffield South East",
+   "membershipStartDate": "1992-04-09T00:00:00"
+  },
+  {
+   "id": 400,
+   "name": "John Healey",
+   "party": "Labour",
+   "constituency": "Rawmarsh and Conisbrough",
+   "membershipStartDate": "1997-05-01T00:00:00"
+  },
+  {
+   "id": 410,
+   "name": "Jon Trickett",
+   "party": "Labour",
+   "constituency": "Normanton and Hemsworth",
+   "membershipStartDate": "1996-02-01T00:00:00"
+  },
+  {
+   "id": 413,
+   "name": "Hilary Benn",
+   "party": "Labour",
+   "constituency": "Leeds South",
+   "membershipStartDate": "1999-06-10T00:00:00"
+  },
+  {
+   "id": 415,
+   "name": "Fabian Hamilton",
+   "party": "Labour",
+   "constituency": "Leeds North East",
+   "membershipStartDate": "1997-05-01T00:00:00"
+  },
+  {
+   "id": 420,
+   "name": "Yvette Cooper",
+   "party": "Labour",
+   "constituency": "Pontefract, Castleford and Knottingley",
+   "membershipStartDate": "1997-05-01T00:00:00"
+  },
+  {
+   "id": 429,
+   "name": "Derek Twigg",
+   "party": "Labour",
+   "constituency": "Widnes and Halewood",
+   "membershipStartDate": "1997-05-01T00:00:00"
+  },
+  {
+   "id": 449,
+   "name": "Graham Stringer",
+   "party": "Labour",
+   "constituency": "Blackley and Middleton South",
+   "membershipStartDate": "1997-05-01T00:00:00"
+  },
+  {
+   "id": 467,
+   "name": "Sir Lindsay Hoyle",
+   "party": "Speaker",
+   "constituency": "Chorley",
+   "membershipStartDate": "1997-05-01T00:00:00"
+  },
+  {
+   "id": 473,
+   "name": "Sir Mark Hendrick",
+   "party": "Labour (Co-op)",
+   "constituency": "Preston",
+   "membershipStartDate": "2000-11-23T00:00:00"
+  },
+  {
+   "id": 483,
+   "name": "Maria Eagle",
+   "party": "Labour",
+   "constituency": "Liverpool Garston",
+   "membershipStartDate": "1997-05-01T00:00:00"
+  },
+  {
+   "id": 491,
+   "name": "Dame Angela Eagle",
+   "party": "Labour",
+   "constituency": "Wallasey",
+   "membershipStartDate": "1992-04-09T00:00:00"
+  },
+  {
+   "id": 529,
+   "name": "Sir Alan Campbell",
+   "party": "Labour",
+   "constituency": "Tynemouth",
+   "membershipStartDate": "1997-05-01T00:00:00"
+  },
+  {
+   "id": 632,
+   "name": "Mr Douglas Alexander",
+   "party": "Labour (Co-op)",
+   "constituency": "Lothian East",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 1171,
+   "name": "Liam Byrne",
+   "party": "Labour",
+   "constituency": "Birmingham Hodge Hill and Solihull North",
+   "membershipStartDate": "2004-07-15T00:00:00"
+  },
+  {
+   "id": 1211,
+   "name": "Sir Andrew Mitchell",
+   "party": "Conservative",
+   "constituency": "Sutton Coldfield",
+   "membershipStartDate": "2001-06-07T00:00:00"
+  },
+  {
+   "id": 1383,
+   "name": "Sir Mark Tami",
+   "party": "Labour",
+   "constituency": "Alyn and Deeside",
+   "membershipStartDate": "2001-06-07T00:00:00"
+  },
+  {
+   "id": 1409,
+   "name": "Mr Gregory Campbell",
+   "party": "Democratic Unionist Party",
+   "constituency": "East Londonderry",
+   "membershipStartDate": "2001-06-07T00:00:00"
+  },
+  {
+   "id": 1427,
+   "name": "Andy Burnham",
+   "party": "Labour (Co-op)",
+   "constituency": "Makerfield",
+   "membershipStartDate": "2026-06-18T00:00:00"
+  },
+  {
+   "id": 1440,
+   "name": "Pete Wishart",
+   "party": "Scottish National Party",
+   "constituency": "Perth and Kinross-shire",
+   "membershipStartDate": "2001-06-07T00:00:00"
+  },
+  {
+   "id": 1442,
+   "name": "Mr Alistair Carmichael",
+   "party": "Liberal Democrat",
+   "constituency": "Orkney and Shetland",
+   "membershipStartDate": "2001-06-07T00:00:00"
+  },
+  {
+   "id": 1444,
+   "name": "Mr Mark Francois",
+   "party": "Conservative",
+   "constituency": "Rayleigh and Wickford",
+   "membershipStartDate": "2001-06-07T00:00:00"
+  },
+  {
+   "id": 1446,
+   "name": "Chris Bryant",
+   "party": "Labour",
+   "constituency": "Rhondda and Ogmore",
+   "membershipStartDate": "2001-06-07T00:00:00"
+  },
+  {
+   "id": 1447,
+   "name": "Andrew Rosindell",
+   "party": "Reform UK",
+   "constituency": "Romford",
+   "membershipStartDate": "2001-06-07T00:00:00"
+  },
+  {
+   "id": 1466,
+   "name": "Dr Andrew Murrison",
+   "party": "Conservative",
+   "constituency": "South West Wiltshire",
+   "membershipStartDate": "2001-06-07T00:00:00"
+  },
+  {
+   "id": 1482,
+   "name": "Graham Stuart",
+   "party": "Conservative",
+   "constituency": "Beverley and Holderness",
+   "membershipStartDate": "2005-05-05T00:00:00"
+  },
+  {
+   "id": 1489,
+   "name": "Dawn Butler",
+   "party": "Labour",
+   "constituency": "Brent East",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 1491,
+   "name": "Kerry McCarthy",
+   "party": "Labour",
+   "constituency": "Bristol East",
+   "membershipStartDate": "2005-05-05T00:00:00"
+  },
+  {
+   "id": 1508,
+   "name": "Sir Geoffrey Cox",
+   "party": "Conservative",
+   "constituency": "Torridge and Tavistock",
+   "membershipStartDate": "2005-05-05T00:00:00"
+  },
+  {
+   "id": 1510,
+   "name": "Ed Miliband",
+   "party": "Labour",
+   "constituency": "Doncaster North",
+   "membershipStartDate": "2005-05-05T00:00:00"
+  },
+  {
+   "id": 1512,
+   "name": "David Mundell",
+   "party": "Conservative",
+   "constituency": "Dumfriesshire, Clydesdale and Tweeddale",
+   "membershipStartDate": "2005-05-05T00:00:00"
+  },
+  {
+   "id": 1516,
+   "name": "Andy Slaughter",
+   "party": "Labour",
+   "constituency": "Hammersmith and Chiswick",
+   "membershipStartDate": "2005-05-05T00:00:00"
+  },
+  {
+   "id": 1521,
+   "name": "Mrs Sharon Hodgson",
+   "party": "Labour",
+   "constituency": "Washington and Gateshead South",
+   "membershipStartDate": "2005-05-05T00:00:00"
+  },
+  {
+   "id": 1524,
+   "name": "Dame Meg Hillier",
+   "party": "Labour (Co-op)",
+   "constituency": "Hackney South and Shoreditch",
+   "membershipStartDate": "2005-05-05T00:00:00"
+  },
+  {
+   "id": 1533,
+   "name": "Dame Diana Johnson",
+   "party": "Labour",
+   "constituency": "Kingston upon Hull North and Cottingham",
+   "membershipStartDate": "2005-05-05T00:00:00"
+  },
+  {
+   "id": 1536,
+   "name": "Emily Thornberry",
+   "party": "Labour",
+   "constituency": "Islington South and Finsbury",
+   "membershipStartDate": "2005-05-05T00:00:00"
+  },
+  {
+   "id": 1541,
+   "name": "Dame Nia Griffith",
+   "party": "Labour",
+   "constituency": "Llanelli",
+   "membershipStartDate": "2005-05-05T00:00:00"
+  },
+  {
+   "id": 1548,
+   "name": "Jessica Morden",
+   "party": "Labour",
+   "constituency": "Newport East",
+   "membershipStartDate": "2005-05-05T00:00:00"
+  },
+  {
+   "id": 1560,
+   "name": "Sir Jeremy Wright",
+   "party": "Conservative",
+   "constituency": "Kenilworth and Southam",
+   "membershipStartDate": "2005-05-05T00:00:00"
+  },
+  {
+   "id": 1572,
+   "name": "Sir Jeremy Hunt",
+   "party": "Conservative",
+   "constituency": "Godalming and Ash",
+   "membershipStartDate": "2005-05-05T00:00:00"
+  },
+  {
+   "id": 1576,
+   "name": "Mark Pritchard",
+   "party": "Conservative",
+   "constituency": "The Wrekin",
+   "membershipStartDate": "2005-05-05T00:00:00"
+  },
+  {
+   "id": 1579,
+   "name": "Mary Creagh",
+   "party": "Labour",
+   "constituency": "Coventry East",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 1587,
+   "name": "Pat McFadden",
+   "party": "Labour",
+   "constituency": "Wolverhampton South East",
+   "membershipStartDate": "2005-05-05T00:00:00"
+  },
+  {
+   "id": 1591,
+   "name": "Tim Farron",
+   "party": "Liberal Democrat",
+   "constituency": "Westmorland and Lonsdale",
+   "membershipStartDate": "2005-05-05T00:00:00"
+  },
+  {
+   "id": 1593,
+   "name": "Sammy Wilson",
+   "party": "Democratic Unionist Party",
+   "constituency": "East Antrim",
+   "membershipStartDate": "2005-05-05T00:00:00"
+  },
+  {
+   "id": 3909,
+   "name": "Pamela Nash",
+   "party": "Labour",
+   "constituency": "Motherwell, Wishaw and Carluke",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 3912,
+   "name": "Richard Fuller",
+   "party": "Conservative",
+   "constituency": "North Bedfordshire",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 3914,
+   "name": "Shabana Mahmood",
+   "party": "Labour",
+   "constituency": "Birmingham Ladywood",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 3924,
+   "name": "Yasmin Qureshi",
+   "party": "Labour",
+   "constituency": "Bolton South and Walkden",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 3928,
+   "name": "Nick Smith",
+   "party": "Labour",
+   "constituency": "Blaenau Gwent and Rhymney",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 3935,
+   "name": "Sir Mel Stride",
+   "party": "Conservative",
+   "constituency": "Central Devon",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 3948,
+   "name": "Rebecca Harris",
+   "party": "Conservative",
+   "constituency": "Castle Point",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 3952,
+   "name": "Mr Toby Perkins",
+   "party": "Labour",
+   "constituency": "Chesterfield",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 3957,
+   "name": "Martin Vickers",
+   "party": "Conservative",
+   "constituency": "Brigg and Immingham",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 3966,
+   "name": "Ian Murray",
+   "party": "Labour",
+   "constituency": "Edinburgh South",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 3969,
+   "name": "Damian Hinds",
+   "party": "Conservative",
+   "constituency": "East Hampshire",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 3973,
+   "name": "Grahame Morris",
+   "party": "Labour",
+   "constituency": "Easington",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 3991,
+   "name": "Jesse Norman",
+   "party": "Conservative",
+   "constituency": "Hereford and South Herefordshire",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 3997,
+   "name": "Sir Alec Shelbrooke",
+   "party": "Conservative",
+   "constituency": "Wetherby and Easingwold",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4005,
+   "name": "Bob Blackman",
+   "party": "Conservative",
+   "constituency": "Harrow East",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4008,
+   "name": "Dame Caroline Dinenage",
+   "party": "Conservative",
+   "constituency": "Gosport",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4018,
+   "name": "Helen Grant",
+   "party": "Conservative",
+   "constituency": "Maidstone and Malling",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4020,
+   "name": "George Freeman",
+   "party": "Conservative",
+   "constituency": "Mid Norfolk",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4026,
+   "name": "Liz Kendall",
+   "party": "Labour",
+   "constituency": "Leicester West",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4029,
+   "name": "Lilian Greenwood",
+   "party": "Labour",
+   "constituency": "Nottingham South",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4030,
+   "name": "Karl Turner",
+   "party": "Independent",
+   "constituency": "Kingston upon Hull East",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4031,
+   "name": "Rachel Reeves",
+   "party": "Labour",
+   "constituency": "Leeds West and Pudsey",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4032,
+   "name": "Stuart Andrew",
+   "party": "Conservative",
+   "constituency": "Daventry",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4038,
+   "name": "Heidi Alexander",
+   "party": "Labour",
+   "constituency": "Swindon South",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 4040,
+   "name": "Chris Evans",
+   "party": "Labour (Co-op)",
+   "constituency": "Caerphilly",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4046,
+   "name": "Bridget Phillipson",
+   "party": "Labour",
+   "constituency": "Houghton and Sunderland South",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4048,
+   "name": "Caroline Nokes",
+   "party": "Conservative",
+   "constituency": "Romsey and Southampton North",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4051,
+   "name": "John Glen",
+   "party": "Conservative",
+   "constituency": "Salisbury",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4056,
+   "name": "Sir Nicholas Dakin",
+   "party": "Labour",
+   "constituency": "Scunthorpe",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 4061,
+   "name": "Bill Esterson",
+   "party": "Labour",
+   "constituency": "Sefton Central",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4066,
+   "name": "Priti Patel",
+   "party": "Conservative",
+   "constituency": "Witham",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4074,
+   "name": "Mark Garnier",
+   "party": "Conservative",
+   "constituency": "Wyre Forest",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4076,
+   "name": "Valerie Vaz",
+   "party": "Labour",
+   "constituency": "Walsall and Bloxwich",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4077,
+   "name": "Emma Reynolds",
+   "party": "Labour",
+   "constituency": "Wycombe",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 4082,
+   "name": "Lisa Nandy",
+   "party": "Labour",
+   "constituency": "Wigan",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4083,
+   "name": "Alison McGovern",
+   "party": "Labour",
+   "constituency": "Birkenhead",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4084,
+   "name": "Esther McVey",
+   "party": "Conservative",
+   "constituency": "Tatton",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4088,
+   "name": "Ms Stella Creasy",
+   "party": "Labour (Co-op)",
+   "constituency": "Walthamstow",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4089,
+   "name": "Tessa Munt",
+   "party": "Liberal Democrat",
+   "constituency": "Wells and Mendip Hills",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 4095,
+   "name": "Steve Barclay",
+   "party": "Conservative",
+   "constituency": "North East Cambridgeshire",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4107,
+   "name": "Dame Harriett Baldwin",
+   "party": "Conservative",
+   "constituency": "West Worcestershire",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4108,
+   "name": "Sir Gavin Williamson",
+   "party": "Conservative",
+   "constituency": "Stone, Great Wyrley and Penkridge",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4110,
+   "name": "Dame Karen Bradley",
+   "party": "Conservative",
+   "constituency": "Staffordshire Moorlands",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4118,
+   "name": "Sir Julian Smith",
+   "party": "Conservative",
+   "constituency": "Skipton and Ripon",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4119,
+   "name": "Jonathan Reynolds",
+   "party": "Labour (Co-op)",
+   "constituency": "Stalybridge and Hyde",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4124,
+   "name": "Dame Chi Onwurah",
+   "party": "Labour",
+   "constituency": "Newcastle upon Tyne Central and West",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4125,
+   "name": "Catherine McKinnell",
+   "party": "Labour",
+   "constituency": "Newcastle upon Tyne North",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4126,
+   "name": "Mary Glindon",
+   "party": "Labour",
+   "constituency": "Newcastle upon Tyne East and Wallsend",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4131,
+   "name": "Jim Shannon",
+   "party": "Democratic Unionist Party",
+   "constituency": "Strangford",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4138,
+   "name": "Rushanara Ali",
+   "party": "Labour",
+   "constituency": "Bethnal Green and Stepney",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4139,
+   "name": "Ian Lavery",
+   "party": "Labour",
+   "constituency": "Blyth and Ashington",
+   "membershipStartDate": "2010-05-06T00:00:00"
+  },
+  {
+   "id": 4212,
+   "name": "Debbie Abrahams",
+   "party": "Labour",
+   "constituency": "Oldham East and Saddleworth",
+   "membershipStartDate": "2011-01-13T00:00:00"
+  },
+  {
+   "id": 4243,
+   "name": "Dan Jarvis",
+   "party": "Labour",
+   "constituency": "Barnsley North",
+   "membershipStartDate": "2011-03-03T00:00:00"
+  },
+  {
+   "id": 4245,
+   "name": "Paul Maskey",
+   "party": "Sinn Féin",
+   "constituency": "Belfast West",
+   "membershipStartDate": "2011-06-09T00:00:00"
+  },
+  {
+   "id": 4253,
+   "name": "Seema Malhotra",
+   "party": "Labour (Co-op)",
+   "constituency": "Feltham and Heston",
+   "membershipStartDate": "2011-12-15T00:00:00"
+  },
+  {
+   "id": 4263,
+   "name": "Lucy Powell",
+   "party": "Labour (Co-op)",
+   "constituency": "Manchester Central",
+   "membershipStartDate": "2012-11-15T00:00:00"
+  },
+  {
+   "id": 4264,
+   "name": "Stephen Doughty",
+   "party": "Labour (Co-op)",
+   "constituency": "Cardiff South and Penarth",
+   "membershipStartDate": "2012-11-15T00:00:00"
+  },
+  {
+   "id": 4267,
+   "name": "Sarah Champion",
+   "party": "Labour",
+   "constituency": "Rotherham",
+   "membershipStartDate": "2012-11-29T00:00:00"
+  },
+  {
+   "id": 4268,
+   "name": "Steve Reed",
+   "party": "Labour (Co-op)",
+   "constituency": "Streatham and Croydon North",
+   "membershipStartDate": "2012-11-29T00:00:00"
+  },
+  {
+   "id": 4269,
+   "name": "Andy McDonald",
+   "party": "Labour",
+   "constituency": "Middlesbrough and Thornaby East",
+   "membershipStartDate": "2012-11-29T00:00:00"
+  },
+  {
+   "id": 4277,
+   "name": "Emma Lewell",
+   "party": "Labour",
+   "constituency": "South Shields",
+   "membershipStartDate": "2013-05-02T00:00:00"
+  },
+  {
+   "id": 4316,
+   "name": "Mike Kane",
+   "party": "Labour",
+   "constituency": "Wythenshawe and Sale East",
+   "membershipStartDate": "2014-02-13T00:00:00"
+  },
+  {
+   "id": 4320,
+   "name": "Robert Jenrick",
+   "party": "Reform UK",
+   "constituency": "Newark",
+   "membershipStartDate": "2014-06-05T00:00:00"
+  },
+  {
+   "id": 4356,
+   "name": "Angela Rayner",
+   "party": "Labour",
+   "constituency": "Ashton-under-Lyne",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4357,
+   "name": "Kirsty Blackman",
+   "party": "Scottish National Party",
+   "constituency": "Aberdeen North",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4358,
+   "name": "Wendy Morton",
+   "party": "Conservative",
+   "constituency": "Aldridge-Brownhills",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4359,
+   "name": "Stephen Kinnock",
+   "party": "Labour",
+   "constituency": "Aberafan Maesteg",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4360,
+   "name": "Gavin Robinson",
+   "party": "Democratic Unionist Party",
+   "constituency": "Belfast East",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4362,
+   "name": "Edward Argar",
+   "party": "Conservative",
+   "constituency": "Melton and Syston",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4366,
+   "name": "Sir James Cleverly",
+   "party": "Conservative",
+   "constituency": "Braintree",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4368,
+   "name": "Neil Coyle",
+   "party": "Labour",
+   "constituency": "Bermondsey and Old Southwark",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4370,
+   "name": "Jess Phillips",
+   "party": "Labour",
+   "constituency": "Birmingham Yardley",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4371,
+   "name": "Brendan O'Hara",
+   "party": "Scottish National Party",
+   "constituency": "Argyll, Bute and South Lochaber",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4382,
+   "name": "Daniel Zeichner",
+   "party": "Labour",
+   "constituency": "Cambridge",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4384,
+   "name": "Mike Wood",
+   "party": "Conservative",
+   "constituency": "Kingswinford and South Staffordshire",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4389,
+   "name": "Ruth Cadbury",
+   "party": "Labour",
+   "constituency": "Brentford and Isleworth",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4391,
+   "name": "Judith Cummins",
+   "party": "Labour",
+   "constituency": "Bradford South",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4394,
+   "name": "Imran Hussain",
+   "party": "Labour",
+   "constituency": "Bradford East",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4396,
+   "name": "Rebecca Long Bailey",
+   "party": "Labour",
+   "constituency": "Salford",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4397,
+   "name": "Peter Dowd",
+   "party": "Labour",
+   "constituency": "Bootle",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4399,
+   "name": "Victoria Atkins",
+   "party": "Conservative",
+   "constituency": "Louth and Horncastle",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4403,
+   "name": "Chris Law",
+   "party": "Scottish National Party",
+   "constituency": "Dundee Central",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4407,
+   "name": "Nigel Huddleston",
+   "party": "Conservative",
+   "constituency": "Droitwich and Evesham",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4409,
+   "name": "Naz Shah",
+   "party": "Labour",
+   "constituency": "Bradford West",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4418,
+   "name": "Justin Madders",
+   "party": "Labour",
+   "constituency": "Ellesmere Port and Bromborough",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4425,
+   "name": "Jo Stevens",
+   "party": "Labour",
+   "constituency": "Cardiff East",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4436,
+   "name": "Cat Smith",
+   "party": "Labour",
+   "constituency": "Lancaster and Wyre",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4439,
+   "name": "Alberto Costa",
+   "party": "Conservative",
+   "constituency": "South Leicestershire",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4441,
+   "name": "Sir Oliver Dowden",
+   "party": "Conservative",
+   "constituency": "Hertsmere",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4444,
+   "name": "Karin Smyth",
+   "party": "Labour",
+   "constituency": "Bristol South",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4449,
+   "name": "Anna Turley",
+   "party": "Labour (Co-op)",
+   "constituency": "Redcar",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 4456,
+   "name": "Jeff Smith",
+   "party": "Labour",
+   "constituency": "Manchester Withington",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4457,
+   "name": "Ms Marie Rimmer",
+   "party": "Labour",
+   "constituency": "St Helens South and Whiston",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4460,
+   "name": "Ms Nusrat Ghani",
+   "party": "Conservative",
+   "constituency": "Sussex Weald",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4462,
+   "name": "Tom Tugendhat",
+   "party": "Conservative",
+   "constituency": "Tonbridge",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4464,
+   "name": "Melanie Onn",
+   "party": "Labour",
+   "constituency": "Great Grimsby and Cleethorpes",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 4471,
+   "name": "Rachael Maskell",
+   "party": "Labour (Co-op)",
+   "constituency": "York Central",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4473,
+   "name": "Louise Haigh",
+   "party": "Labour",
+   "constituency": "Sheffield Heeley",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4474,
+   "name": "Kevin Hollinrake",
+   "party": "Conservative",
+   "constituency": "Thirsk and Malton",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4475,
+   "name": "Suella Braverman",
+   "party": "Reform UK",
+   "constituency": "Fareham and Waterlooville",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4479,
+   "name": "Nick Thomas-Symonds",
+   "party": "Labour",
+   "constituency": "Torfaen",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4480,
+   "name": "Carolyn Harris",
+   "party": "Labour",
+   "constituency": "Neath and Swansea East",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4483,
+   "name": "Rishi Sunak",
+   "party": "Conservative",
+   "constituency": "Richmond and Northallerton",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4484,
+   "name": "Alan Mak",
+   "party": "Conservative",
+   "constituency": "Havant",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4491,
+   "name": "Vicky Foxcroft",
+   "party": "Labour",
+   "constituency": "Lewisham North",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4493,
+   "name": "Richard Burgon",
+   "party": "Labour",
+   "constituency": "Leeds East",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4494,
+   "name": "Simon Hoare",
+   "party": "Conservative",
+   "constituency": "North Dorset",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4495,
+   "name": "Kit Malthouse",
+   "party": "Conservative",
+   "constituency": "North West Hampshire",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4500,
+   "name": "Clive Lewis",
+   "party": "Labour",
+   "constituency": "Norwich South",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4501,
+   "name": "Gerald Jones",
+   "party": "Labour",
+   "constituency": "Merthyr Tydfil and Aberdare",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4503,
+   "name": "Chris Philp",
+   "party": "Conservative",
+   "constituency": "Croydon South",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4504,
+   "name": "Wes Streeting",
+   "party": "Labour",
+   "constituency": "Ilford North",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4505,
+   "name": "Peter Kyle",
+   "party": "Labour",
+   "constituency": "Hove and Portslade",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4510,
+   "name": "Helen Hayes",
+   "party": "Labour",
+   "constituency": "Dulwich and West Norwood",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4511,
+   "name": "Dr Rupa Huq",
+   "party": "Labour",
+   "constituency": "Ealing Central and Acton",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4513,
+   "name": "Mims Davies",
+   "party": "Conservative",
+   "constituency": "East Grinstead and Uckfield",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4514,
+   "name": "Sir Keir Starmer",
+   "party": "Labour",
+   "constituency": "Holborn and St Pancras",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4515,
+   "name": "Kate Osamor",
+   "party": "Labour (Co-op)",
+   "constituency": "Edmonton and Winchmore Hill",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4518,
+   "name": "Tulip Siddiq",
+   "party": "Labour",
+   "constituency": "Hampstead and Highgate",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4519,
+   "name": "James Cartlidge",
+   "party": "Conservative",
+   "constituency": "South Suffolk",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4520,
+   "name": "Matthew Pennycook",
+   "party": "Labour",
+   "constituency": "Greenwich and Woolwich",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4521,
+   "name": "Liz Saville Roberts",
+   "party": "Plaid Cymru",
+   "constituency": "Dwyfor Meirionnydd",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4523,
+   "name": "Catherine West",
+   "party": "Labour",
+   "constituency": "Hornsey and Friern Barnet",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4527,
+   "name": "Helen Whately",
+   "party": "Conservative",
+   "constituency": "Faversham and Mid Kent",
+   "membershipStartDate": "2015-05-07T00:00:00"
+  },
+  {
+   "id": 4569,
+   "name": "Jim McMahon",
+   "party": "Labour (Co-op)",
+   "constituency": "Oldham West, Chadderton and Royton",
+   "membershipStartDate": "2015-12-03T00:00:00"
+  },
+  {
+   "id": 4571,
+   "name": "Gill Furniss",
+   "party": "Labour",
+   "constituency": "Sheffield Brightside and Hillsborough",
+   "membershipStartDate": "2016-05-05T00:00:00"
+  },
+  {
+   "id": 4572,
+   "name": "Chris Elmore",
+   "party": "Labour",
+   "constituency": "Bridgend",
+   "membershipStartDate": "2016-05-05T00:00:00"
+  },
+  {
+   "id": 4573,
+   "name": "Dr Rosena Allin-Khan",
+   "party": "Labour",
+   "constituency": "Tooting",
+   "membershipStartDate": "2016-06-16T00:00:00"
+  },
+  {
+   "id": 4591,
+   "name": "Sarah Olney",
+   "party": "Liberal Democrat",
+   "constituency": "Richmond Park",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4592,
+   "name": "Dr Caroline Johnson",
+   "party": "Conservative",
+   "constituency": "Sleaford and North Hykeham",
+   "membershipStartDate": "2016-12-08T00:00:00"
+  },
+  {
+   "id": 4595,
+   "name": "Gareth Snell",
+   "party": "Labour (Co-op)",
+   "constituency": "Stoke-on-Trent Central",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 4597,
+   "name": "Mrs Kemi Badenoch",
+   "party": "Conservative",
+   "constituency": "North West Essex",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4598,
+   "name": "Mohammad Yasin",
+   "party": "Labour",
+   "constituency": "Bedford",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4601,
+   "name": "Andrew Bowie",
+   "party": "Conservative",
+   "constituency": "West Aberdeenshire and Kincardine",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4602,
+   "name": "Wera Hobhouse",
+   "party": "Liberal Democrat",
+   "constituency": "Bath",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4603,
+   "name": "Preet Kaur Gill",
+   "party": "Labour (Co-op)",
+   "constituency": "Birmingham Edgbaston",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4607,
+   "name": "Stephanie Peacock",
+   "party": "Labour",
+   "constituency": "Barnsley South",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4608,
+   "name": "John Lamont",
+   "party": "Conservative",
+   "constituency": "Berwickshire, Roxburgh and Selkirk",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4610,
+   "name": "Bambos Charalambous",
+   "party": "Labour",
+   "constituency": "Southgate and Wood Green",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4612,
+   "name": "Jamie Stone",
+   "party": "Liberal Democrat",
+   "constituency": "Caithness, Sutherland and Easter Ross",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4613,
+   "name": "Alex Burghart",
+   "party": "Conservative",
+   "constituency": "Brentwood and Ongar",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4616,
+   "name": "Rosie Duffield",
+   "party": "Independent",
+   "constituency": "Canterbury",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4617,
+   "name": "Matt Western",
+   "party": "Labour",
+   "constituency": "Warwick and Leamington",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4618,
+   "name": "Liz Twist",
+   "party": "Labour",
+   "constituency": "Blaydon and Consett",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4620,
+   "name": "Ellie Reeves",
+   "party": "Labour",
+   "constituency": "Lewisham West and East Dulwich",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4621,
+   "name": "Darren Jones",
+   "party": "Labour",
+   "constituency": "Bristol North West",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4623,
+   "name": "Tonia Antoniazzi",
+   "party": "Labour",
+   "constituency": "Gower",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4630,
+   "name": "Ben Lake",
+   "party": "Plaid Cymru",
+   "constituency": "Ceredigion Preseli",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4631,
+   "name": "Sarah Jones",
+   "party": "Labour",
+   "constituency": "Croydon West",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4632,
+   "name": "Anna McMorrin",
+   "party": "Labour",
+   "constituency": "Cardiff North",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4634,
+   "name": "Christine Jardine",
+   "party": "Liberal Democrat",
+   "constituency": "Edinburgh West",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4636,
+   "name": "Chris Hazzard",
+   "party": "Sinn Féin",
+   "constituency": "South Down",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4637,
+   "name": "Mr James Frith",
+   "party": "Labour",
+   "constituency": "Bury North",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 4638,
+   "name": "Mr Tanmanjeet Singh Dhesi",
+   "party": "Labour",
+   "constituency": "Slough",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4641,
+   "name": "Alex Norris",
+   "party": "Labour (Co-op)",
+   "constituency": "Nottingham North and Kimberley",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4645,
+   "name": "Emma Hardy",
+   "party": "Labour",
+   "constituency": "Kingston upon Hull West and Haltemprice",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4647,
+   "name": "Julia Lopez",
+   "party": "Conservative",
+   "constituency": "Hornchurch and Upminster",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4651,
+   "name": "Dan Carden",
+   "party": "Labour",
+   "constituency": "Liverpool Walton",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4653,
+   "name": "Stephen Morgan",
+   "party": "Labour",
+   "constituency": "Portsmouth South",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4654,
+   "name": "Matt Rodda",
+   "party": "Labour",
+   "constituency": "Reading Central",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4656,
+   "name": "Layla Moran",
+   "party": "Liberal Democrat",
+   "constituency": "Oxford West and Abingdon",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4657,
+   "name": "Anneliese Dodds",
+   "party": "Labour (Co-op)",
+   "constituency": "Oxford East",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4658,
+   "name": "Alex Sobel",
+   "party": "Labour (Co-op)",
+   "constituency": "Leeds Central and Headingley",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4671,
+   "name": "Afzal Khan",
+   "party": "Labour",
+   "constituency": "Manchester Rusholme",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4673,
+   "name": "Jo Platt",
+   "party": "Labour (Co-op)",
+   "constituency": "Leigh and Atherton",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 4676,
+   "name": "Marsha De Cordova",
+   "party": "Labour",
+   "constituency": "Battersea",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4679,
+   "name": "Neil O'Brien",
+   "party": "Conservative",
+   "constituency": "Harborough, Oadby and Wigston",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4682,
+   "name": "Luke Pollard",
+   "party": "Labour (Co-op)",
+   "constituency": "Plymouth Sutton and Devonport",
+   "membershipStartDate": "2017-06-08T00:00:00"
+  },
+  {
+   "id": 4697,
+   "name": "Órfhlaith Begley",
+   "party": "Sinn Féin",
+   "constituency": "West Tyrone",
+   "membershipStartDate": "2018-05-03T00:00:00"
+  },
+  {
+   "id": 4698,
+   "name": "Janet Daby",
+   "party": "Labour",
+   "constituency": "Lewisham East",
+   "membershipStartDate": "2018-06-14T00:00:00"
+  },
+  {
+   "id": 4716,
+   "name": "Ruth Jones",
+   "party": "Labour",
+   "constituency": "Newport West and Islwyn",
+   "membershipStartDate": "2019-04-04T00:00:00"
+  },
+  {
+   "id": 4736,
+   "name": "Dave Doogan",
+   "party": "Scottish National Party",
+   "constituency": "Angus and Perthshire Glens",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4739,
+   "name": "Jerome Mayhew",
+   "party": "Conservative",
+   "constituency": "Broadland and Fakenham",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4742,
+   "name": "Stuart Anderson",
+   "party": "Conservative",
+   "constituency": "South Shropshire",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4743,
+   "name": "Lee Anderson",
+   "party": "Reform UK",
+   "constituency": "Ashfield",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4747,
+   "name": "Tahir Ali",
+   "party": "Labour",
+   "constituency": "Birmingham Hall Green and Moseley",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4753,
+   "name": "Mary Kelly Foy",
+   "party": "Labour",
+   "constituency": "City of Durham",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4759,
+   "name": "Joy Morrissey",
+   "party": "Conservative",
+   "constituency": "Beaconsfield",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4764,
+   "name": "Bell Ribeiro-Addy",
+   "party": "Labour",
+   "constituency": "Clapham and Brixton Hill",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4765,
+   "name": "Wendy Chamberlain",
+   "party": "Liberal Democrat",
+   "constituency": "North East Fife",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4769,
+   "name": "Daisy Cooper",
+   "party": "Liberal Democrat",
+   "constituency": "St Albans",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4776,
+   "name": "Munira Wilson",
+   "party": "Liberal Democrat",
+   "constituency": "Twickenham",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4777,
+   "name": "Sarah Owen",
+   "party": "Labour",
+   "constituency": "Luton North",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4778,
+   "name": "Greg Smith",
+   "party": "Conservative",
+   "constituency": "Mid Buckinghamshire",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4779,
+   "name": "Taiwo Owatemi",
+   "party": "Labour",
+   "constituency": "Coventry North West",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4780,
+   "name": "Laura Trott",
+   "party": "Conservative",
+   "constituency": "Sevenoaks",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4781,
+   "name": "Dr Luke Evans",
+   "party": "Conservative",
+   "constituency": "Hinckley and Bosworth",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4783,
+   "name": "Kate Osborne",
+   "party": "Labour",
+   "constituency": "Jarrow and Gateshead East",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4785,
+   "name": "Dr Ben Spencer",
+   "party": "Conservative",
+   "constituency": "Runnymede and Weybridge",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4786,
+   "name": "Zarah Sultana",
+   "party": "Your Party",
+   "constituency": "Coventry South",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4787,
+   "name": "James Wild",
+   "party": "Conservative",
+   "constituency": "North West Norfolk",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4788,
+   "name": "Fleur Anderson",
+   "party": "Labour",
+   "constituency": "Putney",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4790,
+   "name": "Apsana Begum",
+   "party": "Labour",
+   "constituency": "Poplar and Limehouse",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4797,
+   "name": "James Murray",
+   "party": "Labour (Co-op)",
+   "constituency": "Ealing North",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4798,
+   "name": "Gareth Bacon",
+   "party": "Conservative",
+   "constituency": "Orpington",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4799,
+   "name": "Charlotte Nichols",
+   "party": "Labour",
+   "constituency": "Warrington North",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4803,
+   "name": "Paul Holmes",
+   "party": "Conservative",
+   "constituency": "Hamble Valley",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4804,
+   "name": "Mr Gagan Mohindra",
+   "party": "Conservative",
+   "constituency": "South West Hertfordshire",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4805,
+   "name": "Alicia Kearns",
+   "party": "Conservative",
+   "constituency": "Rutland and Stamford",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4806,
+   "name": "Claire Coutinho",
+   "party": "Conservative",
+   "constituency": "East Surrey",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4811,
+   "name": "Navendu Mishra",
+   "party": "Labour",
+   "constituency": "Stockport",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4813,
+   "name": "Mr Richard Holden",
+   "party": "Conservative",
+   "constituency": "Basildon and Billericay",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4818,
+   "name": "Saqib Bhatti",
+   "party": "Conservative",
+   "constituency": "Meriden and Solihull East",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4820,
+   "name": "Ms Abena Oppong-Asare",
+   "party": "Labour",
+   "constituency": "Erith and Thamesmead",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4822,
+   "name": "Feryal Clark",
+   "party": "Labour",
+   "constituency": "Enfield North",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4823,
+   "name": "John Finucane",
+   "party": "Sinn Féin",
+   "constituency": "Belfast North",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4824,
+   "name": "Kim Johnson",
+   "party": "Labour",
+   "constituency": "Liverpool Riverside",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4827,
+   "name": "Claire Hanna",
+   "party": "Social Democratic & Labour Party",
+   "constituency": "Belfast South and Mid Down",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4828,
+   "name": "Paula Barker",
+   "party": "Labour",
+   "constituency": "Liverpool Wavertree",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4831,
+   "name": "Ian Byrne",
+   "party": "Labour",
+   "constituency": "Liverpool West Derby",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4844,
+   "name": "Matt Vickers",
+   "party": "Conservative",
+   "constituency": "Stockton West",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4846,
+   "name": "Colum Eastwood",
+   "party": "Social Democratic & Labour Party",
+   "constituency": "Foyle",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4849,
+   "name": "Alex Davies-Jones",
+   "party": "Labour",
+   "constituency": "Pontypridd",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4850,
+   "name": "Gareth Davies",
+   "party": "Conservative",
+   "constituency": "Grantham and Bourne",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4853,
+   "name": "Dr Neil Hudson",
+   "party": "Conservative",
+   "constituency": "Epping Forest",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4857,
+   "name": "Carla Lockhart",
+   "party": "Democratic Unionist Party",
+   "constituency": "Upper Bann",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4858,
+   "name": "Danny Kruger",
+   "party": "Reform UK",
+   "constituency": "East Wiltshire",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4860,
+   "name": "Dr Kieran Mullan",
+   "party": "Conservative",
+   "constituency": "Bexhill and Battle",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4861,
+   "name": "Robbie Moore",
+   "party": "Conservative",
+   "constituency": "Keighley and Ilkley",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4864,
+   "name": "Olivia Blake",
+   "party": "Labour",
+   "constituency": "Sheffield Hallam",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4869,
+   "name": "Nadia Whittome",
+   "party": "Labour",
+   "constituency": "Nottingham East",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4870,
+   "name": "Florence Eshalomi",
+   "party": "Labour (Co-op)",
+   "constituency": "Vauxhall and Camberwell Green",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4871,
+   "name": "Christian Wakeford",
+   "party": "Labour",
+   "constituency": "Bury South",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4872,
+   "name": "David Simmonds",
+   "party": "Conservative",
+   "constituency": "Ruislip, Northwood and Pinner",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4873,
+   "name": "Rachel Hopkins",
+   "party": "Labour",
+   "constituency": "Luton South and South Bedfordshire",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4874,
+   "name": "Andrew Griffith",
+   "party": "Conservative",
+   "constituency": "Arundel and South Downs",
+   "membershipStartDate": "2019-12-12T00:00:00"
+  },
+  {
+   "id": 4918,
+   "name": "Sarah Green",
+   "party": "Liberal Democrat",
+   "constituency": "Chesham and Amersham",
+   "membershipStartDate": "2021-06-17T00:00:00"
+  },
+  {
+   "id": 4923,
+   "name": "Kim Leadbeater",
+   "party": "Labour",
+   "constituency": "Spen Valley",
+   "membershipStartDate": "2021-07-01T00:00:00"
+  },
+  {
+   "id": 4932,
+   "name": "Mr Louie French",
+   "party": "Conservative",
+   "constituency": "Old Bexley and Sidcup",
+   "membershipStartDate": "2021-12-02T00:00:00"
+  },
+  {
+   "id": 4934,
+   "name": "Helen Morgan",
+   "party": "Liberal Democrat",
+   "constituency": "North Shropshire",
+   "membershipStartDate": "2021-12-16T00:00:00"
+  },
+  {
+   "id": 4938,
+   "name": "Paulette Hamilton",
+   "party": "Labour",
+   "constituency": "Birmingham Erdington",
+   "membershipStartDate": "2022-03-03T00:00:00"
+  },
+  {
+   "id": 4942,
+   "name": "Richard Foord",
+   "party": "Liberal Democrat",
+   "constituency": "Honiton and Sidmouth",
+   "membershipStartDate": "2022-06-23T00:00:00"
+  },
+  {
+   "id": 4943,
+   "name": "Simon Lightwood",
+   "party": "Labour (Co-op)",
+   "constituency": "Wakefield and Rothwell",
+   "membershipStartDate": "2022-06-23T00:00:00"
+  },
+  {
+   "id": 4976,
+   "name": "Samantha Dixon",
+   "party": "Labour",
+   "constituency": "Chester North and Neston",
+   "membershipStartDate": "2022-12-01T00:00:00"
+  },
+  {
+   "id": 4979,
+   "name": "Andrew Western",
+   "party": "Labour",
+   "constituency": "Stretford and Urmston",
+   "membershipStartDate": "2022-12-15T00:00:00"
+  },
+  {
+   "id": 4981,
+   "name": "Ashley Dalton",
+   "party": "Labour",
+   "constituency": "West Lancashire",
+   "membershipStartDate": "2023-02-09T00:00:00"
+  },
+  {
+   "id": 4993,
+   "name": "Keir Mather",
+   "party": "Labour",
+   "constituency": "Selby",
+   "membershipStartDate": "2023-07-20T00:00:00"
+  },
+  {
+   "id": 4995,
+   "name": "Sarah Dyke",
+   "party": "Liberal Democrat",
+   "constituency": "Glastonbury and Somerton",
+   "membershipStartDate": "2023-07-20T00:00:00"
+  },
+  {
+   "id": 4998,
+   "name": "Michael Shanks",
+   "party": "Labour",
+   "constituency": "Rutherglen",
+   "membershipStartDate": "2023-10-05T00:00:00"
+  },
+  {
+   "id": 5000,
+   "name": "Alistair Strathern",
+   "party": "Labour",
+   "constituency": "Hitchin",
+   "membershipStartDate": "2023-10-19T00:00:00"
+  },
+  {
+   "id": 5001,
+   "name": "Sarah Edwards",
+   "party": "Labour",
+   "constituency": "Tamworth",
+   "membershipStartDate": "2023-10-19T00:00:00"
+  },
+  {
+   "id": 5010,
+   "name": "Damien Egan",
+   "party": "Labour",
+   "constituency": "Bristol North East",
+   "membershipStartDate": "2024-02-15T00:00:00"
+  },
+  {
+   "id": 5011,
+   "name": "Gen Kitchen",
+   "party": "Labour",
+   "constituency": "Wellingborough and Rushden",
+   "membershipStartDate": "2024-02-15T00:00:00"
+  },
+  {
+   "id": 5025,
+   "name": "Chris Webb",
+   "party": "Labour",
+   "constituency": "Blackpool South",
+   "membershipStartDate": "2024-05-02T00:00:00"
+  },
+  {
+   "id": 5028,
+   "name": "Lewis Atkinson",
+   "party": "Labour",
+   "constituency": "Sunderland Central",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5029,
+   "name": "Emma Foody",
+   "party": "Labour (Co-op)",
+   "constituency": "Cramlington and Killingworth",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5030,
+   "name": "Dr Simon Opher",
+   "party": "Labour",
+   "constituency": "Stroud",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5031,
+   "name": "Mark Ferguson",
+   "party": "Labour",
+   "constituency": "Gateshead Central and Whickham",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5032,
+   "name": "Tom Gordon",
+   "party": "Liberal Democrat",
+   "constituency": "Harrogate and Knaresborough",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5033,
+   "name": "Josh MacAlister",
+   "party": "Labour",
+   "constituency": "Whitehaven and Workington",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5034,
+   "name": "Josh Newbury",
+   "party": "Labour",
+   "constituency": "Cannock Chase",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5035,
+   "name": "Will Stone",
+   "party": "Labour",
+   "constituency": "Swindon North",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5036,
+   "name": "Jodie Gosling",
+   "party": "Labour",
+   "constituency": "Nuneaton",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5037,
+   "name": "Lola McEvoy",
+   "party": "Labour",
+   "constituency": "Darlington",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5038,
+   "name": "Anneliese Midgley",
+   "party": "Labour",
+   "constituency": "Knowsley",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5039,
+   "name": "Kanishka Narayan",
+   "party": "Labour",
+   "constituency": "Vale of Glamorgan",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5040,
+   "name": "Liz Jarvis",
+   "party": "Liberal Democrat",
+   "constituency": "Eastleigh",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5041,
+   "name": "Shaun Davies",
+   "party": "Labour",
+   "constituency": "Telford",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5042,
+   "name": "Pam Cox",
+   "party": "Labour",
+   "constituency": "Colchester",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5043,
+   "name": "Lillian Jones",
+   "party": "Labour",
+   "constituency": "Kilmarnock and Loudoun",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5044,
+   "name": "Adam Thompson",
+   "party": "Labour",
+   "constituency": "Erewash",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5045,
+   "name": "Mr Jonathan Brash",
+   "party": "Labour",
+   "constituency": "Hartlepool",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5046,
+   "name": "Andrew Ranger",
+   "party": "Labour",
+   "constituency": "Wrexham",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5047,
+   "name": "James Naish",
+   "party": "Labour",
+   "constituency": "Rushcliffe",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5048,
+   "name": "Antonia Bance",
+   "party": "Labour",
+   "constituency": "Tipton and Wednesbury",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5049,
+   "name": "Michelle Scrogham",
+   "party": "Labour",
+   "constituency": "Barrow and Furness",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5050,
+   "name": "Lewis Cocking",
+   "party": "Conservative",
+   "constituency": "Broxbourne",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5051,
+   "name": "Kevin Bonavia",
+   "party": "Labour",
+   "constituency": "Stevenage",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5052,
+   "name": "Patrick Hurley",
+   "party": "Labour",
+   "constituency": "Southport",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5053,
+   "name": "Natalie Fleet",
+   "party": "Labour",
+   "constituency": "Bolsover",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5054,
+   "name": "Mr Calvin Bailey",
+   "party": "Labour",
+   "constituency": "Leyton and Wanstead",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5055,
+   "name": "Max Wilkinson",
+   "party": "Liberal Democrat",
+   "constituency": "Cheltenham",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5056,
+   "name": "Jen Craft",
+   "party": "Labour",
+   "constituency": "Thurrock",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5057,
+   "name": "Douglas McAllister",
+   "party": "Labour",
+   "constituency": "West Dunbartonshire",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5058,
+   "name": "Juliet Campbell",
+   "party": "Labour",
+   "constituency": "Broxtowe",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5059,
+   "name": "Gurinder Singh Josan",
+   "party": "Labour",
+   "constituency": "Smethwick",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5061,
+   "name": "Andrew Lewin",
+   "party": "Labour",
+   "constituency": "Welwyn Hatfield",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5062,
+   "name": "Nick Timothy",
+   "party": "Conservative",
+   "constituency": "West Suffolk",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5063,
+   "name": "Johanna Baxter",
+   "party": "Labour",
+   "constituency": "Paisley and Renfrewshire South",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5064,
+   "name": "Steve Race",
+   "party": "Labour",
+   "constituency": "Exeter",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5065,
+   "name": "Rachel Taylor",
+   "party": "Labour",
+   "constituency": "North Warwickshire and Bedworth",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5066,
+   "name": "Steve Darling",
+   "party": "Liberal Democrat",
+   "constituency": "Torbay",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5067,
+   "name": "Tony Vaughan",
+   "party": "Labour",
+   "constituency": "Folkestone and Hythe",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5068,
+   "name": "Shivani Raja",
+   "party": "Conservative",
+   "constituency": "Leicester East",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5069,
+   "name": "Torsten Bell",
+   "party": "Labour",
+   "constituency": "Swansea West",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5070,
+   "name": "Lisa Smart",
+   "party": "Liberal Democrat",
+   "constituency": "Hazel Grove",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5071,
+   "name": "Paul Waugh",
+   "party": "Labour (Co-op)",
+   "constituency": "Rochdale",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5072,
+   "name": "Mr Andrew Snowden",
+   "party": "Conservative",
+   "constituency": "Fylde",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5073,
+   "name": "Marie Goldman",
+   "party": "Liberal Democrat",
+   "constituency": "Chelmsford",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5074,
+   "name": "Mr Paul Foster",
+   "party": "Labour",
+   "constituency": "South Ribble",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5075,
+   "name": "Deirdre Costigan",
+   "party": "Labour",
+   "constituency": "Ealing Southall",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5076,
+   "name": "Blair McDougall",
+   "party": "Labour",
+   "constituency": "East Renfrewshire",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5077,
+   "name": "Jacob Collier",
+   "party": "Labour",
+   "constituency": "Burton and Uttoxeter",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5078,
+   "name": "Pippa Heylings",
+   "party": "Liberal Democrat",
+   "constituency": "South Cambridgeshire",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5079,
+   "name": "Joani Reid",
+   "party": "Labour",
+   "constituency": "East Kilbride and Strathaven",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5080,
+   "name": "Alan Strickland",
+   "party": "Labour",
+   "constituency": "Newton Aycliffe and Spennymoor",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5081,
+   "name": "Joe Morris",
+   "party": "Labour",
+   "constituency": "Hexham",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5082,
+   "name": "Jake Richards",
+   "party": "Labour",
+   "constituency": "Rother Valley",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5083,
+   "name": "Bobby Dean",
+   "party": "Liberal Democrat",
+   "constituency": "Carshalton and Wallington",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5084,
+   "name": "Mrs Elsie Blundell",
+   "party": "Labour",
+   "constituency": "Heywood and Middleton North",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5085,
+   "name": "Llinos Medi",
+   "party": "Plaid Cymru",
+   "constituency": "Ynys Môn",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5086,
+   "name": "Josh Babarinde",
+   "party": "Liberal Democrat",
+   "constituency": "Eastbourne",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5087,
+   "name": "Tom Collins",
+   "party": "Labour",
+   "constituency": "Worcester",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5088,
+   "name": "Sarah Coombes",
+   "party": "Labour",
+   "constituency": "West Bromwich",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5089,
+   "name": "Ben Obese-Jecty",
+   "party": "Conservative",
+   "constituency": "Huntingdon",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5090,
+   "name": "Tom Morrison",
+   "party": "Liberal Democrat",
+   "constituency": "Cheadle",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5091,
+   "name": "Nigel Farage",
+   "party": "Reform UK",
+   "constituency": "Clacton",
+   "membershipStartDate": "2026-08-13T00:00:00"
+  },
+  {
+   "id": 5092,
+   "name": "David Baines",
+   "party": "Labour",
+   "constituency": "St Helens North",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5093,
+   "name": "Alison Taylor",
+   "party": "Labour",
+   "constituency": "Paisley and Renfrewshire North",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5094,
+   "name": "Ms Julie Minns",
+   "party": "Labour",
+   "constituency": "Carlisle",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5095,
+   "name": "Kirith Entwistle",
+   "party": "Labour",
+   "constituency": "Bolton North East",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5096,
+   "name": "Ian Sollom",
+   "party": "Liberal Democrat",
+   "constituency": "St Neots and Mid Cambridgeshire",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5097,
+   "name": "Mr Bayo Alaba",
+   "party": "Independent",
+   "constituency": "Southend East and Rochford",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5098,
+   "name": "Dr Marie Tidball",
+   "party": "Labour",
+   "constituency": "Penistone and Stocksbridge",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5099,
+   "name": "Miatta Fahnbulleh",
+   "party": "Labour (Co-op)",
+   "constituency": "Peckham",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5100,
+   "name": "Blake Stephenson",
+   "party": "Conservative",
+   "constituency": "Mid Bedfordshire",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5101,
+   "name": "Sir Ashley Fox",
+   "party": "Conservative",
+   "constituency": "Bridgwater",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5102,
+   "name": "Carla Denyer",
+   "party": "Green Party",
+   "constituency": "Bristol Central",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5103,
+   "name": "Luke Taylor",
+   "party": "Liberal Democrat",
+   "constituency": "Sutton and Cheam",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5104,
+   "name": "Gill German",
+   "party": "Labour",
+   "constituency": "Clwyd North",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5105,
+   "name": "Jo White",
+   "party": "Labour",
+   "constituency": "Bassetlaw",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5106,
+   "name": "David Burton-Sampson",
+   "party": "Labour",
+   "constituency": "Southend West and Leigh",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5107,
+   "name": "Linsey Farnsworth",
+   "party": "Labour",
+   "constituency": "Amber Valley",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5108,
+   "name": "Sam Rushworth",
+   "party": "Labour",
+   "constituency": "Bishop Auckland",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5109,
+   "name": "Chris Bloore",
+   "party": "Labour",
+   "constituency": "Redditch",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5110,
+   "name": "Euan Stainbank",
+   "party": "Labour",
+   "constituency": "Falkirk",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5111,
+   "name": "Martin Wrigley",
+   "party": "Liberal Democrat",
+   "constituency": "Newton Abbot",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5112,
+   "name": "Luke Akehurst",
+   "party": "Labour",
+   "constituency": "North Durham",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5113,
+   "name": "Claire Hughes",
+   "party": "Labour",
+   "constituency": "Bangor Aberconwy",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5114,
+   "name": "Kirsty McNeill",
+   "party": "Labour (Co-op)",
+   "constituency": "Midlothian",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5115,
+   "name": "Jon Pearce",
+   "party": "Labour",
+   "constituency": "High Peak",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5116,
+   "name": "Chris McDonald",
+   "party": "Labour",
+   "constituency": "Stockton North",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5117,
+   "name": "Sarah Smith",
+   "party": "Labour",
+   "constituency": "Hyndburn",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5118,
+   "name": "Chris Curtis",
+   "party": "Labour",
+   "constituency": "Milton Keynes North",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5119,
+   "name": "Natasha Irons",
+   "party": "Labour",
+   "constituency": "Croydon East",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5120,
+   "name": "Shockat Adam",
+   "party": "Independent",
+   "constituency": "Leicester South",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5121,
+   "name": "Henry Tufnell",
+   "party": "Labour",
+   "constituency": "Mid and South Pembrokeshire",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5122,
+   "name": "Manuela Perteghella",
+   "party": "Liberal Democrat",
+   "constituency": "Stratford-on-Avon",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5123,
+   "name": "Ms Polly Billington",
+   "party": "Labour",
+   "constituency": "East Thanet",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5124,
+   "name": "Markus Campbell-Savours",
+   "party": "Labour",
+   "constituency": "Penrith and Solway",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5125,
+   "name": "Sorcha Eastwood",
+   "party": "Alliance",
+   "constituency": "Lagan Valley",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5126,
+   "name": "Dave Robertson",
+   "party": "Labour",
+   "constituency": "Lichfield",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5127,
+   "name": "John Slinger",
+   "party": "Labour",
+   "constituency": "Rugby",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5128,
+   "name": "Phil Brickell",
+   "party": "Labour",
+   "constituency": "Bolton West",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5129,
+   "name": "Martin McCluskey",
+   "party": "Labour",
+   "constituency": "Inverclyde and Renfrewshire West",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5130,
+   "name": "Matt Turmaine",
+   "party": "Labour",
+   "constituency": "Watford",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5131,
+   "name": "Jack Abbott",
+   "party": "Labour (Co-op)",
+   "constituency": "Ipswich",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5132,
+   "name": "Liam Conlon",
+   "party": "Labour",
+   "constituency": "Beckenham and Penge",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5133,
+   "name": "Alice Macdonald",
+   "party": "Labour (Co-op)",
+   "constituency": "Norwich North",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5134,
+   "name": "Andy MacNae",
+   "party": "Labour",
+   "constituency": "Rossendale and Darwen",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5135,
+   "name": "Oliver Ryan",
+   "party": "Labour (Co-op)",
+   "constituency": "Burnley",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5136,
+   "name": "Imogen Walker",
+   "party": "Labour",
+   "constituency": "Hamilton and Clyde Valley",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5137,
+   "name": "Maureen Burke",
+   "party": "Labour",
+   "constituency": "Glasgow North East",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5138,
+   "name": "Ian Roome",
+   "party": "Liberal Democrat",
+   "constituency": "North Devon",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5139,
+   "name": "Emily Darlington",
+   "party": "Labour",
+   "constituency": "Milton Keynes Central",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5140,
+   "name": "Claire Young",
+   "party": "Liberal Democrat",
+   "constituency": "Thornbury and Yate",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5141,
+   "name": "Alex Mayer",
+   "party": "Labour",
+   "constituency": "Dunstable and Leighton Buzzard",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5142,
+   "name": "Abtisam Mohamed",
+   "party": "Labour",
+   "constituency": "Sheffield Central",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5143,
+   "name": "Catherine Atkinson",
+   "party": "Labour",
+   "constituency": "Derby North",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5144,
+   "name": "Richard Quigley",
+   "party": "Labour",
+   "constituency": "Isle of Wight West",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5145,
+   "name": "Irene Campbell",
+   "party": "Labour",
+   "constituency": "North Ayrshire and Arran",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5146,
+   "name": "Michael Payne",
+   "party": "Labour",
+   "constituency": "Gedling",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5147,
+   "name": "Luke Myer",
+   "party": "Labour",
+   "constituency": "Middlesbrough South and East Cleveland",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5148,
+   "name": "Mr Hamish Falconer",
+   "party": "Labour",
+   "constituency": "Lincoln",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5149,
+   "name": "Amanda Hack",
+   "party": "Labour",
+   "constituency": "North West Leicestershire",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5150,
+   "name": "Samantha Niblett",
+   "party": "Labour",
+   "constituency": "South Derbyshire",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5151,
+   "name": "David Williams",
+   "party": "Labour",
+   "constituency": "Stoke-on-Trent North",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5152,
+   "name": "Sureena Brackenridge",
+   "party": "Labour",
+   "constituency": "Wolverhampton North East",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5153,
+   "name": "Mr Cathal Mallaghan",
+   "party": "Sinn Féin",
+   "constituency": "Mid Ulster",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5154,
+   "name": "Sarah Hall",
+   "party": "Labour (Co-op)",
+   "constituency": "Warrington South",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5155,
+   "name": "Chris Kane",
+   "party": "Labour",
+   "constituency": "Stirling and Strathallan",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5156,
+   "name": "Jess Asato",
+   "party": "Labour",
+   "constituency": "Lowestoft",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5157,
+   "name": "Susan Murray",
+   "party": "Liberal Democrat",
+   "constituency": "Mid Dunbartonshire",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5158,
+   "name": "Rupert Lowe",
+   "party": "Restore Britain",
+   "constituency": "Great Yarmouth",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5159,
+   "name": "Mr Connor Rand",
+   "party": "Labour",
+   "constituency": "Altrincham and Sale West",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5160,
+   "name": "Jenny Riddell-Carpenter",
+   "party": "Labour",
+   "constituency": "Suffolk Coastal",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5161,
+   "name": "Richard Tice",
+   "party": "Reform UK",
+   "constituency": "Boston and Skegness",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5162,
+   "name": "Matthew Patrick",
+   "party": "Labour",
+   "constituency": "Wirral West",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5163,
+   "name": "Dr Peter Prinsley",
+   "party": "Labour",
+   "constituency": "Bury St Edmunds and Stowmarket",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5164,
+   "name": "Steff Aquarone",
+   "party": "Liberal Democrat",
+   "constituency": "North Norfolk",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5165,
+   "name": "Peter Swallow",
+   "party": "Labour",
+   "constituency": "Bracknell",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5166,
+   "name": "Mark Sewards",
+   "party": "Labour",
+   "constituency": "Leeds South West and Morley",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5167,
+   "name": "Gregor Poynton",
+   "party": "Labour",
+   "constituency": "Livingston",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5168,
+   "name": "Adam Jogee",
+   "party": "Labour",
+   "constituency": "Newcastle-under-Lyme",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5169,
+   "name": "Charlie Dewhirst",
+   "party": "Conservative",
+   "constituency": "Bridlington and The Wolds",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5170,
+   "name": "John Grady",
+   "party": "Labour",
+   "constituency": "Glasgow East",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5171,
+   "name": "Julia Buckley",
+   "party": "Labour",
+   "constituency": "Shrewsbury",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5172,
+   "name": "Dan Aldridge",
+   "party": "Labour",
+   "constituency": "Weston-super-Mare",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5173,
+   "name": "Alex Baker",
+   "party": "Labour",
+   "constituency": "Aldershot",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5174,
+   "name": "Fred Thomas",
+   "party": "Labour",
+   "constituency": "Plymouth Moor View",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5175,
+   "name": "Mr Alex Barros-Curtis",
+   "party": "Labour",
+   "constituency": "Cardiff West",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5176,
+   "name": "Baggy Shanker",
+   "party": "Labour (Co-op)",
+   "constituency": "Derby South",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5177,
+   "name": "Ann Davies",
+   "party": "Plaid Cymru",
+   "constituency": "Caerfyrddin",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5178,
+   "name": "Sally Jameson",
+   "party": "Labour (Co-op)",
+   "constituency": "Doncaster Central",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5179,
+   "name": "Kirsteen Sullivan",
+   "party": "Labour (Co-op)",
+   "constituency": "Bathgate and Linlithgow",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5180,
+   "name": "Nesil Caliskan",
+   "party": "Labour",
+   "constituency": "Barking",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5181,
+   "name": "Becky Gittins",
+   "party": "Labour",
+   "constituency": "Clwyd East",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5182,
+   "name": "Charlotte Cane",
+   "party": "Liberal Democrat",
+   "constituency": "Ely and East Cambridgeshire",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5183,
+   "name": "Frank McNally",
+   "party": "Labour",
+   "constituency": "Coatbridge and Bellshill",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5184,
+   "name": "Daniel Francis",
+   "party": "Labour",
+   "constituency": "Bexleyheath and Crayford",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5185,
+   "name": "Alan Gemmell",
+   "party": "Labour",
+   "constituency": "Central Ayrshire",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5186,
+   "name": "Bradley Thomas",
+   "party": "Conservative",
+   "constituency": "Bromsgrove",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5187,
+   "name": "Josh Dean",
+   "party": "Labour",
+   "constituency": "Hertford and Stortford",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5188,
+   "name": "Tracy Gilbert",
+   "party": "Labour",
+   "constituency": "Edinburgh North and Leith",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5189,
+   "name": "Gordon McKee",
+   "party": "Labour",
+   "constituency": "Glasgow South",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5190,
+   "name": "Patricia Ferguson",
+   "party": "Labour",
+   "constituency": "Glasgow West",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5191,
+   "name": "Adam Dance",
+   "party": "Liberal Democrat",
+   "constituency": "Yeovil",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5192,
+   "name": "Helena Dollimore",
+   "party": "Labour (Co-op)",
+   "constituency": "Hastings and Rye",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5193,
+   "name": "Callum Anderson",
+   "party": "Labour",
+   "constituency": "Buckingham and Bletchley",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5194,
+   "name": "Steve Yemm",
+   "party": "Labour",
+   "constituency": "Mansfield",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5195,
+   "name": "Andrew Cooper",
+   "party": "Labour",
+   "constituency": "Mid Cheshire",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5196,
+   "name": "Brian Leishman",
+   "party": "Labour",
+   "constituency": "Alloa and Grangemouth",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5197,
+   "name": "Dr Neil Shastri-Hurst",
+   "party": "Conservative",
+   "constituency": "Solihull West and Shirley",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5198,
+   "name": "Chris Coghlan",
+   "party": "Liberal Democrat",
+   "constituency": "Dorking and Horley",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5199,
+   "name": "Mr Luke Charters",
+   "party": "Labour",
+   "constituency": "York Outer",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5200,
+   "name": "Kenneth Stevenson",
+   "party": "Labour",
+   "constituency": "Airdrie and Shotts",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5201,
+   "name": "Victoria Collins",
+   "party": "Liberal Democrat",
+   "constituency": "Harpenden and Berkhamsted",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5202,
+   "name": "Jessica Toale",
+   "party": "Labour",
+   "constituency": "Bournemouth West",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5203,
+   "name": "Alison Griffiths",
+   "party": "Conservative",
+   "constituency": "Bognor Regis and Littlehampton",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5204,
+   "name": "Sarah Sackman",
+   "party": "Labour",
+   "constituency": "Finchley and Golders Green",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5205,
+   "name": "Ben Goldsborough",
+   "party": "Labour",
+   "constituency": "South Norfolk",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5206,
+   "name": "Elaine Stewart",
+   "party": "Labour",
+   "constituency": "Ayr, Carrick and Cumnock",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5207,
+   "name": "Clive Jones",
+   "party": "Liberal Democrat",
+   "constituency": "Wokingham",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5208,
+   "name": "Perran Moon",
+   "party": "Labour",
+   "constituency": "Camborne and Redruth",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5209,
+   "name": "Peter Fortune",
+   "party": "Conservative",
+   "constituency": "Bromley and Biggin Hill",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5210,
+   "name": "Tom Hayes",
+   "party": "Labour",
+   "constituency": "Bournemouth East",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5211,
+   "name": "James Asser",
+   "party": "Labour",
+   "constituency": "West Ham and Beckton",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5212,
+   "name": "Dr Scott Arthur",
+   "party": "Labour",
+   "constituency": "Edinburgh South West",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5213,
+   "name": "Dr Zubir Ahmed",
+   "party": "Labour",
+   "constituency": "Glasgow South West",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5214,
+   "name": "Brian Mathew",
+   "party": "Liberal Democrat",
+   "constituency": "Melksham and Devizes",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5215,
+   "name": "Naushabah Khan",
+   "party": "Labour",
+   "constituency": "Gillingham and Rainham",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5216,
+   "name": "Caroline Voaden",
+   "party": "Liberal Democrat",
+   "constituency": "South Devon",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5217,
+   "name": "Lloyd Hatton",
+   "party": "Labour",
+   "constituency": "South Dorset",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5218,
+   "name": "David Smith",
+   "party": "Labour",
+   "constituency": "North Northumberland",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5219,
+   "name": "Mike Martin",
+   "party": "Liberal Democrat",
+   "constituency": "Tunbridge Wells",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5220,
+   "name": "Tristan Osborne",
+   "party": "Labour",
+   "constituency": "Chatham and Aylesford",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5221,
+   "name": "Steve Witherden",
+   "party": "Labour",
+   "constituency": "Montgomeryshire and Glyndŵr",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5222,
+   "name": "Tom Rutland",
+   "party": "Labour",
+   "constituency": "East Worthing and Shoreham",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5223,
+   "name": "Jim Dickson",
+   "party": "Labour",
+   "constituency": "Dartford",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5224,
+   "name": "Kate Dearden",
+   "party": "Labour (Co-op)",
+   "constituency": "Halifax",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5225,
+   "name": "Lizzi Collinge",
+   "party": "Labour",
+   "constituency": "Morecambe and Lunesdale",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5226,
+   "name": "Michelle Welsh",
+   "party": "Labour",
+   "constituency": "Sherwood Forest",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5227,
+   "name": "Jas Athwal",
+   "party": "Labour",
+   "constituency": "Ilford South",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5228,
+   "name": "Maya Ellis",
+   "party": "Labour",
+   "constituency": "Ribble Valley",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5229,
+   "name": "Joe Powell",
+   "party": "Labour",
+   "constituency": "Kensington and Bayswater",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5230,
+   "name": "Warinder Juss",
+   "party": "Labour",
+   "constituency": "Wolverhampton West",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5231,
+   "name": "Mr Adnan Hussain",
+   "party": "Independent",
+   "constituency": "Blackburn",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5232,
+   "name": "Lorraine Beavers",
+   "party": "Labour",
+   "constituency": "Blackpool North and Fleetwood",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5233,
+   "name": "Lee Pitcher",
+   "party": "Labour",
+   "constituency": "Doncaster East and the Isle of Axholme",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5234,
+   "name": "Laurence Turner",
+   "party": "Labour",
+   "constituency": "Birmingham Northfield",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5235,
+   "name": "Al Carns",
+   "party": "Labour",
+   "constituency": "Birmingham Selly Oak",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5236,
+   "name": "Jade Botterill",
+   "party": "Labour",
+   "constituency": "Ossett and Denby Dale",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5237,
+   "name": "Chris Vince",
+   "party": "Labour (Co-op)",
+   "constituency": "Harlow",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5238,
+   "name": "Alex Ballinger",
+   "party": "Labour",
+   "constituency": "Halesowen",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5239,
+   "name": "Sarah Gibson",
+   "party": "Liberal Democrat",
+   "constituency": "Chippenham",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5240,
+   "name": "Melanie Ward",
+   "party": "Labour",
+   "constituency": "Cowdenbeath and Kirkcaldy",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5241,
+   "name": "Aphra Brandreth",
+   "party": "Conservative",
+   "constituency": "Chester South and Eddisbury",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5242,
+   "name": "Michael Wheeler",
+   "party": "Labour",
+   "constituency": "Worsley and Eccles",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5243,
+   "name": "Andrew Pakes",
+   "party": "Labour (Co-op)",
+   "constituency": "Peterborough",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5244,
+   "name": "Chris Hinchliff",
+   "party": "Labour",
+   "constituency": "North East Hertfordshire",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5245,
+   "name": "Chris Murray",
+   "party": "Labour",
+   "constituency": "Edinburgh East and Musselburgh",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5246,
+   "name": "Torcuil Crichton",
+   "party": "Labour",
+   "constituency": "Na h-Eileanan an Iar",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5247,
+   "name": "Sojan Joseph",
+   "party": "Labour",
+   "constituency": "Ashford",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5248,
+   "name": "Luke Murphy",
+   "party": "Labour",
+   "constituency": "Basingstoke",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5249,
+   "name": "Dr Ellie Chowns",
+   "party": "Green Party",
+   "constituency": "North Herefordshire",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5250,
+   "name": "Gideon Amos",
+   "party": "Liberal Democrat",
+   "constituency": "Taunton and Wellington",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5251,
+   "name": "Martin Rhodes",
+   "party": "Labour",
+   "constituency": "Glasgow North",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5252,
+   "name": "Rachel Gilmour",
+   "party": "Liberal Democrat",
+   "constituency": "Tiverton and Minehead",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5253,
+   "name": "Richard Baker",
+   "party": "Labour",
+   "constituency": "Glenrothes and Mid Fife",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5254,
+   "name": "Alison Hume",
+   "party": "Labour",
+   "constituency": "Scarborough and Whitby",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5255,
+   "name": "Joe Robertson",
+   "party": "Conservative",
+   "constituency": "Isle of Wight East",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5256,
+   "name": "Jonathan Davies",
+   "party": "Labour",
+   "constituency": "Mid Derbyshire",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5257,
+   "name": "Rachel Blake",
+   "party": "Labour (Co-op)",
+   "constituency": "Cities of London and Westminster",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5258,
+   "name": "Louise Sandher-Jones",
+   "party": "Labour",
+   "constituency": "North East Derbyshire",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5259,
+   "name": "Dr Jeevun Sandher",
+   "party": "Labour",
+   "constituency": "Loughborough",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5260,
+   "name": "Katie White",
+   "party": "Labour",
+   "constituency": "Leeds North West",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5261,
+   "name": "Pat Cullen",
+   "party": "Sinn Féin",
+   "constituency": "Fermanagh and South Tyrone",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5262,
+   "name": "Alex Easton",
+   "party": "Independent",
+   "constituency": "North Down",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5263,
+   "name": "Alex Brewer",
+   "party": "Liberal Democrat",
+   "constituency": "North East Hampshire",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5264,
+   "name": "Jonathan Hinder",
+   "party": "Labour",
+   "constituency": "Pendle and Clitheroe",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5265,
+   "name": "James MacCleary",
+   "party": "Liberal Democrat",
+   "constituency": "Lewes",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5266,
+   "name": "Mike Tapp",
+   "party": "Labour",
+   "constituency": "Dover and Deal",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5267,
+   "name": "Yuan Yang",
+   "party": "Labour",
+   "constituency": "Earley and Woodley",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5268,
+   "name": "Iqbal Mohamed",
+   "party": "Independent",
+   "constituency": "Dewsbury and Batley",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5269,
+   "name": "Dr Lauren Sullivan",
+   "party": "Labour",
+   "constituency": "Gravesham",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5270,
+   "name": "Darren Paffey",
+   "party": "Labour",
+   "constituency": "Southampton Itchen",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5271,
+   "name": "Satvir Kaur",
+   "party": "Labour",
+   "constituency": "Southampton Test",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5272,
+   "name": "Margaret Mullane",
+   "party": "Labour",
+   "constituency": "Dagenham and Rainham",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5273,
+   "name": "Connor Naismith",
+   "party": "Labour",
+   "constituency": "Crewe and Nantwich",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5274,
+   "name": "Sonia Kumar",
+   "party": "Labour",
+   "constituency": "Dudley",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5275,
+   "name": "Graeme Downie",
+   "party": "Labour",
+   "constituency": "Dunfermline and Dollar",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5276,
+   "name": "Chris Ward",
+   "party": "Labour",
+   "constituency": "Brighton Kemptown and Peacehaven",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5277,
+   "name": "Graham Leadbitter",
+   "party": "Scottish National Party",
+   "constituency": "Moray West, Nairn and Strathspey",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5278,
+   "name": "Uma Kumaran",
+   "party": "Labour",
+   "constituency": "Stratford and Bow",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5279,
+   "name": "Jayne Kirkham",
+   "party": "Labour (Co-op)",
+   "constituency": "Truro and Falmouth",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5280,
+   "name": "Seamus Logan",
+   "party": "Scottish National Party",
+   "constituency": "Aberdeenshire North and Moray East",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5281,
+   "name": "Anna Dixon",
+   "party": "Labour",
+   "constituency": "Shipley",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5282,
+   "name": "Dan Tomlinson",
+   "party": "Labour",
+   "constituency": "Chipping Barnet",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5283,
+   "name": "Alison Bennett",
+   "party": "Liberal Democrat",
+   "constituency": "Mid Sussex",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5284,
+   "name": "David Chadwick",
+   "party": "Liberal Democrat",
+   "constituency": "Brecon, Radnor and Cwm Tawe",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5285,
+   "name": "Katie Lam",
+   "party": "Conservative",
+   "constituency": "Weald of Kent",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5286,
+   "name": "Anna Sabine",
+   "party": "Liberal Democrat",
+   "constituency": "Frome and East Somerset",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5287,
+   "name": "Tim Roca",
+   "party": "Labour",
+   "constituency": "Macclesfield",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5288,
+   "name": "Dr Al Pinkerton",
+   "party": "Liberal Democrat",
+   "constituency": "Surrey Heath",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5289,
+   "name": "Harpreet Uppal",
+   "party": "Labour",
+   "constituency": "Huddersfield",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5290,
+   "name": "Leigh Ingham",
+   "party": "Labour",
+   "constituency": "Stafford",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5291,
+   "name": "Catherine Fookes",
+   "party": "Labour",
+   "constituency": "Monmouthshire",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5292,
+   "name": "Dáire Hughes",
+   "party": "Sinn Féin",
+   "constituency": "Newry and Armagh",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5293,
+   "name": "Cat Eccles",
+   "party": "Labour",
+   "constituency": "Stourbridge",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5294,
+   "name": "Amanda Martin",
+   "party": "Labour",
+   "constituency": "Portsmouth North",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5295,
+   "name": "Josh Fenton-Glynn",
+   "party": "Labour",
+   "constituency": "Calder Valley",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5296,
+   "name": "Freddie van Mierlo",
+   "party": "Liberal Democrat",
+   "constituency": "Henley and Thame",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5297,
+   "name": "Rebecca Paul",
+   "party": "Conservative",
+   "constituency": "Reigate",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5298,
+   "name": "Lauren Edwards",
+   "party": "Labour",
+   "constituency": "Rochester and Strood",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5299,
+   "name": "Monica Harding",
+   "party": "Liberal Democrat",
+   "constituency": "Esher and Walton",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5300,
+   "name": "Kevin McKenna",
+   "party": "Labour",
+   "constituency": "Sittingbourne and Sheppey",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5301,
+   "name": "Rebecca Smith",
+   "party": "Conservative",
+   "constituency": "South West Devon",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5302,
+   "name": "Noah Law",
+   "party": "Labour",
+   "constituency": "St Austell and Newquay",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5303,
+   "name": "Patrick Spencer",
+   "party": "Conservative",
+   "constituency": "Central Suffolk and North Ipswich",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5304,
+   "name": "Dr Danny Chambers",
+   "party": "Liberal Democrat",
+   "constituency": "Winchester",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5305,
+   "name": "Georgia Gould",
+   "party": "Labour",
+   "constituency": "Queen's Park and Maida Vale",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5306,
+   "name": "Claire Hazelgrove",
+   "party": "Labour",
+   "constituency": "Filton and Bradley Stoke",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5307,
+   "name": "Dr Beccy Cooper",
+   "party": "Labour",
+   "constituency": "Worthing West",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5308,
+   "name": "Sam Carling",
+   "party": "Labour",
+   "constituency": "North West Cambridgeshire",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5309,
+   "name": "Katrina Murray",
+   "party": "Labour",
+   "constituency": "Cumbernauld and Kirkintilloch",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5310,
+   "name": "Mr Lee Dillon",
+   "party": "Liberal Democrat",
+   "constituency": "Newbury",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5311,
+   "name": "Harriet Cross",
+   "party": "Conservative",
+   "constituency": "Gordon and Buchan",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5312,
+   "name": "Sadik Al-Hassan",
+   "party": "Labour",
+   "constituency": "North Somerset",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5313,
+   "name": "Zöe Franklin",
+   "party": "Liberal Democrat",
+   "constituency": "Guildford",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5314,
+   "name": "Siân Berry",
+   "party": "Green Party",
+   "constituency": "Brighton Pavilion",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5315,
+   "name": "Lee Barron",
+   "party": "Labour",
+   "constituency": "Corby and East Northamptonshire",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5316,
+   "name": "Mike Reader",
+   "party": "Labour",
+   "constituency": "Northampton South",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5317,
+   "name": "Paul Davies",
+   "party": "Labour",
+   "constituency": "Colne Valley",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5318,
+   "name": "Olly Glover",
+   "party": "Liberal Democrat",
+   "constituency": "Didcot and Wantage",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5319,
+   "name": "Robin Swann",
+   "party": "Ulster Unionist Party",
+   "constituency": "South Antrim",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5320,
+   "name": "Adrian Ramsay",
+   "party": "Green Party",
+   "constituency": "Waveney Valley",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5321,
+   "name": "Mr Paul Kohler",
+   "party": "Liberal Democrat",
+   "constituency": "Wimbledon",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5322,
+   "name": "Mr Will Forster",
+   "party": "Liberal Democrat",
+   "constituency": "Woking",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5323,
+   "name": "Matt Bishop",
+   "party": "Labour",
+   "constituency": "Forest of Dean",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5324,
+   "name": "Sarah Russell",
+   "party": "Labour",
+   "constituency": "Congleton",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5325,
+   "name": "Charlie Maynard",
+   "party": "Liberal Democrat",
+   "constituency": "Witney",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5326,
+   "name": "Edward Morello",
+   "party": "Liberal Democrat",
+   "constituency": "West Dorset",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5327,
+   "name": "Vikki Slade",
+   "party": "Liberal Democrat",
+   "constituency": "Mid Dorset and North Poole",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5328,
+   "name": "Sean Woodcock",
+   "party": "Labour",
+   "constituency": "Banbury",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5329,
+   "name": "John Milne",
+   "party": "Liberal Democrat",
+   "constituency": "Horsham",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5330,
+   "name": "Mr Peter Bedford",
+   "party": "Conservative",
+   "constituency": "Mid Leicestershire",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5331,
+   "name": "Rosie Wrighting",
+   "party": "Labour",
+   "constituency": "Kettering",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5332,
+   "name": "Lincoln Jopp",
+   "party": "Conservative",
+   "constituency": "Spelthorne",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5333,
+   "name": "Lucy Rigby",
+   "party": "Labour",
+   "constituency": "Northampton North",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5334,
+   "name": "Dr Allison Gardner",
+   "party": "Labour",
+   "constituency": "Stoke-on-Trent South",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5335,
+   "name": "Jess Brown-Fuller",
+   "party": "Liberal Democrat",
+   "constituency": "Chichester",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5336,
+   "name": "Helen Maguire",
+   "party": "Liberal Democrat",
+   "constituency": "Epsom and Ewell",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5337,
+   "name": "Olivia Bailey",
+   "party": "Labour",
+   "constituency": "Reading West and Mid Berkshire",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5338,
+   "name": "Terry Jermy",
+   "party": "Labour",
+   "constituency": "South West Norfolk",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5339,
+   "name": "Danny Beales",
+   "party": "Labour",
+   "constituency": "Uxbridge and South Ruislip",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5340,
+   "name": "Jack Rankin",
+   "party": "Conservative",
+   "constituency": "Windsor",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5341,
+   "name": "Laura Kyrke-Smith",
+   "party": "Labour",
+   "constituency": "Aylesbury",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5342,
+   "name": "John Whitby",
+   "party": "Labour",
+   "constituency": "Derbyshire Dales",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5343,
+   "name": "Mr Joshua Reynolds",
+   "party": "Liberal Democrat",
+   "constituency": "Maidenhead",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5344,
+   "name": "Ben Coleman",
+   "party": "Labour",
+   "constituency": "Chelsea and Fulham",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5345,
+   "name": "Peter Lamb",
+   "party": "Labour",
+   "constituency": "Crawley",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5346,
+   "name": "Calum Miller",
+   "party": "Liberal Democrat",
+   "constituency": "Bicester and Woodstock",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5347,
+   "name": "David Reed",
+   "party": "Conservative",
+   "constituency": "Exmouth and Exeter East",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5348,
+   "name": "David Taylor",
+   "party": "Labour",
+   "constituency": "Hemel Hempstead",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5349,
+   "name": "Alex McIntyre",
+   "party": "Labour",
+   "constituency": "Gloucester",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5350,
+   "name": "Ben Maguire",
+   "party": "Liberal Democrat",
+   "constituency": "North Cornwall",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5351,
+   "name": "Gregory Stafford",
+   "party": "Conservative",
+   "constituency": "Farnham and Bordon",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5352,
+   "name": "Dr Roz Savage",
+   "party": "Liberal Democrat",
+   "constituency": "South Cotswolds",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5353,
+   "name": "Anna Gelderd",
+   "party": "Labour",
+   "constituency": "South East Cornwall",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5354,
+   "name": "Cameron Thomas",
+   "party": "Independent",
+   "constituency": "Tewkesbury",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5355,
+   "name": "Sarah Bool",
+   "party": "Conservative",
+   "constituency": "South Northamptonshire",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5356,
+   "name": "Jim Allister",
+   "party": "Traditional Unionist Voice",
+   "constituency": "North Antrim",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5357,
+   "name": "Ayoub Khan",
+   "party": "Independent",
+   "constituency": "Birmingham Perry Barr",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5358,
+   "name": "John Cooper",
+   "party": "Conservative",
+   "constituency": "Dumfries and Galloway",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5359,
+   "name": "Neil Duncan-Jordan",
+   "party": "Labour",
+   "constituency": "Poole",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5360,
+   "name": "David Pinto-Duschinsky",
+   "party": "Labour",
+   "constituency": "Hendon",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5361,
+   "name": "James McMurdock",
+   "party": "Independent",
+   "constituency": "South Basildon and East Thurrock",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5362,
+   "name": "Mr Angus MacDonald",
+   "party": "Liberal Democrat",
+   "constituency": "Inverness, Skye and West Ross-shire",
+   "membershipStartDate": "2024-07-04T00:00:00"
+  },
+  {
+   "id": 5403,
+   "name": "Sarah Pochin",
+   "party": "Reform UK",
+   "constituency": "Runcorn and Helsby",
+   "membershipStartDate": "2025-05-01T00:00:00"
+  },
+  {
+   "id": 5447,
+   "name": "Hannah Spencer",
+   "party": "Green Party",
+   "constituency": "Gorton and Denton",
+   "membershipStartDate": "2026-02-26T00:00:00"
+  },
+  {
+   "id": 5449,
+   "name": "Lara Bird",
+   "party": "Scottish National Party",
+   "constituency": "Arbroath and Broughty Ferry",
+   "membershipStartDate": "2026-06-18T00:00:00"
+  },
+  {
+   "id": 5450,
+   "name": "Douglas Lumsden",
+   "party": "Conservative",
+   "constituency": "Aberdeen South",
+   "membershipStartDate": "2026-06-18T00:00:00"
+  }
+ ]
+}
