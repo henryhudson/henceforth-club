@@ -132,6 +132,15 @@ describe("board taxes document route", () => {
     const res = await call("2025-12-31-fourth-period", "filing-pack");
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toBe("text/html; charset=utf-8");
+    // Inline HTML renders on the site origin under the reader's session — the
+    // sandbox strips script execution and credentialed fetches from it.
+    expect(res.headers.get("Content-Security-Policy")).toBe("sandbox");
     expect(Buffer.from(await res.arrayBuffer()).toString()).toBe(html);
+  });
+
+  it("does not sandbox PDFs — only rendered HTML carries the policy", async () => {
+    const res = await call();
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Security-Policy")).toBeNull();
   });
 });

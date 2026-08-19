@@ -71,4 +71,48 @@ describe("planScreenshotUpdate", () => {
     });
     expect(unmatched).toHaveLength(1);
   });
+
+  // A set holding both orientations matches two size groups; un-merged, the
+  // apply loop would delete the set once per assignment and crash on the
+  // second pass (2026-08-19 review, SITE-1).
+  it("collapses two size groups landing on one mixed-orientation set into a single assignment", () => {
+    const mixed = { id: "set-mixed", displayType: "APP_IPHONE_69", sizes: [[1320, 2868], [2868, 1320]], count: 4 };
+    const { assignments, unmatched } = planScreenshotUpdate({
+      files: [
+        { name: "02-landscape.png", width: 2868, height: 1320 },
+        { name: "01-portrait.png", width: 1320, height: 2868 },
+      ],
+      sets: [mixed],
+    });
+    expect(unmatched).toEqual([]);
+    expect(assignments).toHaveLength(1);
+    expect(assignments[0].setId).toBe("set-mixed");
+    expect(assignments[0].files).toEqual(["01-portrait.png", "02-landscape.png"]);
+  });
+
+  // Recovery for the stranding case: a failed run that deleted a set's
+  // screenshots leaves it empty and unmatchable; --assign feeds an explicit
+  // size-to-set mapping through `forced` (2026-08-19 review, SITE-2).
+  it("forced mapping assigns a size group to an empty set by explicit id", () => {
+    const empty = { id: "set-stranded", displayType: "APP_IPHONE_69", sizes: [], count: 0 };
+    const { assignments, unmatched } = planScreenshotUpdate({
+      files: [{ name: "01-a.png", width: 1320, height: 2868 }],
+      sets: [empty],
+      forced: { "1320x2868": "set-stranded" },
+    });
+    expect(unmatched).toEqual([]);
+    expect(assignments).toEqual([
+      { setId: "set-stranded", displayType: "APP_IPHONE_69", size: "1320x2868", files: ["01-a.png"], replaceCount: 0 },
+    ]);
+  });
+
+  it("reports a forced mapping whose set id does not exist instead of guessing", () => {
+    const { assignments, unmatched } = planScreenshotUpdate({
+      files: [{ name: "01-a.png", width: 1320, height: 2868 }],
+      sets: [iphoneSet],
+      forced: { "1320x2868": "set-nonexistent" },
+    });
+    expect(assignments).toEqual([]);
+    expect(unmatched[0].reason).toContain("does not exist");
+  });
 });

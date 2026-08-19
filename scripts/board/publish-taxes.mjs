@@ -129,6 +129,17 @@ for (const dirName of dirs) {
     });
   }
   rows.sort((a, b) => a.nested - b.nested || a.order - b.order || a.meta.slug.localeCompare(b.meta.slug));
+  // Two files whose names slugify identically (filing-pack.html beside
+  // filing_pack.html, or a .pdf/.html pair of one stem) would write one
+  // document key twice — the index then lists two rows serving the same bytes.
+  const seen = new Set();
+  for (const r of rows) {
+    if (seen.has(r.meta.slug)) {
+      console.error(`slug collision in ${dirName}: two files slugify to "${r.meta.slug}" — rename one`);
+      process.exit(1);
+    }
+    seen.add(r.meta.slug);
+  }
   periods.push({
     year: dirName,
     period: labelByFolder.get(dirName) ?? EXTRA_LABELS[dirName] ?? dirName,

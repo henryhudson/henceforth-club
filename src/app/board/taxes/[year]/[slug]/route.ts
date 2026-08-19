@@ -51,13 +51,18 @@ export async function GET(
   // The store carries PDFs and, since the filings tree took over as the
   // source, HTML working papers (the filing pack). Absent type means a
   // document published before the field existed — always a PDF.
-  const contentType = file.type === "html" ? "text/html; charset=utf-8" : "application/pdf";
+  const isHtml = file.type === "html";
+  const contentType = isHtml ? "text/html; charset=utf-8" : "application/pdf";
 
-  return new NextResponse(new Uint8Array(Buffer.from(file.b64, "base64")), {
-    headers: {
-      "Content-Type": contentType,
-      "Content-Disposition": `inline; filename="${filename}"`,
-      "Cache-Control": "private, no-store",
-    },
-  });
+  // An inline HTML document renders on the site origin under the reader's
+  // signed-in session; sandboxing it strips script execution and credentialed
+  // fetches so a served pack can never act with the reader's authority.
+  const headers: Record<string, string> = {
+    "Content-Type": contentType,
+    "Content-Disposition": `inline; filename="${filename}"`,
+    "Cache-Control": "private, no-store",
+  };
+  if (isHtml) headers["Content-Security-Policy"] = "sandbox";
+
+  return new NextResponse(new Uint8Array(Buffer.from(file.b64, "base64")), { headers });
 }

@@ -47,9 +47,17 @@ const PLATFORM = arg("platform", "IOS");
 const DIRS = argAll("dir");
 const LOCALE = arg("locale");
 const APPLY = has("apply");
+// --assign 1320x2868=<setId>: recovery for a set whose screenshots a failed
+// run already deleted (empty sets carry no dimension identity to match on).
+const FORCED = Object.fromEntries(
+  argAll("assign").map((s) => {
+    const [size, setId] = s.split("=");
+    return [size, setId];
+  }),
+);
 if (!APP_ID || !VERSION || DIRS.length === 0) {
   console.error(
-    "usage: asc-screenshots.mjs --app <appStoreId> --version <x.y> [--platform IOS|MAC_OS] --dir <exports dir> [--dir …] [--locale xx-XX] [--apply]",
+    "usage: asc-screenshots.mjs --app <appStoreId> --version <x.y> [--platform IOS|MAC_OS] --dir <exports dir> [--dir …] [--locale xx-XX] [--assign WxH=setId …] [--apply]",
   );
   process.exit(2);
 }
@@ -146,6 +154,15 @@ for (const dir of DIRS) {
       console.error(`not a PNG: ${full}`);
       process.exit(1);
     }
+    // The apply loop looks files up by basename; a collision across --dir
+    // directories would silently upload one directory's bytes into the other's
+    // set (2026-08-19 review, SITE-3). The export naming embeds the pixel size
+    // so collisions are always a mistake — refuse loudly.
+    const clash = files.find((f) => f.name === name);
+    if (clash) {
+      console.error(`duplicate basename across directories: ${clash.full} and ${full}`);
+      process.exit(1);
+    }
     files.push({ name, full, buf, width: dims.width, height: dims.height });
   }
 }
@@ -153,6 +170,7 @@ for (const dir of DIRS) {
 const plan = planScreenshotUpdate({
   files: files.map(({ name, width, height }) => ({ name, width, height })),
   sets,
+  forced: FORCED,
 });
 
 console.log("\nPLAN");
@@ -173,6 +191,12 @@ if (!APPLY) {
 }
 
 // ---- apply ----
+// Print the recovery map BEFORE the first mutation: deleting a set's
+// screenshots erases the dimension identity the planner matches on, so a
+// failure mid-apply leaves this line as the way back in (--assign WxH=setId).
+for (const a of plan.assignments) {
+  console.log(`recovery map: --assign ${a.size.split("+")[0]}=${a.setId}  (${a.displayType})`);
+}
 const byName = new Map(files.map((f) => [f.name, f]));
 for (const a of plan.assignments) {
   const set = sets.find((s) => s.id === a.setId);
