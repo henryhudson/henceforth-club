@@ -6,6 +6,27 @@ records that sweep's **rejections and dismissals**, newest first, so a later run
 re-flag what a prior run already refuted. Confirmed findings go to the Morning Board, not
 here. Cite `file:line` (or the live probe) so each verdict is independently re-derivable.
 
+## 2026-08-20 — one rejection out of four newspaper-measure findings
+
+**Rejected 1 — "A4Sheet fit loop measures before the blackletter nameplate face arrives" (JUDGMENT, low).**
+The race is real but cannot move the measurement. The only element rendered in the
+asynchronously-loaded UnifrakturMaguntia face is the single-line `.nameplate` with an explicit
+`line-height: 1` at a fixed 34pt (`overview.module.css:41-48` at `origin/main` `25824be` — the
+sole reference to the face), so a late font swap changes glyph ink but not the line box:
+`scrollHeight` is identical with Georgia standing in as after the swap ("The Hansard" cannot
+wrap in a 186mm measure at 34pt in either face). Every other font on the sheet is local and
+loaded before the mount-time `useEffect` measures, leaving no reflow for the single 0.2pt
+back-off to be exposed to. No fix needed; if the nameplate ever grows a second line or a
+variable measure, re-derive.
+
+**For the record.** The sweep was otherwise clean and three low findings were confirmed to the
+board (`asc-screenshots.mjs:198` recovery-map under-print, `members-snapshot.mjs:27-42,66-71`
+pagination/overwrite guards, the empty ruled sidebar on no-data digest issues live at
+`/hansard/this-week/2026-05-27`). Routes: `/` 0.069-0.112s, `/folklore` warm 0.392-0.507s;
+`POST /api/folklore/job` refused 503 fail-closed; `/board` challenged 307. Zero open pull
+requests; `npm test` 1,574 passed, 0 failed. The 2026-08-19 draft correctly 404s and its
+opengraph image serves the zero-content card — the draft-leak fix holds.
+
 ## 2026-08-14 — a sweep-brief correction and one intent question
 
 - PROCESS CORRECTION: the morning sweep checked `/this-week/<date>` and found 404 — the digest lives at `/hansard/this-week/<date>` (200 in 0.372s; git grep at origin/main confirms no `/this-week` route or redirect exists). Future sweeps use the `/hansard` path. The 2026-08-12 digest is live.
