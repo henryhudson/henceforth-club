@@ -88,3 +88,15 @@ export function planScreenshotUpdate({ files, sets, forced = {} }) {
   }
   return { assignments: merged, unmatched };
 }
+
+/** The recovery map: one `--assign WxH=setId` line PER SIZE of each
+ *  assignment. A merged mixed-orientation assignment carries "WxH+WxH", and
+ *  after a mid-apply failure its set is empty — only a forced entry can match
+ *  it — so recovery must force EVERY orientation group, not just the first
+ *  (2026-08-20 review: the one case the map existed for was the one case it
+ *  under-covered). */
+export function recoveryLines(assignments) {
+  return assignments.flatMap((a) =>
+    a.size.split("+").map((size) => `recovery map: --assign ${size}=${a.setId}  (${a.displayType})`),
+  );
+}

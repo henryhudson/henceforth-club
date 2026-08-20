@@ -28,6 +28,7 @@ async function fetchAll() {
     const res = await fetch(`${API}&skip=${skip}&take=20`);
     if (!res.ok) throw new Error(`members-api ${res.status} at skip=${skip}`);
     const page = await res.json();
+    const got = (page.items ?? []).length;
     for (const it of page.items ?? []) {
       const v = it.value;
       members.push({
@@ -39,12 +40,33 @@ async function fetchAll() {
       });
     }
     if (members.length >= (page.totalResults ?? 0)) break;
+    // An ok page with zero items while more were promised is a stalled feed —
+    // without this the totalResults comparison above never breaks the loop
+    // (2026-08-20 review).
+    if (got === 0) {
+      throw new Error(
+        `members-api stalled: empty page at skip=${skip} with ${members.length}/${page.totalResults} fetched`,
+      );
+    }
   }
   return members.sort((a, b) => a.id - b.id);
 }
 
+// The Commons seats 650; a fetch far below that is an upstream incident, not
+// a mass departure. Refuse to diff or overwrite the committed baseline from a
+// short list — a totalResults of 0 during an outage would otherwise flood the
+// diff with departures and invert the flood on the next honest run
+// (2026-08-20 review).
+const MEMBER_FLOOR = 600;
+
 const current = await fetchAll();
 console.log(`fetched ${current.length} current Commons members`);
+if (current.length < MEMBER_FLOOR) {
+  console.error(
+    `refusing to continue: ${current.length} members is below the ${MEMBER_FLOOR}-member floor — upstream incident?`,
+  );
+  process.exit(1);
+}
 
 let previous = null;
 try {

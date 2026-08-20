@@ -1,5 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { pngDimensions, planScreenshotUpdate } from "./asc-screenshots-core.mjs";
+import { pngDimensions, planScreenshotUpdate, recoveryLines } from "./asc-screenshots-core.mjs";
+
+describe("recoveryLines", () => {
+  it("prints one --assign per orientation group of a merged mixed-orientation assignment", () => {
+    const lines = recoveryLines([
+      { setId: "set-ipad", displayType: "APP_IPAD_PRO_3GEN_129", size: "2064x2752+2752x2064", files: [] },
+    ]);
+    expect(lines).toEqual([
+      "recovery map: --assign 2064x2752=set-ipad  (APP_IPAD_PRO_3GEN_129)",
+      "recovery map: --assign 2752x2064=set-ipad  (APP_IPAD_PRO_3GEN_129)",
+    ]);
+  });
+
+  it("prints exactly one line for a single-orientation assignment", () => {
+    const lines = recoveryLines([
+      { setId: "set-iphone", displayType: "APP_IPHONE_69", size: "1320x2868", files: [] },
+    ]);
+    expect(lines).toEqual(["recovery map: --assign 1320x2868=set-iphone  (APP_IPHONE_69)"]);
+  });
+});
 
 function fakePng(width, height) {
   const buf = Buffer.alloc(24);

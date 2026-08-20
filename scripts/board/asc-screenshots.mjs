@@ -26,7 +26,7 @@ import { createHash } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { mintJWT } from "./asc-client.mjs";
-import { pngDimensions, planScreenshotUpdate } from "./asc-screenshots-core.mjs";
+import { pngDimensions, planScreenshotUpdate, recoveryLines } from "./asc-screenshots-core.mjs";
 
 const arg = (name, fallback) => {
   const i = process.argv.indexOf(`--${name}`);
@@ -193,9 +193,10 @@ if (!APPLY) {
 // ---- apply ----
 // Print the recovery map BEFORE the first mutation: deleting a set's
 // screenshots erases the dimension identity the planner matches on, so a
-// failure mid-apply leaves this line as the way back in (--assign WxH=setId).
-for (const a of plan.assignments) {
-  console.log(`recovery map: --assign ${a.size.split("+")[0]}=${a.setId}  (${a.displayType})`);
+// failure mid-apply leaves these lines as the way back in (--assign WxH=setId,
+// one per orientation group of a merged assignment — replay needs them all).
+for (const line of recoveryLines(plan.assignments)) {
+  console.log(line);
 }
 const byName = new Map(files.map((f) => [f.name, f]));
 for (const a of plan.assignments) {
