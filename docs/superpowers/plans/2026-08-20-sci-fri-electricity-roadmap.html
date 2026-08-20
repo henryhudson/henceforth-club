@@ -74,12 +74,20 @@
 <h3>And then there was light</h3>
 <p><strong>One idea:</strong> Maxwell's synthesis. The season's discoveries condense, one by one, into four short equations — the symbols-as-finale rule at full stretch, every symbol having been WORDS in an earlier film. Maxwell solves them and a wave comes out; the wave's speed comes out of the electrical measurements alone; and it is the speed of light. <strong>The reveal:</strong> light is electromagnetism — the whole season was walking toward this sentence. <strong>Period music:</strong> 1865; Brahms.</p></div>
 
+<h2>The two artifacts the season leaves behind</h2>
+
+<p><strong>The physics app.</strong> Every film is built in Swift in FeynmanFigures, and the parts are already app-shaped: pure, tested physics cores (KeplerOrbit, GasWorld), deterministic scene views per film, and the scrubber pattern that lets a finger drive any frame. By Maxwell the project holds interactive demonstrations of orbits, the three laws, momentum, energy, Coulomb's balance, Oersted's needle, Faraday's coil and the field equations. The end-of-season act is an assembly pass: a menu over the scenes, the film timelines given their interaction layers (the scrubber generalised), and "sort of a physics app" becomes an actual one. Whether it then joins the Wednesday cadence as a fourth App Store app is the season-end decision, alongside choosing the next season.</p>
+
+<p><strong>The Henceforth vocabulary.</strong> The formulas already live as words: <code>~/Programming/FORTH/feynman-equations.fs</code> (twenty-plus words — <code>momentum</code>, <code>kinetic-energy</code>, <code>gravity-force</code>, torque and inertia — with the vendored copy pinned by <code>FeynmanEquations_Tests</code> on Henceforth main). The season's rule: each film's formula lands as a word with a test the same week it airs. Film six is the vocabulary's best moment: <code>coulomb-force</code> takes exactly the stack shape of <code>gravity-force</code>, so the film's one idea — nature reused her favourite equation — is visible in the source code.</p>
+
 <h2>Production checklist</h2>
 <ul class="steps">
 <li><input type="checkbox"> Week of 31 August: cut films 4 and 5 as a batch (the conservations pair; the batch pattern from the Newton laws).</li>
 <li><input type="checkbox"> Week of 14 September: cut film 6 (Coulomb); decide whether films 7 and 8 batch with it.</li>
 <li><input type="checkbox"> Each cut: verify the RECORDING's public-domain licence, not just the work's; period-match per the table above.</li>
 <li><input type="checkbox"> Film 10 is the one film allowed a symbols overview — everything before it stays in words.</li>
+<li><input type="checkbox"> Each film week: the film's formula lands in feynman-equations.fs with a FeynmanEquations_Tests case (coulomb-force, field words, induction) — the vocabulary tracks the season.</li>
+<li><input type="checkbox"> Season end: the assembly pass — menu over the scenes, interaction layers on the film timelines; decide whether Feynman Figures joins the App Store cadence.</li>
 <li><input type="checkbox"> After film 10: decide the next season (candidates: heat and entropy; waves and sound; or straight on to relativity, for which Maxwell is the perfect setup).</li>
 </ul>
 
