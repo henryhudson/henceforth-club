@@ -672,36 +672,9 @@ body:has(.provenance)::before {
   .print-weekly h1 { font-size: 18px; }
   .print-weekly h2 { font-size: 12px; margin-top: 10px; }
 
-  /* ── the daily, set as a newspaper ──────────────────────────────────────
-     Tailwind's sm: breakpoints key off VIEWPORT width, and a print run has no
-     viewport in the sense a browser window does — headless Chrome lays the
-     page out at paper width, where sm: does not reliably apply. The two
-     devices that make this read as a paper — the two-column body and the
-     three standing columns — therefore have to be declared for print
-     explicitly rather than inherited from the screen classes. */
-  .newspaper article > div {
-    column-count: 2;
-    column-gap: 18px;
-    column-rule: 1px solid #d6d3d1;
-  }
-  /* A section split across a column break loses its heading from its text,
-     which is exactly the thing that stops looking like a newspaper. */
-  .newspaper article section { break-inside: avoid-column; }
-  .newspaper .grid {
-    display: grid !important;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 14px;
-  }
-
-  /* The masthead is display type on screen; on paper it only needs to be the
-     largest thing on the page, and every millimetre it gives back is body
-     copy that stays with the edition rather than spilling to another sheet. */
-  .newspaper header { padding-block: 6px; }
-  .newspaper header h1 { font-size: 26px; letter-spacing: 0.1em; }
-  .newspaper h2 { break-after: avoid; }
-
-  /* Boxed furniture — stop press, today's orders — must not be split. */
-  .newspaper section.border-2 { break-inside: avoid; }
+  /* The daily's print layout moved to the newspaper-measure sheet
+     (reports/[date]/_components/, 2026-08-20) — its whole below-sheet web
+     matter is display:none in print, so no .newspaper print rules remain. */
 }
 
 /* Stylesheet URL rotation, 2026-07-16: a corrupt copy of this file (fetched

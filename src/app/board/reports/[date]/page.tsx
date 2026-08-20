@@ -37,7 +37,7 @@ export default async function DailyEdition({ params }: { params: Promise<{ date:
         <MorningSheet report={report} issue={issue} />
       </div>
 
-      <div className="mx-auto max-w-4xl px-6 py-8 print:hidden">
+      <div className="newspaper mx-auto max-w-4xl px-6 py-8 print:hidden">
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-foreground/60 pb-2 font-serif text-[12px]">
           <Link href="/board/reports" className="underline">Reports</Link>
           <Link href="/board" className="underline">Board</Link>
