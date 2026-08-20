@@ -18,32 +18,45 @@ function clip(text: string, max: number): string {
 }
 
 /** The remaining days of the current week, from the edition date onward,
- *  read type-aware: planner tasks mix plain strings and {label, done}. */
+ *  read type-aware: planner tasks mix plain strings and {label, done}.
+ *  Capped hard — the sheet is a fixed A4 and the one-page budget fails the
+ *  render loudly, so open-ended sources must bound themselves here. */
 export function weekAheadFrom(week: WeekReport | null, fromDate: string): WeekAheadDay[] {
   const plan = week?.retro?.weekPlan ?? [];
   return plan
     .filter((day) => day.date >= fromDate)
-    .map((day) => ({
-      label: `${day.weekday.slice(0, 3)} ${parseInt(day.date.slice(8, 10), 10)}`,
-      tasks: (day.tasks ?? []).map((t) =>
-        typeof t === "string" ? { label: clip(t, 110), done: false } : { label: clip(t.label, 110), done: !!t.done },
-      ),
-    }))
+    .map((day) => {
+      const tasks = (day.tasks ?? []).map((t) =>
+        typeof t === "string" ? { label: clip(t, 72), done: false } : { label: clip(t.label, 72), done: !!t.done },
+      );
+      const kept = tasks.slice(0, 3);
+      if (tasks.length > 3) kept.push({ label: `and ${tasks.length - 3} more`, done: false });
+      return {
+        label: `${day.weekday.slice(0, 3)} ${parseInt(day.date.slice(8, 10), 10)}`,
+        tasks: kept,
+      };
+    })
     .filter((day) => day.tasks.length > 0);
 }
 
 /** The open board, compressed to run-in agate: titles clipped at their first
- *  dash, columns in working order. */
+ *  dash, columns in working order, the long tails capped by count. */
 export function openCards(board: Board, date: string): BoardOpen {
-  const byCol = (col: string) =>
-    board.cards.filter((c) => c.col === col).map((c) => clip(c.title, 64));
+  const byCol = (col: string, max: number) => {
+    const titles = board.cards.filter((c) => c.col === col).map((c) => clip(c.title, 44));
+    if (titles.length > max) {
+      return [...titles.slice(0, max), `and ${titles.length - max} more`];
+    }
+    return titles;
+  };
   return {
-    review: byCol("review"),
-    inprogress: byCol("inprogress"),
-    todo: byCol("todo"),
+    review: byCol("review", 8),
+    inprogress: byCol("inprogress", 6),
+    todo: byCol("todo", 9),
     doneToday: board.cards
       .filter((c) => c.col === "done" && (c.doneAt ?? "").startsWith(date))
-      .map((c) => clip(c.title, 64)),
+      .map((c) => clip(c.title, 44))
+      .slice(0, 5),
     total: board.cards.length,
   };
 }
