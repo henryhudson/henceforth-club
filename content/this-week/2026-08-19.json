@@ -1,0 +1,57 @@
+{
+ "week": "2026-08-19",
+ "windowLabel": "12 Aug – 19 Aug 2026",
+ "mode": "recess",
+ "generatedAt": "2026-08-19T11:20:00.000Z",
+ "recessReturnISO": "2026-09-01T00:00:00.000Z",
+ "stats": {
+  "divisions": 0,
+  "questions": 0,
+  "distinctAskers": 0
+ },
+ "departments": [],
+ "topTopics": [],
+ "qa": [],
+ "intro": "Parliament was away, and yet the House changed shape twice. On Thursday 13 August the member for Clacton was returned to a chamber that is not sitting: Nigel Farage — who resigned the seat on 7 July, amid reported scrutiny of his personal finances and questions over undeclared support, to seek a fresh mandate — won his own by-election with 22,239 votes to the 9,455 of Count Binface, a majority of 12,784 on a 44% turnout, after Labour, the Conservatives, the Liberal Democrats and the Greens all declined to stand. Thirty-four names crowded the ballot, and the register now records a parliamentary membership that began on 13 August 2026, making him the only member elected by this year’s electorate. Four days later the House changed again: on Monday 17 August Bayo Alaba, the member for Southend East and Rochford, had the Labour whip suspended and now sits as an independent while the party investigates a £50,000 taxpayer-backed Covid-era loan to one of his businesses — a matter he referred himself, after questions from The Times, and one the party stresses implies no wrongdoing at this stage. The week’s written record kept its own score. James Cartlidge put four plain questions about Stratus, the deep-strike missile at the heart of June’s Defence Investment Plan, and received four courtly refusals — stockpile withheld “for operational and security reasons”, range classified (though “significantly greater than the Storm Shadow and Harpoon weapons that it is replacing”), unit cost a commercial secret, first full-scale tests “from 2028” — each prefaced, with departmental politeness, “as he will recall from his time as a Defence Minister.” The money, by contrast, is published to the pound: £3 billion for Deep Precision Strike by 2030, £190 million towards the Precision Strike Missile, a twelve-nation Ankara initiative worth over $50 billion. And when Helen Morgan and Munira Wilson asked, separately, what the NHS capital budget gave up to fund that Plan, both waited forty-nine days and received the same answer word for word — £15 billion by 2029/30, neither the cut nor the Plan mentioned. Among the week’s 51 written answers: 27,748 hospital admissions of children aged five to ten for dental procedures last year, up from 12,702 in the pandemic year of 2020/21, with no record kept of what each admission costs. The House that could press any of this returns on 1 September.",
+ "overview": {
+  "headline": "The member for Clacton returns to an empty House",
+  "intro": "Nigel Farage resigned his seat on 7 July and won it back at a by-election on Thursday 13 August. He took 22,239 votes against 9,455 for the satirical candidate Count Binface, a majority of 12,784 on a 44% turnout. Labour, the Conservatives, the Liberal Democrats and the Greens all chose not to stand, and thirty-four candidates appeared on the ballot. The parliamentary register now records his membership as beginning on 13 August 2026. Four days later the House changed shape again when Bayo Alaba, the member for Southend East and Rochford, had the Labour whip suspended while the party investigates a Covid era business loan. Parliament itself sat for none of it and returns on 1 September.",
+  "brief": [
+   {
+    "title": "Farage wins the by-election he called on himself",
+    "when": "Thursday 13 August",
+    "note": "Nigel Farage resigned Clacton on 7 July, amid reported scrutiny of his personal finances, and stood again for a fresh mandate. The major parties declined to contest it, leaving Count Binface as the principal challenger among thirty-four candidates. Reform UK held the seat with 22,239 votes to 9,455, a majority of 12,784, on a turnout of 44%. He is now the only Member of Parliament elected by the 2026 electorate."
+   },
+   {
+    "title": "The whip suspended over a Covid loan",
+    "when": "Monday 17 August",
+    "note": "Bayo Alaba, the Labour member for Southend East and Rochford, referred himself to the party after The Times asked about a £50,000 taxpayer backed loan issued to one of his businesses in the pandemic. The whip was suspended while an investigation runs and he sits as an independent. The party has said the investigation implies no wrongdoing at this stage."
+   },
+   {
+    "title": "Four questions about Stratus, four refusals",
+    "when": "Answered Wednesday 19 August",
+    "note": "James Cartlidge of the Conservatives asked how many Stratus missiles will be bought, what one costs, what its range is and when it first flies. The Ministry of Defence withheld the number, the price and the range, and said full scale tests begin from 2028. The spending is public. Three billion pounds goes to deep precision strike by 2030 and £190 million towards the Precision Strike Missile programme, part of a twelve nation initiative worth over $50 billion agreed at Ankara."
+   },
+   {
+    "title": "Two questions about the NHS capital budget, one identical answer",
+    "when": "Answered Wednesday 19 August",
+    "note": "Helen Morgan of the Liberal Democrats asked about the impact of the one percent cut to the National Health Service capital budget. Her colleague Munira Wilson asked which hospital projects were cancelled, delayed or descoped to fund the Defence Investment Plan. Both waited forty-nine days and received the same answer word for word. It promises £15 billion of capital by 2029/30 and mentions neither the cut nor the Plan."
+   },
+   {
+    "title": "When Parliament comes back",
+    "when": "Tuesday 1 September",
+    "note": "The summer recess runs to 31 August. Fifty-one written answers arrived this week, eighteen from Health and ten from Defence. The starkest told Vikki Slade that 27,748 children aged five to ten were admitted to hospital for dental procedures last year, up from 12,702 in the pandemic year of 2020/21, with no record kept of the cost. The Department for Education could not price the preparation of its ministers for Westminster Hall debates, though the Department for Environment, Food and Rural Affairs counted exactly 301 staff on a compressed four day week."
+   }
+  ],
+  "feature": {
+   "title": "A mandate renewed against Count Binface",
+   "summary": "The by-election device is as old as the House, but its August form was new. A party leader resigned his seat while questions about his finances circulated, chose the date of his own re-examination, and faced an electorate his major opponents refused to contest. The result was emphatic and the turnout, at 44%, higher than most August contests could hope for. What the exercise proved is harder to say. A mandate renewed against a satirical candidate in a fancy dress helmet answers the question of Clacton's loyalty, not the questions that prompted the resignation. Those questions belong to the sitting House, its commissioner and its committees, and they resume on 1 September, facing a member whose membership is four weeks younger than everyone else's."
+  }
+ },
+ "highlights": {
+  "votes": [],
+  "questions": [],
+  "bills": []
+ },
+ "status": "published"
+}
