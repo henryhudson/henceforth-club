@@ -6,9 +6,13 @@ import s from "./morning.module.css";
 export type WeekAheadDay = { label: string; tasks: { label: string; done: boolean }[] };
 export type BoardOpen = {
   review: string[];
+  reviewCount: number;
   inprogress: string[];
+  inprogressCount: number;
   todo: string[];
+  todoCount: number;
   doneToday: string[];
+  doneTodayCount: number;
   total: number;
 };
 
@@ -42,21 +46,28 @@ export function weekAheadFrom(week: WeekReport | null, fromDate: string): WeekAh
 /** The open board, compressed to run-in agate: titles clipped at their first
  *  dash, columns in working order, the long tails capped by count. */
 export function openCards(board: Board, date: string): BoardOpen {
-  const byCol = (col: string, max: number) => {
+  const byCol = (col: string, max: number): [string[], number] => {
     const titles = board.cards.filter((c) => c.col === col).map((c) => clip(c.title, 44));
     if (titles.length > max) {
-      return [...titles.slice(0, max), `and ${titles.length - max} more`];
+      return [[...titles.slice(0, max), `and ${titles.length - max} more`], titles.length];
     }
-    return titles;
+    return [titles, titles.length];
   };
+  const [review, reviewCount] = byCol("review", 8);
+  const [inprogress, inprogressCount] = byCol("inprogress", 6);
+  const [todo, todoCount] = byCol("todo", 9);
+  const doneAll = board.cards
+    .filter((c) => c.col === "done" && (c.doneAt ?? "").startsWith(date))
+    .map((c) => clip(c.title, 44));
   return {
-    review: byCol("review", 8),
-    inprogress: byCol("inprogress", 6),
-    todo: byCol("todo", 9),
-    doneToday: board.cards
-      .filter((c) => c.col === "done" && (c.doneAt ?? "").startsWith(date))
-      .map((c) => clip(c.title, 44))
-      .slice(0, 5),
+    review,
+    reviewCount,
+    inprogress,
+    inprogressCount,
+    todo,
+    todoCount,
+    doneToday: doneAll.slice(0, 5),
+    doneTodayCount: doneAll.length,
     total: board.cards.length,
   };
 }
@@ -349,22 +360,22 @@ export default function MorningSheet({
                   <div className={s.sectionTitle}>The board · {boardOpen.total} cards</div>
                   {boardOpen.review.length > 0 && (
                     <p>
-                      <b>In review ({boardOpen.review.length})</b> · {boardOpen.review.join(" · ")}
+                      <b>In review ({boardOpen.reviewCount})</b> · {boardOpen.review.join(" · ")}
                     </p>
                   )}
                   {boardOpen.inprogress.length > 0 && (
                     <p>
-                      <b>In progress ({boardOpen.inprogress.length})</b> · {boardOpen.inprogress.join(" · ")}
+                      <b>In progress ({boardOpen.inprogressCount})</b> · {boardOpen.inprogress.join(" · ")}
                     </p>
                   )}
                   {boardOpen.todo.length > 0 && (
                     <p>
-                      <b>Waiting ({boardOpen.todo.length})</b> · {boardOpen.todo.join(" · ")}
+                      <b>Waiting ({boardOpen.todoCount})</b> · {boardOpen.todo.join(" · ")}
                     </p>
                   )}
                   {boardOpen.doneToday.length > 0 && (
                     <p>
-                      <b>Done today ({boardOpen.doneToday.length})</b> · {boardOpen.doneToday.join(" · ")}
+                      <b>Done today ({boardOpen.doneTodayCount})</b> · {boardOpen.doneToday.join(" · ")}
                     </p>
                   )}
                 </div>
