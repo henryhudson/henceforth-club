@@ -102,7 +102,7 @@ export default function MorningSheet({ report, issue }: { report: Report; issue:
           {stopPress.map((e, i) => (
             <div key={i} className={s.spItem}>
               <span className={s.tag}>{e.tag} · </span>
-              <b>{e.title}</b> {e.why}
+              <b>{/[.!?]$/.test(e.title) ? e.title : `${e.title}.`}</b> {e.why}
             </div>
           ))}
         </div>
@@ -272,8 +272,9 @@ export default function MorningSheet({ report, issue }: { report: Report; issue:
               </div>
               <div className={s.notice}>
                 <p>
-                  <b>The storefront.</b> Live store state is read from the storefront itself, never from the
-                  repositories, and never from the default lookup&apos;s stale cache.
+                  <b>The storefront.</b>{" "}
+                  Live store state is read from the storefront itself, never from the repositories, and
+                  never from the default lookup&apos;s stale cache.
                 </p>
               </div>
               <div className={s.notice}>
