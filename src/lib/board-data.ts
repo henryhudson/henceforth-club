@@ -167,6 +167,18 @@ export async function loadWeek(date: string): Promise<WeekReport | null> {
 
 export type Board = { generated: string; cards: Card[]; log?: string };
 
+// The gardening schedule, published from Henry's laptop by publish.mjs —
+// Upstash-only (the source file lives outside the repo, so there is no local
+// content fallback). The diary selection lives in src/lib/gardening.ts.
+export async function loadGardening(): Promise<import("./gardening").Gardening | null> {
+  const redis = getRedis();
+  if (redis) {
+    const g = await redis.get<import("./gardening").Gardening>("board:gardening");
+    if (g) return g;
+  }
+  return null;
+}
+
 // Production reads the kanban from Upstash (written by /hh's publish step).
 // Local dev (no Redis env) falls back to the gitignored content file.
 export async function loadBoard(): Promise<Board | null> {

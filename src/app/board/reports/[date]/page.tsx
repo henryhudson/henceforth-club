@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { listDates, listWeeks, loadBoard, loadReport, loadWeek } from "@/lib/board-data";
+import { listDates, listWeeks, loadBoard, loadGardening, loadReport, loadWeek } from "@/lib/board-data";
+import { gardenDiary, type DiaryEntry } from "@/lib/gardening";
 import { asList, editionNumber } from "@/lib/report-helpers";
 import PlanChecklist from "../PlanChecklist";
 import MorningSheet, { openCards, weekAheadFrom } from "./_components/MorningSheet";
@@ -46,13 +47,22 @@ export default async function DailyEdition({ params }: { params: Promise<{ date:
   } catch {
     boardOpen = null;
   }
+  // The garden diary: the content rhythms are excluded because the week
+  // planner already carries them on the sheet.
+  let garden: DiaryEntry[] = [];
+  try {
+    const g = await loadGardening();
+    garden = g ? gardenDiary(g.jobs, date, ["Sci Fri", "Thinking Henceforth"]) : [];
+  } catch {
+    garden = [];
+  }
 
   return (
     <main>
       {/* The paper itself — one A4 sheet on the newspaper measure. Print
           renders exactly this sheet; everything below is web-only matter. */}
       <div className="bg-[#dedbd4] py-6 print:bg-white print:py-0">
-        <MorningSheet report={report} issue={issue} weekAhead={weekAhead} boardOpen={boardOpen} />
+        <MorningSheet report={report} issue={issue} weekAhead={weekAhead} boardOpen={boardOpen} garden={garden} />
       </div>
 
       <div className="newspaper mx-auto max-w-4xl px-6 py-8 print:hidden">

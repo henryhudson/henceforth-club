@@ -1,4 +1,5 @@
 import type { Report, Finding, Emergency, WeekReport, Board } from "@/lib/board-data";
+import type { DiaryEntry } from "@/lib/gardening";
 import { longDate } from "@/lib/report-helpers";
 import A4Sheet from "@/app/hansard/this-week/_components/overview/A4Sheet";
 import s from "./morning.module.css";
@@ -109,16 +110,27 @@ function asItems(v?: string | string[]): string[] {
   return Array.isArray(v) ? v : [v];
 }
 
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "2026-08-27" → "Thu 27 Aug" (an almanac date). */
+function diaryDate(iso: string): string {
+  const d = new Date(`${iso}T12:00:00Z`);
+  return `${DAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
+}
+
 export default function MorningSheet({
   report,
   issue,
   weekAhead = [],
   boardOpen = null,
+  garden = [],
 }: {
   report: Report;
   issue: number | null;
   weekAhead?: WeekAheadDay[];
   boardOpen?: BoardOpen | null;
+  garden?: DiaryEntry[];
 }) {
   const article = report.article;
   const sections = article?.sections ?? [];
@@ -332,25 +344,40 @@ export default function MorningSheet({
           </div>
         </div>
 
-        {/* ── BAND C2 · the week ahead and the board, in agate ── */}
-        {(weekAhead.length > 0 || boardOpen) && (
+        {/* ── BAND C2 · the calendar corner (week ahead + garden diary) and the board ── */}
+        {(weekAhead.length > 0 || garden.length > 0 || boardOpen) && (
           <div className={`${s.band} ${s.bandLight}`}>
-            {weekAhead.length > 0 && (
+            {(weekAhead.length > 0 || garden.length > 0) && (
               <div className={s.mod2}>
                 <div className={`${s.sq} ${s.agate}`}>
-                  <div className={s.sectionTitle}>The week ahead</div>
-                  {weekAhead.map((day) => (
-                    <p key={day.label}>
-                      <b>{day.label}</b> ·{" "}
-                      {day.tasks.map((t, i) => (
-                        <span key={i}>
-                          {i > 0 && " ; "}
-                          {t.done && "✓ "}
-                          {t.label}
-                        </span>
+                  {weekAhead.length > 0 && (
+                    <>
+                      <div className={s.sectionTitle}>The week ahead</div>
+                      {weekAhead.map((day) => (
+                        <p key={day.label}>
+                          <b>{day.label}</b> ·{" "}
+                          {day.tasks.map((t, i) => (
+                            <span key={i}>
+                              {i > 0 && " ; "}
+                              {t.done && "✓ "}
+                              {t.label}
+                            </span>
+                          ))}
+                        </p>
                       ))}
-                    </p>
-                  ))}
+                    </>
+                  )}
+                  {garden.length > 0 && (
+                    <>
+                      <div className={s.sectionTitle}>The garden diary</div>
+                      {garden.slice(0, 5).map((g) => (
+                        <p key={g.section}>
+                          <b>{diaryDate(g.date)}</b> · {g.section.replace(" — ", ": ")}
+                          {g.overdue && <b> · OVERDUE</b>}
+                        </p>
+                      ))}
+                    </>
+                  )}
                 </div>
               </div>
             )}
