@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { listDates, loadReport } from "@/lib/board-data";
+import { listDates, listWeeks, loadBoard, loadReport, loadWeek } from "@/lib/board-data";
 import { asList, editionNumber } from "@/lib/report-helpers";
 import PlanChecklist from "../PlanChecklist";
-import MorningSheet from "./_components/MorningSheet";
+import MorningSheet, { openCards, weekAheadFrom } from "./_components/MorningSheet";
+import type { BoardOpen, WeekAheadDay } from "./_components/MorningSheet";
 
 export const dynamic = "force-dynamic";
 
@@ -29,12 +30,29 @@ export default async function DailyEdition({ params }: { params: Promise<{ date:
     issue = null;
   }
 
+  // The week-ahead diary and the open board, both best-effort: a failure to
+  // load either must never take the edition down.
+  let weekAhead: WeekAheadDay[] = [];
+  try {
+    const weekKey = (await listWeeks()).find((w) => w <= date);
+    weekAhead = weekAheadFrom(weekKey ? await loadWeek(weekKey) : null, date);
+  } catch {
+    weekAhead = [];
+  }
+  let boardOpen: BoardOpen | null = null;
+  try {
+    const board = await loadBoard();
+    boardOpen = board ? openCards(board, date) : null;
+  } catch {
+    boardOpen = null;
+  }
+
   return (
     <main>
       {/* The paper itself — one A4 sheet on the newspaper measure. Print
           renders exactly this sheet; everything below is web-only matter. */}
       <div className="bg-[#dedbd4] py-6 print:bg-white print:py-0">
-        <MorningSheet report={report} issue={issue} />
+        <MorningSheet report={report} issue={issue} weekAhead={weekAhead} boardOpen={boardOpen} />
       </div>
 
       <div className="newspaper mx-auto max-w-4xl px-6 py-8 print:hidden">

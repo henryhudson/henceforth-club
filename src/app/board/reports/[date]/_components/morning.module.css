@@ -101,6 +101,7 @@
 .mod3 { grid-column: span 3; }
 .mod2 { grid-column: span 2; }
 .mod1 { grid-column: span 1; }
+.modFull { grid-column: span 4; }
 
 .legs3 {
   column-count: 3;

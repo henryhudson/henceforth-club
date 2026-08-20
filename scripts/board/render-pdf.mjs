@@ -16,9 +16,9 @@
 // own print stylesheet instead of the live site (which doesn't have it yet).
 import puppeteer from "puppeteer-core";
 import { createCipheriv, createHmac, randomBytes } from "node:crypto";
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { execSync } from "node:child_process";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { PDFDocument } from "pdf-lib";
 import { Redis } from "@upstash/redis";
@@ -230,6 +230,17 @@ async function render(browser, kind, date, outPath, prevTx, dryRun) {
   // or fails the render.
   const localPath = outPath ?? join(tmpdir(), `board-${kind}-${date}.pdf`);
   await writeFile(localPath, pdf);
+  // Every render also lands a permanent copy in the editions archive (Henry,
+  // 2026-08-20: "ensure we are saving all this in folders for future
+  // reference") — the chain holds the inscribed record, the folder holds the
+  // browsable one. Best-effort: an archive failure never blocks the render.
+  try {
+    const archiveDir = join(homedir(), "Henceforth", "editions", kind);
+    await mkdir(archiveDir, { recursive: true });
+    await writeFile(join(archiveDir, `${date}.pdf`), pdf);
+  } catch (e) {
+    console.warn(`editions archive copy failed (render unaffected): ${e.message}`);
+  }
   // Blocking open so it launches before the process exits (a fire-and-forget
   // child gets orphaned on exit and never surfaces the window); best-effort so
   // a headless environment can't fail the render.

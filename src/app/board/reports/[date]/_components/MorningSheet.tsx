@@ -1,7 +1,52 @@
-import type { Report, Finding, Emergency } from "@/lib/board-data";
+import type { Report, Finding, Emergency, WeekReport, Board } from "@/lib/board-data";
 import { longDate } from "@/lib/report-helpers";
 import A4Sheet from "@/app/hansard/this-week/_components/overview/A4Sheet";
 import s from "./morning.module.css";
+
+export type WeekAheadDay = { label: string; tasks: { label: string; done: boolean }[] };
+export type BoardOpen = {
+  review: string[];
+  inprogress: string[];
+  todo: string[];
+  doneToday: string[];
+  total: number;
+};
+
+function clip(text: string, max: number): string {
+  const cut = text.split(" — ")[0].trim();
+  return cut.length > max ? `${cut.slice(0, max - 1).trimEnd()}…` : cut;
+}
+
+/** The remaining days of the current week, from the edition date onward,
+ *  read type-aware: planner tasks mix plain strings and {label, done}. */
+export function weekAheadFrom(week: WeekReport | null, fromDate: string): WeekAheadDay[] {
+  const plan = week?.retro?.weekPlan ?? [];
+  return plan
+    .filter((day) => day.date >= fromDate)
+    .map((day) => ({
+      label: `${day.weekday.slice(0, 3)} ${parseInt(day.date.slice(8, 10), 10)}`,
+      tasks: (day.tasks ?? []).map((t) =>
+        typeof t === "string" ? { label: clip(t, 110), done: false } : { label: clip(t.label, 110), done: !!t.done },
+      ),
+    }))
+    .filter((day) => day.tasks.length > 0);
+}
+
+/** The open board, compressed to run-in agate: titles clipped at their first
+ *  dash, columns in working order. */
+export function openCards(board: Board, date: string): BoardOpen {
+  const byCol = (col: string) =>
+    board.cards.filter((c) => c.col === col).map((c) => clip(c.title, 64));
+  return {
+    review: byCol("review"),
+    inprogress: byCol("inprogress"),
+    todo: byCol("todo"),
+    doneToday: board.cards
+      .filter((c) => c.col === "done" && (c.doneAt ?? "").startsWith(date))
+      .map((c) => clip(c.title, 64)),
+    total: board.cards.length,
+  };
+}
 
 const APP_NAMES: Record<string, string> = {
   deck: "Deck of Cards",
@@ -40,7 +85,17 @@ function asItems(v?: string | string[]): string[] {
   return Array.isArray(v) ? v : [v];
 }
 
-export default function MorningSheet({ report, issue }: { report: Report; issue: number | null }) {
+export default function MorningSheet({
+  report,
+  issue,
+  weekAhead = [],
+  boardOpen = null,
+}: {
+  report: Report;
+  issue: number | null;
+  weekAhead?: WeekAheadDay[];
+  boardOpen?: BoardOpen | null;
+}) {
   const article = report.article;
   const sections = article?.sections ?? [];
   const numbersSection = sections.find((sec) => sec.heading.toLowerCase().includes("number"));
@@ -252,6 +307,58 @@ export default function MorningSheet({ report, issue }: { report: Report; issue:
             </div>
           </div>
         </div>
+
+        {/* ── BAND C2 · the week ahead and the board, in agate ── */}
+        {(weekAhead.length > 0 || boardOpen) && (
+          <div className={`${s.band} ${s.bandLight}`}>
+            {weekAhead.length > 0 && (
+              <div className={s.mod2}>
+                <div className={`${s.sq} ${s.agate}`}>
+                  <div className={s.sectionTitle}>The week ahead</div>
+                  {weekAhead.map((day) => (
+                    <p key={day.label}>
+                      <b>{day.label}</b> ·{" "}
+                      {day.tasks.map((t, i) => (
+                        <span key={i}>
+                          {i > 0 && " ; "}
+                          {t.done && "✓ "}
+                          {t.label}
+                        </span>
+                      ))}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+            {boardOpen && (
+              <div className={weekAhead.length > 0 ? s.mod2 : s.modFull}>
+                <div className={`${s.sq} ${s.agate}`}>
+                  <div className={s.sectionTitle}>The board · {boardOpen.total} cards</div>
+                  {boardOpen.review.length > 0 && (
+                    <p>
+                      <b>In review ({boardOpen.review.length})</b> · {boardOpen.review.join(" · ")}
+                    </p>
+                  )}
+                  {boardOpen.inprogress.length > 0 && (
+                    <p>
+                      <b>In progress ({boardOpen.inprogress.length})</b> · {boardOpen.inprogress.join(" · ")}
+                    </p>
+                  )}
+                  {boardOpen.todo.length > 0 && (
+                    <p>
+                      <b>Waiting ({boardOpen.todo.length})</b> · {boardOpen.todo.join(" · ")}
+                    </p>
+                  )}
+                  {boardOpen.doneToday.length > 0 && (
+                    <p>
+                      <b>Done today ({boardOpen.doneToday.length})</b> · {boardOpen.doneToday.join(" · ")}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── BAND D · notices and the composing room ── */}
         <div className={`${s.band} ${s.bandLight} ${s.bandLast}`}>
