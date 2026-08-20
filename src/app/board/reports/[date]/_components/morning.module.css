@@ -1,0 +1,240 @@
+/* ── The Morning Edition on the newspaper measure (design spec 2026-08-19,
+   Henry's sign-off: "this is the format from now on") ──
+   Georgia 7pt on 8pt in justified legs, agate listings at 5.5pt, hairline
+   rules, a modular page: the three-leg lead module with a boxed sidebar,
+   bands of ruled and boxed squares, the notices strip at the foot. Content
+   sizes are in em so the A4Sheet fit loop scales the whole hierarchy as one
+   voice; only the masthead furniture (folio, nameplate, subtitle) is pinned
+   in pt, the way a real nameplate never changes size with the news. The
+   daily's accent is the teal #0e7490 where The Hansard wears purple. */
+
+.sheet {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  background: #fff;
+  color: #111;
+  padding: 9mm 12mm 8mm;
+  font: 7pt/1.143 Georgia, serif;
+  display: flex;
+  flex-direction: column;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  box-sizing: border-box;
+}
+
+/* ── masthead furniture (fixed pt — never scales with the news) ── */
+.folio {
+  font: 5.5pt/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #111;
+  display: flex;
+  justify-content: space-between;
+  gap: 4mm;
+  border-top: .5pt solid #111;
+  border-bottom: .5pt solid #111;
+  padding: 1.1mm 0;
+}
+.folio span { white-space: nowrap; }
+
+.nameplate {
+  font-family: 'UnifrakturMaguntia', Georgia, serif;
+  text-align: center;
+  font-size: 34pt;
+  line-height: 1;
+  font-weight: 400;
+  margin: 1.8mm 0 1.2mm;
+}
+
+.subtitle {
+  font: 5.5pt/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  text-align: center;
+  border-top: .5pt solid #111;
+  border-bottom: 1.5pt solid #111;
+  padding: 1.1mm 0;
+  margin-bottom: 1.6mm;
+}
+
+/* ── stop press: the do-first strip under the subtitle ── */
+.stoppress {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0 3mm;
+  border-bottom: .5pt solid #111;
+  padding: 0 0 1.4mm;
+  margin-bottom: 1.8mm;
+}
+.stoppress > * + * { border-left: .5pt solid #999; padding-left: 3mm; min-width: 0; }
+.spItem { font: .786em/1.2 -apple-system, 'Helvetica Neue', Helvetica, sans-serif; color: #222; }
+.spItem .tag { font-weight: 700; color: #0e7490; letter-spacing: .1em; text-transform: uppercase; }
+
+.headline {
+  font: 700 3.55em/1.03 Georgia, serif;
+  letter-spacing: -.015em;
+  text-align: center;
+  margin: 1.6mm 0 1.8mm;
+}
+.deckline {
+  font: italic 1.23em/1.28 Georgia, serif;
+  text-align: center;
+  max-width: 152mm;
+  margin: 0 auto 3mm;
+}
+
+/* ── modular bands ── */
+.band {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0 4mm;
+  border-top: 1.5pt solid #111;
+  padding-top: 1.6mm;
+  margin: 0 0 3.2mm;
+}
+.band > * + * { border-left: .5pt solid #999; padding-left: 4mm; margin-left: -4mm; min-width: 0; }
+.band > * { min-width: 0; }
+.bandLight { border-top-width: .5pt; }
+.bandLast { margin-top: auto; margin-bottom: 0; }
+
+.mod3 { grid-column: span 3; }
+.mod2 { grid-column: span 2; }
+.mod1 { grid-column: span 1; }
+
+.legs3 {
+  column-count: 3;
+  column-gap: 4mm;
+  column-rule: .5pt solid #999;
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+.legs2 {
+  column-count: 2;
+  column-gap: 4mm;
+  column-rule: .5pt solid #999;
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+.legs3 p, .legs2 p { margin: 0; }
+.legs3 p + p, .legs2 p + p { text-indent: 3mm; }
+.noIndent { text-indent: 0 !important; }
+
+.byline {
+  font: .857em/1.17 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  text-align: center;
+  margin: 0 0 1.2mm;
+}
+
+.drop::first-letter {
+  font-size: 3.07em;
+  line-height: .83;
+  font-weight: 700;
+  float: left;
+  padding: .4mm 1.1mm 0 0;
+  color: #0e7490;
+}
+
+.sectionTitle {
+  font: 700 .857em/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: #111;
+  border-top: 1.5pt solid #111;
+  padding-top: 1mm;
+  margin: 2.2mm 0 1mm;
+  break-after: avoid;
+  text-indent: 0;
+}
+.sq > .sectionTitle:first-child,
+.mod2 > .sectionTitle:first-child,
+.mod3 > .sectionTitle:first-child { margin-top: 0; border-top: none; padding-top: 0; }
+
+/* a boxed square */
+.sq {
+  border: .5pt solid #111;
+  padding: 2.2mm 2.4mm;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+/* ── agate matter ── */
+.agate {
+  font: .786em/1.2 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+  hyphens: none;
+}
+.agate p { text-indent: 0; margin: 0 0 .8mm; text-align: left; }
+.agateTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin: .6mm 0 1mm;
+  break-inside: avoid;
+  font: .786em/1.2 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+.agateTable th {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  text-align: left;
+  border-bottom: .5pt solid #111;
+  padding: .3mm 0;
+}
+.agateTable td { padding: .28mm 0; vertical-align: top; }
+.agateTable .n { text-align: right; padding-left: 1mm; white-space: nowrap; }
+
+/* ── the verdicts sidebar ── */
+.verdicts { list-style: none; margin: .4mm 0 1mm; padding: 0; }
+.verdicts li {
+  text-indent: 0;
+  padding-left: 2.4mm;
+  position: relative;
+  margin-bottom: .6mm;
+  text-align: left;
+  font: .786em/1.2 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+}
+.verdicts li::before { content: '■'; position: absolute; left: 0; font-size: .64em; top: .12em; }
+.verdicts b { letter-spacing: .04em; text-transform: uppercase; font-size: .93em; }
+
+/* ── the notices strip ── */
+.noticestrip { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 3mm; height: 100%; align-content: start; }
+.noticestrip > * + * { border-left: .5pt solid #999; padding-left: 3mm; min-width: 0; }
+.notice { font: 1em/1.15 Georgia, serif; }
+.notice p { text-indent: 0; margin: 0 0 1mm; text-align: justify; }
+
+/* the composing-room square */
+.composing {
+  border: .5pt solid #111;
+  padding: 2.2mm 2.4mm;
+  height: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.4mm;
+}
+.composing .sectionTitle { text-align: center; margin: 0; border-top: none; padding-top: 0; }
+.composing p { text-indent: 0; text-align: center; margin: 0; }
+.composingNote { font-style: italic; }
+
+/* ── colophon strip ── */
+.credit {
+  margin-top: 2.2mm;
+  padding-top: 1.2mm;
+  border-top: .5pt solid #111;
+  font: italic 5.5pt/1.25 Georgia, serif;
+  color: #333;
+  text-align: center;
+}
+
+.ground { background: #dedbd4; padding: 6mm 0; }
+@media print {
+  .ground { background: #fff; padding: 0; }
+}
