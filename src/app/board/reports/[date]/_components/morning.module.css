@@ -189,19 +189,6 @@
 .agateTable td { padding: .28mm 0; vertical-align: top; }
 .agateTable .n { text-align: right; padding-left: 1mm; white-space: nowrap; }
 
-/* ── the verdicts sidebar ── */
-.verdicts { list-style: none; margin: .4mm 0 1mm; padding: 0; }
-.verdicts li {
-  text-indent: 0;
-  padding-left: 2.4mm;
-  position: relative;
-  margin-bottom: .6mm;
-  text-align: left;
-  font: .786em/1.2 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
-}
-.verdicts li::before { content: '■'; position: absolute; left: 0; font-size: .64em; top: .12em; }
-.verdicts b { letter-spacing: .04em; text-transform: uppercase; font-size: .93em; }
-
 /* ── the footer reference band: thin rules, small-caps run heads, no boxes.
    The page decelerates here — reference matter, not more competing stories. ── */
 .footerBand {
@@ -232,14 +219,16 @@
   text-indent: 0;
 }
 
-/* ── the production strip: one row of agate housekeeping ── */
+/* ── the production strip: one row of agate housekeeping, with enough
+   leading that the eye exits cleanly into the colophon ── */
 .production {
   display: flex;
   flex-wrap: wrap;
-  gap: .4mm 3mm;
+  gap: .8mm 3mm;
   border-top: .5pt solid #111;
-  padding-top: 1mm;
-  font: 5.5pt/1.3 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  padding-top: 1.2mm;
+  margin-bottom: .6mm;
+  font: 5.5pt/1.45 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
   color: #222;
 }
 .production > span { min-width: 0; }

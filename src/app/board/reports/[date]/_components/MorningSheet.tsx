@@ -80,13 +80,6 @@ const APP_NAMES: Record<string, string> = {
   site: "henceforth.club",
 };
 
-const VERDICT_LABELS: Record<string, string> = {
-  agree: "Confirmed",
-  reject: "Rejected",
-  abstain: "Abstained",
-  "already-resolved": "Already fixed",
-};
-
 /** "finding-site-members-snapshot-guards-2026-08-20" → "site members snapshot guards" */
 function cardName(id: string): string {
   return id
@@ -227,21 +220,20 @@ export default function MorningSheet({
             </div>
           </div>
           <div className={s.mod1}>
-            <div className={s.sq}>
+            {/* The per-finding list is web-only matter below the sheet — on the
+                printed page the review narrative carries the substance, so the
+                box holds only the counts (Henry's trim, 2026-08-21). */}
+            <div className={`${s.sq} ${s.agate}`}>
               <div className={s.sectionTitle}>The verdicts, in brief</div>
-              <ul className={s.verdicts}>
-                {findings.map(({ f }) => (
-                  <li key={f.refId}>
-                    <b>{VERDICT_LABELS[f.verdict] ?? f.verdict}.</b> {f.title}.
-                  </li>
-                ))}
-                {cleanApps.length > 0 && (
-                  <li>
-                    <b>Clean.</b> {cleanApps.join(", ")}: zero findings{findings.length > 0 ? " each" : ""}.
-                  </li>
-                )}
-              </ul>
-              <p className={s.agate}>{summarySentence(report.summary)}</p>
+              <p>{summarySentence(report.summary)}</p>
+              {cleanApps.length > 0 && (
+                <p>
+                  <b>Clean:</b> {cleanApps.join(", ")} — zero findings{findings.length > 0 ? " each" : ""}.
+                </p>
+              )}
+              {findings.length > 0 && !report.summary.rejected && (
+                <p>Every finding survived adversarial refutation.</p>
+              )}
             </div>
           </div>
         </div>
