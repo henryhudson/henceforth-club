@@ -196,7 +196,7 @@ export default function WeekSheet({ week }: { week: WeekReport }) {
         {/* ── PRODUCTION · one thin strip of housekeeping ── */}
         <div className={s.production}>
           <span>
-            <b>The reckoning.</b> Aggregated from the week&apos;s daily reviews and App Store Connect sales, every Sunday.
+            <b>The reckoning. </b>Aggregated from the week&apos;s daily reviews and App Store Connect sales, every Sunday.
           </span>
           <span>
             <b>The ledger.</b> The board records the work; it is never the objective.

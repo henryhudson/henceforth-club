@@ -26,15 +26,12 @@ import { LockingScript, OP, P2PKH, PrivateKey, SatoshisPerKilobyte, Transaction,
 
 const SITE = process.env.RENDER_PDF_BASE ?? "https://www.henceforth.club";
 const SITE_HOST = new URL(SITE).hostname;
-// Daily was capped at one page while the report was a digest. Henry's framing
-// on 2026-07-28 changed what it is for: "it is not just a daily report it is the
-// state of our apps what we need to do that day to better the apps" — a state
-// of four properties with an action each does not fit on one A4 page AT BOOK
-// SIZE, which is why 2026-08-04 relaxed the daily to two. The newspaper
-// measure (adopted 2026-08-19, Morning Edition re-cut 2026-08-20) sets the
-// same content on ONE sheet, so the daily budget is back to 1: a second page
-// now means the sheet's fit loop failed, and the render must fail loudly.
-const BUDGET = { daily: 1, week: 2 };
+// One sheet each, on the newspaper measure: the daily since its re-cut on
+// 2026-08-20, the weekly since its own re-cut proved one page on 2026-08-21.
+// A second page means the sheet's fit loop failed — tighten the sheet, never
+// raise the number; the render must fail loudly. (History: the daily ran two
+// pages 2026-08-04 to 2026-08-19, when the report was set at book size.)
+const BUDGET = { daily: 1, week: 1 };
 // Keep in sync with src/lib/board-pdf-crypto.ts (the script cannot import TypeScript).
 const INSCRIPTION_MARKER = "HHRPT1";
 // Expected fees at 100 satoshis per kilobyte (the rate BOTH transaction
