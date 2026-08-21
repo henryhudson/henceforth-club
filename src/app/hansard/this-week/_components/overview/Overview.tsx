@@ -64,28 +64,33 @@ export default function Overview({ digest, week }: { digest: DigestData; week: s
         hasFull={Boolean(digest.body?.length)}
       />
 
-      {/* Band A — the big lead module + boxed sidebar */}
+      {/* Band A — the big lead module + boxed sidebar. A no-data issue with an
+          empty brief has nothing to box, so the sidebar renders only when it
+          has content and the lead takes the whole measure instead of leaving
+          a blank ruled column. */}
       <div className={s.band}>
-        <div className={s.lead}>
+        <div className={hasData || sideBrief.length > 0 ? s.lead : s.leadFull}>
           <div className={s.legs3}>
             <p className={s.drop}>{intro}</p>
           </div>
         </div>
-        <aside className={s.side}>
-          {hasData ? (
-            <>
-              <h3 className={s.sectionTitle}>The divisions, closest first</h3>
-              <DivisionsBlock votes={digest.highlights.votes} />
-            </>
-          ) : (
-            sideBrief.map((item, i) => (
-              <div key={i}>
-                <h3 className={s.sectionTitle}>{item.title}</h3>
-                <p className={s.sideNote}><b>{item.when}.</b> {item.note}</p>
-              </div>
-            ))
-          )}
-        </aside>
+        {(hasData || sideBrief.length > 0) && (
+          <aside className={s.side}>
+            {hasData ? (
+              <>
+                <h3 className={s.sectionTitle}>The divisions, closest first</h3>
+                <DivisionsBlock votes={digest.highlights.votes} />
+              </>
+            ) : (
+              sideBrief.map((item, i) => (
+                <div key={i}>
+                  <h3 className={s.sectionTitle}>{item.title}</h3>
+                  <p className={s.sideNote}><b>{item.when}.</b> {item.note}</p>
+                </div>
+              ))
+            )}
+          </aside>
+        )}
       </div>
 
       {/* The government of the day, when the week redrew it */}

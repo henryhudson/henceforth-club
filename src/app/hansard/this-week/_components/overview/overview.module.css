@@ -79,6 +79,7 @@
 .bandLast { margin-top: auto; margin-bottom: 0; }
 
 .lead { grid-column: span 3; }
+.leadFull { grid-column: 1 / -1; }
 .side { grid-column: span 1; }
 .mod3 { grid-column: span 3; }
 .mod2 { grid-column: span 2; }
