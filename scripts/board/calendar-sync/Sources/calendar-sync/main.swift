@@ -92,6 +92,68 @@ func dayKey(_ components: DateComponents) -> String {
     "\(components.year ?? 0)-\(components.month ?? 0)-\(components.day ?? 0)"
 }
 
+// ---- ad-hoc appointments ----------------------------------------------
+// `calendar-sync add <YYYY-MM-DD> <title> [note]` books one all-day event
+// with a morning alarm into the "Board Appointments" calendar. That is a
+// SEPARATE calendar from "Morning Board" on purpose: the sync reconciler
+// owns and prunes Morning Board, so an ad-hoc event placed there would be
+// deleted on the next sync. Same binary as the sync, so the calendar
+// permission granted once covers this path — no new prompt, and no .ics
+// import click (the friction Henry asked to remove, 2026-08-21).
+@MainActor
+func addAppointment(dateText: String, title: String, note: String?) async {
+    guard let components = dayComponents(fromPlainDate: dateText) else {
+        fail("the date must be YYYY-MM-DD, got: \(dateText)")
+    }
+    let events = EKEventStore()
+    let granted: Bool
+    do { granted = try await events.requestFullAccessToEvents() }
+    catch { fail("calendar access could not be requested: \(error.localizedDescription)") }
+    guard granted else {
+        fail("calendar access was refused. Grant it in System Settings, Privacy and Security, Calendars.")
+    }
+
+    let calendarName = "Board Appointments"
+    let target: EKCalendar
+    if let found = events.calendars(for: .event).first(where: { $0.title == calendarName }) {
+        target = found
+    } else {
+        guard let source = events.sources.first(where: { $0.sourceType == .calDAV && $0.title == "iCloud" }) else {
+            fail("no calendar account titled iCloud was found, so a new calendar would not reach the phone.")
+        }
+        let made = EKCalendar(for: .event, eventStore: events)
+        made.title = calendarName
+        made.source = source
+        do { try events.saveCalendar(made, commit: true) }
+        catch { fail("could not create the appointments calendar: \(error.localizedDescription)") }
+        target = made
+    }
+
+    let calendar = Calendar.current
+    guard let day = calendar.date(from: components).map({ calendar.startOfDay(for: $0) }) else {
+        fail("could not resolve the date \(dateText)")
+    }
+    // Same day + same title is the same appointment: update it, never duplicate,
+    // so a routine can re-book without checking first.
+    let predicate = events.predicateForEvents(
+        withStart: day,
+        end: calendar.date(byAdding: .day, value: 1, to: day) ?? day,
+        calendars: [target]
+    )
+    let found = events.events(matching: predicate).first(where: { $0.title == title })
+    let event = found ?? EKEvent(eventStore: events)
+    event.calendar = target
+    event.title = title
+    event.notes = note
+    event.isAllDay = true
+    event.startDate = day
+    event.endDate = day
+    if (event.alarms ?? []).isEmpty { event.addAlarm(EKAlarm(relativeOffset: 9 * 3600)) }
+    do { try events.save(event, span: .thisEvent, commit: true) }
+    catch { fail("could not save the appointment: \(error.localizedDescription)") }
+    print("calendar-sync: \(found == nil ? "booked" : "updated") \(dateText) — \(title)")
+}
+
 @MainActor
 func run() async {
     let calendarName = "Morning Board"
@@ -289,4 +351,16 @@ func run() async {
     if failures > 0 { fail("\(failures) events failed to save") }
 }
 
-await run()
+let arguments = Array(CommandLine.arguments.dropFirst())
+if arguments.first == "add" {
+    guard arguments.count >= 3 else {
+        fail("usage: calendar-sync add <YYYY-MM-DD> <title> [note]")
+    }
+    await addAppointment(
+        dateText: arguments[1],
+        title: arguments[2],
+        note: arguments.count > 3 ? arguments[3] : nil
+    )
+} else {
+    await run()
+}
