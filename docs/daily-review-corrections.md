@@ -6,6 +6,28 @@ records that sweep's **rejections and dismissals**, newest first, so a later run
 re-flag what a prior run already refuted. Confirmed findings go to the Morning Board, not
 here. Cite `file:line` (or the live probe) so each verdict is independently re-derivable.
 
+## 2026-08-21 — zero rejections; two suspicions killed at the falsification gate before filing
+
+Nothing was rejected today — all four candidate findings (three carded, one folded)
+survived adversarial refutation. Recorded here instead are the two range suspicions the
+finder **affirmatively falsified before filing**, so a later run does not re-raise them:
+
+- **`recoveryLines` splitting `size` on `+` is correct AND consumable.** The suspicion was
+  that one `--assign WxH+WxH=setId` line could not be replayed. Falsified at the consumer:
+  `argAll` (`asc-screenshots.mjs:36-42`) collects repeated `--assign` flags, and same-set
+  forced entries re-merge, preserving the delete-once invariant. The 08-20 recovery-map fix
+  emits one line per size element by design.
+- **The members-snapshot floor guard exits before any write.** The suspicion was a
+  half-written baseline on a floor breach. Falsified at the definition: `MEMBER_FLOOR`
+  exits 1 before the diff and before the snapshot write, leaving the committed baseline
+  untouched. Residual (low, noted not carded): a corrupt committed snapshot parses as "no
+  prior snapshot", silently skipping that week's diff before overwriting — recoverable via
+  git history.
+
+**For the record.** Routes: `/` 0.084-0.234s; `/folklore` 0.515-0.517s warm (1.57s
+documented cold); `POST /api/folklore/job` refused 503 fail-closed; `/board` challenged 307
+to login. Zero open pull requests; `npm test` 1,580 passed, 0 failed.
+
 ## 2026-08-20 — one rejection out of four newspaper-measure findings
 
 **Rejected 1 — "A4Sheet fit loop measures before the blackletter nameplate face arrives" (JUDGMENT, low).**
