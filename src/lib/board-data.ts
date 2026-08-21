@@ -37,6 +37,7 @@ export type ReachApp = {
   yesterday: ReachYesterday;
   week?: Record<string, number>;
   rating?: { average: number | null; count: number };
+  subscriptions?: { date: string; paying: number; trial: number; monthly: number; yearly: number };
 };
 export type Reach = {
   dataThrough?: string | null;

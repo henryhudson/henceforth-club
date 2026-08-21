@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { generateKeyPairSync } from "node:crypto";
 import { gzipSync } from "node:zlib";
-import { mintJWT, parseSalesTsv, sumByApp, delta, fetchSalesReport, pullSales } from "./asc-client.mjs";
+import { mintJWT, parseSalesTsv, sumByApp, delta, fetchSalesReport, pullSales, parseSubscriptionTsv, sumSubscriptions, fetchSubscriptionReport } from "./asc-client.mjs";
 
 const TSV = [
   "SKU\tTitle\tProduct Type Identifier\tUnits\tDeveloper Proceeds\tCurrency of Proceeds",
@@ -85,5 +85,60 @@ describe("pullSales", () => {
     expect(h.units.lastWeek).toBe(4);
     expect(h.units.deltaPct).toBeCloseTo(0.5);
     expect(sales.window).toEqual({ thisWeek: "2026-06-29", lastWeek: "2026-06-22" });
+  });
+});
+
+// Fixture mirrors the live 1_4 SUBSCRIPTION SUMMARY header (columns the parser
+// reads plus enough neighbours to keep the indices honest).
+const SUB_HEADER = [
+  "App Name", "App Apple ID", "Subscription Name", "Subscription Apple ID", "Subscription Group ID",
+  "Standard Subscription Duration", "Subscription Offer Name", "Promotional Offer ID",
+  "Customer Price", "Customer Currency", "Developer Proceeds", "Proceeds Currency",
+  "Preserved Pricing", "Proceeds Reason", "Client", "Device", "State", "Country",
+  "Active Standard Price Subscriptions", "Active Free Trial Introductory Offer Subscriptions",
+  "Active Pay Up Front Introductory Offer Subscriptions", "Active Pay As You Go Introductory Offer Subscriptions",
+  "Free Trial Promotional Offer Subscriptions", "Pay Up Front Promotional Offer Subscriptions",
+  "Pay As You Go Promotional Offer Subscriptions", "Free Trial Offer Code Subscriptions",
+  "Pay Up Front Offer Code Subscriptions", "Pay As You Go Offer Code Subscriptions",
+  "Free Trial Win-back Offers", "Pay Up Front Win-back Offers", "Pay As You Go Win-back Offers",
+  "Billing Retry", "Grace Period", "Subscribers", "Contingent App Name",
+].join("\t");
+const subRow = (id, duration, standard, trial) => {
+  const c = new Array(35).fill("0");
+  c[0] = "Deck Of Cards"; c[1] = id; c[2] = "Sub"; c[5] = duration;
+  c[18] = String(standard); c[19] = String(trial);
+  return c.join("\t");
+};
+const SUB_TSV = [
+  SUB_HEADER,
+  subRow("1520654142", "1 Month", 3, 0),
+  subRow("1520654142", "1 Month", 1, 2), // a second monthly slice, with trials
+  subRow("1520654142", "1 Year", 4, 0),
+  subRow("999", "1 Month", 9, 9), // another app's rows never count
+].join("\n");
+
+describe("parseSubscriptionTsv + sumSubscriptions", () => {
+  it("splits paying from trial and monthly from yearly, per app id", () => {
+    const rows = parseSubscriptionTsv(SUB_TSV);
+    expect(rows).toHaveLength(4);
+    const deck = sumSubscriptions(rows, "1520654142");
+    expect(deck).toEqual({ paying: 8, trial: 2, monthly: 4, yearly: 4 });
+    expect(sumSubscriptions(rows, "424242")).toEqual({ paying: 0, trial: 0, monthly: 0, yearly: 0 });
+  });
+  it("parses empty input to no rows", () => {
+    expect(parseSubscriptionTsv("")).toEqual([]);
+  });
+});
+
+describe("fetchSubscriptionReport", () => {
+  it("gunzips + parses; 404 returns empty; other errors throw", async () => {
+    const body = gzipSync(Buffer.from(SUB_TSV));
+    const okFetch = async () => ({ ok: true, status: 200, arrayBuffer: async () => body });
+    const rows = await fetchSubscriptionReport({ jwt: "x", vendorNumber: "1", reportDate: "2026-08-19", fetchImpl: okFetch });
+    expect(rows.filter((r) => r.appAppleId === "1520654142")).toHaveLength(3);
+    const notFound = async () => ({ ok: false, status: 404 });
+    expect(await fetchSubscriptionReport({ jwt: "x", vendorNumber: "1", reportDate: "2026-08-19", fetchImpl: notFound })).toEqual([]);
+    const serverError = async () => ({ ok: false, status: 500 });
+    await expect(fetchSubscriptionReport({ jwt: "x", vendorNumber: "1", reportDate: "2026-08-19", fetchImpl: serverError })).rejects.toThrow("500");
   });
 });

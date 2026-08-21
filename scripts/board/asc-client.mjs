@@ -29,6 +29,68 @@ export function parseSalesTsv(text) {
   });
 }
 
+/** Parse an App Store Connect SUBSCRIPTION SUMMARY report (tab-separated, version 1_4)
+ *  into rows. Each row is one price/state/device slice of one subscription product;
+ *  the Active columns split paying variants from free-trial variants. */
+export function parseSubscriptionTsv(text) {
+  const lines = text.split(/\r?\n/).filter((l) => l.length);
+  if (!lines.length) return [];
+  const h = lines[0].split("\t");
+  const at = (name) => h.indexOf(name);
+  const PAYING = [
+    "Active Standard Price Subscriptions",
+    "Active Pay Up Front Introductory Offer Subscriptions",
+    "Active Pay As You Go Introductory Offer Subscriptions",
+    "Pay Up Front Promotional Offer Subscriptions",
+    "Pay As You Go Promotional Offer Subscriptions",
+    "Pay Up Front Offer Code Subscriptions",
+    "Pay As You Go Offer Code Subscriptions",
+    "Pay Up Front Win-back Offers",
+    "Pay As You Go Win-back Offers",
+  ].map(at);
+  const TRIAL = [
+    "Active Free Trial Introductory Offer Subscriptions",
+    "Free Trial Promotional Offer Subscriptions",
+    "Free Trial Offer Code Subscriptions",
+    "Free Trial Win-back Offers",
+  ].map(at);
+  const [iApp, iDur] = ["App Apple ID", "Standard Subscription Duration"].map(at);
+  const sum = (c, idxs) => idxs.reduce((n, i) => n + (i >= 0 ? Number(c[i]) || 0 : 0), 0);
+  return lines.slice(1).map((line) => {
+    const c = line.split("\t");
+    return { appAppleId: c[iApp], duration: c[iDur], paying: sum(c, PAYING), trial: sum(c, TRIAL) };
+  });
+}
+
+/** Total one app's active subscriptions: paying vs in-trial, with the paying
+ *  side split by standard duration (monthly / yearly / other). */
+export function sumSubscriptions(rows, appAppleId) {
+  const mine = rows.filter((r) => r.appAppleId === String(appAppleId));
+  const byDuration = (d) => mine.filter((r) => r.duration === d).reduce((n, r) => n + r.paying, 0);
+  return {
+    paying: mine.reduce((n, r) => n + r.paying, 0),
+    trial: mine.reduce((n, r) => n + r.trial, 0),
+    monthly: byDuration("1 Month"),
+    yearly: byDuration("1 Year"),
+  };
+}
+
+/** Fetch + gunzip + parse one SUBSCRIPTION SUMMARY report; 404 means the day is
+ *  not processed yet (or genuinely empty) — callers step back a day and retry. */
+export async function fetchSubscriptionReport({ jwt, vendorNumber, reportDate, fetchImpl = fetch }) {
+  const params = new URLSearchParams({
+    "filter[frequency]": "DAILY", "filter[reportType]": "SUBSCRIPTION",
+    "filter[reportSubType]": "SUMMARY", "filter[vendorNumber]": vendorNumber,
+    "filter[reportDate]": reportDate, "filter[version]": "1_4",
+  });
+  const res = await fetchImpl(`${ASC_BASE}/salesReports?${params}`, {
+    headers: { Authorization: `Bearer ${jwt}`, Accept: "application/a-gzip" },
+  });
+  if (res.status === 404) return [];
+  if (!res.ok) throw new Error(`App Store Connect salesReports (subscription) ${res.status}`);
+  return parseSubscriptionTsv(gunzipSync(Buffer.from(await res.arrayBuffer())).toString("utf8"));
+}
+
 /** A "download" row is an app install (product type 1*); updates (7*) and in-app purchases (3*) are not downloads. */
 const isDownload = (r) => String(r.productType ?? "").startsWith("1");
 

@@ -167,6 +167,7 @@ export default function MorningSheet({
     .map((a) => `${APP_NAMES[a.app] ?? a.app} ${Number(a.rating!.average).toFixed(2).replace(/0$/, "")} on ${a.rating!.count}`)
     .join(" · ");
   const site = report.reach?.site;
+  const deckSubs = storeApps.find((a) => a.app === "deck")?.subscriptions;
 
   const notToday = asItems(report.plan?.notToday);
 
@@ -299,6 +300,11 @@ export default function MorningSheet({
               )}
               <p className={`${s.agate} ${s.noIndent}`}>
                 {ratingLine && <>Ratings: {ratingLine}. </>}
+                {deckSubs && (
+                  <>
+                    Deck subscriptions: {deckSubs.paying} paying ({deckSubs.monthly} monthly, {deckSubs.yearly} yearly), {deckSubs.trial} in trial.{" "}
+                  </>
+                )}
                 {site && (
                   <>
                     The site: {site.yesterday ?? 0} yesterday · {site.week} this week · {site.total.toLocaleString("en-GB")} all-time.
@@ -344,65 +350,71 @@ export default function MorningSheet({
           </div>
         </div>
 
-        {/* ── BAND C2 · the calendar corner (week ahead + garden diary) and the board ── */}
+        {/* ── FOOTER · the reference band: calendar left, board status right.
+            Thin rules and small-caps run heads, no boxes — the sheet decelerates
+            here into agate reference matter (Henry's re-grouping, 2026-08-21). ── */}
         {(weekAhead.length > 0 || garden.length > 0 || boardOpen) && (
-          <div className={`${s.band} ${s.bandLight}`}>
+          <div className={s.footerBand}>
             {(weekAhead.length > 0 || garden.length > 0) && (
-              <div className={s.mod2}>
-                <div className={`${s.sq} ${s.agate}`}>
-                  {weekAhead.length > 0 && (
-                    <>
-                      <div className={s.sectionTitle}>The week ahead</div>
-                      {weekAhead.map((day) => (
-                        <p key={day.label}>
-                          <b>{day.label}</b> ·{" "}
-                          {day.tasks.map((t, i) => (
-                            <span key={i}>
-                              {i > 0 && " ; "}
-                              {t.done && "✓ "}
-                              {t.label}
-                            </span>
-                          ))}
-                        </p>
+              <div className={boardOpen ? undefined : s.footerFull}>
+                <div className={s.runHead}>The calendar</div>
+                <div className={s.agate}>
+                  {weekAhead.map((day) => (
+                    <p key={day.label}>
+                      <b>{day.label}</b> ·{" "}
+                      {day.tasks.map((t, i) => (
+                        <span key={i}>
+                          {i > 0 && " ; "}
+                          {t.done && "✓ "}
+                          {t.label}
+                        </span>
                       ))}
-                    </>
-                  )}
-                  {garden.length > 0 && (
-                    <>
-                      <div className={s.sectionTitle}>The garden diary</div>
-                      {garden.slice(0, 5).map((g) => (
-                        <p key={g.section}>
-                          <b>{diaryDate(g.date)}</b> · {g.section.replace(" — ", ": ")}
-                          {g.overdue && <b> · OVERDUE</b>}
-                        </p>
-                      ))}
-                    </>
-                  )}
+                    </p>
+                  ))}
+                  {garden.slice(0, 4).map((g) => (
+                    <p key={g.section}>
+                      <b>{diaryDate(g.date)}</b> · {g.section.replace(" — ", ": ")}
+                      {g.overdue && <b> · OVERDUE</b>}
+                    </p>
+                  ))}
                 </div>
               </div>
             )}
             {boardOpen && (
-              <div className={weekAhead.length > 0 ? s.mod2 : s.modFull}>
-                <div className={`${s.sq} ${s.agate}`}>
-                  <div className={s.sectionTitle}>The board · {boardOpen.total} cards</div>
+              <div className={weekAhead.length > 0 || garden.length > 0 ? undefined : s.footerFull}>
+                <div className={s.runHead}>The board · {boardOpen.total} cards</div>
+                <p className={s.pills}>
+                  In review <b>{boardOpen.reviewCount}</b> · In progress <b>{boardOpen.inprogressCount}</b> · Waiting{" "}
+                  <b>{boardOpen.todoCount}</b>
+                  {boardOpen.doneTodayCount > 0 && (
+                    <>
+                      {" "}· Done today <b>{boardOpen.doneTodayCount}</b>
+                    </>
+                  )}
+                </p>
+                <div className={s.agate}>
                   {boardOpen.review.length > 0 && (
                     <p>
-                      <b>In review ({boardOpen.reviewCount})</b> · {boardOpen.review.join(" · ")}
+                      <b>Review</b> · {boardOpen.review[0]}
+                      {boardOpen.reviewCount > 1 && <> and {boardOpen.reviewCount - 1} more</>}
                     </p>
                   )}
                   {boardOpen.inprogress.length > 0 && (
                     <p>
-                      <b>In progress ({boardOpen.inprogressCount})</b> · {boardOpen.inprogress.join(" · ")}
+                      <b>In progress</b> · {boardOpen.inprogress[0]}
+                      {boardOpen.inprogressCount > 1 && <> and {boardOpen.inprogressCount - 1} more</>}
                     </p>
                   )}
                   {boardOpen.todo.length > 0 && (
                     <p>
-                      <b>Waiting ({boardOpen.todoCount})</b> · {boardOpen.todo.join(" · ")}
+                      <b>Waiting</b> · {boardOpen.todo[0]}
+                      {boardOpen.todoCount > 1 && <> and {boardOpen.todoCount - 1} more</>}
                     </p>
                   )}
                   {boardOpen.doneToday.length > 0 && (
                     <p>
-                      <b>Done today ({boardOpen.doneTodayCount})</b> · {boardOpen.doneToday.join(" · ")}
+                      <b>Done today</b> · {boardOpen.doneToday[0]}
+                      {boardOpen.doneTodayCount > 1 && <> and {boardOpen.doneTodayCount - 1} more</>}
                     </p>
                   )}
                 </div>
@@ -411,47 +423,24 @@ export default function MorningSheet({
           </div>
         )}
 
-        {/* ── BAND D · notices and the composing room ── */}
-        <div className={`${s.band} ${s.bandLight} ${s.bandLast}`}>
-          <div className={s.mod3}>
-            <div className={s.sectionTitle}>Notices</div>
-            <div className={s.noticestrip}>
-              <div className={s.notice}>
-                {report.appStore?.rule && (
-                  <p>
-                    <b>The cadence.</b> {report.appStore.rule}
-                  </p>
-                )}
-                {report.plan?.note && (
-                  <p>
-                    <b>The ledger.</b> {report.plan.note}
-                  </p>
-                )}
-              </div>
-              <div className={s.notice}>
-                <p>
-                  <b>The storefront.</b>{" "}
-                  Live store state is read from the storefront itself, never from the repositories, and
-                  never from the default lookup&apos;s stale cache.
-                </p>
-              </div>
-              <div className={s.notice}>
-                <p>
-                  <b>The archive.</b> This edition is rendered to a single sheet by the morning routine and
-                  inscribed upon Bitcoin SV; back numbers are served from the chain at henceforth.club/board.
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className={s.mod1}>
-            <div className={s.composing}>
-              <div className={s.sectionTitle}>From the composing room</div>
-              <p className={s.composingNote}>{summarySentence(report.summary)}</p>
-              <p className={s.agate}>
-                <b>ONE PAGE · ONE INSCRIPTION · EVERY MORNING</b>
-              </p>
-            </div>
-          </div>
+        {/* ── PRODUCTION · one thin strip of housekeeping in place of the old
+            notices band and composing-room box ── */}
+        <div className={s.production}>
+          <span>
+            <b>The cadence.</b> {report.appStore?.rule ?? "Every Wednesday one app ships an update."}
+          </span>
+          <span>
+            <b>The ledger.</b> The board records the work; it is never the objective.
+          </span>
+          <span>
+            <b>The storefront.</b> Live store state comes from the storefront, never the repositories.
+          </span>
+          <span>
+            <b>The archive.</b> One sheet, inscribed daily upon Bitcoin SV; back numbers served from the chain.
+          </span>
+          <span>
+            <b>The composing room.</b> {summarySentence(report.summary)} One page · one inscription · every morning.
+          </span>
         </div>
 
         <p className={s.credit}>

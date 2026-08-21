@@ -9,7 +9,7 @@
 
 import { readFileSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
-import { mintJWT } from "./asc-client.mjs";
+import { mintJWT, fetchSubscriptionReport, sumSubscriptions } from "./asc-client.mjs";
 import { parseDownloadsCsv } from "./asc-analytics.mjs";
 import { fetchRatings } from "./app-state.mjs";
 
@@ -126,6 +126,23 @@ const APPS = [
   { app: "hansard", reqEnv: "ASC_ANALYTICS_REQ_HANSARD", storeId: "6762037651" },
 ];
 
+/** Deck's active subscriptions (paying vs trial, monthly vs yearly) from the
+ *  SUBSCRIPTION daily report. Apple lags a day and sometimes two, so walk back
+ *  from yesterday until a report answers; null when none of the window has one
+ *  (absence of the report, never presented as zero subscribers). */
+async function deckSubscriptions(jwt, today, back = 3) {
+  for (let i = 1; i <= back; i++) {
+    const reportDate = daysAgo(today, i);
+    try {
+      const rows = await fetchSubscriptionReport({
+        jwt, vendorNumber: process.env.ASC_VENDOR_NUMBER, reportDate,
+      });
+      if (rows.length) return { date: reportDate, ...sumSubscriptions(rows, "1520654142") };
+    } catch { /* auth or transport failure: fall through to older days, then null */ }
+  }
+  return null;
+}
+
 /** Site page views from the counters /api/hit has always kept (views:YYYY-MM-DD
  *  + views:total in Upstash). Unlike Apple these have no lag, and an absent day
  *  key IS a real zero — the counter has been live since launch. A failed read is
@@ -159,5 +176,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     try { instances = await dailyInstances(jwt, process.env[reqEnv]); } catch { instances = []; }
     apps.push({ app, instances, rating: await fetchRatings(storeId) });
   }
-  console.log(JSON.stringify(buildReach(today, apps, await siteViews(today)), null, 1));
+  const reach = buildReach(today, apps, await siteViews(today));
+  const subs = await deckSubscriptions(jwt, today);
+  if (subs) {
+    const deck = reach.perApp.find((a) => a.app === "deck");
+    if (deck) deck.subscriptions = subs;
+  }
+  console.log(JSON.stringify(reach, null, 1));
 }

@@ -219,17 +219,18 @@ async function render(browser, kind, date, outPath, prevTx, dryRun) {
   const pdf = await page.pdf({ format: "A4", preferCSSPageSize: true, printBackground: true });
   await page.close();
 
-  const pages = (await PDFDocument.load(pdf)).getPageCount();
-  if (pages > BUDGET[kind]) {
-    throw new Error(`${kind} ${date}: ${pages} pages exceeds the budget of ${BUDGET[kind]} — tighten the print stylesheet, do not skip`);
-  }
-
-  // Always write a local copy and open it in the default viewer, so the edition
-  // is seen as a PDF the moment it's rendered — before any inscription/upload
-  // (Henry's standing preference). `open` is fire-and-forget; it never blocks
-  // or fails the render.
+  // The local copy is written BEFORE the budget check: when the fit loop loses,
+  // the failed sheet must exist on disk to be opened and diagnosed. Only the
+  // free local write moves ahead of the throw — the archive and the inscription
+  // stay strictly behind it (money must stay behind the check).
   const localPath = outPath ?? join(tmpdir(), `board-${kind}-${date}.pdf`);
   await writeFile(localPath, pdf);
+
+  const pages = (await PDFDocument.load(pdf)).getPageCount();
+  if (pages > BUDGET[kind]) {
+    try { execSync(`open ${JSON.stringify(localPath)}`); } catch { /* open is best-effort */ }
+    throw new Error(`${kind} ${date}: ${pages} pages exceeds the budget of ${BUDGET[kind]} — tighten the print stylesheet, do not skip (over-budget sheet at ${localPath})`);
+  }
   // Every render also lands a permanent copy in the editions archive (Henry,
   // 2026-08-20: "ensure we are saving all this in folders for future
   // reference") — the chain holds the inscribed record, the folder holds the
