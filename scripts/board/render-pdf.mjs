@@ -82,6 +82,18 @@ function changeOutputIndex(tx) {
 // change output in process — re-fetching UTXOs between jobs would either
 // double-spend (stale list) or miss the just-created change (not yet indexed).
 async function inscribe(kind, date, pdf, prevTx, dryRun) {
+  // One inscription per edition, ever. A date that already carries a
+  // transaction is done — a re-run refreshes the local copy and stops here,
+  // so a same-day follow-up (or an accidental bare re-render of a past date)
+  // can never inscribe twice and spend twice. Fails open only if the index
+  // read itself fails: an unreadable index must not block the day's first
+  // genuine inscription, and the index write at the end already warns loudly
+  // when it cannot record one.
+  const existing = await getRedisClient().get(`board:pdftx:${kind}:${date}`).catch(() => null);
+  if (existing) {
+    console.log(`${kind} ${date} is already inscribed (${existing}) — inscription skipped, local copy refreshed`);
+    return null;
+  }
   const key = PrivateKey.fromWif(process.env.BOARD_ARCHIVE_WIF);
   const address = key.toAddress();
   const payload = encryptPdf(Buffer.from(pdf), process.env.BOARD_ARCHIVE_KEY);
