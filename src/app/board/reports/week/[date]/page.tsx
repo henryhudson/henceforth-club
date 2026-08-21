@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadWeek } from "@/lib/board-data";
+import WeekSheet from "./_components/WeekSheet";
+import ground from "./_components/week.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -14,59 +16,26 @@ export default async function WeeklyEdition({ params }: { params: Promise<{ date
   if (!w) notFound();
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-10 print-weekly">
+    <main>
+      <div className={ground.ground}>
+        <WeekSheet week={w} />
+      </div>
+
+      {/* Everything below is web-only matter — the printed edition is the
+          one-page sheet above; the full week detail stays reachable here. */}
+      <div className="mx-auto max-w-3xl px-6 py-10 print:hidden">
       <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Weekly Report</h1>
-        <div className="flex gap-3 text-sm text-accent-green print:hidden">
+        <div className="flex gap-3 text-sm text-accent-green">
           <Link href="/board/reports" className="underline">Reports</Link>
           <Link href="/board" className="underline">Board</Link>
           <Link href="/board/week" className="underline">Week</Link>
-          <a href={`/board/reports/week/${date}/pdf`} className="underline print:hidden">PDF</a>
+          <a href={`/board/reports/week/${date}/pdf`} className="underline">PDF</a>
         </div>
       </div>
       <p className="text-muted">Week of {w.weekOf} → {w.weekEnd} · {w.daysCovered.length} review days</p>
 
-      {w.retro.stateOfUnion && (
-        <p className="mt-4 border-l-2 border-accent-green/50 pl-4 text-lg leading-relaxed text-foreground">{w.retro.stateOfUnion}</p>
-      )}
-
-      {/* sales strip — one line per app */}
-      <section className="mt-6">
-        <h2 className="mb-2 border-b border-card-border pb-1 text-xl font-bold text-foreground">Sales</h2>
-        <ul className="flex flex-col gap-1 text-sm">
-          {w.sales.perApp.map((a) => (
-            <li key={a.app} className="text-muted">
-              <span className="font-semibold text-foreground">{a.name}</span>
-              {" — "}{a.units.thisWeek} downloads ({pct(a.units.deltaPct)} on last week)
-            </li>
-          ))}
-        </ul>
-        {w.sales.note && <p className="mt-2 text-sm text-muted">{w.sales.note}</p>}
-      </section>
-
-      {/* accomplished vs planned — per day, done tasks ticked */}
-      <section className="mt-8">
-        <h2 className="mb-2 border-b border-card-border pb-1 text-xl font-bold text-foreground">Accomplished vs planned</h2>
-        <ul className="flex flex-col gap-2 text-sm">
-          {w.retro.weekPlan.filter((d) => d.tasks.length > 0).map((d) => (
-            <li key={d.date}>
-              <span className="font-semibold text-foreground">{d.weekday} {d.date.slice(5)}</span>
-              <ul className="mt-0.5 flex flex-col gap-0.5 pl-4">
-                {d.tasks.map((t, i) => {
-                  const task = typeof t === "string" ? { label: t, done: false } : t;
-                  return (
-                    <li key={i} className={task.done ? "text-muted line-through" : "text-muted"}>
-                      {task.done ? "✓ " : "· "}{task.label}
-                    </li>
-                  );
-                })}
-              </ul>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <details className="mt-10 print:hidden">
+      <details className="mt-10">
         <summary className="cursor-pointer text-sm font-semibold text-muted hover:text-foreground">
           Full week detail — week strip, wins &amp; misses, stuck work, re-flags, next week, sales drivers, app state
         </summary>
@@ -175,6 +144,7 @@ export default async function WeeklyEdition({ params }: { params: Promise<{ date
           )}
         </div>
       </details>
+      </div>
     </main>
   );
 }

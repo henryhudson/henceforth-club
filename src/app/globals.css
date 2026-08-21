@@ -667,14 +667,10 @@ body:has(.provenance)::before {
   .paper .mt-8 { margin-top: 0.75rem !important; }
   .paper ol > li.border-b { padding-block: 0.3rem !important; }
 
-  /* weekly edition: small type, two-page ceiling */
-  .print-weekly { font-size: 9.5px; line-height: 1.35; }
-  .print-weekly h1 { font-size: 18px; }
-  .print-weekly h2 { font-size: 12px; margin-top: 10px; }
-
-  /* The daily's print layout moved to the newspaper-measure sheet
-     (reports/[date]/_components/, 2026-08-20) — its whole below-sheet web
-     matter is display:none in print, so no .newspaper print rules remain. */
+  /* Both editions' print layouts live on their newspaper-measure sheets
+     (reports/[date] 2026-08-20, reports/week/[date] 2026-08-21) — the
+     below-sheet web matter is display:none in print, so no .newspaper or
+     .print-weekly rules remain. */
 }
 
 /* Stylesheet URL rotation, 2026-07-16: a corrupt copy of this file (fetched

@@ -1,0 +1,182 @@
+/* ── The Weekly Edition on the newspaper measure (2026-08-21; the daily's
+   grammar transposed to the Sunday reckoning — design spec 2026-08-19).
+   Georgia 7pt on 8pt in justified legs, agate at 5.5pt, hairline rules,
+   modular bands, a decelerating foot. Content sizes in em so the A4Sheet
+   fit loop scales the hierarchy as one voice; masthead furniture pinned in
+   pt. The weekly wears the board family's teal #0e7490. */
+
+/* The A4 sheet frame itself comes from A4Sheet (overview.module.css);
+   this file styles only the weekly's own furniture and matter. */
+
+/* ── masthead furniture (fixed pt) ── */
+.folio {
+  font: 5.5pt/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #111;
+  display: flex;
+  justify-content: space-between;
+  gap: 4mm;
+  border-top: .5pt solid #111;
+  border-bottom: .5pt solid #111;
+  padding: 1.1mm 0;
+}
+.folio span { white-space: nowrap; }
+
+.nameplate {
+  font-family: 'UnifrakturMaguntia', Georgia, serif;
+  text-align: center;
+  font-size: 34pt;
+  line-height: 1;
+  font-weight: 400;
+  margin: 1.8mm 0 1.2mm;
+}
+
+.subtitle {
+  font: 5.5pt/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  text-align: center;
+  border-top: .5pt solid #111;
+  border-bottom: 1.5pt solid #111;
+  padding: 1.1mm 0;
+  margin-bottom: 2mm;
+}
+
+/* the leader standfirst — the weekly opens on its state of the union,
+   set large and italic, never a news headline */
+.standfirst {
+  font: italic 1.5em/1.32 Georgia, serif;
+  text-align: center;
+  max-width: 160mm;
+  margin: 1.2mm auto 3mm;
+}
+
+/* ── modular bands ── */
+.band {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0 4mm;
+  border-top: 1.5pt solid #111;
+  padding-top: 1.6mm;
+  margin: 0 0 3.2mm;
+}
+.band > * + * { border-left: .5pt solid #999; padding-left: 4mm; margin-left: -4mm; min-width: 0; }
+.band > * { min-width: 0; }
+.bandLight { border-top-width: .5pt; }
+
+.mod3 { grid-column: span 3; }
+.mod2 { grid-column: span 2; }
+.mod1 { grid-column: span 1; }
+
+.legs2 {
+  column-count: 2;
+  column-gap: 4mm;
+  column-rule: .5pt solid #999;
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+.legs2 p { margin: 0; }
+.legs2 p + p { text-indent: 3mm; }
+.noIndent { text-indent: 0 !important; }
+
+.sectionTitle {
+  font: 700 .857em/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: #111;
+  border-top: 1.5pt solid #111;
+  padding-top: 1mm;
+  margin: 2.2mm 0 1mm;
+  break-after: avoid;
+  text-indent: 0;
+}
+.sq > .sectionTitle:first-child,
+.mod2 > .sectionTitle:first-child,
+.mod3 > .sectionTitle:first-child { margin-top: 0; border-top: none; padding-top: 0; }
+
+/* a boxed square */
+.sq {
+  border: .5pt solid #111;
+  padding: 2.2mm 2.4mm;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+/* ── agate matter ── */
+.agate {
+  font: .786em/1.2 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+  hyphens: none;
+}
+.agate p { text-indent: 0; margin: 0 0 .8mm; text-align: left; }
+.agateTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin: .6mm 0 1mm;
+  break-inside: avoid;
+  font: .786em/1.2 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+.agateTable th {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  text-align: left;
+  border-bottom: .5pt solid #111;
+  padding: .3mm 0;
+}
+.agateTable td { padding: .28mm 0; vertical-align: top; }
+.agateTable .n { text-align: right; padding-left: 1mm; white-space: nowrap; }
+
+/* ── the footer reference band: thin rules, small-caps run heads, no boxes ── */
+.footerBand {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 4mm;
+  border-top: 1.5pt solid #111;
+  padding-top: 1.4mm;
+  margin-bottom: 2mm;
+}
+.footerBand > * { min-width: 0; }
+.footerBand > * + * { border-left: .5pt solid #999; padding-left: 4mm; margin-left: -4mm; }
+.footerFull { grid-column: 1 / -1; }
+
+.runHead {
+  font: 700 .786em/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: #333;
+  margin: 0 0 .9mm;
+}
+
+/* ── the production strip ── */
+.production {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .8mm 3mm;
+  border-top: .5pt solid #111;
+  padding-top: 1.2mm;
+  margin-bottom: .6mm;
+  font: 5.5pt/1.45 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  color: #222;
+}
+.production > span { min-width: 0; }
+
+/* ── colophon strip ── */
+.credit {
+  margin-top: 2.2mm;
+  padding-top: 1.2mm;
+  border-top: .5pt solid #111;
+  font: italic 5.5pt/1.25 Georgia, serif;
+  color: #333;
+  text-align: center;
+}
+
+.ground { background: #dedbd4; padding: 6mm 0; }
+@media print {
+  .ground { background: #fff; padding: 0; }
+}
