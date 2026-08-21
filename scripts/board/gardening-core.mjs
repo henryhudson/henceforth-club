@@ -26,7 +26,10 @@ export function parseGardeningSchedule(markdown) {
       section,
       date: cols[0],
       label: cols.length > 2 ? cols[1] : null,
-      done: cols[cols.length - 1] !== "",
+      // A lone-date row has no status column at all — the date would read as
+      // its own status and the job would silently vanish from the diary, so
+      // it parses as undone rather than done.
+      done: cols.length > 1 && cols[cols.length - 1] !== "",
     });
   }
   return jobs;

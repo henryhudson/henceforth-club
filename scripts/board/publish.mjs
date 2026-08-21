@@ -62,14 +62,25 @@ try {
   console.error("no reports to publish:", e.message);
 }
 
-// Gardening (Henry, 2026-08-20: the Morning Edition doubles as a calendar)
+// Gardening (Henry, 2026-08-20: the Morning Edition doubles as a calendar).
+// Only a genuinely missing schedule is silent (the mini has none); any other
+// failure warns, and a schedule parsing to zero rows is never published over
+// the last good diary — format drift must not blank it quietly.
 try {
   const md = await readFile(path.join(homedir(), "Gardening/schedule.md"), "utf8");
   const jobs = parseGardeningSchedule(md);
-  await redis.set("board:gardening", { updated: new Date().toISOString(), jobs });
-  console.log(`published board:gardening (${jobs.length} dated rows)`);
-} catch {
-  // No schedule on this machine (the mini) — the last laptop publish stands.
+  if (jobs.length === 0) {
+    console.warn("board:gardening NOT updated: the schedule parsed to zero dated rows — the last published diary stands");
+  } else {
+    await redis.set("board:gardening", { updated: new Date().toISOString(), jobs });
+    console.log(`published board:gardening (${jobs.length} dated rows)`);
+  }
+} catch (e) {
+  if (e?.code === "ENOENT") {
+    // No schedule on this machine (the mini) — the last laptop publish stands.
+  } else {
+    console.warn(`board:gardening NOT updated: ${e.message}`);
+  }
 }
 
 console.log("done");

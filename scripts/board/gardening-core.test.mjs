@@ -41,5 +41,10 @@ describe("parseGardeningSchedule", () => {
       { section: "Sci Fri — the week's film", date: "2026-08-21", label: "Second law (staged, reviewed 08-20)", done: false },
     ]);
   });
+
+  it("parses a lone-date row as undone — the date is not its own status", () => {
+    const jobs = parseGardeningSchedule("## Roses\n\n| 2026-08-28 |\n");
+    expect(jobs).toEqual([{ section: "Roses", date: "2026-08-28", label: null, done: false }]);
+  });
 });
 
