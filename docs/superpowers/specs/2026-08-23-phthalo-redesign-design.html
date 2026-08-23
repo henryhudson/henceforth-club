@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Phthalo: the club gets its own colour</title>
+<title>Racing green: the club gets its own colour</title>
 <style>
   :root { --bg:#f4ecd8; --ink:#2a2318; --muted:#6b5d45; --rule:#c9b98f; --accent:#8b3a1a; --card:#faf4e4; --shadow:0 1px 3px rgba(60,40,10,0.15); }
   *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.68;}
@@ -26,7 +26,7 @@
   .flow{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px 20px;margin:16px 0;box-shadow:var(--shadow);}
   .chip{display:inline-block;width:74px;height:40px;border-radius:6px;vertical-align:middle;border:1px solid rgba(0,0,0,0.25);}
   .chiplabel{font-family:'SF Mono',Menlo,monospace;font-size:12px;color:var(--muted);}
-  .darkboard{background:#050f0b;border-radius:10px;padding:22px 24px;margin:16px 0;font-family:'SF Mono',Menlo,monospace;font-size:14px;line-height:2;}
+  .darkboard{background:#05140d;border-radius:10px;padding:22px 24px;margin:16px 0;font-family:'SF Mono',Menlo,monospace;font-size:14px;line-height:2;}
 </style>
 </head>
 <body>
@@ -34,8 +34,8 @@
 
 <header class="doc">
 <div class="eyebrow">Design spec · 2026-08-23 · henceforth.club · redesign proposal, awaiting Henry's go</div>
-<h1>Phthalo: the club gets its own colour</h1>
-<p class="lede">Two asks from Henry — use phthalo green more, and put the apps at the top instead of behind an Apps button — plus a full read of the live site. The finding underneath both: the club has been borrowing Deck of Cards' cyan as its own brand, and the hero hides its most important text behind a JavaScript animation. Phthalo fixes the first; deleting one wrapper fixes the second.</p>
+<h1>Racing green: the club gets its own colour</h1>
+<p class="lede">Two asks from Henry — use the deep green more, and put the apps at the top instead of behind an Apps button — plus a full read of the live site. The finding underneath both: the club has been borrowing Deck of Cards' cyan as its own brand, and the hero hides its most important text behind a JavaScript animation. The green fixes the first; deleting one wrapper fixes the second. <strong>Steer (Henry, 2026-08-23):</strong> the pigment is British racing green, not phthalo — warmer, richer, heritage-motorsport rather than inky viridian — and it brings its classic partner, cream numbering on green ground.</p>
 </header>
 
 <h2>1 · What the site is today, measured</h2>
@@ -58,60 +58,60 @@
 
 <p><strong>The two wounds.</strong> First: <code>henceforth.club</code> answers with a 307 redirect to <code>www.henceforth.club</code> — about 775 ms of modelled first-visit delay on mobile — while <code>metadataBase</code>, the sitemap, and every printed link declare the bare domain as canonical. The site pays a round-trip to contradict its own metadata. Second: the hero copy is wrapped in the Motion <code>FadeIn</code> component, which renders it at opacity 0 until JavaScript loads, hydrates, and animates. The largest contentful paint element is that paragraph — the site's most important sentence is the last thing to exist. First paint happens at 1.9 s; the words arrive at 4.0 s.</p>
 
-<p><strong>The brand finding.</strong> Cyan <code>#5eead4</code> is doing two jobs: it is Deck of Cards' identity <em>and</em> the club's wordmark, glow, selection colour, hero wash, and grid. Henceforth has amber, Hansard has green, Folklore has orange — the club itself has nothing of its own. That is the real reason "use phthalo green more" is the right instinct and not just a repaint.</p>
+<p><strong>The brand finding.</strong> Cyan <code>#5eead4</code> is doing two jobs: it is Deck of Cards' identity <em>and</em> the club's wordmark, glow, selection colour, hero wash, and grid. Henceforth has amber, Hansard has green, Folklore has orange — the club itself has nothing of its own. That is the real reason "use the green more" is the right instinct and not just a repaint.</p>
 
-<h2>2 · Phthalo: the palette</h2>
+<h2>2 · British racing green: the palette</h2>
 
-<div class="decision"><strong>Proposal.</strong> Phthalo green becomes the club's own material at two depths: the pigment itself (<code>#123524</code>, the blue-shade phthalocyanine painters glaze shadows with) as the <em>ground</em> — every near-black surface shifts from blue-black to phthalo-black — and a luminous viridian as the club's <em>accent</em> for the wordmark, links, selection, and chrome. The four app accents do not move an inch: amber stays Henceforth, cyan goes back to being only Deck's, green stays Hansard, orange stays Folklore. The club stops borrowing.</div>
+<div class="decision"><strong>Proposal, re-anchored on Henry's steer (2026-08-23).</strong> British racing green becomes the club's own material at two depths: the livery colour itself (<code>#004225</code>, the green of the works Bentleys and Jaguars) as the <em>ground</em> — every near-black surface shifts from blue-black to racing-green black — and its classic partner, <em>roundel cream</em>, as the club's accent for the wordmark, chrome links, focus, and selection, the way racing numbers sit on a green bonnet. The four app accents do not move an inch: amber stays Henceforth, cyan goes back to being only Deck's, green stays Hansard, and Folklore keeps its orange — which in a paddock of liveries now reads as McLaren papaya (Henry, 2026-08-23: it stays). The club stops borrowing.</div>
 
 <table>
 <tr><th>Token</th><th>Today</th><th>Proposed</th><th>Role</th></tr>
-<tr><td><code>--phthalo</code> (new)</td><td>—</td><td><code>#123524</code></td><td>The pigment. Washes, gradients, hover tints — never text</td></tr>
-<tr><td><code>--background</code></td><td><code>#06080a</code></td><td><code>#050f0b</code></td><td>Phthalo black — the room turns green</td></tr>
-<tr><td><code>--card-bg</code></td><td><code>#0d1117</code></td><td><code>#0b1a13</code></td><td>Card surface</td></tr>
-<tr><td><code>--card-border</code></td><td><code>#1e2530</code></td><td><code>#1b2f24</code></td><td>Hairlines</td></tr>
-<tr><td><code>--card-border-hover</code></td><td><code>#2d3748</code></td><td><code>#2c4a38</code></td><td>Hover hairlines</td></tr>
-<tr><td><code>--terminal-bg</code></td><td><code>#0a0e14</code></td><td><code>#081410</code></td><td>Terminal panels</td></tr>
-<tr><td><code>--accent-club</code> (new)</td><td>cyan borrowed</td><td><code>#2fbd93</code></td><td>Wordmark, chrome links, focus, selection (7.9:1 on the ground)</td></tr>
-<tr><td><code>--muted</code></td><td><code>#8b949e</code> blue-grey</td><td><code>#93a49a</code> green-grey</td><td>Secondary text, ~7:1</td></tr>
-<tr><td><code>--muted-2</code> (new)</td><td>opacity fractions</td><td><code>#6e8076</code></td><td>Tertiary text floor, ~4.6:1 — replaces every <code>text-muted/40..60</code></td></tr>
+<tr><td><code>--brg</code> (new)</td><td>—</td><td><code>#004225</code></td><td>The livery. Washes, gradients, hover tints — never text</td></tr>
+<tr><td><code>--background</code></td><td><code>#06080a</code></td><td><code>#05140d</code></td><td>Racing-green black — the room turns green</td></tr>
+<tr><td><code>--card-bg</code></td><td><code>#0d1117</code></td><td><code>#0b1d14</code></td><td>Card surface</td></tr>
+<tr><td><code>--card-border</code></td><td><code>#1e2530</code></td><td><code>#193426</code></td><td>Hairlines</td></tr>
+<tr><td><code>--card-border-hover</code></td><td><code>#2d3748</code></td><td><code>#28533d</code></td><td>Hover hairlines</td></tr>
+<tr><td><code>--terminal-bg</code></td><td><code>#0a0e14</code></td><td><code>#071710</code></td><td>Terminal panels</td></tr>
+<tr><td><code>--accent-club</code> (new)</td><td>cyan borrowed</td><td><code>#eadfb8</code></td><td>Roundel cream — wordmark, chrome links, focus, selection (~14:1 on the ground)</td></tr>
+<tr><td><code>--muted</code></td><td><code>#8b949e</code> blue-grey</td><td><code>#95a396</code> green-grey</td><td>Secondary text, ~7:1</td></tr>
+<tr><td><code>--muted-2</code> (new)</td><td>opacity fractions</td><td><code>#74857a</code></td><td>Tertiary text floor, ~4.6:1 — replaces every <code>text-muted/40..60</code></td></tr>
 </table>
 
-<p>Swatches, ground first, then the accent row — the club chip must read as its own voice beside the four apps, neither Hansard's forest nor Deck's ice:</p>
+<p>Swatches, ground first, then the paddock row — five liveries side by side. The old judgement call (a green club accent holding its lane between Hansard's forest and Deck's ice) dissolves entirely: cream shares a lane with nobody. The one pairing to eyeball is cream beside Henceforth's amber — pale ivory against saturated signal-yellow, distinct in both hue and weight:</p>
 
 <p>
-<span class="chip" style="background:#050f0b"></span>
-<span class="chip" style="background:#0b1a13"></span>
-<span class="chip" style="background:#123524"></span>
-<span class="chip" style="background:#2fbd93"></span>
-&nbsp;<span class="chiplabel">ground #050f0b · card #0b1a13 · phthalo #123524 · club accent #2fbd93</span>
+<span class="chip" style="background:#05140d"></span>
+<span class="chip" style="background:#0b1d14"></span>
+<span class="chip" style="background:#004225"></span>
+<span class="chip" style="background:#eadfb8"></span>
+&nbsp;<span class="chiplabel">ground #05140d · card #0b1d14 · racing green #004225 · roundel cream #eadfb8</span>
 </p>
 <p>
-<span class="chip" style="background:#2fbd93"></span>
+<span class="chip" style="background:#eadfb8"></span>
 <span class="chip" style="background:#fbbf24"></span>
 <span class="chip" style="background:#5eead4"></span>
 <span class="chip" style="background:#3da87a"></span>
 <span class="chip" style="background:#e8731e"></span>
-&nbsp;<span class="chiplabel">club · Henceforth · Deck · Hansard · Folklore</span>
+&nbsp;<span class="chiplabel">club cream · Henceforth amber · Deck ice · Hansard green · Folklore papaya</span>
 </p>
 
-<p>And on the actual ground — the judgement call is whether <code>#2fbd93</code> holds its own lane between Hansard's <code>#3da87a</code> and Deck's <code>#5eead4</code>:</p>
+<p>And on the actual ground — cream numbering on a racing-green bonnet, with each app's hover colour untouched:</p>
 
-<div class="darkboard">
-<span style="color:#2fbd93;font-weight:700">henceforth</span><span style="color:#6e8076">.club</span>&nbsp;&nbsp;&nbsp;
+<div class="darkboard" style="background:#05140d">
+<span style="color:#eadfb8;font-weight:700">henceforth</span><span style="color:#74857a">.club</span>&nbsp;&nbsp;&nbsp;
 <span style="color:#e4e4e7">Henceforth</span>&nbsp;&nbsp;
 <span style="color:#e4e4e7">Deck</span>&nbsp;&nbsp;
 <span style="color:#e4e4e7">Hansard</span>&nbsp;&nbsp;
 <span style="color:#e4e4e7">Folklore</span>&nbsp;&nbsp;&nbsp;
-<span style="color:#93a49a">Learn&nbsp;&nbsp;Docs&nbsp;&nbsp;Articles</span><br>
-<span style="color:#fbbf24">■</span> <span style="color:#93a49a">amber hover</span>&nbsp;&nbsp;
-<span style="color:#5eead4">■</span> <span style="color:#93a49a">cyan hover</span>&nbsp;&nbsp;
-<span style="color:#3da87a">■</span> <span style="color:#93a49a">green hover</span>&nbsp;&nbsp;
-<span style="color:#e8731e">■</span> <span style="color:#93a49a">orange hover</span>&nbsp;&nbsp;
+<span style="color:#95a396">Learn&nbsp;&nbsp;Docs&nbsp;&nbsp;Articles</span><br>
+<span style="color:#fbbf24">■</span> <span style="color:#95a396">amber hover</span>&nbsp;&nbsp;
+<span style="color:#5eead4">■</span> <span style="color:#95a396">cyan hover</span>&nbsp;&nbsp;
+<span style="color:#3da87a">■</span> <span style="color:#95a396">green hover</span>&nbsp;&nbsp;
+<span style="color:#e8731e">■</span> <span style="color:#95a396">papaya hover</span>&nbsp;&nbsp;
 <span style="color:#7ee787">2 3 + . &nbsp;5 ok.</span>
 </div>
 
-<p><strong>Where the pigment goes to work</strong> (the "use it more" of the ask): the hero's radial washes swap cyan for phthalo glazes — <code>rgba(18,53,36,…)</code> layered at two radii, the way the pigment is actually used on canvas; the hero grid lines go phthalo; the terminal window's outer glow goes phthalo; <code>::selection</code> goes club-accent at 22%; the section-line gradients pick up <code>--card-border</code>'s new green automatically. Because every surface already reads tokens, the whole shift is roughly twenty lines in <code>:root</code> plus the handful of hard-coded cyan rgba values in <code>globals.css</code> (<code>.glow-cyan</code>, <code>.hero-gradient</code>, <code>.hero-grid</code>, <code>.terminal-window</code>, <code>::selection</code>, input focus). The scoped rooms — paper articles, Folklore's black, Provenance's white — re-declare their own tokens and are untouched by design.</p>
+<p><strong>Where the green goes to work</strong> (the "use it more" of the ask): the hero's radial washes swap cyan for racing-green glazes — <code>rgba(0,66,37,…)</code> layered at two radii; the hero grid lines go racing green; the terminal window's outer glow goes racing green; <code>::selection</code> goes roundel cream at 20%; the section-line gradients pick up <code>--card-border</code>'s new green automatically. The terminal's phosphor output green (<code>#7ee787</code>) stays — it reads like an instrument lamp against the deeper ground. Because every surface already reads tokens, the whole shift is roughly twenty lines in <code>:root</code> plus the handful of hard-coded cyan rgba values in <code>globals.css</code> (<code>.glow-cyan</code>, <code>.hero-gradient</code>, <code>.hero-grid</code>, <code>.terminal-window</code>, <code>::selection</code>, input focus). The scoped rooms — paper articles, Folklore's papaya-on-black, Provenance's white — re-declare their own tokens and are untouched by design.</p>
 
 <p><strong>Type does not move.</strong> Space Mono everywhere is the identity; this redesign spends nothing there.</p>
 
