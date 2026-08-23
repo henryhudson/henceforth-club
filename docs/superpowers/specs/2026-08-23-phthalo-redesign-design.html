@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phthalo: the club gets its own colour</title>
+<style>
+  :root { --bg:#f4ecd8; --ink:#2a2318; --muted:#6b5d45; --rule:#c9b98f; --accent:#8b3a1a; --card:#faf4e4; --shadow:0 1px 3px rgba(60,40,10,0.15); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.68;}
+  .wrap{max-width:860px;margin:0 auto;padding:56px 32px;}
+  header.doc{margin-bottom:40px;border-bottom:3px double var(--rule);padding-bottom:26px;}
+  .eyebrow{font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:33px;line-height:1.16;margin:0 0 12px;font-weight:700;}
+  h2{font-size:24px;margin:46px 0 12px;padding-top:18px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 8px;}
+  .lede{font-size:19px;color:var(--muted);margin:0;font-style:italic;}
+  p{margin:13px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(120,90,30,0.12);padding:2px 6px;border-radius:4px;}
+  pre{background:#2a2318;color:#f0e6cf;padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;background:var(--card);}
+  th,td{text-align:left;padding:9px 12px;border:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .decision{background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 18px;margin:18px 0;box-shadow:var(--shadow);}
+  .decision strong{color:var(--accent);}
+  ul,ol{margin:12px 0;padding-left:26px;} li{margin:6px 0;}
+  .flow{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px 20px;margin:16px 0;box-shadow:var(--shadow);}
+  .chip{display:inline-block;width:74px;height:40px;border-radius:6px;vertical-align:middle;border:1px solid rgba(0,0,0,0.25);}
+  .chiplabel{font-family:'SF Mono',Menlo,monospace;font-size:12px;color:var(--muted);}
+  .darkboard{background:#050f0b;border-radius:10px;padding:22px 24px;margin:16px 0;font-family:'SF Mono',Menlo,monospace;font-size:14px;line-height:2;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Design spec · 2026-08-23 · henceforth.club · redesign proposal, awaiting Henry's go</div>
+<h1>Phthalo: the club gets its own colour</h1>
+<p class="lede">Two asks from Henry — use phthalo green more, and put the apps at the top instead of behind an Apps button — plus a full read of the live site. The finding underneath both: the club has been borrowing Deck of Cards' cyan as its own brand, and the hero hides its most important text behind a JavaScript animation. Phthalo fixes the first; deleting one wrapper fixes the second.</p>
+</header>
+
+<h2>1 · What the site is today, measured</h2>
+
+<p>Measurements taken 2026-08-23 against the live site (Lighthouse 12, mobile emulation, plus direct transfer-size reads of every chunk the homepage ships).</p>
+
+<table>
+<tr><th>Measure</th><th>Value</th><th>Reading</th></tr>
+<tr><td>Performance score</td><td>86 / 100</td><td>Good bones, two self-inflicted wounds (below)</td></tr>
+<tr><td>Accessibility score</td><td>87 / 100</td><td>Contrast + list-markup failures, all fixable</td></tr>
+<tr><td>First contentful paint</td><td>1.9 s</td><td>Healthy</td></tr>
+<tr><td>Largest contentful paint</td><td><strong>4.0 s</strong></td><td>Poor — and it is the hero <em>paragraph</em>, a text node</td></tr>
+<tr><td>Total blocking time · layout shift</td><td>40 ms · 0</td><td>Excellent</td></tr>
+<tr><td>Server first byte</td><td>~70 ms</td><td>Vercel edge doing its job</td></tr>
+<tr><td>JavaScript, compressed</td><td>248 KB (792 KB parsed)</td><td>Heavy for a static storefront</td></tr>
+<tr><td>— of which Motion</td><td>41 KB (24 KB measured unused)</td><td>An animation library shipped on every page to run fade-ins</td></tr>
+<tr><td>Stylesheet · fonts</td><td>16.6 KB · 2 × 9.5 KB</td><td>Lean; Space Mono subset, preloaded, swap</td></tr>
+<tr><td>Whole homepage</td><td>24 requests · 272 KB</td><td>No image weight in the critical path</td></tr>
+</table>
+
+<p><strong>The two wounds.</strong> First: <code>henceforth.club</code> answers with a 307 redirect to <code>www.henceforth.club</code> — about 775 ms of modelled first-visit delay on mobile — while <code>metadataBase</code>, the sitemap, and every printed link declare the bare domain as canonical. The site pays a round-trip to contradict its own metadata. Second: the hero copy is wrapped in the Motion <code>FadeIn</code> component, which renders it at opacity 0 until JavaScript loads, hydrates, and animates. The largest contentful paint element is that paragraph — the site's most important sentence is the last thing to exist. First paint happens at 1.9 s; the words arrive at 4.0 s.</p>
+
+<p><strong>The brand finding.</strong> Cyan <code>#5eead4</code> is doing two jobs: it is Deck of Cards' identity <em>and</em> the club's wordmark, glow, selection colour, hero wash, and grid. Henceforth has amber, Hansard has green, Folklore has orange — the club itself has nothing of its own. That is the real reason "use phthalo green more" is the right instinct and not just a repaint.</p>
+
+<h2>2 · Phthalo: the palette</h2>
+
+<div class="decision"><strong>Proposal.</strong> Phthalo green becomes the club's own material at two depths: the pigment itself (<code>#123524</code>, the blue-shade phthalocyanine painters glaze shadows with) as the <em>ground</em> — every near-black surface shifts from blue-black to phthalo-black — and a luminous viridian as the club's <em>accent</em> for the wordmark, links, selection, and chrome. The four app accents do not move an inch: amber stays Henceforth, cyan goes back to being only Deck's, green stays Hansard, orange stays Folklore. The club stops borrowing.</div>
+
+<table>
+<tr><th>Token</th><th>Today</th><th>Proposed</th><th>Role</th></tr>
+<tr><td><code>--phthalo</code> (new)</td><td>—</td><td><code>#123524</code></td><td>The pigment. Washes, gradients, hover tints — never text</td></tr>
+<tr><td><code>--background</code></td><td><code>#06080a</code></td><td><code>#050f0b</code></td><td>Phthalo black — the room turns green</td></tr>
+<tr><td><code>--card-bg</code></td><td><code>#0d1117</code></td><td><code>#0b1a13</code></td><td>Card surface</td></tr>
+<tr><td><code>--card-border</code></td><td><code>#1e2530</code></td><td><code>#1b2f24</code></td><td>Hairlines</td></tr>
+<tr><td><code>--card-border-hover</code></td><td><code>#2d3748</code></td><td><code>#2c4a38</code></td><td>Hover hairlines</td></tr>
+<tr><td><code>--terminal-bg</code></td><td><code>#0a0e14</code></td><td><code>#081410</code></td><td>Terminal panels</td></tr>
+<tr><td><code>--accent-club</code> (new)</td><td>cyan borrowed</td><td><code>#2fbd93</code></td><td>Wordmark, chrome links, focus, selection (7.9:1 on the ground)</td></tr>
+<tr><td><code>--muted</code></td><td><code>#8b949e</code> blue-grey</td><td><code>#93a49a</code> green-grey</td><td>Secondary text, ~7:1</td></tr>
+<tr><td><code>--muted-2</code> (new)</td><td>opacity fractions</td><td><code>#6e8076</code></td><td>Tertiary text floor, ~4.6:1 — replaces every <code>text-muted/40..60</code></td></tr>
+</table>
+
+<p>Swatches, ground first, then the accent row — the club chip must read as its own voice beside the four apps, neither Hansard's forest nor Deck's ice:</p>
+
+<p>
+<span class="chip" style="background:#050f0b"></span>
+<span class="chip" style="background:#0b1a13"></span>
+<span class="chip" style="background:#123524"></span>
+<span class="chip" style="background:#2fbd93"></span>
+&nbsp;<span class="chiplabel">ground #050f0b · card #0b1a13 · phthalo #123524 · club accent #2fbd93</span>
+</p>
+<p>
+<span class="chip" style="background:#2fbd93"></span>
+<span class="chip" style="background:#fbbf24"></span>
+<span class="chip" style="background:#5eead4"></span>
+<span class="chip" style="background:#3da87a"></span>
+<span class="chip" style="background:#e8731e"></span>
+&nbsp;<span class="chiplabel">club · Henceforth · Deck · Hansard · Folklore</span>
+</p>
+
+<p>And on the actual ground — the judgement call is whether <code>#2fbd93</code> holds its own lane between Hansard's <code>#3da87a</code> and Deck's <code>#5eead4</code>:</p>
+
+<div class="darkboard">
+<span style="color:#2fbd93;font-weight:700">henceforth</span><span style="color:#6e8076">.club</span>&nbsp;&nbsp;&nbsp;
+<span style="color:#e4e4e7">Henceforth</span>&nbsp;&nbsp;
+<span style="color:#e4e4e7">Deck</span>&nbsp;&nbsp;
+<span style="color:#e4e4e7">Hansard</span>&nbsp;&nbsp;
+<span style="color:#e4e4e7">Folklore</span>&nbsp;&nbsp;&nbsp;
+<span style="color:#93a49a">Learn&nbsp;&nbsp;Docs&nbsp;&nbsp;Articles</span><br>
+<span style="color:#fbbf24">■</span> <span style="color:#93a49a">amber hover</span>&nbsp;&nbsp;
+<span style="color:#5eead4">■</span> <span style="color:#93a49a">cyan hover</span>&nbsp;&nbsp;
+<span style="color:#3da87a">■</span> <span style="color:#93a49a">green hover</span>&nbsp;&nbsp;
+<span style="color:#e8731e">■</span> <span style="color:#93a49a">orange hover</span>&nbsp;&nbsp;
+<span style="color:#7ee787">2 3 + . &nbsp;5 ok.</span>
+</div>
+
+<p><strong>Where the pigment goes to work</strong> (the "use it more" of the ask): the hero's radial washes swap cyan for phthalo glazes — <code>rgba(18,53,36,…)</code> layered at two radii, the way the pigment is actually used on canvas; the hero grid lines go phthalo; the terminal window's outer glow goes phthalo; <code>::selection</code> goes club-accent at 22%; the section-line gradients pick up <code>--card-border</code>'s new green automatically. Because every surface already reads tokens, the whole shift is roughly twenty lines in <code>:root</code> plus the handful of hard-coded cyan rgba values in <code>globals.css</code> (<code>.glow-cyan</code>, <code>.hero-gradient</code>, <code>.hero-grid</code>, <code>.terminal-window</code>, <code>::selection</code>, input focus). The scoped rooms — paper articles, Folklore's black, Provenance's white — re-declare their own tokens and are untouched by design.</p>
+
+<p><strong>Type does not move.</strong> Space Mono everywhere is the identity; this redesign spends nothing there.</p>
+
+<h2>3 · The shelf: apps at the top</h2>
+
+<p>Today the desktop nav hides the three store apps behind a hover-gated Apps button — the menu is conditionally rendered, so the product names are not even in the server markup of most pages — while a generic word takes the slot the products should own. The mobile menu already lists them flat, which is the right answer.</p>
+
+<pre><code>Before   henceforth.club     Apps ▾   Learn  Docs  Articles  folklore  Contact  (Sign in)
+                              └─ Henceforth / Deck of Cards / Hansard   · hover only
+
+After    henceforth.club     ▎Henceforth  ▎Deck of Cards  ▎Hansard  ▎folklore  ·  Learn  Docs  Articles  Sign in</code></pre>
+
+<ul>
+<li><strong>Every app is a top-level link.</strong> Each carries a two-pixel tick in its own accent colour — the nav becomes the app index, and the accent system the site already owns does the labelling. Hover colours stay exactly as the dropdown had them.</li>
+<li><strong>Contact leaves the top bar</strong> (it is three X links; the footer already carries it). That funds the width the app names need.</li>
+<li><strong>The hamburger breakpoint moves from <code>sm</code> to <code>md</code></strong> — below that the inline shelf will not fit honestly. If the full "Deck of Cards" crowds the medium widths, it shortens to "Deck" at <code>md</code> and speaks fully from <code>lg</code>.</li>
+<li><strong>The dropdown machinery is deleted</strong> — <code>appsOpen</code> state, hover handlers, conditional menu — the Navbar gets simpler, and app links are in the server markup of every page.</li>
+<li><strong>The sign-in pill quiets down.</strong> It is the operator's door, yet today it is the loudest element in the chrome for every visitor. It becomes a muted ghost link that only glows once signed in.</li>
+</ul>
+
+<h2>4 · Speed, ranked by what a visitor feels</h2>
+
+<table>
+<tr><th>#</th><th>Change</th><th>Cost</th><th>Expected effect</th></tr>
+<tr><td>1</td><td><strong>Flip the redirect.</strong> Make the bare domain primary in Vercel; <code>www</code> redirects to it — the direction the metadata already claims</td><td>Domain settings only</td><td>~0.5–0.8 s off every first visit that types or taps "henceforth.club"; canonical stops contradicting itself</td></tr>
+<tr><td>2</td><td><strong>Unhide the hero.</strong> Hero copy and terminal render visible, animated by the existing CSS <code>.animate-in</code> classes (which run before hydration and already honour reduced-motion); Motion stays below the fold or goes entirely</td><td>Small edit</td><td>Largest contentful paint 4.0 s → ≈2.0 s; performance score ≈86 → mid-90s</td></tr>
+<tr><td>3</td><td><strong>Retire Motion.</strong> <code>FadeIn</code> becomes a ~20-line intersection-observer hook toggling a class; the Hansard accordion becomes a grid-rows transition</td><td>One component + one refactor</td><td>−41 KB compressed, −120 KB parsed, on every page</td></tr>
+<tr><td>4</td><td><strong>Lazy-mount the easter eggs.</strong> Konami listener and the Ctrl+` terminal dynamic-import on first keydown — they are keyboard-only by nature</td><td>Small edit</td><td>Less parse for every visitor who never summons them; the eggs still work identically</td></tr>
+</table>
+
+<p>What is already right and should be left alone: first byte at ~70 ms, zero layout shift, 40 ms blocking time, subset fonts preloaded with swap, a 16.6 KB stylesheet, no hero imagery to weigh down paint. The site's problem was never the server or the assets — it is one redirect and one opacity:0.</p>
+
+<h2>5 · Ease of use and accessibility</h2>
+
+<ul>
+<li><strong>Contrast floor.</strong> Every failing element is a <code>text-muted/40..60</code> opacity fraction on near-black — footer link columns, taglines, section eyebrows. The two-tier muted ramp (§2) replaces fractions with real colours that clear 4.5:1; the footer's easter-egg whispers may stay whispers, but nudged to the floor so the lore is legible to everyone.</li>
+<li><strong>List semantics.</strong> The homepage ladder renders <code>&lt;ol&gt; → &lt;div&gt; (FadeIn) → &lt;li&gt;</code> — invalid, and flagged. <code>FadeIn</code> moves inside the <code>&lt;li&gt;</code> (or renders as one) and the failure disappears along with Motion.</li>
+<li><strong>Copy drift.</strong> "Three apps. One dream." sits above four products, and the shared metadata says "Three apps, one dream" on every card. Drop the count rather than maintain it: the description already carries the three-clause poem, which needs no number. Whether Folklore joins the <em>headline</em> ("FORTH. Cards. Parliament.") is Henry's call under the no-announcements-before-launch gate — the card and nav presence it already has stays either way.</li>
+<li><strong>The ladder stays.</strong> "Start here" 1–4 is numbered because it genuinely is a sequence — that is structure carrying information, keep it.</li>
+<li><strong>Golden-ratio cards, terminal hero, times-table circle, all four eggs: keep.</strong> They are the memorable furniture; the redesign changes the light in the room, not the room.</li>
+</ul>
+
+<h2>6 · What deliberately does not change</h2>
+
+<p>Space Mono. The Phosphor Noir posture. The per-app accent system. The scoped rooms (paper, Folklore black, Provenance). The board world. The Folklore announcement gate. No new dependencies — this spec only deletes one.</p>
+
+<h2>7 · If you say go</h2>
+
+<ol>
+<li>Vercel domain flip (no code, reversible in the dashboard).</li>
+<li>Palette: <code>:root</code> tokens + the hard-coded cyan rgba sweep in <code>globals.css</code>; bump <code>--stylesheet-rev</code>.</li>
+<li>Navbar shelf + sign-in de-emphasis + Contact demotion.</li>
+<li>Hero unhide (largest-paint fix) — ship 1–4 together as the visible redesign.</li>
+<li>Motion retirement + easter-egg lazy-mount + list semantics + muted ramp sweep.</li>
+<li>Re-run Lighthouse against production; the targets are: performance ≥ 95, accessibility 100, largest contentful paint ≤ 2.2 s mobile.</li>
+</ol>
+
+<p style="margin-top:34px;color:var(--muted);font-size:14px">Sources: live-site chunk transfer sizes and Lighthouse 12 run of 2026-08-23; <code>src/app/globals.css</code>, <code>src/components/Navbar.tsx</code>, <code>src/components/HeroTerminal.tsx</code>, <code>src/components/FadeIn.tsx</code>, <code>src/app/page.tsx</code>, <code>src/app/layout.tsx</code>. The site is TypeScript and Next.js, so the Swift skill set bears on the apps this site sells rather than on this codebase; the functional house style is already visible in its pure modules and this spec keeps it that way.</p>
+
+</div>
+</body>
+</html>
