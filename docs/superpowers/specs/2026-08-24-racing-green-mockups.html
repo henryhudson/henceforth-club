@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Racing green — the mock-ups</title>
+<meta name="description" content="Visual mock-ups for the henceforth.club British racing green redesign: today's site next to the proposed livery, the app shelf close up, and the full palette.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #f5f2e9;
+    color: #1c1813;
+    font-family: Georgia, "Times New Roman", serif;
+    line-height: 1.55;
+    padding: 3rem 1.25rem 5rem;
+  }
+  .sheet { max-width: 1040px; margin: 0 auto; }
+  .masthead { text-align: center; border-bottom: 3px double #1c1813; padding-bottom: 1.2rem; margin-bottom: .9rem; }
+  .masthead h1 { font-size: 2rem; letter-spacing: .01em; }
+  .masthead .date { font-size: .8rem; letter-spacing: .18em; text-transform: uppercase; color: #6e6149; margin-top: .45rem; }
+  .lede { font-size: 1.02rem; max-width: 44rem; margin: 1.4rem auto 0; }
+  .lede strong { font-weight: 700; }
+
+  section { margin-top: 3.2rem; }
+  h2 { font-size: 1.15rem; letter-spacing: .04em; border-bottom: 1px solid #b9ad8e; padding-bottom: .35rem; margin-bottom: .4rem; }
+  .cap { font-size: .88rem; color: #55503f; max-width: 46rem; margin-bottom: 1.1rem; }
+  .note { font-size: .8rem; color: #6e6149; margin-top: .6rem; font-style: italic; }
+
+  /* ── Browser frame ─────────────────────────── */
+  .frame { border: 1px solid #c9bfa6; border-radius: 10px; overflow: hidden; box-shadow: 0 10px 30px rgba(28,24,19,.18); background: #ddd; }
+  .chrome { display: flex; align-items: center; gap: .5rem; background: #e8e3d4; padding: .5rem .8rem; border-bottom: 1px solid #c9bfa6; }
+  .chrome i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+  .chrome .url { flex: 1; text-align: center; font-family: "Space Mono", monospace; font-size: .72rem; color: #55503f; background: #f5f2e9; border-radius: 5px; padding: .15rem .6rem; margin: 0 2rem; }
+
+  /* ── Shared mock building blocks ───────────── */
+  .screen { font-family: "Space Mono", ui-monospace, monospace; background: var(--bg); color: var(--fg); padding-bottom: 0; }
+  .mnav { display: flex; align-items: center; justify-content: space-between; padding: .95rem 2.2rem; border-bottom: 1px solid var(--border); font-size: .78rem; }
+  .wordmark { font-weight: 700; font-size: 1rem; letter-spacing: -.02em; color: var(--club); text-shadow: var(--clubglow); }
+  .wordmark .tld { color: var(--muted); font-weight: 700; text-shadow: none; }
+  .mlinks { display: flex; align-items: center; gap: 1.35rem; color: var(--muted); white-space: nowrap; }
+  .mlinks .sep { color: var(--muted); opacity: .45; }
+  .appitem { display: inline-flex; align-items: center; gap: .42rem; }
+  .appitem i { width: 3px; height: .85em; display: inline-block; border-radius: 1px; }
+  .pillbtn { border: 1px solid rgba(61,168,122,.4); background: rgba(61,168,122,.1); color: #3da87a; border-radius: 999px; padding: .3rem .85rem; font-size: .74rem; }
+  .signin-quiet { color: var(--muted2, var(--muted)); font-size: .74rem; }
+  .folk { color: #e8731e; font-style: italic; }
+
+  .hero { padding: 3.4rem 2.2rem 2.8rem; position: relative; overflow: hidden; }
+  .hero .ring { position: absolute; right: -110px; top: 50%; transform: translateY(-50%); width: 340px; height: 340px; border-radius: 50%; border: 1px solid var(--border); opacity: .8; pointer-events: none; }
+  .hero .ring::before { content: ""; position: absolute; inset: 34px; border-radius: 50%; border: 1px dashed var(--border); }
+  .kicker { font-size: .68rem; letter-spacing: .3em; text-transform: uppercase; color: var(--clubdim); }
+  .hero h1 { font-size: 2.1rem; line-height: 1.12; font-weight: 700; margin-top: 1rem; color: var(--fg); }
+  .hero .sub { margin-top: 1rem; max-width: 30rem; font-size: .85rem; line-height: 1.7; color: var(--muted); }
+
+  .term { margin-top: 1.9rem; max-width: 33rem; background: var(--tbg); border: 1px solid var(--border); border-radius: 9px; overflow: hidden; position: relative; }
+  .term::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,.022) 0 1px, transparent 1px 3px); }
+  .term .bar { display: flex; align-items: center; gap: .45rem; padding: .55rem .9rem; border-bottom: 1px solid var(--border); }
+  .term .bar i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .term .bar span { margin-left: .5rem; font-size: .62rem; color: var(--muted); opacity: .6; }
+  .term .tbody { padding: 1rem 1.2rem 1.1rem; font-size: .74rem; line-height: 2; }
+  .tprompt { color: var(--club); text-shadow: var(--clubglow); }
+  .tin { color: var(--fg); }
+  .tout { color: #7ee787; }
+  .tdim { color: var(--muted); opacity: .65; }
+  .caret { display: inline-block; width: .5em; height: 1em; background: var(--club); vertical-align: text-bottom; opacity: .85; }
+  .hint { margin-top: .55rem; font-size: .6rem; color: var(--muted); opacity: .45; }
+
+  .rule { height: 1px; background: var(--border); margin: 0; }
+
+  .ladder { padding: 2.6rem 2.2rem; }
+  .seckick { font-size: .62rem; letter-spacing: .28em; text-transform: uppercase; color: var(--muted); opacity: .6; }
+  .ladder h3 { font-size: 1.25rem; font-weight: 700; margin-top: .8rem; color: var(--fg); }
+  .ladder .intro { margin-top: .6rem; max-width: 34rem; font-size: .78rem; line-height: 1.65; color: var(--muted); }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; margin-top: 1.6rem; }
+  .card { border: 1px solid var(--border); background: var(--card); border-radius: 11px; padding: 1.15rem 1.25rem; }
+  .card .n { font-size: .68rem; font-weight: 700; }
+  .card h4 { font-size: .92rem; font-weight: 700; margin-top: .4rem; color: var(--fg); }
+  .card p { margin-top: .45rem; font-size: .72rem; line-height: 1.6; color: var(--muted); }
+  .card .cta { display: block; margin-top: .7rem; font-size: .66rem; color: var(--muted); opacity: .7; }
+  .card.hovered { border-color: var(--borderhov); }
+
+  .mfoot { display: flex; justify-content: space-between; align-items: center; padding: 1.1rem 2.2rem; border-top: 1px solid var(--border); font-size: .62rem; color: var(--muted); }
+  .mfoot .clue { opacity: .35; }
+
+  /* Today's tokens */
+  .now { --bg:#06080a; --fg:#e4e4e7; --card:#0d1117; --border:#1e2530; --borderhov:#2d3748;
+         --muted:#8b949e; --tbg:#0a0e14; --club:#5eead4; --clubdim:rgba(94,234,212,.7);
+         --clubglow:0 0 10px rgba(94,234,212,.45); }
+  /* Racing green tokens */
+  .brg { --bg:#05140d; --fg:#e6e8e3; --card:#0b1d14; --border:#193426; --borderhov:#28533d;
+         --muted:#95a396; --muted2:#74857a; --tbg:#071710; --club:#eadfb8; --clubdim:rgba(234,223,184,.75);
+         --clubglow:0 0 9px rgba(234,223,184,.28); }
+
+  /* ── Shelf close-up ────────────────────────── */
+  .shelfdemo { background: #05140d; border: 1px solid #193426; border-radius: 10px; font-family: "Space Mono", monospace; padding: .4rem 0; }
+  .shelfrow { display: flex; align-items: center; gap: 1.6rem; padding: 1rem 1.8rem; font-size: .86rem; color: #95a396; border-bottom: 1px solid #10261a; flex-wrap: wrap; }
+  .shelfrow:last-child { border-bottom: 0; }
+  .shelfrow .state { flex-basis: 100%; font-size: .6rem; letter-spacing: .2em; text-transform: uppercase; color: #74857a; margin-bottom: .1rem; }
+  .shelfrow .wm { font-weight: 700; color: #eadfb8; }
+  .shelfrow .wm .tld { color: #74857a; }
+  .si { display: inline-flex; align-items: center; gap: .45rem; }
+  .si i { width: 3px; height: .9em; border-radius: 1px; display: inline-block; }
+  .si.on { color: #e6e8e3; }
+  .si.hover { color: #5eead4; }
+  .si.current { color: #e6e8e3; box-shadow: inset 0 -2px 0 -0px #3da87a; padding-bottom: .15rem; }
+  .quiet { color: #74857a; font-size: .78rem; }
+
+  /* ── Palette ───────────────────────────────── */
+  .chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .8rem; }
+  .chip { border: 1px solid #c9bfa6; border-radius: 8px; overflow: hidden; background: #fffdf6; }
+  .chip .swatch { height: 58px; }
+  .chip .label { padding: .5rem .65rem .55rem; font-size: .68rem; line-height: 1.45; }
+  .chip .label b { display: block; font-family: "Space Mono", monospace; font-size: .64rem; }
+  .chip .label span { color: #6e6149; }
+
+  /* ── Verdict ───────────────────────────────── */
+  .verdict { border: 2px solid #004225; border-radius: 10px; background: #eef2ea; padding: 1.5rem 1.8rem; }
+  .verdict h2 { border-bottom: 0; color: #004225; margin-bottom: .6rem; }
+  .verdict p { font-size: .95rem; max-width: 48rem; }
+  .verdict ul { margin: .7rem 0 0 1.2rem; font-size: .9rem; }
+  .verdict li { margin-top: .35rem; }
+
+  @media (max-width: 720px) {
+    .cards { grid-template-columns: 1fr; }
+    .mlinks { display: none; }
+    .hero h1 { font-size: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <header class="masthead">
+    <h1>Racing green — the mock-ups</h1>
+    <p class="date">henceforth.club · 24 August 2026 · companion to the redesign spec of 23 August</p>
+  </header>
+
+  <p class="lede">Two full renderings of the homepage: <strong>the site as it is live today</strong>, then <strong>the proposed British racing green livery</strong> — cream wordmark on green ground, all four apps on the top shelf, hero visible from the first paint. Below them: the shelf close up, the complete palette, and the go or no-go verdict. The mock-ups are hand-set approximations of the real components, faithful in colour, type, and layout.</p>
+
+  <!-- ═══════════ 1 · TODAY ═══════════ -->
+  <section>
+    <h2>1 · Today, as live</h2>
+    <p class="cap">Cyan wordmark (borrowed from Deck of Cards), the apps hidden behind an <em>Apps</em> hover button, a loud green sign-in pill, and a hero that the visitor only sees after the JavaScript arrives.</p>
+
+    <div class="frame">
+      <div class="chrome"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span class="url">www.henceforth.club</span></div>
+      <div class="screen now">
+
+        <div class="mnav">
+          <span class="wordmark">henceforth<span class="tld">.club</span></span>
+          <span class="mlinks">
+            <span>Apps ▾</span>
+            <span>Learn</span><span>Docs</span><span>Articles</span>
+            <span class="folk">folklore</span>
+            <span>Contact</span>
+            <span class="pillbtn">Sign in</span>
+          </span>
+        </div>
+
+        <div class="hero">
+          <div class="ring"></div>
+          <p class="kicker">Three apps. One dream.</p>
+          <h1>FORTH. Cards. Parliament.</h1>
+          <p class="sub">A programmable Bitcoin wallet. Every constituency offline. A deck with no rules of its own. Native iOS. No ads.</p>
+
+          <div class="term">
+            <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span>henceforth</span></div>
+            <div class="tbody">
+              <div><span class="tprompt">$</span> <span class="tin">2 3 + .</span></div>
+              <div class="tout">5 ok.</div>
+              <div><span class="tprompt">$</span> <span class="tin">: greet ." Hello, world!" ;</span></div>
+              <div class="tout">ok.</div>
+              <div><span class="tprompt">$</span> <span class="tin">greet</span></div>
+              <div class="tout">Hello, world! ok.</div>
+              <div><span class="tprompt">$</span> <span class="caret"></span></div>
+            </div>
+          </div>
+          <p class="hint">Try a number (2, 3, 41, 51) or type help.</p>
+        </div>
+
+        <div class="rule"></div>
+
+        <div class="ladder">
+          <p class="seckick">Start here</p>
+          <h3>A clear ladder</h3>
+          <p class="intro">New to the club? Learn the stack, open the wallet, check Parliament, then play cards — in that order if you want the short path.</p>
+          <div class="cards">
+            <div class="card"><span class="n" style="color:#fbbf24">1</span><h4>Try FORTH in 60 seconds</h4><p>Episode one of Starting Henceforth — postfix maths, words you teach, and a payment that reads like a sentence.</p><span class="cta">Watch episode 1 →</span></div>
+            <div class="card"><span class="n" style="color:#fbbf24">2</span><h4>Use the wallet</h4><p>Henceforth — Forth-2012 interpreter with a Bitcoin SV wallet. One purchase for iPhone, iPad, and Mac.</p><span class="cta">Henceforth · $9.99 →</span></div>
+            <div class="card"><span class="n" style="color:#3da87a">3</span><h4>Browse Parliament</h4><p>Hansard — Commons, Lords, and every constituency on a map. Offline from first launch.</p><span class="cta">Hansard · 99p →</span></div>
+            <div class="card"><span class="n" style="color:#5eead4">4</span><h4>Play cards</h4><p>Deck of Cards — multiplayer over Game Center, free core game, optional multiplayer subscription.</p><span class="cta">Deck of Cards · Free →</span></div>
+          </div>
+        </div>
+
+        <div class="mfoot"><span>© Henceforth Bitcoin Limited</span><span class="clue">↑↑↓↓←→←→BA · ctrl+` · hello, world</span></div>
+      </div>
+    </div>
+    <p class="note">Note the wordmark and the terminal prompt: both cyan — the same cyan that is Deck of Cards' accent. The club has no colour of its own.</p>
+  </section>
+
+  <!-- ═══════════ 2 · PROPOSED ═══════════ -->
+  <section>
+    <h2>2 · Proposed — British racing green</h2>
+    <p class="cap">Green ground (#05140d over a #004225 pigment), <strong>roundel cream</strong> wordmark and prompt — the classic cream-numbering-on-green-livery pairing — and all four apps on the shelf with their own colour ticks. Sign-in goes quiet; Contact moves to the footer. The hero is painted in the very first response, no JavaScript wait.</p>
+
+    <div class="frame">
+      <div class="chrome"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span class="url">henceforth.club</span></div>
+      <div class="screen brg">
+
+        <div class="mnav">
+          <span class="wordmark">henceforth<span class="tld">.club</span></span>
+          <span class="mlinks">
+            <span class="appitem"><i style="background:#fbbf24"></i>Henceforth</span>
+            <span class="appitem"><i style="background:#5eead4"></i>Deck&nbsp;of&nbsp;Cards</span>
+            <span class="appitem"><i style="background:#3da87a"></i>Hansard</span>
+            <span class="appitem"><i style="background:#e8731e"></i><span class="folk">folklore</span></span>
+            <span class="sep">·</span>
+            <span class="signin-quiet">Learn</span><span class="signin-quiet">Docs</span><span class="signin-quiet">Articles</span>
+            <span class="signin-quiet">Sign in</span>
+          </span>
+        </div>
+
+        <div class="hero">
+          <div class="ring"></div>
+          <p class="kicker">Three apps. One dream.</p>
+          <h1>FORTH. Cards. Parliament.</h1>
+          <p class="sub">A programmable Bitcoin wallet. Every constituency offline. A deck with no rules of its own. Native iOS. No ads.</p>
+
+          <div class="term">
+            <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span>henceforth</span></div>
+            <div class="tbody">
+              <div><span class="tprompt">$</span> <span class="tin">2 3 + .</span></div>
+              <div class="tout">5 ok.</div>
+              <div><span class="tprompt">$</span> <span class="tin">: greet ." Hello, world!" ;</span></div>
+              <div class="tout">ok.</div>
+              <div><span class="tprompt">$</span> <span class="tin">greet</span></div>
+              <div class="tout">Hello, world! ok.</div>
+              <div><span class="tprompt">$</span> <span class="caret"></span></div>
+            </div>
+          </div>
+          <p class="hint">Try a number (2, 3, 41, 51) or type help.</p>
+        </div>
+
+        <div class="rule"></div>
+
+        <div class="ladder">
+          <p class="seckick">Start here</p>
+          <h3>A clear ladder</h3>
+          <p class="intro">New to the club? Learn the stack, open the wallet, check Parliament, then play cards — in that order if you want the short path.</p>
+          <div class="cards">
+            <div class="card"><span class="n" style="color:#fbbf24">1</span><h4>Try FORTH in 60 seconds</h4><p>Episode one of Starting Henceforth — postfix maths, words you teach, and a payment that reads like a sentence.</p><span class="cta">Watch episode 1 →</span></div>
+            <div class="card hovered"><span class="n" style="color:#fbbf24">2</span><h4>Use the wallet</h4><p>Henceforth — Forth-2012 interpreter with a Bitcoin SV wallet. One purchase for iPhone, iPad, and Mac.</p><span class="cta">Henceforth · $9.99 →</span></div>
+            <div class="card"><span class="n" style="color:#3da87a">3</span><h4>Browse Parliament</h4><p>Hansard — Commons, Lords, and every constituency on a map. Offline from first launch.</p><span class="cta">Hansard · 99p →</span></div>
+            <div class="card"><span class="n" style="color:#5eead4">4</span><h4>Play cards</h4><p>Deck of Cards — multiplayer over Game Center, free core game, optional multiplayer subscription.</p><span class="cta">Deck of Cards · Free →</span></div>
+          </div>
+        </div>
+
+        <div class="mfoot"><span>© Henceforth Bitcoin Limited · <span style="color:#95a396">Contact</span></span><span class="clue">↑↑↓↓←→←→BA · ctrl+` · hello, world</span></div>
+      </div>
+    </div>
+    <p class="note">Card two is drawn in its hover state (#28533d border) so you can judge the resting and lifted values side by side. The amber, cyan, Hansard green, and papaya accents all keep their lanes — cream shares a lane with nobody.</p>
+  </section>
+
+  <!-- ═══════════ 3 · SHELF CLOSE-UP ═══════════ -->
+  <section>
+    <h2>3 · The shelf, close up</h2>
+    <p class="cap">Three states of the proposed navigation, enlarged. Each app carries a thin tick in its own accent; text stays muted until you engage it. The current section earns a full underline in its app's colour.</p>
+
+    <div class="shelfdemo">
+      <div class="shelfrow">
+        <span class="state">At rest</span>
+        <span class="wm">henceforth<span class="tld">.club</span></span>
+        <span class="si"><i style="background:#fbbf24"></i>Henceforth</span>
+        <span class="si"><i style="background:#5eead4"></i>Deck of Cards</span>
+        <span class="si"><i style="background:#3da87a"></i>Hansard</span>
+        <span class="si"><i style="background:#e8731e"></i><span class="folk">folklore</span></span>
+        <span class="quiet">· Learn Docs Articles · Sign in</span>
+      </div>
+      <div class="shelfrow">
+        <span class="state">Hovering Deck of Cards</span>
+        <span class="wm">henceforth<span class="tld">.club</span></span>
+        <span class="si"><i style="background:#fbbf24"></i>Henceforth</span>
+        <span class="si hover"><i style="background:#5eead4"></i>Deck of Cards</span>
+        <span class="si"><i style="background:#3da87a"></i>Hansard</span>
+        <span class="si"><i style="background:#e8731e"></i><span class="folk">folklore</span></span>
+        <span class="quiet">· Learn Docs Articles · Sign in</span>
+      </div>
+      <div class="shelfrow">
+        <span class="state">Reading /hansard</span>
+        <span class="wm">henceforth<span class="tld">.club</span></span>
+        <span class="si"><i style="background:#fbbf24"></i>Henceforth</span>
+        <span class="si"><i style="background:#5eead4"></i>Deck of Cards</span>
+        <span class="si current"><i style="background:#3da87a"></i>Hansard</span>
+        <span class="si"><i style="background:#e8731e"></i><span class="folk">folklore</span></span>
+        <span class="quiet">· Learn Docs Articles · Sign in</span>
+      </div>
+    </div>
+    <p class="note">On phones the shelf folds into the existing hamburger menu, which already lists the apps flat — that layout barely changes, it just gains Folklore and the green ground.</p>
+  </section>
+
+  <!-- ═══════════ 4 · THE LIVERY ═══════════ -->
+  <section>
+    <h2>4 · The livery</h2>
+    <p class="cap">The full racing-green token set, with the four app accents that do not change. Contrast figures are against the #05140d ground.</p>
+    <div class="chips">
+      <div class="chip"><div class="swatch" style="background:#004225"></div><div class="label"><b>#004225</b><span>racing green — the pigment</span></div></div>
+      <div class="chip"><div class="swatch" style="background:#05140d"></div><div class="label"><b>#05140d</b><span>ground — page background</span></div></div>
+      <div class="chip"><div class="swatch" style="background:#0b1d14"></div><div class="label"><b>#0b1d14</b><span>card surface</span></div></div>
+      <div class="chip"><div class="swatch" style="background:#193426"></div><div class="label"><b>#193426</b><span>card border</span></div></div>
+      <div class="chip"><div class="swatch" style="background:#28533d"></div><div class="label"><b>#28533d</b><span>border, hover</span></div></div>
+      <div class="chip"><div class="swatch" style="background:#071710"></div><div class="label"><b>#071710</b><span>terminal well</span></div></div>
+      <div class="chip"><div class="swatch" style="background:#eadfb8"></div><div class="label"><b>#eadfb8</b><span>roundel cream — the club's colour (≈14:1)</span></div></div>
+      <div class="chip"><div class="swatch" style="background:#95a396"></div><div class="label"><b>#95a396</b><span>muted text (≈7:1)</span></div></div>
+      <div class="chip"><div class="swatch" style="background:#74857a"></div><div class="label"><b>#74857a</b><span>muted floor (≈4.6:1)</span></div></div>
+      <div class="chip"><div class="swatch" style="background:#fbbf24"></div><div class="label"><b>#fbbf24</b><span>Henceforth amber</span></div></div>
+      <div class="chip"><div class="swatch" style="background:#5eead4"></div><div class="label"><b>#5eead4</b><span>Deck of Cards cyan — now Deck's alone</span></div></div>
+      <div class="chip"><div class="swatch" style="background:#3da87a"></div><div class="label"><b>#3da87a</b><span>Hansard green</span></div></div>
+      <div class="chip"><div class="swatch" style="background:#e8731e"></div><div class="label"><b>#e8731e</b><span>Folklore — McLaren papaya (it stays)</span></div></div>
+      <div class="chip"><div class="swatch" style="background:#7ee787"></div><div class="label"><b>#7ee787</b><span>terminal output green</span></div></div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 5 · VERDICT ═══════════ -->
+  <section class="verdict">
+    <h2>5 · Should we go live?</h2>
+    <p><strong>My verdict: yes.</strong> Every change is presentation-layer — colour tokens, the navigation bar, and how the hero enters. No money paths, no board machinery, no data. A push deploys in about thirty seconds, and a plain revert undoes the whole thing just as fast.</p>
+    <ul>
+      <li><strong>What ships:</strong> the racing-green tokens and cyan sweep, the app shelf, the quiet sign-in, the hero painted without waiting for JavaScript, and the accessibility fixes (muted-text contrast floor, real list markup).</li>
+      <li><strong>What it buys:</strong> the club finally owns a colour; the apps are one click from everywhere; largest contentful paint should drop from about 4.0 seconds toward the 2.2-second target.</li>
+      <li><strong>The one thing I cannot push:</strong> making the bare domain primary (the apex redirect) lives in the Vercel dashboard — worth doing, not blocking, can follow separately.</li>
+      <li><strong>The one judgement call left:</strong> cream next to Henceforth's amber in the shelf — they are neighbours, not twins; judge it in mock-up two above.</li>
+    </ul>
+  </section>
+
+</div>
+</body>
+</html>
