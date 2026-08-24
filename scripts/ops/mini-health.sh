@@ -13,8 +13,9 @@
 #
 # Runs every 10 minutes (launchd: club.henceforth.mini-health) ON THE MINI.
 # Emails hnryhdsn@gmail.com only on a state CHANGE — one when it goes bad, one
-# when it recovers — reusing the daily-reviews Gmail app password, exactly as
-# text-monitor.sh does.
+# when it recovers, and one when it goes bad and corrects itself within a
+# single pass (see self-correction below) — reusing the daily-reviews Gmail
+# app password, exactly as text-monitor.sh does.
 #
 # Install:
 #   cp scripts/ops/mini-health.sh  ~/Programming/Main\ Projects/.mini-health/
@@ -127,6 +128,35 @@ run_pass() {
   print -rn -- "$failures"
 }
 
+# ── self-correction ──────────────────────────────────────────────────────────
+# Added 2026-08-24, after the second load incident (849 that morning, 467 on
+# 2026-07-28). When the machine is drowning, the build work already running is
+# doomed — every job will crawl into its own timeout. Killing it is therefore
+# not destructive: it turns runs that would die slowly into runs that die now,
+# frees the memory whose paging IS the load, and the runners pick up the next
+# job. It is also the only correction available without root: FileVault parks
+# an unattended restart at the pre-boot unlock screen, and there is no
+# passwordless sudo, so the reboot still needs a person at the machine.
+#
+# Exact process names only (pkill -x), so the runner listeners, the folklore
+# worker, and this monitor can never match.
+KILL_PATTERN='xcodebuild|swift-frontend|XCBBuildService|SourceKitService'
+RECOVERY_WAIT_SECONDS=90
+
+attempt_recovery() {
+  local build sims
+  build=$(pgrep -lx "$KILL_PATTERN" 2>/dev/null \
+            | awk '{ n[$2]++ } END { for (p in n) printf "%d %s, ", n[p], p }')
+  sims=$(pgrep -f CoreSimulator 2>/dev/null | wc -l | tr -d ' ')
+  [[ -z "$build" && "$sims" == 0 ]] && return
+  pkill -9 -x "$KILL_PATTERN" 2>/dev/null
+  # A starved simctl can hang for minutes; detach it so it cannot wedge the
+  # monitor. The three runners share one device set, so this shuts down every
+  # simulator on the machine — intended: they are all doomed together.
+  ( xcrun simctl shutdown all > /dev/null 2>&1 & )
+  print -r -- "${build}${sims} simulator processes"
+}
+
 send_mail() {
   local subject=$1 body=$2
   [[ -r "$PASS_FILE" ]] || { log "ALERT UNSENT (no app password): $subject"; return 1 }
@@ -148,6 +178,28 @@ if [[ -n "$failures" ]]; then
   failures=$(run_pass)
 fi
 
+# Correct before alarming. Only a load or paging failure is something killing
+# build work can fix — a full disk or an unreadable sensor is not. And if the
+# fork check just failed, pgrep and pkill would hang exactly as ps did, which
+# would delay the alert itself — a machine that can barely fork gets the email
+# and the human, not an attempted correction. Re-measure after the kill and
+# let the re-measurement decide which email goes out.
+original_failures="$failures"
+recovery_note="" killed=""
+if print -r -- "$failures" | grep -qE '^(load average is|swap is)' \
+   && ! print -r -- "$failures" | grep -qE 'process table|cannot enumerate'; then
+  killed=$(attempt_recovery)
+  if [[ -n "$killed" ]]; then
+    log "RECOVERY: killed ${killed}"
+    sleep $RECOVERY_WAIT_SECONDS
+    failures=$(run_pass)
+    recovery_note=killed
+  else
+    log "RECOVERY: nothing to kill"
+    recovery_note=nothing
+  fi
+fi
+
 # Read the state TOTALLY: `cat` on an empty file exits 0, so a `|| print ok`
 # fallback never fires and `previous` comes back empty, matching neither
 # branch — that silently suppressed a recovery email on the site monitor in
@@ -159,6 +211,16 @@ if [[ -n "$failures" ]]; then
   write_state fail
   log "FAIL: ${failures//$'\n'/ · }"
   if [[ "$previous" == ok ]]; then
+    case "$recovery_note" in
+      killed)  correction="Self-correction was attempted first: the monitor killed the build pile-up
+(${killed}) and re-measured ${RECOVERY_WAIT_SECONDS} seconds later — the numbers
+above are AFTER that kill. A load average decays slowly, so if the kill was
+enough after all, the all-clear email follows within ten minutes. If it does
+not arrive, the machine needs the reboot." ;;
+      nothing) correction="Self-correction found nothing to do: there was no build work to kill, so
+this load is not runaway builds and only the reboot will clear it." ;;
+      *)       correction="This is not a failure that killing build work can fix." ;;
+    esac
     send_mail "The Mac mini is unhealthy — builds will fail" \
 "The build machine's own health check failed twice, thirty seconds apart:
 
@@ -166,6 +228,8 @@ ${failures}
 This is the MACHINE, not any website or repository. While it is in this state
 every continuous-integration run will start, crawl, and die on its own timeout,
 and any red run you see is the machine rather than the code.
+
+${correction}
 
 Fix: reboot it. FileVault means an ordinary restart parks it at the pre-boot
 unlock screen where nothing runs, so use a Terminal AT the machine:
@@ -187,13 +251,33 @@ else
   ok_disk=$(df -g /System/Volumes/Data | awk 'NR==2 {print $4}')
   log "ok load=${ok_load} swap=${ok_swap}M diskfree=${ok_disk}G"
   if [[ "$previous" == fail ]]; then
+    extra=""
+    [[ "$recovery_note" == killed ]] && extra="
+
+This followed the monitor killing the build pile-up (${killed}) — the
+correction, not a coincidence. The killed jobs will show as red runs; re-run
+them."
     send_mail "The Mac mini has recovered" \
 "The build machine's health check is passing again.
 
   $(sysctl -n vm.loadavg)
   $(sysctl -n vm.swapusage)
   $(df -h /System/Volumes/Data | tail -1)
-
+${extra}
 Continuous integration should go green on the next run."
+  elif [[ "$recovery_note" == killed ]]; then
+    send_mail "The Mac mini went unhealthy and corrected itself" \
+"The build machine's health check failed twice, thirty seconds apart:
+
+${original_failures}
+The monitor killed the build pile-up — ${killed} — and shut down every
+simulator. ${RECOVERY_WAIT_SECONDS} seconds later the machine passed every
+check:
+
+  $(sysctl -n vm.loadavg)
+  $(sysctl -n vm.swapusage)
+
+No reboot was needed and nothing is required of you, except that the killed
+jobs will show as red runs — re-run them."
   fi
 fi
