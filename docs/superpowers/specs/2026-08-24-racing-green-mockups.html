@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Racing green — the mock-ups</title>
-<meta name="description" content="Visual mock-ups for the henceforth.club British racing green redesign: today's site next to the proposed livery, the app shelf close up, and the full palette.">
+<title>Phthalo green — the mock-ups</title>
+<meta name="description" content="Visual mock-ups for the henceforth.club redesign in the Home Alone phthalo green: today's site next to the proposed livery, the app shelf close up, and the full palette.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
@@ -23,6 +23,7 @@
   .masthead .date { font-size: .8rem; letter-spacing: .18em; text-transform: uppercase; color: #6e6149; margin-top: .45rem; }
   .lede { font-size: 1.02rem; max-width: 44rem; margin: 1.4rem auto 0; }
   .lede strong { font-weight: 700; }
+  .steer { max-width: 44rem; margin: 1rem auto 0; font-size: .92rem; background: #eef2ef; border-left: 4px solid #114b3e; padding: .8rem 1rem; }
 
   section { margin-top: 3.2rem; }
   h2 { font-size: 1.15rem; letter-spacing: .04em; border-bottom: 1px solid #b9ad8e; padding-bottom: .35rem; margin-bottom: .4rem; }
@@ -65,7 +66,6 @@
   .tprompt { color: var(--club); text-shadow: var(--clubglow); }
   .tin { color: var(--fg); }
   .tout { color: #7ee787; }
-  .tdim { color: var(--muted); opacity: .65; }
   .caret { display: inline-block; width: .5em; height: 1em; background: var(--club); vertical-align: text-bottom; opacity: .85; }
   .hint { margin-top: .55rem; font-size: .6rem; color: var(--muted); opacity: .45; }
 
@@ -90,24 +90,23 @@
   .now { --bg:#06080a; --fg:#e4e4e7; --card:#0d1117; --border:#1e2530; --borderhov:#2d3748;
          --muted:#8b949e; --tbg:#0a0e14; --club:#5eead4; --clubdim:rgba(94,234,212,.7);
          --clubglow:0 0 10px rgba(94,234,212,.45); }
-  /* Racing green tokens */
-  .brg { --bg:#05140d; --fg:#e6e8e3; --card:#0b1d14; --border:#193426; --borderhov:#28533d;
-         --muted:#95a396; --muted2:#74857a; --tbg:#071710; --club:#eadfb8; --clubdim:rgba(234,223,184,.75);
+  /* Phthalo — the Home Alone green */
+  .phthalo { --bg:#041410; --fg:#e6e9e6; --card:#0a211b; --border:#16362d; --borderhov:#23584a;
+         --muted:#92a49c; --muted2:#70857c; --tbg:#061814; --club:#eadfb8; --clubdim:rgba(234,223,184,.75);
          --clubglow:0 0 9px rgba(234,223,184,.28); }
 
   /* ── Shelf close-up ────────────────────────── */
-  .shelfdemo { background: #05140d; border: 1px solid #193426; border-radius: 10px; font-family: "Space Mono", monospace; padding: .4rem 0; }
-  .shelfrow { display: flex; align-items: center; gap: 1.6rem; padding: 1rem 1.8rem; font-size: .86rem; color: #95a396; border-bottom: 1px solid #10261a; flex-wrap: wrap; }
+  .shelfdemo { background: #041410; border: 1px solid #16362d; border-radius: 10px; font-family: "Space Mono", monospace; padding: .4rem 0; }
+  .shelfrow { display: flex; align-items: center; gap: 1.6rem; padding: 1rem 1.8rem; font-size: .86rem; color: #92a49c; border-bottom: 1px solid #0d2620; flex-wrap: wrap; }
   .shelfrow:last-child { border-bottom: 0; }
-  .shelfrow .state { flex-basis: 100%; font-size: .6rem; letter-spacing: .2em; text-transform: uppercase; color: #74857a; margin-bottom: .1rem; }
+  .shelfrow .state { flex-basis: 100%; font-size: .6rem; letter-spacing: .2em; text-transform: uppercase; color: #70857c; margin-bottom: .1rem; }
   .shelfrow .wm { font-weight: 700; color: #eadfb8; }
-  .shelfrow .wm .tld { color: #74857a; }
+  .shelfrow .wm .tld { color: #70857c; }
   .si { display: inline-flex; align-items: center; gap: .45rem; }
   .si i { width: 3px; height: .9em; border-radius: 1px; display: inline-block; }
-  .si.on { color: #e6e8e3; }
   .si.hover { color: #5eead4; }
-  .si.current { color: #e6e8e3; box-shadow: inset 0 -2px 0 -0px #3da87a; padding-bottom: .15rem; }
-  .quiet { color: #74857a; font-size: .78rem; }
+  .si.current { color: #e6e9e6; box-shadow: inset 0 -2px 0 0 #3da87a; padding-bottom: .15rem; }
+  .quiet { color: #70857c; font-size: .78rem; }
 
   /* ── Palette ───────────────────────────────── */
   .chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .8rem; }
@@ -118,8 +117,8 @@
   .chip .label span { color: #6e6149; }
 
   /* ── Verdict ───────────────────────────────── */
-  .verdict { border: 2px solid #004225; border-radius: 10px; background: #eef2ea; padding: 1.5rem 1.8rem; }
-  .verdict h2 { border-bottom: 0; color: #004225; margin-bottom: .6rem; }
+  .verdict { border: 2px solid #114b3e; border-radius: 10px; background: #eef2ef; padding: 1.5rem 1.8rem; }
+  .verdict h2 { border-bottom: 0; color: #114b3e; margin-bottom: .6rem; }
   .verdict p { font-size: .95rem; max-width: 48rem; }
   .verdict ul { margin: .7rem 0 0 1.2rem; font-size: .9rem; }
   .verdict li { margin-top: .35rem; }
@@ -135,16 +134,18 @@
 <div class="sheet">
 
   <header class="masthead">
-    <h1>Racing green — the mock-ups</h1>
-    <p class="date">henceforth.club · 24 August 2026 · companion to the redesign spec of 23 August</p>
+    <h1>Phthalo green — the mock-ups</h1>
+    <p class="date">henceforth.club · 24 August 2026 · the Home Alone green · companion to the redesign spec</p>
   </header>
 
-  <p class="lede">Two full renderings of the homepage: <strong>the site as it is live today</strong>, then <strong>the proposed British racing green livery</strong> — cream wordmark on green ground, all four apps on the top shelf, hero visible from the first paint. Below them: the shelf close up, the complete palette, and the go or no-go verdict. The mock-ups are hand-set approximations of the real components, faithful in colour, type, and layout.</p>
+  <p class="lede">Two full renderings of the homepage: <strong>the site as it is live today (the before)</strong>, then <strong>the proposed phthalo livery (the after)</strong> — cream wordmark on deep blue-green ground, and a shelf that carries only <strong>the apps, folklore, Contact, and Sign in — nothing else</strong>. Learn, Docs, and Articles fold into the Henceforth section, where they already belong.</p>
 
-  <!-- ═══════════ 1 · TODAY ═══════════ -->
+  <p class="steer"><strong>Steer (Henry, 24 August):</strong> the green is the one in the pigment dish — <strong>phthalo, the Home Alone green</strong> — deeper and bluer than the warm racing-green cast of the first cut. The roundel cream carries over: it reads even better on the colder green. And the shelf loses Learn, Docs, and Articles — they are Henceforth content and move inside it.</p>
+
+  <!-- ═══════════ 1 · BEFORE ═══════════ -->
   <section>
-    <h2>1 · Today, as live</h2>
-    <p class="cap">Cyan wordmark (borrowed from Deck of Cards), the apps hidden behind an <em>Apps</em> hover button, a loud green sign-in pill, and a hero that the visitor only sees after the JavaScript arrives.</p>
+    <h2>1 · Before — today, as live (this is what we are replacing)</h2>
+    <p class="cap">The current site, kept here only for comparison. Cyan wordmark (borrowed from Deck of Cards), the apps hidden behind an <em>Apps ▾</em> hover dropdown, a loud green sign-in pill, and a hero the visitor only sees after the JavaScript arrives. <strong>The dropdown does not survive into the proposal.</strong></p>
 
     <div class="frame">
       <div class="chrome"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span class="url">www.henceforth.club</span></div>
@@ -202,14 +203,14 @@
     <p class="note">Note the wordmark and the terminal prompt: both cyan — the same cyan that is Deck of Cards' accent. The club has no colour of its own.</p>
   </section>
 
-  <!-- ═══════════ 2 · PROPOSED ═══════════ -->
+  <!-- ═══════════ 2 · AFTER ═══════════ -->
   <section>
-    <h2>2 · Proposed — British racing green</h2>
-    <p class="cap">Green ground (#05140d over a #004225 pigment), <strong>roundel cream</strong> wordmark and prompt — the classic cream-numbering-on-green-livery pairing — and all four apps on the shelf with their own colour ticks. Sign-in goes quiet; Contact moves to the footer. The hero is painted in the very first response, no JavaScript wait.</p>
+    <h2>2 · After — phthalo green, the Home Alone green</h2>
+    <p class="cap">Deep blue-green ground (#041410 over a #114b3e pigment), <strong>roundel cream</strong> wordmark and prompt. No dropdown anywhere: the shelf lists <strong>Henceforth, Deck of Cards, Hansard, folklore, then Contact and Sign in</strong> — and nothing else. Learn, Docs, and Articles move inside Henceforth, reachable from the Henceforth page and its existing sub-navigation. The hero is painted in the very first response, no JavaScript wait.</p>
 
     <div class="frame">
       <div class="chrome"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span class="url">henceforth.club</span></div>
-      <div class="screen brg">
+      <div class="screen phthalo">
 
         <div class="mnav">
           <span class="wordmark">henceforth<span class="tld">.club</span></span>
@@ -219,7 +220,7 @@
             <span class="appitem"><i style="background:#3da87a"></i>Hansard</span>
             <span class="appitem"><i style="background:#e8731e"></i><span class="folk">folklore</span></span>
             <span class="sep">·</span>
-            <span class="signin-quiet">Learn</span><span class="signin-quiet">Docs</span><span class="signin-quiet">Articles</span>
+            <span class="signin-quiet">Contact</span>
             <span class="signin-quiet">Sign in</span>
           </span>
         </div>
@@ -259,10 +260,10 @@
           </div>
         </div>
 
-        <div class="mfoot"><span>© Henceforth Bitcoin Limited · <span style="color:#95a396">Contact</span></span><span class="clue">↑↑↓↓←→←→BA · ctrl+` · hello, world</span></div>
+        <div class="mfoot"><span>© Henceforth Bitcoin Limited</span><span class="clue">↑↑↓↓←→←→BA · ctrl+` · hello, world</span></div>
       </div>
     </div>
-    <p class="note">Card two is drawn in its hover state (#28533d border) so you can judge the resting and lifted values side by side. The amber, cyan, Hansard green, and papaya accents all keep their lanes — cream shares a lane with nobody.</p>
+    <p class="note">Card two is drawn in its hover state (#23584a border) so you can judge the resting and lifted values side by side. The amber, cyan, Hansard green, and papaya accents all keep their lanes — cream shares a lane with nobody.</p>
   </section>
 
   <!-- ═══════════ 3 · SHELF CLOSE-UP ═══════════ -->
@@ -278,7 +279,7 @@
         <span class="si"><i style="background:#5eead4"></i>Deck of Cards</span>
         <span class="si"><i style="background:#3da87a"></i>Hansard</span>
         <span class="si"><i style="background:#e8731e"></i><span class="folk">folklore</span></span>
-        <span class="quiet">· Learn Docs Articles · Sign in</span>
+        <span class="quiet">· Contact · Sign in</span>
       </div>
       <div class="shelfrow">
         <span class="state">Hovering Deck of Cards</span>
@@ -287,7 +288,7 @@
         <span class="si hover"><i style="background:#5eead4"></i>Deck of Cards</span>
         <span class="si"><i style="background:#3da87a"></i>Hansard</span>
         <span class="si"><i style="background:#e8731e"></i><span class="folk">folklore</span></span>
-        <span class="quiet">· Learn Docs Articles · Sign in</span>
+        <span class="quiet">· Contact · Sign in</span>
       </div>
       <div class="shelfrow">
         <span class="state">Reading /hansard</span>
@@ -296,26 +297,26 @@
         <span class="si"><i style="background:#5eead4"></i>Deck of Cards</span>
         <span class="si current"><i style="background:#3da87a"></i>Hansard</span>
         <span class="si"><i style="background:#e8731e"></i><span class="folk">folklore</span></span>
-        <span class="quiet">· Learn Docs Articles · Sign in</span>
+        <span class="quiet">· Contact · Sign in</span>
       </div>
     </div>
-    <p class="note">On phones the shelf folds into the existing hamburger menu, which already lists the apps flat — that layout barely changes, it just gains Folklore and the green ground.</p>
+    <p class="note">Learn, Docs, and Articles leave the top bar entirely — they live inside the Henceforth section, whose sticky sub-navigation already claims those routes. On phones the shelf folds into the existing hamburger menu, which already lists the apps flat; it gains Folklore and Contact and drops the rest.</p>
   </section>
 
   <!-- ═══════════ 4 · THE LIVERY ═══════════ -->
   <section>
     <h2>4 · The livery</h2>
-    <p class="cap">The full racing-green token set, with the four app accents that do not change. Contrast figures are against the #05140d ground.</p>
+    <p class="cap">The full phthalo token set, with the four app accents that do not change. Contrast figures are against the #041410 ground.</p>
     <div class="chips">
-      <div class="chip"><div class="swatch" style="background:#004225"></div><div class="label"><b>#004225</b><span>racing green — the pigment</span></div></div>
-      <div class="chip"><div class="swatch" style="background:#05140d"></div><div class="label"><b>#05140d</b><span>ground — page background</span></div></div>
-      <div class="chip"><div class="swatch" style="background:#0b1d14"></div><div class="label"><b>#0b1d14</b><span>card surface</span></div></div>
-      <div class="chip"><div class="swatch" style="background:#193426"></div><div class="label"><b>#193426</b><span>card border</span></div></div>
-      <div class="chip"><div class="swatch" style="background:#28533d"></div><div class="label"><b>#28533d</b><span>border, hover</span></div></div>
-      <div class="chip"><div class="swatch" style="background:#071710"></div><div class="label"><b>#071710</b><span>terminal well</span></div></div>
+      <div class="chip"><div class="swatch" style="background:#114b3e"></div><div class="label"><b>#114b3e</b><span>phthalo — the pigment in the dish</span></div></div>
+      <div class="chip"><div class="swatch" style="background:#041410"></div><div class="label"><b>#041410</b><span>ground — page background</span></div></div>
+      <div class="chip"><div class="swatch" style="background:#0a211b"></div><div class="label"><b>#0a211b</b><span>card surface</span></div></div>
+      <div class="chip"><div class="swatch" style="background:#16362d"></div><div class="label"><b>#16362d</b><span>card border</span></div></div>
+      <div class="chip"><div class="swatch" style="background:#23584a"></div><div class="label"><b>#23584a</b><span>border, hover</span></div></div>
+      <div class="chip"><div class="swatch" style="background:#061814"></div><div class="label"><b>#061814</b><span>terminal well</span></div></div>
       <div class="chip"><div class="swatch" style="background:#eadfb8"></div><div class="label"><b>#eadfb8</b><span>roundel cream — the club's colour (≈14:1)</span></div></div>
-      <div class="chip"><div class="swatch" style="background:#95a396"></div><div class="label"><b>#95a396</b><span>muted text (≈7:1)</span></div></div>
-      <div class="chip"><div class="swatch" style="background:#74857a"></div><div class="label"><b>#74857a</b><span>muted floor (≈4.6:1)</span></div></div>
+      <div class="chip"><div class="swatch" style="background:#92a49c"></div><div class="label"><b>#92a49c</b><span>muted text (≈7:1)</span></div></div>
+      <div class="chip"><div class="swatch" style="background:#70857c"></div><div class="label"><b>#70857c</b><span>muted floor (≈4.6:1)</span></div></div>
       <div class="chip"><div class="swatch" style="background:#fbbf24"></div><div class="label"><b>#fbbf24</b><span>Henceforth amber</span></div></div>
       <div class="chip"><div class="swatch" style="background:#5eead4"></div><div class="label"><b>#5eead4</b><span>Deck of Cards cyan — now Deck's alone</span></div></div>
       <div class="chip"><div class="swatch" style="background:#3da87a"></div><div class="label"><b>#3da87a</b><span>Hansard green</span></div></div>
@@ -329,10 +330,10 @@
     <h2>5 · Should we go live?</h2>
     <p><strong>My verdict: yes.</strong> Every change is presentation-layer — colour tokens, the navigation bar, and how the hero enters. No money paths, no board machinery, no data. A push deploys in about thirty seconds, and a plain revert undoes the whole thing just as fast.</p>
     <ul>
-      <li><strong>What ships:</strong> the racing-green tokens and cyan sweep, the app shelf, the quiet sign-in, the hero painted without waiting for JavaScript, and the accessibility fixes (muted-text contrast floor, real list markup).</li>
+      <li><strong>What ships:</strong> the phthalo tokens and cyan sweep; the shelf carrying only Henceforth, Deck of Cards, Hansard, folklore, Contact, and a quiet Sign in; Learn, Docs, and Articles folded into the Henceforth section; the hero painted without waiting for JavaScript; and the accessibility fixes (muted-text contrast floor, real list markup).</li>
       <li><strong>What it buys:</strong> the club finally owns a colour; the apps are one click from everywhere; largest contentful paint should drop from about 4.0 seconds toward the 2.2-second target.</li>
       <li><strong>The one thing I cannot push:</strong> making the bare domain primary (the apex redirect) lives in the Vercel dashboard — worth doing, not blocking, can follow separately.</li>
-      <li><strong>The one judgement call left:</strong> cream next to Henceforth's amber in the shelf — they are neighbours, not twins; judge it in mock-up two above.</li>
+      <li><strong>The one judgement call left:</strong> cream next to Henceforth's amber in the shelf — neighbours, not twins; judge it in mock-up two above. The colder phthalo ground makes the amber pop harder than the racing-green cut did.</li>
     </ul>
   </section>
 
