@@ -230,13 +230,13 @@ export default function DaDeckOfCardsPage() {
         <FadeIn>
           <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_15rem]">
             <div className="max-w-xl">
-              <p className="text-xs tracking-widest text-accent/70 uppercase">
+              <p className="text-xs tracking-widest text-accent uppercase">
                 iOS App
               </p>
               <h1 className="mt-6 text-5xl sm:text-7xl text-foreground font-bold">
                 Deck of Cards
               </h1>
-              <p className="mt-3 text-sm tracking-wide text-accent/70">
+              <p className="mt-3 text-sm tracking-wide text-accent">
                 One table, everyone&apos;s cards.
               </p>
               <p className="mt-6 text-lg leading-relaxed text-muted">

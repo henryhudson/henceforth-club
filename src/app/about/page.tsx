@@ -40,7 +40,7 @@ export default function AboutPage() {
     <div className="py-16 sm:py-24">
       <div className="mx-auto max-w-3xl px-6">
         <FadeIn>
-          <p className="text-xs uppercase tracking-widest text-accent/70">
+          <p className="text-xs uppercase tracking-widest text-accent-club">
             Henceforth Bitcoin Limited
           </p>
           <h1 className="mt-6 text-5xl font-bold text-foreground sm:text-7xl">

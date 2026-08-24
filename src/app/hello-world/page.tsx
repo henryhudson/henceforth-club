@@ -122,7 +122,7 @@ export default function HelloWorldPage() {
   return (
     <div className="py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-6 text-center">
-        <p className="text-xs tracking-widest text-accent/70 uppercase">
+        <p className="text-xs tracking-widest text-accent-club uppercase">
           Secret page
         </p>
         <h1 className="mt-6 text-4xl sm:text-5xl text-foreground font-bold">

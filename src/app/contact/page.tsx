@@ -12,7 +12,7 @@ const profiles = [
     label: "Henceforth",
     handle: "@henceforth_app",
     href: "https://x.com/henceforth_app",
-    color: "text-accent",
+    color: "text-accent-warm",
     glowClass: "",
     description: "App updates, FORTH tips, and Bitcoin.",
   },
@@ -20,8 +20,8 @@ const profiles = [
     label: "Deck of Cards",
     handle: "@cardsDeck",
     href: "https://x.com/cardsDeck",
-    color: "text-accent-warm",
-    glowClass: "card-glow-warm",
+    color: "text-accent",
+    glowClass: "card-glow",
     description: "Game updates, new features, and multiplayer news.",
   },
   {
@@ -57,7 +57,7 @@ export default function ContactPage() {
       <div className="mx-auto max-w-6xl px-6">
         <FadeIn>
           <div className="max-w-3xl">
-            <p className="text-xs tracking-widest text-accent/70 uppercase">
+            <p className="text-xs tracking-widest text-accent-club uppercase">
               Get in touch
             </p>
             <h1 className="mt-6 text-5xl sm:text-7xl text-foreground font-bold">
