@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { asList, editionIndex, editionNumber, longDate, reachAppLine, shippedByDay, verdictLine } from "./report-helpers";
+import { asList, editionIndex, editionNumber, isRowHigh, longDate, reachAppLine, reachCell, shippedByDay, sparkPoints, verdictLine } from "./report-helpers";
 
 describe("longDate", () => {
   const tz = process.env.TZ;
@@ -110,6 +110,48 @@ describe("verdictLine", () => {
   });
   it("counts unknown verdicts as abstained", () => {
     expect(verdictLine([{ verdict: "shrug" }])).toBe("1 abstained");
+  });
+});
+
+describe("reachCell", () => {
+  it("renders an unprocessed day as an em dash, not zero", () => {
+    expect(reachCell(null)).toBe("—");
+    expect(reachCell(undefined)).toBe("—");
+  });
+  it("renders a real zero as 0", () => {
+    expect(reachCell(0)).toBe("0");
+  });
+  it("renders a counted day as the number", () => {
+    expect(reachCell(19)).toBe("19");
+  });
+});
+
+describe("sparkPoints", () => {
+  it("returns null when fewer than two numbers exist", () => {
+    expect(sparkPoints([])).toBeNull();
+    expect(sparkPoints([null, 4, null])).toBeNull();
+    expect(sparkPoints([19])).toBeNull();
+  });
+  it("puts the row high at the top of the view and keeps nulls as x-gaps", () => {
+    const pts = sparkPoints([10, 9, 5, 4, 6, 19], 42, 10);
+    expect(pts).not.toBeNull();
+    const ys = pts!.split(" ").map((p) => Number(p.split(",")[1]));
+    expect(ys[5]).toBeLessThan(ys[3]);
+    expect(Math.min(...ys)).toBeCloseTo(0.5, 5);
+  });
+});
+
+describe("isRowHigh", () => {
+  const row = [10, 9, 5, 4, 6, 19];
+  it("marks only the numeric high", () => {
+    expect(row.map((_, i) => isRowHigh(row, i))).toEqual([false, false, false, false, false, true]);
+  });
+  it("marks every cell that ties for high", () => {
+    expect(isRowHigh([4, 4], 0)).toBe(true);
+    expect(isRowHigh([4, 4], 1)).toBe(true);
+  });
+  it("marks nothing on an unprocessed row", () => {
+    expect(isRowHigh([null, undefined], 0)).toBe(false);
   });
 });
 

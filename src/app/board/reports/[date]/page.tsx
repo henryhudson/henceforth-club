@@ -59,13 +59,9 @@ export default async function DailyEdition({ params }: { params: Promise<{ date:
 
   return (
     <main>
-      {/* The paper itself — one A4 sheet on the newspaper measure. Print
-          renders exactly this sheet; everything below is web-only matter. */}
-      <div className="bg-[#dedbd4] py-6 print:bg-white print:py-0">
-        <MorningSheet report={report} issue={issue} weekAhead={weekAhead} boardOpen={boardOpen} garden={garden} />
-      </div>
-
-      <div className="newspaper mx-auto max-w-4xl px-6 py-8 print:hidden">
+      {/* Web working copy first (print:hidden): the edition is for reading,
+          this strip is for doing. Henry's 2026-08-24 process: orders on top. */}
+      <div className="newspaper mx-auto max-w-4xl px-6 pt-6 print:hidden">
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-foreground/60 pb-2 font-serif text-[12px]">
           <Link href="/board/reports" className="underline">Reports</Link>
           <Link href="/board" className="underline">Board</Link>
@@ -73,9 +69,8 @@ export default async function DailyEdition({ params }: { params: Promise<{ date:
           <a href={`/board/reports/${date}/pdf`} className="underline">PDF</a>
         </div>
 
-        {/* Today's orders — the tickable plan, the web's working copy */}
         {report.plan && report.plan.items.length > 0 && (
-          <section className="mt-6 border-2 border-foreground p-3">
+          <section className="mt-4 border-2 border-foreground p-3">
             <h2 className="mb-1 text-center font-serif text-[12px] font-black uppercase tracking-[0.22em] text-foreground">
               Today&apos;s orders
             </h2>
@@ -94,9 +89,8 @@ export default async function DailyEdition({ params }: { params: Promise<{ date:
           </section>
         )}
 
-        {/* Awaiting a decision — the one-line answers the morning asks for */}
         {report.decisions && report.decisions.length > 0 && (
-          <section className="mt-8">
+          <section className="mt-4">
             <h2 className="mb-2 border-b-2 border-foreground/70 pb-0.5 font-serif text-[11px] font-bold uppercase tracking-[0.18em] text-foreground">
               Awaiting a decision
             </h2>
@@ -112,7 +106,15 @@ export default async function DailyEdition({ params }: { params: Promise<{ date:
             </ul>
           </section>
         )}
+      </div>
 
+      {/* The paper itself — one A4 sheet on the newspaper measure. Print
+          renders exactly this sheet; the working copy above is web-only. */}
+      <div className="bg-[#dedbd4] py-6 print:bg-white print:py-0">
+        <MorningSheet report={report} issue={issue} weekAhead={weekAhead} boardOpen={boardOpen} garden={garden} />
+      </div>
+
+      <div className="newspaper mx-auto max-w-4xl px-6 py-8 print:hidden">
         {report.plan?.decisions && (
           <p className="mt-3 font-serif text-[13px] leading-snug text-muted">
             <span className="font-bold text-foreground/80">Open decisions.</span>{" "}

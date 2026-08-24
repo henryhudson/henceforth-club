@@ -111,6 +111,52 @@ export function shippedByDay(
   return out;
 }
 
+/** Agate cell for a day's downloads. An unprocessed day (missing or null)
+ *  is an em dash — never a zero. A real zero prints as "0". */
+export function reachCell(count: number | null | undefined): string {
+  return count == null ? "—" : String(count);
+}
+
+/** Polyline points for an agate sparkline. Nulls keep their x slot but are
+ *  not plotted. Returns null when fewer than two numbers exist — a single
+ *  point is not a series, and a blank row stays blank. */
+export function sparkPoints(
+  values: (number | null | undefined)[],
+  width = 42,
+  height = 10,
+): string | null {
+  if (values.length === 0) return null;
+  const plotted = values
+    .map((v, i) => (v == null ? null : { i, v }))
+    .filter((p): p is { i: number; v: number } => p != null);
+  if (plotted.length < 2) return null;
+  const min = Math.min(0, ...plotted.map((p) => p.v));
+  const max = Math.max(...plotted.map((p) => p.v));
+  const span = max - min || 1;
+  const last = Math.max(values.length - 1, 1);
+  const pad = 0.5;
+  return plotted
+    .map(({ i, v }) => {
+      const x = (i / last) * width;
+      const y = height - pad - ((v - min) / span) * (height - 2 * pad);
+      return `${x.toFixed(2)},${y.toFixed(2)}`;
+    })
+    .join(" ");
+}
+
+/** True when this cell is a numeric high for the row. Ties all mark.
+ *  An all-unprocessed row has no high. */
+export function isRowHigh(
+  values: (number | null | undefined)[],
+  index: number,
+): boolean {
+  const v = values[index];
+  if (v == null) return false;
+  const nums = values.filter((n): n is number => n != null);
+  if (nums.length === 0) return false;
+  return v === Math.max(...nums);
+}
+
 export function editionIndex(dailyDates: string[], weekDates: string[]): Edition[] {
   const dailies: Edition[] = dailyDates.map((d) => ({ type: "daily", date: d, href: `/board/reports/${d}` }));
   const weeklies: Edition[] = weekDates.map((d) => ({ type: "weekly", date: d, href: `/board/reports/week/${d}` }));

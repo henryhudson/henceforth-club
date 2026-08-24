@@ -1,6 +1,6 @@
 import type { Report, Finding, Emergency, WeekReport, Board } from "@/lib/board-data";
 import type { DiaryEntry } from "@/lib/gardening";
-import { longDate } from "@/lib/report-helpers";
+import { isRowHigh, longDate, reachCell, sparkPoints } from "@/lib/report-helpers";
 import A4Sheet from "@/app/hansard/this-week/_components/overview/A4Sheet";
 import s from "./morning.module.css";
 
@@ -163,6 +163,9 @@ export default function MorningSheet({
   const deckSubs = storeApps.find((a) => a.app === "deck")?.subscriptions;
 
   const notToday = asItems(report.plan?.notToday);
+  const emergencyCount = report.emergencies?.length ?? 0;
+  const stopPressClass =
+    emergencyCount === 1 ? `${s.stoppress} ${s.stoppressOne}` : emergencyCount === 2 ? `${s.stoppress} ${s.stoppressTwo}` : s.stoppress;
 
   return (
     <>
@@ -183,7 +186,7 @@ export default function MorningSheet({
         <div className={s.nameplate}>The Morning Edition</div>
         <div className={s.subtitle}>The state of the four, and what would most improve each today</div>
 
-        <div className={s.stoppress}>
+        <div className={stopPressClass}>
           {stopPress.map((e, i) => (
             <div key={i} className={s.spItem}>
               <span className={s.tag}>{e.tag} · </span>
@@ -225,6 +228,13 @@ export default function MorningSheet({
                 box holds only the counts (Henry's trim, 2026-08-21). */}
             <div className={`${s.sq} ${s.agate}`}>
               <div className={s.sectionTitle}>The verdicts, in brief</div>
+              {(report.summary.confirmed || report.summary.rejected || report.summary.alreadyResolved) ? (
+                <p className={s.ticks} aria-hidden>
+                  {"■".repeat(report.summary.confirmed ?? 0)}
+                  {"□".repeat(report.summary.rejected ?? 0)}
+                  {"▪".repeat(report.summary.alreadyResolved ?? 0)}
+                </p>
+              ) : null}
               <p>{summarySentence(report.summary)}</p>
               {cleanApps.length > 0 && (
                 <p>
@@ -269,6 +279,7 @@ export default function MorningSheet({
                   <thead>
                     <tr>
                       <th>Downloads</th>
+                      <th />
                       {dayKeys.map((d) => (
                         <th key={d} className={s.n}>
                           {"SMTWTFS"[new Date(`${d}T12:00:00Z`).getUTCDay()]}
@@ -277,16 +288,27 @@ export default function MorningSheet({
                     </tr>
                   </thead>
                   <tbody>
-                    {storeApps.map((a) => (
-                      <tr key={a.app}>
-                        <td>{APP_NAMES[a.app] ?? a.app}</td>
-                        {dayKeys.map((d) => (
-                          <td key={d} className={s.n}>
-                            {a.week?.[d] ?? 0}
+                    {storeApps.map((a) => {
+                      const row = dayKeys.map((d) => a.week?.[d]);
+                      const spark = sparkPoints(row);
+                      return (
+                        <tr key={a.app}>
+                          <td>{APP_NAMES[a.app] ?? a.app}</td>
+                          <td className={s.sparkCell}>
+                            {spark && (
+                              <svg className={s.spark} viewBox="0 0 42 10" width="42" height="10" aria-hidden>
+                                <polyline fill="none" stroke="currentColor" strokeWidth="0.8" points={spark} />
+                              </svg>
+                            )}
                           </td>
-                        ))}
-                      </tr>
-                    ))}
+                          {row.map((count, i) => (
+                            <td key={dayKeys[i]} className={`${s.n} ${isRowHigh(row, i) ? s.high : ""}`}>
+                              {reachCell(count)}
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               )}
@@ -316,14 +338,24 @@ export default function MorningSheet({
               {report.appStore?.apps.map((a) => (
                 <p key={a.app}>
                   <b>{APP_NAMES[a.app] ?? a.app}</b> · {a.status} {a.version}
-                  {a.daysSince != null && <>, day {a.daysSince}</>}. {a.readyToShip} {a.blocker}
+                  {a.daysSince != null && (
+                    <>
+                      , day {a.daysSince}{" "}
+                      <span
+                        className={s.stem}
+                        aria-hidden
+                        style={{ width: `${Math.min(Math.max(a.daysSince, 1), 14) * 0.5}mm` }}
+                      />
+                    </>
+                  )}
+                  . {a.readyToShip} {a.blocker}
                 </p>
               ))}
               {report.appStore && <p>{report.appStore.rule}</p>}
             </div>
           </div>
           <div className={s.mod1}>
-            <div className={`${s.sq} ${s.agate}`}>
+            <div className={`${s.sq} ${s.sqHouse} ${s.agate}`}>
               <div className={s.sectionTitle}>Decisions before the house</div>
               {(report.decisions ?? []).map((d) => (
                 <p key={d.card}>

@@ -68,7 +68,10 @@
   padding: 0 0 1.4mm;
   margin-bottom: 1.8mm;
 }
+.stoppressOne { grid-template-columns: 1fr; }
+.stoppressTwo { grid-template-columns: 1fr 1fr; }
 .stoppress > * + * { border-left: .5pt solid #999; padding-left: 3mm; min-width: 0; }
+.stoppressOne > * + * { border-left: none; padding-left: 0; }
 .spItem { font: .786em/1.2 -apple-system, 'Helvetica Neue', Helvetica, sans-serif; color: #222; }
 .spItem .tag { font-weight: 700; color: #0e7490; letter-spacing: .1em; text-transform: uppercase; }
 
@@ -188,6 +191,23 @@
 }
 .agateTable td { padding: .28mm 0; vertical-align: top; }
 .agateTable .n { text-align: right; padding-left: 1mm; white-space: nowrap; }
+.agateTable .high { font-weight: 700; }
+.sparkCell { width: 12mm; padding: 0 1mm 0 0; vertical-align: middle; }
+.spark { display: block; color: #111; }
+.ticks {
+  letter-spacing: .35mm;
+  color: #0e7490;
+  margin: 0 0 .6mm;
+  font-size: 1.05em;
+}
+.sqHouse { border-width: 1.5pt; }
+.stem {
+  display: inline-block;
+  height: .7mm;
+  background: #111;
+  vertical-align: middle;
+  margin: 0 .5mm .2mm;
+}
 
 /* ── the footer reference band: thin rules, small-caps run heads, no boxes.
    The page decelerates here — reference matter, not more competing stories. ── */
