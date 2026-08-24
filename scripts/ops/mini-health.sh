@@ -179,11 +179,15 @@ if [[ -n "$failures" ]]; then
 fi
 
 # Correct before alarming. Only a load or paging failure is something killing
-# build work can fix — a full disk or an unreadable sensor is not. Re-measure
-# after the kill and let the re-measurement decide which email goes out.
+# build work can fix — a full disk or an unreadable sensor is not. And if the
+# fork check just failed, pgrep and pkill would hang exactly as ps did, which
+# would delay the alert itself — a machine that can barely fork gets the email
+# and the human, not an attempted correction. Re-measure after the kill and
+# let the re-measurement decide which email goes out.
 original_failures="$failures"
 recovery_note="" killed=""
-if print -r -- "$failures" | grep -qE '^(load average is|swap is)'; then
+if print -r -- "$failures" | grep -qE '^(load average is|swap is)' \
+   && ! print -r -- "$failures" | grep -qE 'process table|cannot enumerate'; then
   killed=$(attempt_recovery)
   if [[ -n "$killed" ]]; then
     log "RECOVERY: killed ${killed}"
