@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **henceforth.club** — a Next.js 16 site: the marketing front for three shipped iOS apps by Henceforth Bitcoin Limited, plus the gated operations board and the xtext on-chain archive surface.
 - **Henceforth** — FORTH interpreter + Bitcoin SV wallet (App Store: id1602896145) · accent: amber `#fbbf24`
-- **DaDeckOfCards** — multiplayer card game (App Store: id1520654142) · accent: cyan `#5eead4`
+- **DaDeckOfCards** — multiplayer card game (App Store: id1520654142) · accent: red `#e5484d`
 - **The Hansard** — UK Parliament browser (App Store: id6762037651, live since 2026-07-02) · accent: green `#3da87a`
 
 Dark terminal aesthetic ("Phosphor Noir") with Space Mono monospace font throughout, CRT scanline effects, and phosphor glow accents.
@@ -86,7 +86,7 @@ Key custom classes:
 - `.animate-in` + `.delay-1` through `.delay-8` — CSS staggered fade-in (used alongside Motion `FadeIn` component)
 - `body::before` — fixed noise texture SVG overlay at 3.5% opacity
 
-Color palette: dark background (`#06080a`), cyan accent (`#5eead4` — Deck of Cards), warm amber (`#fbbf24` — Henceforth), green (`#3da87a` — Hansard), terminal green (`#7ee787`).
+Color palette (green and black, 2026-08-24): black ground (`#050806`) with deliberate phthalo green (pigment `#114b3e` — hero wash, borders, selection), roundel cream club accent (`#eadfb8` — wordmark, prompts), red accent (`#e5484d` — Deck of Cards), warm amber (`#fbbf24` — Henceforth), green (`#3da87a` — Hansard), terminal green (`#7ee787`).
 
 ### Easter Eggs
 

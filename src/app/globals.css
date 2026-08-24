@@ -5,11 +5,11 @@
      phthalo (the Home Alone green, pigment #114b3e) appears deliberately —
      hero wash, card edges, selection — never flooding a surface. Roundel
      cream (--accent-club) is the type colour for the wordmark and prompts;
-     cyan belongs to Deck of Cards alone. */
+     red belongs to Deck of Cards (Henry, 2026-08-24: "make that be red"). */
   --background: #050806;
   --foreground: #e6e8e6;
-  --accent: #5eead4;
-  --accent-glow: rgba(94, 234, 212, 0.15);
+  --accent: #e5484d;
+  --accent-glow: rgba(229, 72, 77, 0.15);
   --accent-warm: #fbbf24;
   --accent-warm-glow: rgba(251, 191, 36, 0.12);
   --accent-green: #3da87a;
@@ -30,7 +30,7 @@
   /* Inert; exists to rotate this file's content hash (see the note at the end
      of this file) — comments are stripped by minification, declarations are
      not. Bump the date to force every client onto a fresh URL. */
-  --stylesheet-rev: "2026-08-24b";
+  --stylesheet-rev: "2026-08-24c";
 }
 
 @theme inline {

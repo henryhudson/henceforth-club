@@ -164,10 +164,7 @@ export default function HeroTerminal() {
             JavaScript bundle hydrates. A CSS animation starts on first paint. */}
         <div className="animate-in">
           <div className="max-w-3xl">
-            <p className="text-sm tracking-widest text-accent/70 uppercase">
-              Three apps. One dream.
-            </p>
-            <h1 className="mt-6 text-4xl sm:text-6xl leading-[1.1] text-foreground font-bold">
+            <h1 className="text-4xl sm:text-6xl leading-[1.1] text-foreground font-bold">
               FORTH. Cards. Parliament.
             </h1>
             {/* Each clause is the app's own north star, not a feature list:
