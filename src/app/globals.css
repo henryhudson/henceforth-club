@@ -30,7 +30,7 @@
   /* Inert; exists to rotate this file's content hash (see the note at the end
      of this file) — comments are stripped by minification, declarations are
      not. Bump the date to force every client onto a fresh URL. */
-  --stylesheet-rev: "2026-08-24c";
+  --stylesheet-rev: "2026-08-24d";
 }
 
 @theme inline {
@@ -579,6 +579,13 @@ figure[data-rehype-pretty-code-figure] [data-line] {
   padding-inline: 0;
 }
 
+.accordion-panel {
+  transition: grid-template-rows 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.accordion-chevron {
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cursor-blink,
   .animate-in,
@@ -589,6 +596,10 @@ figure[data-rehype-pretty-code-figure] [data-line] {
   .delay-1, .delay-2, .delay-3, .delay-4,
   .delay-5, .delay-6, .delay-7, .delay-8 {
     animation-delay: 0s !important;
+  }
+  .accordion-panel,
+  .accordion-chevron {
+    transition: none !important;
   }
 }
 

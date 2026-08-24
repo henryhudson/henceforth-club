@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { motion, AnimatePresence } from "motion/react";
 
 interface Section {
   title: string;
@@ -9,7 +8,7 @@ interface Section {
 }
 
 /**
- * Accordion with smooth open/close animation.
+ * Accordion with CSS grid-rows open/close — no Motion.
  * Multiple sections can be open at once.
  */
 export default function Accordion({
@@ -49,11 +48,9 @@ export default function Accordion({
               >
                 {section.title}
               </span>
-              <motion.span
-                animate={{ rotate: isOpen ? 45 : 0 }}
-                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                className={`h-6 w-6 flex items-center justify-center rounded-full border border-card-border text-muted ${
-                  isOpen ? accentClass : ""
+              <span
+                className={`h-6 w-6 flex items-center justify-center rounded-full border border-card-border text-muted accordion-chevron ${
+                  isOpen ? `${accentClass} rotate-45` : ""
                 }`}
                 aria-hidden="true"
               >
@@ -66,26 +63,19 @@ export default function Accordion({
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
-              </motion.span>
+              </span>
             </button>
-            <AnimatePresence initial={false}>
-              {isOpen && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{
-                    height: { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
-                    opacity: { duration: 0.2, ease: "easeOut" },
-                  }}
-                  className="overflow-hidden"
-                >
-                  <div className="pb-6 pr-10 text-sm sm:text-base leading-relaxed text-muted space-y-4">
-                    {section.content}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <div
+              className={`grid accordion-panel ${
+                isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+              }`}
+            >
+              <div className="overflow-hidden">
+                <div className="pb-6 pr-10 text-sm sm:text-base leading-relaxed text-muted space-y-4">
+                  {section.content}
+                </div>
+              </div>
+            </div>
           </div>
         );
       })}
