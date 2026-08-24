@@ -1,10 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  /* Phthalo green — the Home Alone green (2026-08-24). The club's own colour
-     is roundel cream (--accent-club); cyan belongs to Deck of Cards alone. */
-  --background: #06201a;
-  --foreground: #e8ebe8;
+  /* Green and black — the club's colours (Henry, 2026-08-24). Black ground;
+     phthalo (the Home Alone green, pigment #114b3e) appears deliberately —
+     hero wash, card edges, selection — never flooding a surface. Roundel
+     cream (--accent-club) is the type colour for the wordmark and prompts;
+     cyan belongs to Deck of Cards alone. */
+  --background: #050806;
+  --foreground: #e6e8e6;
   --accent: #5eead4;
   --accent-glow: rgba(94, 234, 212, 0.15);
   --accent-warm: #fbbf24;
@@ -15,11 +18,11 @@
   --accent-orange-glow: rgba(232, 115, 30, 0.15);
   --accent-club: #eadfb8;
   --accent-club-glow: rgba(234, 223, 184, 0.28);
-  --card-bg: #0c2921;
-  --card-border: #1b4136;
-  --card-border-hover: #2a6252;
-  --muted: #97a9a1;
-  --terminal-bg: #082019;
+  --card-bg: #0a120e;
+  --card-border: #16352b;
+  --card-border-hover: #23584a;
+  --muted: #93a29a;
+  --terminal-bg: #060d0a;
   --terminal-green: #7ee787;
   --code-text: #00ff41;
   --code-comment: #7a8a7a;
@@ -27,7 +30,7 @@
   /* Inert; exists to rotate this file's content hash (see the note at the end
      of this file) — comments are stripped by minification, declarations are
      not. Bump the date to force every client onto a fresh URL. */
-  --stylesheet-rev: "2026-08-24";
+  --stylesheet-rev: "2026-08-24b";
 }
 
 @theme inline {
@@ -101,7 +104,7 @@ body::before {
 }
 
 ::selection {
-  background: rgba(234, 223, 184, 0.22);
+  background: rgba(17, 75, 62, 0.55);
   color: var(--foreground);
 }
 
@@ -484,15 +487,15 @@ body:has(.folkloreroom) {
 
 .hero-gradient {
   background:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(17, 75, 62, 0.55) 0%, transparent 100%),
-    radial-gradient(ellipse 60% 40% at 75% 50%, rgba(17, 75, 62, 0.28) 0%, transparent 100%);
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(17, 75, 62, 0.45) 0%, transparent 100%),
+    radial-gradient(ellipse 60% 40% at 75% 50%, rgba(17, 75, 62, 0.2) 0%, transparent 100%);
 }
 
 /* Grid pattern behind hero */
 .hero-grid {
   background-image:
-    linear-gradient(rgba(234, 223, 184, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(234, 223, 184, 0.03) 1px, transparent 1px);
+    linear-gradient(rgba(46, 157, 123, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(46, 157, 123, 0.05) 1px, transparent 1px);
   background-size: 60px 60px;
   mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
   -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
@@ -501,7 +504,7 @@ body:has(.folkloreroom) {
 /* ── Playing Card Styles ──────────────────────── */
 
 .playing-card {
-  background: linear-gradient(145deg, #123329 0%, #0c2921 100%);
+  background: linear-gradient(145deg, #0f1c15 0%, #0a120e 100%);
   border: 1px solid var(--card-border);
   box-shadow:
     0 4px 20px rgba(0, 0, 0, 0.4),
