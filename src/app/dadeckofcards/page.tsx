@@ -4,6 +4,8 @@ import FadeIn from "@/components/FadeIn";
 import BeatingHeart from "@/components/BeatingHeart";
 import Accordion from "@/components/Accordion";
 import TechModal from "@/components/TechModal";
+import StoreButton from "@/components/StoreButton";
+import PhoneShot from "@/components/PhoneShot";
 
 const accordionSections = [
   {
@@ -74,7 +76,8 @@ const accordionSections = [
 
 export const metadata: Metadata = {
   title: "Deck of Cards",
-  description: "A beautiful multiplayer card game platform for iOS.",
+  description:
+    "One table, everyone's cards. Play any card game together on iPhone and iPad. Free; multiplayer from 99p a month.",
 };
 
 // Structured data for search engines — tells Google/Bing this page
@@ -86,7 +89,8 @@ const jsonLd = {
   name: "Deck of Cards",
   operatingSystem: "iOS",
   applicationCategory: "GameApplication",
-  description: "A beautiful multiplayer card game platform for iOS.",
+  description:
+    "One table, everyone's cards. Play any card game together on iPhone and iPad. Free; multiplayer from 99p a month.",
   url: "https://henceforth.club/dadeckofcards",
   downloadUrl: "https://apps.apple.com/app/deck-of-cards/id1520654142",
   offers: {
@@ -224,30 +228,47 @@ export default function DaDeckOfCardsPage() {
       <div className="relative mx-auto max-w-6xl px-6">
         {/* Header */}
         <FadeIn>
-          <div className="max-w-3xl">
-            <p className="text-xs tracking-widest text-accent/70 uppercase">
-              iOS App
-            </p>
-            <h1 className="mt-6 text-5xl sm:text-7xl text-foreground font-bold">
-              Deck of Cards
-            </h1>
-            <p className="mt-3 text-sm tracking-wide text-accent/70">
-              A digital deck.
-            </p>
-            <p className="mt-6 text-lg leading-relaxed text-muted max-w-2xl">
-              A{" "}
-              <strong className="text-foreground font-medium">
-                multiplayer card game platform
-              </strong>{" "}
-              with smooth animations, custom decks, and a clean interface designed
-              for the way you actually play cards.
-            </p>
+          <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_15rem]">
+            <div className="max-w-xl">
+              <p className="text-xs tracking-widest text-accent/70 uppercase">
+                iOS App
+              </p>
+              <h1 className="mt-6 text-5xl sm:text-7xl text-foreground font-bold">
+                Deck of Cards
+              </h1>
+              <p className="mt-3 text-sm tracking-wide text-accent/70">
+                One table, everyone&apos;s cards.
+              </p>
+              <p className="mt-6 text-lg leading-relaxed text-muted">
+                Play any card game together. The rules stay in your heads.
+                Free on iPhone and iPad; multiplayer from 99p a month.
+              </p>
+              <div className="mt-8 flex flex-col items-start gap-3">
+                <StoreButton
+                  href="https://apps.apple.com/app/deck-of-cards/id1520654142"
+                  accent="accent"
+                />
+                <p className="text-xs text-muted/60">
+                  Free to play · no ads ·{" "}
+                  <a
+                    href="/dadeckofcards/privacy"
+                    className="underline decoration-card-border underline-offset-2 hover:text-accent"
+                  >
+                    Privacy
+                  </a>
+                </p>
+              </div>
+            </div>
+            <PhoneShot
+              src="/apps/deck-table.jpg"
+              alt="A live table in Deck of Cards: a poker hand, two hole cards, and three friends around the felt."
+            />
           </div>
         </FadeIn>
 
-        {/* Card fan */}
+        {/* Card fan — website demo, after the phone */}
         <FadeIn delay={0.15}>
-          <div className="mt-8">
+          <div className="mt-16">
             <CardFan />
           </div>
         </FadeIn>

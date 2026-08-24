@@ -4,6 +4,8 @@ import FadeIn from "@/components/FadeIn";
 import ExpandingCircles from "@/components/ExpandingCircles";
 import Accordion from "@/components/Accordion";
 import TechModal from "@/components/TechModal";
+import StoreButton from "@/components/StoreButton";
+import PhoneShot from "@/components/PhoneShot";
 
 const accordionSections = [
   {
@@ -81,7 +83,7 @@ const accordionSections = [
 export const metadata: Metadata = {
   title: "Henceforth",
   description:
-    "A Forth-2012 compliant interpreter with an integrated Bitcoin SV wallet for iOS.",
+    "A Bitcoin wallet you can program. Forth interpreter and Bitcoin SV wallet. One purchase for iPhone, iPad, and Mac.",
 };
 
 // Structured data for search engines — tells Google/Bing this page
@@ -94,7 +96,7 @@ const jsonLd = {
   operatingSystem: "iOS",
   applicationCategory: "DeveloperApplication",
   description:
-    "A Forth-2012 compliant interpreter with an integrated Bitcoin SV wallet for iOS.",
+    "A Bitcoin wallet you can program. Forth interpreter and Bitcoin SV wallet. One purchase for iPhone, iPad, and Mac.",
   url: "https://henceforth.club/henceforth",
   downloadUrl: "https://apps.apple.com/app/henceforth/id1602896145",
   offers: {
@@ -234,31 +236,37 @@ export default function HenceforthPage() {
       <div className="relative mx-auto max-w-6xl px-6">
         {/* Header */}
         <FadeIn>
-          <div className="max-w-3xl">
-            <p className="text-xs tracking-widest text-accent-warm/70 uppercase">
-              iOS App
-            </p>
-            <h1 className="mt-6 text-5xl sm:text-7xl text-foreground font-bold">
-              Henceforth
-            </h1>
-            <p className="mt-3 text-sm tracking-wide text-accent-warm/70">
-              Bitcoin meets Forth.
-            </p>
-            <p className="mt-6 text-lg leading-relaxed text-muted max-w-2xl">
-              A full{" "}
-              <strong className="text-foreground font-medium">
-                Forth-2012 compliant
-              </strong>{" "}
-              interpreter with an integrated{" "}
-              <strong className="text-foreground font-medium">
-                Bitcoin SV wallet
-              </strong>
-              , running natively on your iPhone and iPad.
-            </p>
+          <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_15rem]">
+            <div className="max-w-xl">
+              <p className="text-xs tracking-widest text-accent-warm/70 uppercase">
+                iOS App
+              </p>
+              <h1 className="mt-6 text-5xl sm:text-7xl text-foreground font-bold">
+                Henceforth
+              </h1>
+              <p className="mt-3 text-sm tracking-wide text-accent-warm/70">
+                A Bitcoin wallet you can program.
+              </p>
+              <p className="mt-6 text-lg leading-relaxed text-muted">
+                A Forth interpreter and a Bitcoin SV wallet in one native app.
+                One purchase for iPhone, iPad, and Mac.
+              </p>
+              <div className="mt-8 flex flex-col items-start gap-3">
+                <StoreButton
+                  href="https://apps.apple.com/app/henceforth/id1602896145"
+                  accent="warm"
+                />
+                <p className="text-xs text-muted/60">$9.99 · no subscription</p>
+              </div>
+            </div>
+            <PhoneShot
+              src="/apps/henceforth-terminal.jpg"
+              alt="The Henceforth terminal on iPhone, with a Forth prompt and a Bitcoin vocabulary."
+            />
           </div>
         </FadeIn>
 
-        {/* Terminal demo */}
+        {/* Terminal demo — website REPL, after the phone */}
         <FadeIn delay={0.15}>
           <div className="mt-16 max-w-3xl">
             <TerminalDemo />

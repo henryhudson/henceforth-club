@@ -6,6 +6,8 @@ import ConstituencyMorph from "@/components/ConstituencyMorph";
 import Accordion from "@/components/Accordion";
 import TechModal from "@/components/TechModal";
 import HansardLatestWeek from "@/components/HansardLatestWeek";
+import StoreButton from "@/components/StoreButton";
+import PhoneShot from "@/components/PhoneShot";
 
 const accordionSections = [
   {
@@ -76,7 +78,7 @@ const accordionSections = [
 export const metadata: Metadata = {
   title: "Hansard",
   description:
-    "Browse UK Parliament — Members of the Commons, House of Lords, and constituencies with an interactive map. A native iOS app.",
+    "Every UK constituency on your phone. Works with no signal. 99p, once.",
 };
 
 // Structured data for search engines and AI crawlers — declares this
@@ -88,7 +90,7 @@ const jsonLd = {
   operatingSystem: "iOS",
   applicationCategory: "ReferenceApplication",
   description:
-    "Browse UK Parliament — Members of the Commons, House of Lords, and constituencies with an interactive map. A native iOS app.",
+    "Every UK constituency on your phone. Works with no signal. 99p, once.",
   url: "https://henceforth.club/hansard",
   downloadUrl: "https://apps.apple.com/app/the-hansard/id6762037651",
   offers: {
@@ -174,34 +176,41 @@ export default function HansardPage() {
       <div className="mx-auto max-w-6xl px-6">
         {/* Header */}
         <FadeIn>
-          <div className="max-w-3xl">
-            <p className="text-xs tracking-widest text-accent-green/70 uppercase">
-              iOS App
-            </p>
-            <h1 className="mt-6 text-5xl sm:text-7xl text-foreground font-bold">
-              Hansard
-            </h1>
-            <p className="mt-3 text-sm tracking-wide text-accent-green/70">
-              See how they treat you.
-            </p>
-            <p className="mt-6 text-lg leading-relaxed text-muted max-w-2xl">
-              Browse{" "}
-              <strong className="text-foreground font-medium">
-                UK Parliament
-              </strong>{" "}
-              — Members of the Commons, House of Lords, and constituencies with
-              an{" "}
-              <strong className="text-foreground font-medium">
-                interactive map
-              </strong>
-              , running natively on your iPhone and iPad.
-            </p>
+          <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_15rem]">
+            <div className="max-w-xl">
+              <p className="text-xs tracking-widest text-accent-green/70 uppercase">
+                iOS App
+              </p>
+              <h1 className="mt-6 text-5xl sm:text-7xl text-foreground font-bold">
+                Hansard
+              </h1>
+              <p className="mt-3 text-sm tracking-wide text-accent-green/70">
+                See how they treat you.
+              </p>
+              <p className="mt-6 text-lg leading-relaxed text-muted">
+                Every constituency on your phone. Works with no signal.
+                99p, once.
+              </p>
+              <div className="mt-8 flex flex-col items-start gap-3">
+                <StoreButton
+                  href="https://apps.apple.com/app/the-hansard/id6762037651"
+                  accent="green"
+                />
+                <p className="text-xs text-muted/60">
+                  One purchase · Commons, Lords, and the map · no subscription
+                </p>
+              </div>
+            </div>
+            <PhoneShot
+              src="/apps/hansard-map.jpg"
+              alt="The Hansard constituency map on iPhone, coloured by party, with a search bar."
+            />
           </div>
         </FadeIn>
 
-        {/* Constituency morph — map ↔ party pie chart */}
+        {/* Constituency morph — website demo, after the phone */}
         <FadeIn delay={0.15}>
-          <div className="mt-8 flex flex-col items-center">
+          <div className="mt-16 flex flex-col items-center">
             <div className="w-64 h-80 sm:w-80 sm:h-96">
               <ConstituencyMorph seats={SEATS} />
             </div>
