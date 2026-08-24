@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import FadeIn from "@/components/FadeIn";
 import TimesTableCircle from "@/components/TimesTableCircle";
 
 interface TerminalLine {
@@ -160,7 +159,10 @@ export default function HeroTerminal() {
       </div>
 
       <div className="relative mx-auto max-w-6xl px-6 py-28 sm:py-40">
-        <FadeIn>
+        {/* CSS entrance, not Motion: the hero is the largest-contentful-paint
+            element, and a Motion whileInView holds it at opacity 0 until the
+            JavaScript bundle hydrates. A CSS animation starts on first paint. */}
+        <div className="animate-in">
           <div className="max-w-3xl">
             <p className="text-sm tracking-widest text-accent/70 uppercase">
               Three apps. One dream.
@@ -179,9 +181,9 @@ export default function HeroTerminal() {
               with no rules of its own. Native iOS. No ads.
             </p>
           </div>
-        </FadeIn>
+        </div>
 
-        <FadeIn delay={0.2}>
+        <div className="animate-in delay-2">
           <div className="mt-16 max-w-2xl">
             <div
               className="terminal-window relative terminal-scanlines cursor-text"
@@ -202,7 +204,7 @@ export default function HeroTerminal() {
                 {lines.map((line, i) =>
                   line.type === "input" ? (
                     <p key={i} className="text-muted/60">
-                      <span className="text-accent glow-cyan">$</span>{" "}
+                      <span className="text-accent-club glow-club">$</span>{" "}
                       <span className="text-foreground">{line.text}</span>
                     </p>
                   ) : (
@@ -213,13 +215,13 @@ export default function HeroTerminal() {
                 )}
                 {/* Active input line */}
                 <form onSubmit={handleSubmit} className="flex items-center">
-                  <span className="text-accent glow-cyan">$</span>{" "}
+                  <span className="text-accent-club glow-club">$</span>{" "}
                   <input
                     ref={inputRef}
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    className="flex-1 bg-transparent text-foreground outline-none border-none caret-accent ml-1"
+                    className="flex-1 bg-transparent text-foreground outline-none border-none caret-accent-club ml-1"
                     autoComplete="off"
                     spellCheck={false}
                     placeholder="try a number..."
@@ -232,7 +234,7 @@ export default function HeroTerminal() {
               Try a number (2, 3, 41, 51) or type <span className="text-muted/50">help</span>.
             </p>
           </div>
-        </FadeIn>
+        </div>
       </div>
     </section>
   );

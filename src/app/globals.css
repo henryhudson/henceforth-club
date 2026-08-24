@@ -1,8 +1,10 @@
 @import "tailwindcss";
 
 :root {
-  --background: #06080a;
-  --foreground: #e4e4e7;
+  /* Phthalo green — the Home Alone green (2026-08-24). The club's own colour
+     is roundel cream (--accent-club); cyan belongs to Deck of Cards alone. */
+  --background: #06201a;
+  --foreground: #e8ebe8;
   --accent: #5eead4;
   --accent-glow: rgba(94, 234, 212, 0.15);
   --accent-warm: #fbbf24;
@@ -11,11 +13,13 @@
   --accent-green-glow: rgba(61, 168, 122, 0.12);
   --accent-orange: #e8731e;
   --accent-orange-glow: rgba(232, 115, 30, 0.15);
-  --card-bg: #0d1117;
-  --card-border: #1e2530;
-  --card-border-hover: #2d3748;
-  --muted: #8b949e;
-  --terminal-bg: #0a0e14;
+  --accent-club: #eadfb8;
+  --accent-club-glow: rgba(234, 223, 184, 0.28);
+  --card-bg: #0c2921;
+  --card-border: #1b4136;
+  --card-border-hover: #2a6252;
+  --muted: #97a9a1;
+  --terminal-bg: #082019;
   --terminal-green: #7ee787;
   --code-text: #00ff41;
   --code-comment: #7a8a7a;
@@ -23,7 +27,7 @@
   /* Inert; exists to rotate this file's content hash (see the note at the end
      of this file) — comments are stripped by minification, declarations are
      not. Bump the date to force every client onto a fresh URL. */
-  --stylesheet-rev: "2026-07-16";
+  --stylesheet-rev: "2026-08-24";
 }
 
 @theme inline {
@@ -37,6 +41,8 @@
   --color-accent-green-glow: var(--accent-green-glow);
   --color-accent-orange: var(--accent-orange);
   --color-accent-orange-glow: var(--accent-orange-glow);
+  --color-accent-club: var(--accent-club);
+  --color-accent-club-glow: var(--accent-club-glow);
   --color-card-bg: var(--card-bg);
   --color-card-border: var(--card-border);
   --color-card-border-hover: var(--card-border-hover);
@@ -95,7 +101,7 @@ body::before {
 }
 
 ::selection {
-  background: rgba(94, 234, 212, 0.2);
+  background: rgba(234, 223, 184, 0.22);
   color: var(--foreground);
 }
 
@@ -335,9 +341,9 @@ body:has(.folkloreroom) {
   border-radius: 12px;
   overflow: hidden;
   box-shadow:
-    0 0 0 1px rgba(94, 234, 212, 0.03),
+    0 0 0 1px rgba(234, 223, 184, 0.04),
     0 8px 40px rgba(0, 0, 0, 0.5),
-    0 0 80px rgba(94, 234, 212, 0.03);
+    0 0 80px rgba(17, 75, 62, 0.3);
 }
 
 /* CRT scanline overlay */
@@ -359,6 +365,11 @@ body:has(.folkloreroom) {
 /* Phosphor glow on text */
 .glow-cyan {
   text-shadow: 0 0 10px rgba(94, 234, 212, 0.4), 0 0 40px rgba(94, 234, 212, 0.1);
+}
+
+/* The club's own glow — roundel cream on phthalo ground. */
+.glow-club {
+  text-shadow: 0 0 10px rgba(234, 223, 184, 0.35), 0 0 40px rgba(234, 223, 184, 0.1);
 }
 
 .glow-warm {
@@ -473,15 +484,15 @@ body:has(.folkloreroom) {
 
 .hero-gradient {
   background:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(94, 234, 212, 0.06) 0%, transparent 100%),
-    radial-gradient(ellipse 60% 40% at 75% 50%, rgba(251, 191, 36, 0.03) 0%, transparent 100%);
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(17, 75, 62, 0.55) 0%, transparent 100%),
+    radial-gradient(ellipse 60% 40% at 75% 50%, rgba(17, 75, 62, 0.28) 0%, transparent 100%);
 }
 
 /* Grid pattern behind hero */
 .hero-grid {
   background-image:
-    linear-gradient(rgba(94, 234, 212, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(94, 234, 212, 0.03) 1px, transparent 1px);
+    linear-gradient(rgba(234, 223, 184, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(234, 223, 184, 0.03) 1px, transparent 1px);
   background-size: 60px 60px;
   mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
   -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
@@ -490,7 +501,7 @@ body:has(.folkloreroom) {
 /* ── Playing Card Styles ──────────────────────── */
 
 .playing-card {
-  background: linear-gradient(145deg, #1a1f2e 0%, #0d1117 100%);
+  background: linear-gradient(145deg, #123329 0%, #0c2921 100%);
   border: 1px solid var(--card-border);
   box-shadow:
     0 4px 20px rgba(0, 0, 0, 0.4),
@@ -508,7 +519,7 @@ body:has(.folkloreroom) {
 /* ── Form Styles ──────────────────────────────── */
 
 input:focus, textarea:focus {
-  box-shadow: 0 0 0 1px var(--accent), 0 0 20px rgba(94, 234, 212, 0.08);
+  box-shadow: 0 0 0 1px var(--accent-club), 0 0 20px rgba(234, 223, 184, 0.08);
 }
 
 /* ── Section Dividers ─────────────────────────── */

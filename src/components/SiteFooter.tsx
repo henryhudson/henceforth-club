@@ -13,7 +13,7 @@ export default function SiteFooter() {
       <div className="mx-auto max-w-6xl px-6 py-12">
         <div className="flex flex-col gap-10 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-sm font-bold text-accent glow-cyan">
+            <p className="text-sm font-bold text-accent-club glow-club">
               henceforth<span className="text-muted">.club</span>
             </p>
             <p className="mt-2 text-xs text-muted/60">

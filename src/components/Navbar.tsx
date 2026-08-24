@@ -6,22 +6,21 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect, useSyncExternalStore } from "react";
 
 // The real session cookie is httpOnly (JS can't read it). Login also sets a
-// non-secret readable flag `board_signed_in=1` so this nav can choose the green
-// "Sign in" vs the red "Sign out" affordance.
+// non-secret readable flag `board_signed_in=1` so this nav can choose the
+// "Sign in" vs "Sign out" affordance.
 const noopSubscribe = () => () => {};
 const readSignedIn = () =>
   document.cookie.split("; ").some((c) => c === "board_signed_in=1");
 
-type NavLink = {
+type AppLink = {
   href: string;
   label: string;
   hoverColor: string;
-  match?: (pathname: string) => boolean;
+  tick: string;
 };
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
-  const [appsOpen, setAppsOpen] = useState(false);
   const pathname = usePathname();
   // Re-evaluated on each render (incl. route changes via usePathname), so a
   // login/logout reflects here — no setState-in-effect.
@@ -41,73 +40,76 @@ export default function Navbar() {
   // Immersive surfaces — no club chrome. Provenance and Folklore own the frame.
   if (pathname?.startsWith("/provenance") || pathname?.startsWith("/folklore")) return null;
 
-  const apps: NavLink[] = [
-    { href: "/henceforth", label: "Henceforth", hoverColor: "hover:text-accent-warm" },
-    { href: "/dadeckofcards", label: "Deck of Cards", hoverColor: "hover:text-accent" },
-    { href: "/hansard", label: "Hansard", hoverColor: "hover:text-accent-green" },
+  // The shelf: every app, each with a tick in its own accent. Learn, Docs,
+  // and Articles are Henceforth content — they live in its section nav
+  // (content-nav.ts), not up here.
+  const apps: AppLink[] = [
+    { href: "/henceforth", label: "Henceforth", hoverColor: "hover:text-accent-warm", tick: "bg-accent-warm" },
+    { href: "/dadeckofcards", label: "Deck of Cards", hoverColor: "hover:text-accent", tick: "bg-accent" },
+    { href: "/hansard", label: "Hansard", hoverColor: "hover:text-accent-green", tick: "bg-accent-green" },
+    { href: "/folklore", label: "Folklore", hoverColor: "hover:opacity-75", tick: "bg-accent-orange" },
   ];
 
-  const links: NavLink[] = [
-    { href: "/learn", label: "Learn", hoverColor: "hover:text-accent-warm" },
-    {
-      href: "/docs",
-      label: "Docs",
-      hoverColor: "hover:text-accent-warm",
-      match: (p) => p === "/docs" || p.startsWith("/docs/"),
-    },
-    {
-      href: "/articles",
-      label: "Articles",
-      hoverColor: "hover:text-accent-warm",
-      match: (p) => p === "/articles" || p.startsWith("/articles/"),
-    },
-    { href: "/folklore", label: "Folklore", hoverColor: "hover:text-accent-orange" },
-    { href: "/contact", label: "Contact", hoverColor: "hover:text-foreground" },
-  ];
+  const isActive = (href: string) =>
+    pathname === href || pathname?.startsWith(href + "/");
 
-  const appsActive = apps.some(
-    (a) => pathname === a.href || pathname?.startsWith(a.href + "/"),
-  );
-
-  // Liquid-glass pill, mirroring the henceforth CTA (rounded-full + translucent
-  // tint + backdrop-blur + accent glow). Green = signed out (sign in); red =
-  // signed in (sign out, which clears the httpOnly session server-side).
-  //
   // Sign out is a form POST, never a <Link>: the router prefetches Link hrefs,
   // and a prefetched cookie-clearing GET signs the user out on page render
   // instead of on click (the 2026-07-05 session-drop bug). The form uses
   // display:contents so the flex layouts see only the button.
-  const pill = (extra: string) =>
-    `inline-flex items-center justify-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium backdrop-blur-md transition-all ${
+  const authClass = (extra = "") =>
+    `text-sm transition-colors ${
       signedIn
-        ? "border-red-500/40 bg-red-500/10 text-red-400 shadow-lg shadow-red-500/10 hover:border-red-500/60 hover:bg-red-500/20 hover:shadow-red-500/20"
-        : "border-accent-green/40 bg-accent-green/10 text-accent-green shadow-lg shadow-accent-green/10 hover:border-accent-green/60 hover:bg-accent-green/20 hover:shadow-accent-green/20"
+        ? "text-red-400/80 hover:text-red-300"
+        : "text-muted/70 hover:text-foreground"
     } ${extra}`;
 
   const authButton = (extra = "") =>
     signedIn ? (
       <form action="/board/logout" method="POST" className="contents">
-        <button type="submit" onClick={() => setOpen(false)} className={pill(extra)}>
+        <button type="submit" onClick={() => setOpen(false)} className={authClass(extra)}>
           Sign out
         </button>
       </form>
     ) : (
-      <Link href="/board" onClick={() => setOpen(false)} className={pill(extra)}>
+      <Link href="/board" onClick={() => setOpen(false)} className={authClass(extra)}>
         Sign in
       </Link>
     );
 
-  const linkClass = (link: NavLink) => {
-    const active = link.match
-      ? link.match(pathname ?? "")
-      : pathname === link.href || pathname?.startsWith(link.href + "/");
-    if (link.href === "/folklore") {
-      return "text-accent-orange transition-opacity hover:opacity-75";
-    }
-    return `transition-colors ${link.hoverColor} ${
-      active ? "text-foreground" : "text-muted"
-    }`;
-  };
+  const appLink = (app: AppLink) => (
+    <Link
+      key={app.href}
+      href={app.href}
+      onClick={() => setOpen(false)}
+      className={`inline-flex items-center gap-2 text-sm transition-all ${app.hoverColor} ${
+        app.href === "/folklore"
+          ? "text-accent-orange"
+          : isActive(app.href)
+            ? "text-foreground"
+            : "text-muted"
+      }`}
+    >
+      <span aria-hidden className={`h-3.5 w-[3px] rounded-[1px] ${app.tick}`} />
+      {app.href === "/folklore" ? (
+        <FolkloreWordmark className="h-3.5 w-auto" />
+      ) : (
+        app.label
+      )}
+    </Link>
+  );
+
+  const contactLink = (extra = "") => (
+    <Link
+      href="/contact"
+      onClick={() => setOpen(false)}
+      className={`text-sm transition-colors hover:text-foreground ${
+        isActive("/contact") ? "text-foreground" : "text-muted"
+      } ${extra}`}
+    >
+      Contact
+    </Link>
+  );
 
   return (
     <nav className="animate-slide-down sticky top-0 z-50 border-b border-card-border/50 bg-background/70 backdrop-blur-xl">
@@ -115,59 +117,18 @@ export default function Navbar() {
         <Link
           href="/"
           onClick={() => setOpen(false)}
-          className="text-lg font-bold tracking-tight text-accent glow-cyan transition-all hover:opacity-80"
+          className="text-lg font-bold tracking-tight text-accent-club glow-club transition-all hover:opacity-80"
         >
           henceforth<span className="text-muted">.club</span>
         </Link>
 
-        {/* Desktop links */}
-        <div className="hidden sm:flex items-center gap-5 lg:gap-7 text-sm">
-          <div
-            className="relative"
-            onMouseEnter={() => setAppsOpen(true)}
-            onMouseLeave={() => setAppsOpen(false)}
-          >
-            <button
-              type="button"
-              className={`transition-colors hover:text-foreground ${
-                appsActive ? "text-foreground" : "text-muted"
-              }`}
-              aria-expanded={appsOpen}
-              aria-haspopup="true"
-              onClick={() => setAppsOpen((v) => !v)}
-            >
-              Apps
-            </button>
-            {appsOpen && (
-              <div className="absolute left-0 top-full z-50 pt-2">
-                <div className="min-w-[11rem] rounded-xl border border-card-border bg-background/95 py-2 shadow-xl backdrop-blur-xl">
-                  {apps.map((app) => (
-                    <Link
-                      key={app.href}
-                      href={app.href}
-                      className={`block px-4 py-2 text-sm transition-colors ${app.hoverColor} ${
-                        pathname === app.href || pathname?.startsWith(app.href + "/")
-                          ? "text-foreground"
-                          : "text-muted"
-                      }`}
-                    >
-                      {app.label}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {links.map((link) => (
-            <Link key={link.href} href={link.href} className={linkClass(link)}>
-              {link.href === "/folklore" ? (
-                <FolkloreWordmark className="h-3.5 w-auto" />
-              ) : (
-                link.label
-              )}
-            </Link>
-          ))}
+        {/* Desktop shelf */}
+        <div className="hidden sm:flex items-center gap-5 lg:gap-6 text-sm">
+          {apps.map((app) => appLink(app))}
+          <span aria-hidden className="text-muted/40">
+            ·
+          </span>
+          {contactLink()}
           {authButton()}
         </div>
 
@@ -204,39 +165,9 @@ export default function Navbar() {
       >
         <div className="border-t border-card-border/30 px-6 py-4 flex flex-col gap-4">
           <p className="text-[10px] uppercase tracking-widest text-muted/40">Apps</p>
-          {apps.map((app) => (
-            <Link
-              key={app.href}
-              href={app.href}
-              onClick={() => setOpen(false)}
-              className={`text-sm transition-colors ${app.hoverColor} ${
-                pathname === app.href || pathname?.startsWith(app.href + "/")
-                  ? "text-foreground"
-                  : "text-muted"
-              }`}
-            >
-              {app.label}
-            </Link>
-          ))}
+          {apps.map((app) => appLink(app))}
           <div className="section-line my-1" />
-          {links.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setOpen(false)}
-              className={
-                link.href === "/folklore"
-                  ? "text-accent-orange transition-opacity hover:opacity-75"
-                  : `text-sm ${linkClass(link)}`
-              }
-            >
-              {link.href === "/folklore" ? (
-                <FolkloreWordmark className="h-3.5 w-auto" />
-              ) : (
-                link.label
-              )}
-            </Link>
-          ))}
+          {contactLink()}
           {authButton("self-start")}
         </div>
       </div>

@@ -176,7 +176,7 @@ export default function MiniTerminal() {
             <div key={i}>
               {entry.input && (
                 <p className="text-muted/60">
-                  <span className="text-accent glow-cyan">$</span>{" "}
+                  <span className="text-accent-club glow-club">$</span>{" "}
                   <span className="text-foreground">{entry.input}</span>
                 </p>
               )}
@@ -185,7 +185,7 @@ export default function MiniTerminal() {
           ))}
         </div>
         <div className="flex items-center gap-2 px-4 py-3 border-t border-card-border/50">
-          <span className="text-accent text-xs glow-cyan">$</span>
+          <span className="text-accent-club text-xs glow-club">$</span>
           <input
             ref={inputRef}
             value={input}

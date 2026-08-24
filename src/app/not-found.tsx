@@ -12,12 +12,12 @@ export default function NotFound() {
           </div>
           <div className="p-6 text-sm leading-[2]">
             <p className="text-muted/60">
-              <span className="text-accent glow-cyan">$</span>{" "}
+              <span className="text-accent-club glow-club">$</span>{" "}
               <span className="text-foreground">find page</span>
             </p>
             <p className="text-red-400">Error: page not found</p>
             <p className="text-muted/60">
-              <span className="text-accent glow-cyan">$</span>{" "}
+              <span className="text-accent-club glow-club">$</span>{" "}
               <span className="cursor-blink text-foreground">_</span>
             </p>
           </div>
