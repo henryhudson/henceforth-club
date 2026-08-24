@@ -15,6 +15,12 @@ export default function Home() {
             <p className="text-xs tracking-widest text-muted/50 uppercase">
               Applications
             </p>
+            <h2 className="mt-4 text-2xl font-bold text-foreground sm:text-3xl">
+              Find what&apos;s for you
+            </h2>
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted sm:text-base">
+              These are separate apps. Nothing here needs the others.
+            </p>
           </FadeIn>
           {/* Four products, two by two — a 3-column grid left the fourth card
               stranded alone on its own row. */}
