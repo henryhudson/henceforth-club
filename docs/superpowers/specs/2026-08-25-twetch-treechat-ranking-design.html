@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>One board, satoshis given — Twetch and Treechat on folklore</title>
+<title>One board, Elo — Twetch and Treechat on folklore</title>
 <style>
   :root { --bg:#f4ecd8; --ink:#2a2318; --muted:#6b5d45; --rule:#c9b98f; --accent:#8b3a1a; --card:#faf4e4; --shadow:0 1px 3px rgba(60,40,10,0.15); }
   *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.68;}
@@ -31,15 +31,15 @@
 
 <header class="doc">
 <div class="eyebrow">Design spec &middot; 2026-08-25 &middot; henceforth.club/folklore &middot; status: DRAFT for Henry's review</div>
-<h1>One board, satoshis given</h1>
-<p class="lede">Twetch and Treechat posts are already on Bitcoin. Folklore ranks by satoshis paid. The work is a mapper and a scan, not a third social network.</p>
+<h1>One board, Elo</h1>
+<p class="lede">Twetch and Treechat posts are already on Bitcoin. Folklore ranks them with the duel Elo that already exists: two posts, tap one. The work is a mapper into that pool, not a new ranking formula.</p>
 </header>
 
-<p><strong>What exists.</strong> Folklore reads <code>SocialArchive</code> JSON from Bitcoin and ranks a post by satoshis given (<code>foldScores</code> — founding / upload cost is ledgered and excluded from the rank). The launchd worker is dead. The web archive flag is dark. Inscription stays in Henceforth. Twetch.com shut in June 2024; the posts remain as Magic Attribute Protocol records, <code>app=twetch</code> <code>type=post</code>, usually signed with the Author Identity Protocol, media often on the same transaction via the B protocol. Treechat writes the same Bitcoin Schema (<code>type=post</code>) and already resurrected Twetch and Hodlocker into its own client. Treechat ranking is upvalue: a micropayment to the post. That is folklore kudos under another name.</p>
+<p><strong>What exists.</strong> Folklore already has Elo: an append-only duel ledger (<code>kudos:duels</code>), a pure fold (<code>applyDuel</code> / <code>foldTable</code>), start rating 1500, K 40 until twenty duels then 16, author rating the mean of their top five texts. The dealer puts two posts on the table; a tap is one duel; <code>sortPostsByElo</code> is the board. The arena candidate pool today is the first page of fifty registered X-archive handles, via Redis. The launchd worker is dead. The web archive flag is dark. Twetch.com shut in June 2024; the posts remain as Magic Attribute Protocol records, <code>app=twetch</code> <code>type=post</code>. Treechat writes the same Bitcoin Schema. Henry, 2026-08-25, on ranking: use the Elo system.</p>
 
 <p><strong>The ask.</strong> Henry, 2026-08-25: <em>&ldquo;it would be good we need the data from twetch and treechat ideally so we can rank them.&rdquo;</em> And the standing lean rule from the same morning: Bitcoin and the mini, no Redis poller.</p>
 
-<div class="decision"><strong>Decision 1 &mdash; rank is satoshis paid to the post.</strong> One number, one fold, every source. A folklore kudos, a Twetch like, and a Treechat upvalue are the same event: bitcoin sent that names a post transaction. Do not mix miner fees or inscription cost into this board &mdash; old Twetch posts would win by being expensive to write, not by being valued. The existing class floors (video before photo before text) may still break ties when a post has no payments.</div>
+<div class="decision"><strong>Decision 1 &mdash; rank is Elo from folklore duels, not satoshis and not Twetch/Treechat likes.</strong> The existing fold is the ranking: two posts dealt, one tap, <code>applyDuel</code>. A text nobody has dueled sits at 1500. Twetch likes and Treechat upvalue are cardinal payments, not pairwise outcomes &mdash; they must not be synthesised into fake duels. They may still show as &ldquo;earned on their own chain&rdquo; on a card; they do not move the Elo table. Importing a post puts it in the dealer's candidate pool. Ranking starts when someone taps.</div>
 
 <div class="decision"><strong>Decision 2 &mdash; point, do not copy.</strong> Each post's identity is its original transaction id. Folklore does not re-inscribe Twetch or Treechat text, and does not copy media into a blob store. The reader resolves media from the source transaction (B protocol / ordinal outpoint). Re-wrapping as <code>SocialArchive</code> is allowed later as an optional bundle; it is not required to rank.</div>
 
@@ -58,24 +58,22 @@
   author: aipAddress | paymail | handle,
   media: [{ outpoint, kind }],
   parentTxid? }</code></pre>
-<p><code>SocialArchive.source</code> is already a free string. No wire change for wrapping. The ranking table is keyed by <code>id</code> (the transaction id), which is how <code>sortPostsByScore</code> already sorts.</p>
+<p><code>SocialArchive.source</code> is already a free string. No wire change for wrapping. The Elo table is keyed by <code>postId</code>. For a MAP post that id is the original transaction id, which is also <code>DealCandidate.postId</code>.</p>
 
-<h2>2 &middot; One vote</h2>
-<p>A vote is a later transaction that pays satoshis and names a post:</p>
-<table>
-<tr><th>App</th><th>On chain</th><th>Weight</th></tr>
-<tr><td>Folklore kudos</td><td>Existing vote ledger (funding transaction id, post id, satoshis)</td><td>satoshis paid</td></tr>
-<tr><td>Twetch like</td><td>MAP <code>type=like</code> with <code>tx</code> = post transaction, plus a payment output</td><td>satoshis paid to the author (not the like's miner fee)</td></tr>
-<tr><td>Treechat upvalue</td><td>Micropayment that references the post; MAP type to be pinned against one live Treechat transaction before coding</td><td>satoshis paid</td></tr>
-</table>
-<p>The fold is <code>foldScores</code> as it stands: sum of signed satoshis per post id, founding entries excluded. A Twetch like becomes a <code>VoteLedgerEntry</code> with <code>txid</code> = the like transaction, <code>postId</code> = the liked post, <code>sats</code> = value paid. Replayable, no cache of the number.</p>
+<h2>2 &middot; The pool, not a new ranker</h2>
+<p>Today <code>listPoolTexts</code> only sees registered X-archive handles. Twetch and Treechat posts join that list as ordinary candidates:</p>
+<pre><code>{ postId: twetchOrTreechatTxid,
+  author: aipAddress | paymail,
+  priority: 0 }</code></pre>
+<p>The dealer, the K schedule, the unranked badge, and <code>sortPostsByElo</code> do not change. A Twetch post dueled against a Treechat post is a legal pair: different authors whenever the pool allows, same-author only when it cannot. The arena eligibility rule already accepts text or media (<code>isArenaEligible</code>).</p>
+<p>The duel ledger is append-only and the rating table is a replay. That ledger currently lives in Redis. It is a short list of pairs, not a <code>KEYS</code> scan, and it is not the retired worker. Until an inscribed duel log exists, that small Redis list may stay; it is not a reason to stand the worker back up. A later slice can write each resolved duel as a Bitcoin Schema record (or a daily JSONL on the mini) and fold from that instead.</p>
 
 <h2>3 &middot; Ingest</h2>
 <div class="flow">
-<p><strong>Mapper (pure).</strong> Magic Attribute Protocol bytes in, post or vote out, or null. One fixture: a real Twetch post transaction. One fixture: a real Treechat post transaction. One fixture: a Twetch like. No network in the mapper.</p>
-<p><strong>Twetch scan (finite).</strong> On the mini, once: walk JungleBus / WhatsOnChain history for <code>app=twetch</code> <code>type=post</code> and <code>type=like</code>. Write a local JSONL of mapped posts and votes (gitignored, like the board). Twetch will not grow.</p>
-<p><strong>Treechat scan.</strong> Same mapper, filter <code>app</code> to Treechat's published app name (pin from a live post before coding &mdash; do not guess). First pass can be Henry's own addresses plus a named list (the Craig Wright seed card is this list). Full-network scrape is a later decision; it is a million-transaction job and is how Treechat themselves did Twetch.</p>
-<p><strong>Show.</strong> Folklore feed reads the JSONL (or an inscribed manifest of transaction ids) and the vote fold. Redis is not the source of truth. If the site needs a hosted copy, inscribe the <em>index</em> (transaction id list + vote list), not the posts.</p>
+<p><strong>Mapper (pure).</strong> Magic Attribute Protocol bytes in, a pool text out, or null. One fixture: a real Twetch post transaction. One fixture: a real Treechat post transaction. No network in the mapper. Likes and upvalue are out of scope for the mapper &mdash; they are not duels.</p>
+<p><strong>Twetch scan (finite).</strong> On the mini, once: walk JungleBus / WhatsOnChain history for <code>app=twetch</code> <code>type=post</code>. Write a local JSONL of mapped pool texts (gitignored, like the board). Twetch will not grow.</p>
+<p><strong>Treechat scan.</strong> Same mapper, filter <code>app</code> to Treechat's published app name (pin from a live post before coding &mdash; do not guess). First pass can be Henry's own addresses plus a named list (the Craig Wright seed card is this list).</p>
+<p><strong>Show.</strong> Folklore feed and arena read the JSONL (or an inscribed manifest of transaction ids) as extra <code>DealCandidate</code>s beside the X-archive pool. Sort with <code>sortPostsByElo</code>. Undueled imports sit at 1500 until the first tap.</p>
 </div>
 
 <h2>4 &middot; Identity</h2>
@@ -85,20 +83,20 @@
 <h2>5 &middot; What this is not</h2>
 <ul>
 <li>Not a live Twetch clone, not a Treechat client, not a JungleBus subscription that ticks forever.</li>
-<li>Not the kudos float, Elo arena, or web-archive job machine.</li>
+<li>Not a new ranker, not a conversion of likes into fake duels, not the retired web-archive worker.</li>
 <li>Not Hodlocker in version one, though it is the same protocol and can ride the mapper later.</li>
 <li>Not re-hosting video. Original outpoints or it does not show.</li>
 </ul>
 
 <h2>6 &middot; Open questions</h2>
 <ul>
-<li><strong>Q1.</strong> Rank by earned satoshis only (recommended, Decision 1), or also add original post value as founding? Treechat's own ranking is earned only.</li>
-<li><strong>Q2.</strong> First ingest: Henry's Twetch only, or the named seed list (Craig Wright and friends) in the same pass?</li>
-<li><strong>Q3.</strong> Treechat live updates: on-demand lookup when someone opens folklore, or a daily mini scan?</li>
-<li><strong>Q4.</strong> Pin one live Treechat post and one upvalue transaction as fixtures before the mapper is written &mdash; Henry or a public Treechat URL.</li>
+<li><strong>Q1.</strong> First ingest: Henry's Twetch only, or the named seed list (Craig Wright and friends) in the same pass?</li>
+<li><strong>Q2.</strong> Treechat live updates: on-demand lookup when someone opens folklore, or a daily mini scan?</li>
+<li><strong>Q3.</strong> Pin one live Treechat post as a mapper fixture &mdash; Henry or a public Treechat URL. (Upvalue is display-only; not needed for Elo.)</li>
+<li><strong>Q4.</strong> Arena access: existing kudos-float gate, or the 27 July front-door &ldquo;two posts, dealt&rdquo; for anyone? Ranking cannot move until someone is allowed to tap.</li>
 </ul>
 
-<p style="margin-top:40px;color:var(--muted);font-style:italic;">No money path in this spec. The mapper is pure. Ingest is a scan. Ranking is a fold over payments already on chain.</p>
+<p style="margin-top:40px;color:var(--muted);font-style:italic;">No money path in this spec. The mapper is pure. Ingest is a scan. Ranking is the existing Elo fold over folklore duels.</p>
 
 </div>
 </body>
