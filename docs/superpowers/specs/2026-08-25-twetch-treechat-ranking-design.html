@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One board, satoshis given — Twetch and Treechat on folklore</title>
+<style>
+  :root { --bg:#f4ecd8; --ink:#2a2318; --muted:#6b5d45; --rule:#c9b98f; --accent:#8b3a1a; --card:#faf4e4; --shadow:0 1px 3px rgba(60,40,10,0.15); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.68;}
+  .wrap{max-width:860px;margin:0 auto;padding:56px 32px;}
+  header.doc{margin-bottom:40px;border-bottom:3px double var(--rule);padding-bottom:26px;}
+  .eyebrow{font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:33px;line-height:1.16;margin:0 0 12px;font-weight:700;}
+  h2{font-size:24px;margin:46px 0 12px;padding-top:18px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 8px;}
+  .lede{font-size:19px;color:var(--muted);margin:0;font-style:italic;}
+  p{margin:13px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(120,90,30,0.12);padding:2px 6px;border-radius:4px;}
+  pre{background:#2a2318;color:#f0e6cf;padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;background:var(--card);}
+  th,td{text-align:left;padding:9px 12px;border:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .decision{background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 18px;margin:18px 0;box-shadow:var(--shadow);}
+  .decision strong{color:var(--accent);}
+  ul{margin:12px 0;padding-left:26px;} li{margin:6px 0;}
+  .flow{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px 20px;margin:16px 0;box-shadow:var(--shadow);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Design spec &middot; 2026-08-25 &middot; henceforth.club/folklore &middot; status: DRAFT for Henry's review</div>
+<h1>One board, satoshis given</h1>
+<p class="lede">Twetch and Treechat posts are already on Bitcoin. Folklore ranks by satoshis paid. The work is a mapper and a scan, not a third social network.</p>
+</header>
+
+<p><strong>What exists.</strong> Folklore reads <code>SocialArchive</code> JSON from Bitcoin and ranks a post by satoshis given (<code>foldScores</code> — founding / upload cost is ledgered and excluded from the rank). The launchd worker is dead. The web archive flag is dark. Inscription stays in Henceforth. Twetch.com shut in June 2024; the posts remain as Magic Attribute Protocol records, <code>app=twetch</code> <code>type=post</code>, usually signed with the Author Identity Protocol, media often on the same transaction via the B protocol. Treechat writes the same Bitcoin Schema (<code>type=post</code>) and already resurrected Twetch and Hodlocker into its own client. Treechat ranking is upvalue: a micropayment to the post. That is folklore kudos under another name.</p>
+
+<p><strong>The ask.</strong> Henry, 2026-08-25: <em>&ldquo;it would be good we need the data from twetch and treechat ideally so we can rank them.&rdquo;</em> And the standing lean rule from the same morning: Bitcoin and the mini, no Redis poller.</p>
+
+<div class="decision"><strong>Decision 1 &mdash; rank is satoshis paid to the post.</strong> One number, one fold, every source. A folklore kudos, a Twetch like, and a Treechat upvalue are the same event: bitcoin sent that names a post transaction. Do not mix miner fees or inscription cost into this board &mdash; old Twetch posts would win by being expensive to write, not by being valued. The existing class floors (video before photo before text) may still break ties when a post has no payments.</div>
+
+<div class="decision"><strong>Decision 2 &mdash; point, do not copy.</strong> Each post's identity is its original transaction id. Folklore does not re-inscribe Twetch or Treechat text, and does not copy media into a blob store. The reader resolves media from the source transaction (B protocol / ordinal outpoint). Re-wrapping as <code>SocialArchive</code> is allowed later as an optional bundle; it is not required to rank.</div>
+
+<div class="decision"><strong>Decision 3 &mdash; no daemon.</strong> Twetch is a finite historical scan (the app is dead). Treechat is a live app; a JungleBus or 1sat lookup on demand is enough until volume proves otherwise. The mini may run a one-shot ingest. The retired <code>xtext-worker</code> stays retired.</div>
+
+<h2>1 &middot; One post, three apps</h2>
+<p>Bitcoin Schema already is the shared shape. A post on chain looks like:</p>
+<pre><code>OP_RETURN
+  B &lt;text or file&gt; &lt;media-type&gt; utf-8
+  | MAP SET app twetch|treechat type post [paymail &hellip;]
+  | AIP BITCOIN_ECDSA &lt;address&gt; &lt;signature&gt;</code></pre>
+<p>Folklore's own archives are a fourth encoding (<code>SocialArchive</code> JSON) of the same idea: handle, posts, media outpoints. The mapper's job is to turn any of these into one in-memory post:</p>
+<pre><code>{ id: txid,          // original transaction, never a new one
+  source: "twetch" | "treechat" | "x" | "folklore",
+  at, text,
+  author: aipAddress | paymail | handle,
+  media: [{ outpoint, kind }],
+  parentTxid? }</code></pre>
+<p><code>SocialArchive.source</code> is already a free string. No wire change for wrapping. The ranking table is keyed by <code>id</code> (the transaction id), which is how <code>sortPostsByScore</code> already sorts.</p>
+
+<h2>2 &middot; One vote</h2>
+<p>A vote is a later transaction that pays satoshis and names a post:</p>
+<table>
+<tr><th>App</th><th>On chain</th><th>Weight</th></tr>
+<tr><td>Folklore kudos</td><td>Existing vote ledger (funding transaction id, post id, satoshis)</td><td>satoshis paid</td></tr>
+<tr><td>Twetch like</td><td>MAP <code>type=like</code> with <code>tx</code> = post transaction, plus a payment output</td><td>satoshis paid to the author (not the like's miner fee)</td></tr>
+<tr><td>Treechat upvalue</td><td>Micropayment that references the post; MAP type to be pinned against one live Treechat transaction before coding</td><td>satoshis paid</td></tr>
+</table>
+<p>The fold is <code>foldScores</code> as it stands: sum of signed satoshis per post id, founding entries excluded. A Twetch like becomes a <code>VoteLedgerEntry</code> with <code>txid</code> = the like transaction, <code>postId</code> = the liked post, <code>sats</code> = value paid. Replayable, no cache of the number.</p>
+
+<h2>3 &middot; Ingest</h2>
+<div class="flow">
+<p><strong>Mapper (pure).</strong> Magic Attribute Protocol bytes in, post or vote out, or null. One fixture: a real Twetch post transaction. One fixture: a real Treechat post transaction. One fixture: a Twetch like. No network in the mapper.</p>
+<p><strong>Twetch scan (finite).</strong> On the mini, once: walk JungleBus / WhatsOnChain history for <code>app=twetch</code> <code>type=post</code> and <code>type=like</code>. Write a local JSONL of mapped posts and votes (gitignored, like the board). Twetch will not grow.</p>
+<p><strong>Treechat scan.</strong> Same mapper, filter <code>app</code> to Treechat's published app name (pin from a live post before coding &mdash; do not guess). First pass can be Henry's own addresses plus a named list (the Craig Wright seed card is this list). Full-network scrape is a later decision; it is a million-transaction job and is how Treechat themselves did Twetch.</p>
+<p><strong>Show.</strong> Folklore feed reads the JSONL (or an inscribed manifest of transaction ids) and the vote fold. Redis is not the source of truth. If the site needs a hosted copy, inscribe the <em>index</em> (transaction id list + vote list), not the posts.</p>
+</div>
+
+<h2>4 &middot; Identity</h2>
+<p>Twetch users are paymails / usernames in MAP, signed by an AIP address from the Twetch seed family Henceforth already derives (<code>m/0/0</code> and payment chains). Treechat users are the same schema. Folklore users are bound X handles. Do not invent a new identity. Display whatever MAP carries; ranking does not need a handle at all (it keys on post transaction id).</p>
+<p>Henry's own Twetch archive is the first ingest: the app already knows the address family. Other people (Craig Wright) need a named address or paymail on the seed list, not an X API pull.</p>
+
+<h2>5 &middot; What this is not</h2>
+<ul>
+<li>Not a live Twetch clone, not a Treechat client, not a JungleBus subscription that ticks forever.</li>
+<li>Not the kudos float, Elo arena, or web-archive job machine.</li>
+<li>Not Hodlocker in version one, though it is the same protocol and can ride the mapper later.</li>
+<li>Not re-hosting video. Original outpoints or it does not show.</li>
+</ul>
+
+<h2>6 &middot; Open questions</h2>
+<ul>
+<li><strong>Q1.</strong> Rank by earned satoshis only (recommended, Decision 1), or also add original post value as founding? Treechat's own ranking is earned only.</li>
+<li><strong>Q2.</strong> First ingest: Henry's Twetch only, or the named seed list (Craig Wright and friends) in the same pass?</li>
+<li><strong>Q3.</strong> Treechat live updates: on-demand lookup when someone opens folklore, or a daily mini scan?</li>
+<li><strong>Q4.</strong> Pin one live Treechat post and one upvalue transaction as fixtures before the mapper is written &mdash; Henry or a public Treechat URL.</li>
+</ul>
+
+<p style="margin-top:40px;color:var(--muted);font-style:italic;">No money path in this spec. The mapper is pure. Ingest is a scan. Ranking is a fold over payments already on chain.</p>
+
+</div>
+</body>
+</html>
