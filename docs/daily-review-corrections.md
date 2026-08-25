@@ -6,9 +6,9 @@ records that sweep's **rejections and dismissals**, newest first, so a later run
 re-flag what a prior run already refuted. Confirmed findings go to the Morning Board, not
 here. Cite `file:line` (or the live probe) so each verdict is independently re-derivable.
 
-## 2026-08-25 — zero rejections; apex and folklore timing already on the redesign card
+## 2026-08-25 — zero rejections; two site findings arrived after the edition was put to bed
 
-Live: `/` 0.14–0.17 s; `/folklore` 0.45 / 1.57 / 1.82 s (same cold/warm shape as 08-21); `POST /api/folklore/job` 503 fail-closed; `/board` login challenge; apex 307 to www. Motion fade-ins retired (`4d5bd10`). Mini-health pull request 63 merged. Nothing new to card.
+The 07:40 edition said nothing new to card. The independent finders finished at 07:43 with two confirmed site facts (both survived adversarial check; neither is a prior rejection). Carded, not rewritten into the paper: `finding-site-visits-null-as-zero-2026-08-25` (`MorningSheet.tsx:324` `{site.yesterday ?? 0}` against `reachCell, never ?? 0`) and `finding-site-accordion-a11y-2026-08-25` (`Accordion.tsx` always mounts closed panel copy). Live: `/` 0.14–0.17 s; `/folklore` 0.45 / 1.57 / 1.82 s (same cold/warm shape as 08-21); `POST /api/folklore/job` 503 fail-closed; `/board` login challenge; apex 307 to www. Motion fade-ins retired (`4d5bd10`). Mini-health pull request 63 merged. Redis at the 500,000-command cap — board publish failed; local files hold today's board.
 
 ## 2026-08-21 — zero rejections; two suspicions killed at the falsification gate before filing
 
