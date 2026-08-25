@@ -47,6 +47,19 @@
 
 <div class="decision"><strong>Decision 4 &mdash; people submit their own links; Elo ranks; kudos is the money; the mini pays once a day.</strong> Henry, 2026-08-25: <em>&ldquo;we want people to submit their own links and hope people vote on them. then we can send them the money at the end of each day.&rdquo;</em> Do not scrape Twetch or Treechat. A submitter pastes a URL (a Twetch post, a Treechat post, anything https). The feed chip is the source (Twetch / Treechat / the rest). Voting is the existing duel: two cards, tap one, Elo moves. The tap spends kudos from the voter's float; that kudos accrues as <code>earned</code> on the winning submitter. Elo does not mint money &mdash; a high rating with no taps pays nothing. Once a day the mini pays each handle's unsettled kudos as bitcoin to the bound address, then <code>markSettled</code>. No 15-second custody loop: the submitter pays their own inscription (app wallet, or the smallest web quote), and the payout is one batch transaction.</div>
 
+<div class="decision"><strong>Decision 5 &mdash; two prices, matching the two kinds we already have in types.</strong> Henry, 2026-08-25: <em>&ldquo;options to fetch all your data from other websites and upload them to bitcoin to be seen on folklore, as well as submit things already on chain which would cost less.&rdquo;</em> The compiler already knows this: <code>Portable</code> may be inscribed; <code>OnChain</code> is never re-inscribed (<code>source.ts</code>). The submit form quotes both.</div>
+
+<table>
+<tr><th></th><th>Already on Bitcoin</th><th>Not on Bitcoin yet</th></tr>
+<tr><td>What</td><td>Paste a transaction id or a Twetch / Treechat / folklore URL</td><td>Drop an X export, or fetch a site that is not on chain</td></tr>
+<tr><td>Type</td><td><code>OnChain</code></td><td><code>Portable</code></td></tr>
+<tr><td>On chain work</td><td>A tiny folklore <code>kind: link</code> (or an index stamp) pointing at the existing transaction</td><td>Inscribe a <code>SocialArchive</code> (and media, if any)</td></tr>
+<tr><td>Cost</td><td>Small &mdash; one short record</td><td>The archive quote, bytes on chain</td></tr>
+<tr><td>Twetch / Treechat</td><td>This path. Their posts already live in Magic Attribute Protocol outputs. &ldquo;Import my Twetch&rdquo; is an address scan, then the cheap submit, not a re-upload.</td><td>Do not take this path. Re-inscribing them copies what Bitcoin already holds.</td></tr>
+<tr><td>X</td><td>Never: policy forbids inscribing API reads. Only the visitor's own export is <code>Portable</code>.</td><td>This path. The zip drop that already exists.</td></tr>
+</table>
+<p>The quote on the form must show the cheap number when the paste resolves to a transaction on Bitcoin, and the dear number when new bytes must be written. Same Elo pool either way; source chip from the origin (Twetch, Treechat, X, folklore).</p>
+
 <h2>1 &middot; One post, three apps</h2>
 <p>Bitcoin Schema already is the shared shape. A post on chain looks like:</p>
 <pre><code>OP_RETURN
