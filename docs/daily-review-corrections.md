@@ -6,6 +6,10 @@ records that sweep's **rejections and dismissals**, newest first, so a later run
 re-flag what a prior run already refuted. Confirmed findings go to the Morning Board, not
 here. Cite `file:line` (or the live probe) so each verdict is independently re-derivable.
 
+## 2026-08-25 — zero rejections; apex and folklore timing already on the redesign card
+
+Live: `/` 0.14–0.17 s; `/folklore` 0.45 / 1.57 / 1.82 s (same cold/warm shape as 08-21); `POST /api/folklore/job` 503 fail-closed; `/board` login challenge; apex 307 to www. Motion fade-ins retired (`4d5bd10`). Mini-health pull request 63 merged. Nothing new to card.
+
 ## 2026-08-21 — zero rejections; two suspicions killed at the falsification gate before filing
 
 Nothing was rejected today — all four candidate findings (three carded, one folded)
