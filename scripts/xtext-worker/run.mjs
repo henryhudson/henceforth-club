@@ -83,7 +83,7 @@ if (probeError) {
 // and the task 10 report for why this was chosen over a runtime dependency.
 register(pathToFileURL(path.join(HERE, "aliasLoader.mjs")).href, import.meta.url);
 
-const { listJobsInState, advance, getPayload } = await import(
+const { listAllJobs, backfillJobIndex, advance, getPayload } = await import(
   pathToFileURL(path.join(REPO_ROOT, "src/lib/folkloreJob/jobStore.ts")).href
 );
 
@@ -107,6 +107,14 @@ async function tick() {
   if (ticking) return; // the previous tick is still waiting on a network call — never overlap
   ticking = true;
   try {
+    // One index read per tick. The eight listJobsInState calls inside a tick
+    // used to each KEYS the whole prefix — eight commands every 15s, empty
+    // or not, which spent the 500,000-command month in ~11 days with no
+    // visitors. Filter the snapshot in memory. An empty pipeline returns
+    // here after the one smembers, and skips the rest of the tick.
+    const snapshot = await listAllJobs();
+    if (snapshot.length === 0) return;
+    const listJobsInState = async (state) => snapshot.filter((j) => j.state === state);
     await runWorkerTick({
       listJobsInState,
       advance,
@@ -131,6 +139,10 @@ async function tick() {
   }
 }
 
-console.log(`xtext-worker: starting — ticking every ${TICK_MS / 1000} seconds, registering against ${registerBaseUrl}`);
+const backfilled = await backfillJobIndex();
+console.log(
+  `xtext-worker: starting — ticking every ${TICK_MS / 1000} seconds, registering against ${registerBaseUrl}` +
+    (backfilled ? `, job index holds ${backfilled}` : ""),
+);
 tick();
 setInterval(tick, TICK_MS);

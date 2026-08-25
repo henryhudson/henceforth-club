@@ -80,10 +80,14 @@ export type Report = {
 const DIR = path.join(process.cwd(), "content/board/reports");
 
 export async function listDates(): Promise<string[]> {
-  const redis = getRedis();
-  if (redis) {
-    const dates = await redis.smembers("board:report:dates");
-    if (dates && dates.length) return [...dates].sort().reverse();
+  try {
+    const redis = getRedis();
+    if (redis) {
+      const dates = await redis.smembers("board:report:dates");
+      if (dates && dates.length) return [...dates].sort().reverse();
+    }
+  } catch {
+    // Cap or transport failure: files still serve.
   }
   try {
     const files = await fs.readdir(DIR);
@@ -98,10 +102,14 @@ export async function listDates(): Promise<string[]> {
 }
 
 export async function loadReport(date: string): Promise<Report | null> {
-  const redis = getRedis();
-  if (redis) {
-    const r = await redis.get<Report>(`board:report:${date}`);
-    if (r) return r;
+  try {
+    const redis = getRedis();
+    if (redis) {
+      const r = await redis.get<Report>(`board:report:${date}`);
+      if (r) return r;
+    }
+  } catch {
+    // Cap or transport failure: files still serve.
   }
   try {
     return JSON.parse(await fs.readFile(path.join(DIR, `${date}.json`), "utf8")) as Report;
@@ -145,10 +153,14 @@ export type WeekReport = {
 const WEEKS_DIR = path.join(process.cwd(), "content/board/weeks");
 
 export async function listWeeks(): Promise<string[]> {
-  const redis = getRedis();
-  if (redis) {
-    const ws = await redis.smembers("board:weeks");
-    if (ws && ws.length) return [...ws].sort().reverse();
+  try {
+    const redis = getRedis();
+    if (redis) {
+      const ws = await redis.smembers("board:weeks");
+      if (ws && ws.length) return [...ws].sort().reverse();
+    }
+  } catch {
+    // Cap or transport failure: files still serve.
   }
   try {
     const files = await fs.readdir(WEEKS_DIR);
@@ -157,10 +169,14 @@ export async function listWeeks(): Promise<string[]> {
 }
 
 export async function loadWeek(date: string): Promise<WeekReport | null> {
-  const redis = getRedis();
-  if (redis) {
-    const w = await redis.get<WeekReport>(`board:week:${date}`);
-    if (w) return w;
+  try {
+    const redis = getRedis();
+    if (redis) {
+      const w = await redis.get<WeekReport>(`board:week:${date}`);
+      if (w) return w;
+    }
+  } catch {
+    // Cap or transport failure: files still serve.
   }
   try { return JSON.parse(await fs.readFile(path.join(WEEKS_DIR, `${date}.json`), "utf8")) as WeekReport; }
   catch { return null; }
@@ -172,10 +188,14 @@ export type Board = { generated: string; cards: Card[]; log?: string };
 // Upstash-only (the source file lives outside the repo, so there is no local
 // content fallback). The diary selection lives in src/lib/gardening.ts.
 export async function loadGardening(): Promise<import("./gardening").Gardening | null> {
-  const redis = getRedis();
-  if (redis) {
-    const g = await redis.get<import("./gardening").Gardening>("board:gardening");
-    if (g) return g;
+  try {
+    const redis = getRedis();
+    if (redis) {
+      const g = await redis.get<import("./gardening").Gardening>("board:gardening");
+      if (g) return g;
+    }
+  } catch {
+    // Cap or transport failure: no local schedule file in the repo.
   }
   return null;
 }
@@ -183,10 +203,14 @@ export async function loadGardening(): Promise<import("./gardening").Gardening |
 // Production reads the kanban from Upstash (written by /hh's publish step).
 // Local dev (no Redis env) falls back to the gitignored content file.
 export async function loadBoard(): Promise<Board | null> {
-  const redis = getRedis();
-  if (redis) {
-    const data = await redis.get<Board>("board:latest");
-    if (data) return data;
+  try {
+    const redis = getRedis();
+    if (redis) {
+      const data = await redis.get<Board>("board:latest");
+      if (data) return data;
+    }
+  } catch {
+    // Cap or transport failure: files still serve.
   }
   try {
     const file = path.join(process.cwd(), "content/board/latest.json");

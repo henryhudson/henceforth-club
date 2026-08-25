@@ -23,6 +23,9 @@ type Archive = Extract<ParsedExport, { ok: true }>["archive"] | FolkloreRecord |
 
 const JOB_PREFIX = "x:job:";
 const PAYLOAD_PREFIX = "x:job:payload:";
+/** Set of job ids. Lives outside the `x:job:` prefix so a leftover KEYS scan
+ * of that prefix cannot pick it up as a job record. */
+const IDS_KEY = "x:jobs";
 const jobKey = (jobId: string) => `${JOB_PREFIX}${jobId}`;
 const payloadKey = (jobId: string) => `${PAYLOAD_PREFIX}${jobId}`;
 
@@ -67,15 +70,36 @@ async function writeIfVersionMatches(
   return wrote === 1;
 }
 
-/** Every job record currently in Redis. A plain key scan, not a secondary
- * index — MAX_CONCURRENT_JOBS keeps the live set tiny, so there is nothing
- * here worth indexing yet. */
+/** Every job record currently in Redis, via the id set — never KEYS.
+ * The mini worker used to KEYS the prefix once per state per 15s tick
+ * (eight scans, empty or not). That alone spent the 500,000-command month
+ * in about eleven days with no visitors. */
 async function allStoredJobs(redis: Redis): Promise<StoredJob[]> {
-  const keys = await redis.keys(`${JOB_PREFIX}*`);
-  const jobKeys = keys.filter((k) => !k.startsWith(PAYLOAD_PREFIX));
-  if (jobKeys.length === 0) return [];
-  const values = await redis.mget<(StoredJob | null)[]>(...jobKeys);
+  const ids = await redis.smembers(IDS_KEY);
+  if (ids.length === 0) return [];
+  const values = await redis.mget<(StoredJob | null)[]>(...ids.map(jobKey));
   return values.filter((v): v is StoredJob => v !== null);
+}
+
+/**
+ * One-time repair: copy leftover `x:job:<id>` keys into the id set when the
+ * set is empty. The worker calls this at boot so jobs created before the
+ * index existed are not stalled. An empty set with no leftover keys is a
+ * real empty pipeline — KEYS is not repeated on the hot path.
+ */
+export async function backfillJobIndex(): Promise<number> {
+  const redis = getRedis();
+  if (!redis) return 0;
+  const existing = await redis.smembers(IDS_KEY);
+  if (existing.length > 0) return existing.length;
+  const keys = await redis.keys(`${JOB_PREFIX}*`);
+  const ids = keys
+    .filter((k) => !k.startsWith(PAYLOAD_PREFIX))
+    .map((k) => k.slice(JOB_PREFIX.length))
+    .filter((id) => id.length > 0);
+  if (ids.length === 0) return 0;
+  await redis.sadd(IDS_KEY, ...ids);
+  return ids.length;
 }
 
 export async function createJob(
@@ -127,6 +151,7 @@ export async function createJob(
 
   await redis.set(jobKey(job.jobId), { ...job, version: 0 });
   await redis.set(payloadKey(job.jobId), parsed.archive);
+  await redis.sadd(IDS_KEY, job.jobId);
   return { ok: true, job };
 }
 
@@ -180,4 +205,12 @@ export async function listJobsInState(state: JobState): Promise<TextJob[]> {
   if (!redis) return [];
   const jobs = await allStoredJobs(redis);
   return jobs.filter((j) => j.state === state).map(stripVersion);
+}
+
+/** Every job in one index read. The worker tick filters this snapshot eight
+ * ways in memory instead of issuing eight Redis scans. */
+export async function listAllJobs(): Promise<TextJob[]> {
+  const redis = getRedis();
+  if (!redis) return [];
+  return (await allStoredJobs(redis)).map(stripVersion);
 }

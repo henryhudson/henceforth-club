@@ -28,10 +28,12 @@ export async function GET() {
       yearKeys.push(`views:${dateKey(d)}`);
     }
 
-    const [total, ...dayCounts] = await Promise.all([
-      redis.get<number>("views:total"),
-      ...yearKeys.map((k) => redis.get<number>(k)),
-    ]);
+    // One MGET, not 366 GETs. The homepage `analytics` command used to
+    // spend 366 of the monthly 500,000 commands per call.
+    const [total, ...dayCounts] = await redis.mget<(number | null)[]>(
+      "views:total",
+      ...yearKeys,
+    );
 
     const nums = dayCounts.map((v) => Number(v) || 0);
     const today = nums[0];

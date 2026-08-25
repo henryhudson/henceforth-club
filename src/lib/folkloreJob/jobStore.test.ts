@@ -2,16 +2,19 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ParsedExport } from "./parseExport";
 import type { Quote } from "./quote";
 import { MAX_CONCURRENT_JOBS, QUOTE_EXPIRY_MINUTES, RESERVED_ARCHIVE_JOBS } from "./constants";
-import { createJob, getJob, getPayload, advance, listJobsInState } from "./jobStore";
+import { backfillJobIndex, createJob, getJob, getPayload, advance, listAllJobs, listJobsInState } from "./jobStore";
 
 // A fake Redis good enough to exercise jobStore's real logic: get/set/del,
-// a keys() scan (jobStore never uses a secondary index — the job count is
-// always tiny), and an eval() that reimplements the same compare-and-swap
+// the job-id set (smembers/sadd), a keys() scan used only by the one-time
+// backfill, and an eval() that reimplements the same compare-and-swap
 // contract the guarded write script asks the real server to run atomically.
 function makeFakeRedis() {
   const store = new Map<string, unknown>();
+  const sets = new Map<string, Set<string>>();
+  const traces = { keys: 0, smembers: 0, sadd: 0, mget: 0 };
   return {
     store,
+    traces,
     async get<T>(key: string): Promise<T | null> {
       return store.has(key) ? (structuredClone(store.get(key)) as T) : null;
     },
@@ -23,10 +26,29 @@ function makeFakeRedis() {
       return store.delete(key) ? 1 : 0;
     },
     async keys(pattern: string): Promise<string[]> {
+      traces.keys += 1;
       const prefix = pattern.endsWith("*") ? pattern.slice(0, -1) : pattern;
       return [...store.keys()].filter((k) => k.startsWith(prefix));
     },
+    async sadd(key: string, ...members: string[]): Promise<number> {
+      traces.sadd += 1;
+      const set = sets.get(key) ?? new Set<string>();
+      let added = 0;
+      for (const member of members) {
+        if (!set.has(member)) {
+          set.add(member);
+          added += 1;
+        }
+      }
+      sets.set(key, set);
+      return added;
+    },
+    async smembers(key: string): Promise<string[]> {
+      traces.smembers += 1;
+      return [...(sets.get(key) ?? [])];
+    },
     async mget<T>(...keys: string[]): Promise<T> {
+      traces.mget += 1;
       return keys.map((k) => (store.has(k) ? structuredClone(store.get(k)) : null)) as unknown as T;
     },
     async eval<TArgs extends unknown[], TData>(
@@ -313,6 +335,65 @@ describe("advance", () => {
     const winner = succeeded[0];
     if (!winner.ok) throw new Error("expected ok");
     expect(stored?.address).toBe(winner.job.address);
+  });
+});
+
+describe("the job-id index", () => {
+  it("lists an empty store without scanning keys — that scan is what burned the monthly cap with no jobs", async () => {
+    expect(await listJobsInState("quoted")).toEqual([]);
+    expect(await listAllJobs()).toEqual([]);
+    expect(fakeRedis?.traces.keys).toBe(0);
+    expect(fakeRedis?.traces.smembers).toBeGreaterThan(0);
+  });
+
+  it("createJob records the id so a later list does not scan keys", async () => {
+    const created = await createJob(archiveInput(), quoteFixture, NOW);
+    if (!created.ok) throw new Error("expected ok");
+    fakeRedis!.traces.keys = 0;
+    fakeRedis!.traces.smembers = 0;
+    const listed = await listJobsInState("quoted");
+    expect(listed.map((j) => j.jobId)).toEqual([created.job.jobId]);
+    expect(fakeRedis?.traces.keys).toBe(0);
+    expect(fakeRedis?.traces.smembers).toBe(1);
+  });
+
+  it("listAllJobs returns every job from one index read — the worker tick's eight state lists share this snapshot", async () => {
+    const a = await createJob(archiveInput("alice"), quoteFixture, NOW);
+    const b = await createJob(archiveInput("bob"), quoteFixture, NOW);
+    if (!a.ok || !b.ok) throw new Error("expected ok");
+    fakeRedis!.traces.keys = 0;
+    fakeRedis!.traces.smembers = 0;
+    fakeRedis!.traces.mget = 0;
+    const all = await listAllJobs();
+    expect(all.map((j) => j.jobId).sort()).toEqual([a.job.jobId, b.job.jobId].sort());
+    expect(fakeRedis?.traces.keys).toBe(0);
+    expect(fakeRedis?.traces.smembers).toBe(1);
+    expect(fakeRedis?.traces.mget).toBe(1);
+  });
+
+  it("backfillJobIndex copies leftover job keys into the set once, then lists never scan again", async () => {
+    const orphanId = "orphan-job";
+    await fakeRedis!.set(`x:job:${orphanId}`, {
+      jobId: orphanId,
+      kind: "archive",
+      handle: "henry",
+      contentHash: "h",
+      feeSats: 1,
+      premiumSats: 1,
+      priceSats: 2,
+      state: "quoted",
+      createdAtMs: NOW,
+      expiresAtMs: NOW + 60_000,
+      version: 0,
+    });
+    expect(await listAllJobs()).toEqual([]);
+    expect(await backfillJobIndex()).toBe(1);
+    fakeRedis!.traces.keys = 0;
+    const all = await listAllJobs();
+    expect(all.map((j) => j.jobId)).toEqual([orphanId]);
+    expect(fakeRedis?.traces.keys).toBe(0);
+    expect(await backfillJobIndex()).toBe(1);
+    expect(fakeRedis?.traces.keys).toBe(0);
   });
 });
 
