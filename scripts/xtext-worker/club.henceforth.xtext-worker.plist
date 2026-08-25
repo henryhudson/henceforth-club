@@ -2,6 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- RETIRED 2026-08-25. Do not install this job. The mini copy is
+	     renamed *.plist.retired-2026-08-25 and launchd has the label
+	     disabled. Inscription is the Henceforth app onto Bitcoin. -->
 	<key>Label</key>
 	<string>club.henceforth.xtext-worker</string>
 

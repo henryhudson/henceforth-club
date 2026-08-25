@@ -4,6 +4,7 @@
 // bridge below), live network fetch, the Keychain wrapping key, and the
 // worker's own tuning constants — then ticks every fifteen seconds. Runs on
 // the Mac mini only, launched by club.henceforth.xtext-worker.plist.
+// RETIRED 2026-08-25: that launchd job is disabled. Do not start this file.
 //
 // Everything that decides WHAT to do each tick lives in worker.mjs, tested
 // there against a fake store and a stubbed fetch. This file only supplies

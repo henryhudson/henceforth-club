@@ -1,5 +1,17 @@
 # The xtext worker
 
+**Retired 2026-08-25.** The launchd job `club.henceforth.xtext-worker` is
+unloaded, disabled, and the plist on the mini is renamed
+`club.henceforth.xtext-worker.plist.retired-2026-08-25`. Do not install it
+again. The web archive flag stays dark. Inscription stays in the Henceforth
+app (`xfolklore`) onto Bitcoin; the mini is for builds, not a 15-second Redis
+poller.
+
+The code below is the old custody worker, kept for tests and history. It is
+not a running service.
+
+---
+
 The Mac mini process that carries a paid text-archive job from a fresh quote
 to a finished, on-chain archive — the only place custody of a visitor's
 per-job key ever exists. It never runs anywhere else: not on the website, not
