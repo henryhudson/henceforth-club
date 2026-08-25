@@ -43,7 +43,9 @@
 
 <div class="decision"><strong>Decision 2 &mdash; point, do not copy.</strong> Each post's identity is its original transaction id. Folklore does not re-inscribe Twetch or Treechat text, and does not copy media into a blob store. The reader resolves media from the source transaction (B protocol / ordinal outpoint). Re-wrapping as <code>SocialArchive</code> is allowed later as an optional bundle; it is not required to rank.</div>
 
-<div class="decision"><strong>Decision 3 &mdash; no daemon.</strong> Twetch is a finite historical scan (the app is dead). Treechat is a live app; a JungleBus or 1sat lookup on demand is enough until volume proves otherwise. The mini may run a one-shot ingest. The retired <code>xtext-worker</code> stays retired.</div>
+<div class="decision"><strong>Decision 3 &mdash; no daemon.</strong> The retired 15-second worker stays dead. The mini may run a <em>once-a-day</em> settlement job, and nothing that ticks in between.</div>
+
+<div class="decision"><strong>Decision 4 &mdash; people submit their own links; Elo ranks; kudos is the money; the mini pays once a day.</strong> Henry, 2026-08-25: <em>&ldquo;we want people to submit their own links and hope people vote on them. then we can send them the money at the end of each day.&rdquo;</em> Do not scrape Twetch or Treechat. A submitter pastes a URL (a Twetch post, a Treechat post, anything https). The feed chip is the source (Twetch / Treechat / the rest). Voting is the existing duel: two cards, tap one, Elo moves. The tap spends kudos from the voter's float; that kudos accrues as <code>earned</code> on the winning submitter. Elo does not mint money &mdash; a high rating with no taps pays nothing. Once a day the mini pays each handle's unsettled kudos as bitcoin to the bound address, then <code>markSettled</code>. No 15-second custody loop: the submitter pays their own inscription (app wallet, or the smallest web quote), and the payout is one batch transaction.</div>
 
 <h2>1 &middot; One post, three apps</h2>
 <p>Bitcoin Schema already is the shared shape. A post on chain looks like:</p>
