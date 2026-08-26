@@ -321,7 +321,7 @@ export default function MorningSheet({
                 )}
                 {site && (
                   <>
-                    The site: {site.yesterday ?? 0} yesterday · {site.week} this week · {site.total.toLocaleString("en-GB")} all-time.
+                    The site: {reachCell(site.yesterday)} yesterday · {site.week} this week · {site.total.toLocaleString("en-GB")} all-time.
                   </>
                 )}
                 {report.reach?.dataThrough && <> Store data through {report.reach.dataThrough}.</>}
