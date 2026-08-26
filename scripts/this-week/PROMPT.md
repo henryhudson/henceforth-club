@@ -48,6 +48,12 @@ In the SAME JSON file, ALSO write an `overview` object on the digest matching `O
   largest sums straight from the written answers, quoting the minister's own sentence, and the wrapper
   injects them at `overview.money`. Five items keep the column the same height as the two-leg lead.
   Since the money column exists, the lead runs in TWO legs rather than three (Henry, 2026-08-26).
+- REAL TERMS (standing rule, Henry, 2026-08-26). A multi-year spending figure is meaningless without a
+  basis. Whenever a money figure spans years, check whether the answer says cash or real terms; if it
+  does not, SAY SO and give the real-terms arithmetic from a sourced inflation rate (the Bank of England
+  target, and the latest Office for National Statistics rate). A department quoting a cash rise without
+  a basis is itself the story: inflation erodes purchasing power, so a large cash rise can be a small
+  real one, or a cut.
 
 Prose rules for `intro`, `brief[].note`, and `feature.summary` (enforced by `src/lib/this-week/overview-prose.test.ts`):
 - Full sentences, plain English, short sentences, full stops freely.
