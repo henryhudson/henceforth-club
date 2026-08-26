@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reddit for transaction ids — implementation plan</title>
+<style>
+  :root { --bg:#f4f1ea; --ink:#1c1a16; --muted:#6b6358; --rule:#d8d0c0; --accent:#a8431f; --accent-soft:#c4a572; --card:#fbf9f4; --code-bg:#1e1e1e; --code-ink:#e8e8e8; --ok:#2f6f3e; --warn:#a8431f; --shadow:0 1px 3px rgba(0,0,0,0.08); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.65;}
+  .wrap{max-width:880px;margin:0 auto;padding:56px 32px;} header.doc{margin-bottom:40px;border-bottom:2px solid var(--rule);padding-bottom:24px;}
+  .eyebrow{font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:34px;line-height:1.15;margin:0 0 12px;font-weight:700;} h2{font-size:24px;margin:48px 0 14px;padding-top:20px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 10px;} .lede{font-size:19px;color:var(--muted);margin:0;} p{margin:14px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(0,0,0,0.06);padding:2px 6px;border-radius:4px;}
+  pre{background:var(--code-bg);color:var(--code-ink);padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;} th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .task{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:8px 22px 18px;margin:22px 0;box-shadow:var(--shadow);}
+  .task .tasknum{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);}
+  .files{font-size:14px;background:#efe9dc;border-radius:6px;padding:10px 14px;margin:10px 0;}
+  .note{background:#f6efe0;border-left:4px solid var(--accent-soft);padding:10px 16px;border-radius:0 6px 6px 0;margin:14px 0;}
+  .danger{background:#f7e8e2;border-left:4px solid var(--warn);padding:10px 16px;border-radius:0 6px 6px 0;margin:14px 0;}
+  ul{margin:12px 0;padding-left:24px;} li{margin:5px 0;}
+  ul.steps{list-style:none;padding-left:4px;} ul.steps>li{margin:12px 0;padding-left:30px;position:relative;}
+  ul.steps>li input[type=checkbox]{position:absolute;left:0;top:5px;width:18px;height:18px;}
+  .badge{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:2px 8px;border-radius:999px;white-space:nowrap;background:#f3dcd2;color:var(--accent);}
+  .effort{font-size:13px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Implementation plan · 2026-08-26 · folklore · henceforth-club + Henceforth</div>
+<h1>Reddit for transaction ids — the build</h1>
+<p class="lede">From the settled spec (<code>docs/superpowers/specs/2026-08-26-folklore-txid-board-design.html</code>). Paste a target id; one board row; comments and Elo on that id; a user-signed ten-pence stamp; daily kudos pay. Henry's go 2026-08-26: keep the floor, Henceforth signs first, synthetic Treechat fixtures until a live post is pinned.</p>
+</header>
+
+<div class="note"><strong>For agentic workers:</strong> REQUIRED: <code>superpowers:subagent-driven-development</code> (recommended) or <code>superpowers:executing-plans</code>, task by task. Real checkboxes. Each task's implementer sees only their task — the Interfaces block is how neighbouring names reach you.</div>
+
+<p><strong>Goal:</strong> a visitor can paste a Bitcoin transaction id, pay the ten-pence stamp from Henceforth, see the row on <code>/folklore</code>, open <code>/folklore/tx/&lt;target&gt;</code> (Twetch, Treechat, archive, or opaque), take Elo taps, and have kudos settle once a day.</p>
+
+<p><strong>Architecture:</strong> two identifiers — <em>target</em> (the listed transaction) and <em>stamp</em> (the folklore JSON plus revenue output the user broadcasts). The site never holds a key. The index is an opinion: <code>POST /api/folklore/index</code> verifies the stamp on chain then <code>addLinkToBoard(target, record)</code>. The reader tries Magic Attribute Protocol, then <code>SocialArchive</code>, then a folklore record. The retired fifteen-second worker stays dead.</p>
+
+<p><strong>Tech stack:</strong> Next.js App Router, TypeScript strict, Vitest (<code>npx vitest run</code>), Henceforth Swift (stamp builder). Site gate: vitest + <code>npm run build</code>.</p>
+
+<p><strong>Spec:</strong> <code>docs/superpowers/specs/2026-08-26-folklore-txid-board-design.html</code>.</p>
+
+<h2>Global constraints</h2>
+<ul>
+<li><code>FOLKLORE_SUBMIT_ENABLED</code> stays unset in production until the funded stamp end-to-end (spec §9).</li>
+<li>Do not revive <code>club.henceforth.xtext-worker</code>.</li>
+<li>Ten-pence floor kept; revenue address <code>1GsP511T8e4VjxYdAGnMYdDd6sWxWybcMP</code>.</li>
+<li>Board member for a listed target is <code>link:&lt;target&gt;</code> (lowercase hex). Legacy https-only links keep stamp-id members.</li>
+<li>Elo <code>postId</code> and comment <code>parent</code> equal the target.</li>
+<li>Anonymous stamps list and cannot accrue kudos (existing conservation).</li>
+<li>Plain English in comments and commit messages. Tests first. No force unwraps in Swift.</li>
+<li>Money-path tasks (A6, B1, A10) get an adversarial review before the flag flips, not before every commit.</li>
+</ul>
+
+<h2>File map</h2>
+<table>
+<tr><th>File</th><th>Responsibility</th></tr>
+<tr><td><code>src/app/folklore/extractTarget.ts</code></td><td>Pure: paste → 64-hex target or null</td></tr>
+<tr><td><code>src/app/folklore/linkRecord.ts</code></td><td><code>txid?</code> on the link; <code>validateLink</code> accepts hex or https</td></tr>
+<tr><td><code>src/app/folklore/mapPost.ts</code></td><td>Pure Magic Attribute Protocol <code>type=post</code> → one <code>XPost</code> + source</td></tr>
+<tr><td><code>src/app/folklore/tx/[txid]/page.tsx</code></td><td>Reader order from spec §3</td></tr>
+<tr><td><code>src/lib/folkloreBoard.ts</code></td><td>Member is the target when the record has <code>txid</code></td></tr>
+<tr><td><code>src/app/api/folklore/index/route.ts</code></td><td>Verify stamp, floor, <code>nx</code> list</td></tr>
+<tr><td><code>src/app/api/folklore/preview/route.ts</code></td><td>Same parser as the reader, JSON for the form</td></tr>
+<tr><td><code>src/app/folklore/submit/*</code></td><td>Paste / preview / “sign in Henceforth”; no job</td></tr>
+<tr><td><code>src/app/folklore/_components/LinkCard.tsx</code></td><td>Permalink to <code>/folklore/tx/&lt;target&gt;</code>; source chip</td></tr>
+<tr><td><code>src/lib/kudos/candidates.ts</code></td><td>Pool includes listed targets</td></tr>
+<tr><td><code>scripts/board/settle-kudos.mjs</code></td><td>Once-a-day pay of <code>earned</code></td></tr>
+<tr><td>Henceforth stamp builder</td><td>OP_RETURN record + revenue output; user signs</td></tr>
+</table>
+
+<div class="task"><span class="tasknum">Task A1</span> <span class="badge">pure</span> <span class="effort">extract the target id from a paste</span>
+<div class="files"><strong>Create:</strong> <code>src/app/folklore/extractTarget.ts</code>, <code>src/app/folklore/extractTarget.test.ts</code></div>
+<p><strong>Produces:</strong> <code>extractTargetTxid(input: string): string | null</code> — lowercase 64 hex, or null. First well-formed run wins.</p>
+<ul class="steps">
+<li><input type="checkbox"> Failing tests:
+<pre><code>import { extractTargetTxid } from "./extractTarget";
+const ID = "ab".repeat(32);
+it("accepts raw hex, mixed case → lowercase", () =&gt; {
+  expect(extractTargetTxid(ID.toUpperCase())).toBe(ID);
+});
+it("pulls from folklore / whatsonchain / treechat /t/ URLs", () =&gt; {
+  expect(extractTargetTxid(`https://www.henceforth.club/folklore/tx/${ID}`)).toBe(ID);
+  expect(extractTargetTxid(`https://whatsonchain.com/tx/${ID}`)).toBe(ID);
+  expect(extractTargetTxid(`https://treechat.com/t/${ID}`)).toBe(ID);
+});
+it("junk and short hex are null", () =&gt; {
+  expect(extractTargetTxid("nope")).toBeNull();
+  expect(extractTargetTxid("abc")).toBeNull();
+});</code></pre></li>
+<li><input type="checkbox"> Implement with <code>TXID_RE</code> from <code>linkRecord.ts</code> (do not duplicate the regex). Scan the string for the first 64-hex match.</li>
+<li><input type="checkbox"> <code>npx vitest run src/app/folklore/extractTarget.test.ts</code> green. Commit.</li>
+</ul>
+</div>
+
+<div class="task"><span class="tasknum">Task A2</span> <span class="badge">pure</span> <span class="effort">validateLink accepts a target id</span>
+<div class="files"><strong>Modify:</strong> <code>src/app/folklore/linkRecord.ts</code>, <code>src/app/folklore/linkRecord.test.ts</code>, <code>recordFromValue</code> so a JSON body with <code>txid</code> (no url) parses. Callers of <code>validateLink(https, title)</code> stay valid.</div>
+<p><strong>Produces:</strong> <code>FolkloreLink</code> may carry <code>txid?: string</code> (lowercase) and/or <code>url?: string</code>. <code>validateLink(urlOrTxid, title, by?)</code>: if <code>TXID_RE.test(urlOrTxid)</code> → <code>{ kind:"link", txid: lower, title, by? }</code> and no <code>url</code>; else existing https path.</p>
+<ul class="steps">
+<li><input type="checkbox"> Tests: 64-hex + title → <code>txid</code> set, no <code>url</code>; mixed-case hex lowercased; existing https tests still pass; <code>recordFromValue</code> with <code>txid</code> and no <code>url</code> round-trips through <code>recordFromScripts</code>; empty title still null.</li>
+<li><input type="checkbox"> Implement. Keep javascript:/ftp: refusals for the url arm.</li>
+<li><input type="checkbox"> Full <code>linkRecord.test.ts</code> green. Commit.</li>
+</ul>
+</div>
+
+<div class="task"><span class="tasknum">Task A3</span> <span class="badge">pure</span> <span class="effort">Magic Attribute Protocol type=post</span>
+<div class="files"><strong>Create:</strong> <code>src/app/folklore/mapPost.ts</code>, <code>src/app/folklore/mapPost.test.ts</code>. Consume <code>extractPushdata</code>.</div>
+<p><strong>Produces:</strong> <code>mapPostFromScripts(scriptHexes: string[], txid: string): { post: XPost; source: string } | null</code>. Source is the MAP <code>app</code> value when <code>type</code> is <code>post</code>. Text from the B-protocol content push when present, else MAP <code>content</code>/<code>text</code> keys. <code>post.id</code> and <code>post.txid</code> are the given txid. Hostile / missing type → null.</p>
+<p>Build fixture hex like <code>linkRecord.test.ts</code> (<code>pushdataHex</code>): MAP prefix string <code>1PuQa7K62MiKCtssSLKy1kh56WWU7MtUR5</code>, then <code>SET</code>, <code>app</code>, <code>twetch</code>, <code>type</code>, <code>post</code>, plus a B-protocol prefix <code>19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut</code> with utf-8 body. Second fixture <code>app=treechat</code>. Third fixture no <code>type=post</code> → null.</p>
+<ul class="steps">
+<li><input type="checkbox"> Failing tests for the three fixtures.</li>
+<li><input type="checkbox"> Implement by walking pushdata chunks; do not add a library.</li>
+<li><input type="checkbox"> Green. Commit.</li>
+</ul>
+</div>
+
+<div class="task"><span class="tasknum">Task A4</span> <span class="badge">reader</span> <span class="effort">/folklore/tx parse order</span>
+<div class="files"><strong>Modify:</strong> <code>src/app/folklore/tx/[txid]/page.tsx</code>. <strong>Create:</strong> a small pure <code>classifyTx(scripts, txid)</code> in e.g. <code>src/app/folklore/tx/classify.ts</code> so the order is testable without rendering.</div>
+<p><strong>Produces:</strong> <code>classifyTx(scripts: string[], txid: string)</code> →
+<code>{ kind: "comment", parent }</code> |
+<code>{ kind: "stamp", target }</code> (folklore link with <code>txid</code> ≠ this page's id) |
+<code>{ kind: "map", post, source }</code> |
+<code>{ kind: "archive" }</code> (caller still fetches archive) |
+<code>{ kind: "legacy-link", record }</code> |
+<code>{ kind: "opaque" }</code>.</p>
+<p>Page: comment → redirect to parent; stamp → redirect to target; map → one-post card + source chip + comment thread on this id; archive → existing ProfilePage; legacy-link → existing LinkThread (url may be absent — do not call <code>new URL</code> on a txid link); opaque → 200 with title/short id/explorer/comments, not 404. Missing tx (no scripts) → 404.</p>
+<ul class="steps">
+<li><input type="checkbox"> Tests on <code>classifyTx</code> for each kind, using A2/A3 fixtures.</li>
+<li><input type="checkbox"> Wire the page. LinkThread: if <code>record.txid</code>, heading links to <code>/folklore/tx/${record.txid}</code> (or is the target page itself when member is target — after A4 the permalink is the target, so LinkThread is for legacy url rows and for the target page's header when classified map/opaque).</li>
+<li><input type="checkbox"> Green. Commit.</li>
+</ul>
+</div>
+
+<div class="task"><span class="tasknum">Task A5</span> <span class="badge">index</span> <span class="effort">board member is the target</span>
+<div class="files"><strong>Modify:</strong> <code>src/lib/folkloreBoard.ts</code>, <code>src/lib/folkloreBoard.test.ts</code>, <code>src/app/folklore/_components/LinkCard.tsx</code> (and its test). <code>addLinkToBoard(txid, record)</code>: if <code>record.kind==="link"</code> and <code>record.txid</code>, the member and cache key use <code>record.txid</code> (the target), not the stamp id passed in. Keep the stamp id on the cached record as a non-on-chain field only if tests need it — prefer looking up by target only. Callers that pass the stamp id still work: function uses <code>record.txid ?? txid</code>.</div>
+<p>LinkCard: if <code>record.txid</code>, title href is <code>/folklore/tx/${record.txid}</code>, detail line shows <code>shortTxid</code> not <code>new URL(record.url).hostname</code>. Source chip is a later polish if classify is not in this component — showing the short id is enough here.</p>
+<ul class="steps">
+<li><input type="checkbox"> Tests: listing a txid-link uses member <code>link:&lt;target&gt;</code>; second add of same target does not reset score; https-only link still uses stamp id as today; LinkCard does not throw on a txid-only record.</li>
+<li><input type="checkbox"> Implement. Commit.</li>
+</ul>
+</div>
+
+<div class="task"><span class="tasknum">Task A6</span> <span class="badge">money</span> <span class="effort">POST /api/folklore/index</span>
+<div class="files"><strong>Create:</strong> <code>src/app/api/folklore/index/route.ts</code>, <code>src/app/api/folklore/index/route.test.ts</code>. Reuse <code>fetchTxScripts</code> / a hex fetcher injectable in tests. <code>quoteLink</code> + <code>gbpPerBsv</code> for the live floor. Revenue address constant copied from <code>scripts/xtext-worker/worker.mjs</code> <code>REVENUE_ADDRESS</code> into <code>src/lib/revenueAddress.ts</code> so site and app share one string.</div>
+<p><strong>Body:</strong> <code>{ stampTxid: string }</code>. Flag: same <code>FOLKLORE_SUBMIT_ENABLED === "true"</code> as submit (503 <code>not-available</code> when dark).</p>
+<p><strong>Refusals:</strong> <code>unknown-tx</code>, <code>bad-record</code>, <code>floor-short</code>, <code>already-listed</code>, <code>unsigned-by</code> (if <code>by</code> set — index of a stamped-on-chain record does not re-check the signature; the chain signature is the broadcast. Spec: <code>by</code> on chain is a claim; payout still requires <code>readOwner</code> at settle time). Keep this task to: parse record, require <code>record.txid</code>, revenue output ≥ live <code>quoteLink(encodeRecord(record).length, rate).premiumSats</code>, <code>addLinkToBoard</code> nx → false means already-listed.</p>
+<p>Detect revenue output: P2PKH to <code>REVENUE_ADDRESS</code>, value in sats. Tests use a fake script/output list — extract a pure <code>revenueSatsTo(address, vouts)</code> rather than parsing full transactions in the first cut if the existing WOC JSON is easier. Prefer: given <code>vout[]</code> with <code>scriptPubKey.addresses</code> and <code>value</code> in BSV, sum those to the revenue address × 1e8.</p>
+<ul class="steps">
+<li><input type="checkbox"> Tests: dark flag 503; unknown tx; valid stamp lists; second stamp same target already-listed; floor-short; https-only record without txid refused as <code>not-a-target</code>.</li>
+<li><input type="checkbox"> Implement. Do not call the job store. Commit.</li>
+</ul>
+</div>
+
+<div class="task"><span class="tasknum">Task A7</span> <span class="badge">ui</span> <span class="effort">preview + submit paste</span>
+<div class="files"><strong>Create:</strong> <code>src/app/api/folklore/preview/route.ts</code> (GET <code>?txid=</code>, same classify, JSON). <strong>Modify:</strong> <code>src/app/folklore/submit/SubmitFlow.tsx</code>, <code>submitDraft.ts</code>, page copy. While the flag is dark the stub stays. When the flag is on: paste field, extractTargetTxid, preview, title (default first line of map/archive text), then instructions to sign in Henceforth (payload JSON shown) and a “I've broadcast” field for <code>stampTxid</code> that POSTs index. No job poller.</div>
+<ul class="steps">
+<li><input type="checkbox"> Preview tests: 64-hex required; classify kind in JSON.</li>
+<li><input type="checkbox"> submitDraft: a txid paste is valid (not “must be http”).</li>
+<li><input type="checkbox"> Commit. Flag still dark — no production leak.</li>
+</ul>
+</div>
+
+<div class="task"><span class="tasknum">Task A8</span> <span class="badge">ui</span> <span class="effort">Elo pool includes listed targets</span>
+<div class="files"><strong>Modify:</strong> <code>src/lib/kudos/candidates.ts</code> (+ tests). After archive-handle posts, append listed folklore targets that <code>isArenaEligible</code> (from cached record + optional map/archive parse already done at index time — store <code>{ postId: target, author: by ?? "anonymous" }</code> eligibility at index if parse is expensive; v1: treat any listed target with a title as eligible text).</div>
+<p>Simplest v1: a listed target is eligible; <code>author</code> is <code>record.by ?? "anonymous-" + target.slice(0,8)</code> so the dealer can still pair across authors.</p>
+<ul class="steps">
+<li><input type="checkbox"> Test: a listed txid-link appears as a DealCandidate with <code>postId === target</code>; two listings cannot exist (A5 nx).</li>
+<li><input type="checkbox"> Commit.</li>
+</ul>
+</div>
+
+<div class="task"><span class="tasknum">Task A9</span> <span class="badge">ops</span> <span class="effort">once-a-day kudos settle (script only)</span>
+<div class="files"><strong>Create:</strong> <code>scripts/board/settle-kudos.mjs</code> — reads Redis <code>kudos:earned:*</code> (SCAN, not KEYS), skips below 546 sats converted from kudos via live rate, <strong>does not broadcast in v1</strong> unless <code>SETTLE_BROADCAST=1</code>; default prints the batch (handle, address from <code>x:owner:&lt;handle&gt;</code>, sats) and exits 0. <code>markSettled</code> only after a successful broadcast when that env is set. No launchd plist in v1 — print-and-exit is the dry run spec §9 asked for.</div>
+<div class="danger">Do not pay mainnet from this task without Henry at the keyboard. Default is dry.</div>
+<ul class="steps">
+<li><input type="checkbox"> A tiny unit of the kudos→sats conversion if you extract it; otherwise a comment in the script and a manual dry run note in the commit.</li>
+<li><input type="checkbox"> Commit.</li>
+</ul>
+</div>
+
+<div class="task"><span class="tasknum">Task B1</span> <span class="badge">money</span> <span class="effort">Henceforth builds the stamp</span>
+<div class="files">Henceforth: a focused builder (pure where possible) that given <code>{ targetTxid, title, by? }</code> and the live floor in sats produces OP_RETURN JSON matching <code>encodeRecord</code> plus a P2PKH output to the revenue address. Wire to a sheet or word only after the bytes round-trip a fixture test against the site's <code>recordFromScripts</code> (duplicate the JSON in the Swift test from a golden vector exported by a site unit test). Vocabulary seven-location checklist if a new word is added; otherwise a Pay-review screen is enough.</div>
+<p>Do not revive the site worker. User signs with the wallet they already have.</p>
+<ul class="steps">
+<li><input type="checkbox"> Swift test: encode matches the site golden vector; output to revenue ≥ floor.</li>
+<li><input type="checkbox"> Commit on a Henceforth branch; do not merge until the funded e2e.</li>
+</ul>
+</div>
+
+<h2>Spec coverage</h2>
+<ul>
+<li>§1 record / validateLink — A2</li>
+<li>§2 extract, preview, quote, index — A1, A6, A7</li>
+<li>§3 reader order / MAP — A3, A4</li>
+<li>§4 Elo / kudos — A8, A9</li>
+<li>§5 dear X path — already exists, flag-dark; not this plan</li>
+<li>§6 failures — A6 refusals</li>
+<li>Decision 4 no worker — A6 + B1</li>
+<li>Q1 floor kept — A6 + B1</li>
+<li>Q2 Henceforth first — B1</li>
+<li>Q3 live Treechat fixture — not blocking; A3 uses synthetic <code>app=treechat</code></li>
+</ul>
+
+</div>
+</body>
+</html>
