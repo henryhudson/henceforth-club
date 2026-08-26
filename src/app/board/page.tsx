@@ -1,4 +1,4 @@
-import { listWeeks, loadBoard, loadWeek } from "@/lib/board-data";
+import { listWeeks, loadBoardResult, loadWeek } from "@/lib/board-data";
 import BoardClient, { type WeekSlice } from "./BoardClient";
 
 export const dynamic = "force-dynamic";
@@ -29,14 +29,24 @@ async function loadWeekSliceFallback(): Promise<WeekSlice | null> {
 }
 
 export default async function BoardPage() {
-  const board = await loadBoard();
-  if (!board) {
+  const result = await loadBoardResult();
+  if (result.status !== "ok") {
     return (
       <main className="mx-auto max-w-3xl px-6 py-16 text-center text-muted">
-        No board data yet — run <code className="text-accent-green">/hh</code> to populate it.
+        {result.status === "unavailable" ? (
+          <>
+            The board is published from a key-value store, and that store is not answering. The
+            board itself is fine — this page will fill in again as soon as the store does.
+          </>
+        ) : (
+          <>
+            No board data yet — run <code className="text-accent-green">/hh</code> to populate it.
+          </>
+        )}
       </main>
     );
   }
+  const board = result.board;
   const week = sliceFromBoard(board) ?? (await loadWeekSliceFallback());
   return (
     <BoardClient

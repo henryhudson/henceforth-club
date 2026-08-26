@@ -65,10 +65,16 @@ export default function Accordion({
                 </svg>
               </span>
             </button>
+            {/* A collapsed panel is only visually collapsed: without inert its
+                content stays in the accessibility tree and its links stay in the
+                tab order. inert removes both; aria-hidden is belt and braces for
+                readers that do not yet honour it. */}
             <div
               className={`grid accordion-panel ${
                 isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
               }`}
+              inert={!isOpen}
+              aria-hidden={!isOpen}
             >
               <div className="overflow-hidden">
                 <div className="pb-6 pr-10 text-sm sm:text-base leading-relaxed text-muted space-y-4">

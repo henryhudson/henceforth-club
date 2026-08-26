@@ -206,21 +206,43 @@ export async function loadGardening(): Promise<import("./gardening").Gardening |
   return null;
 }
 
+/** Why the board is not here. "empty" means nothing has ever been published;
+ *  "unavailable" means the store refused or failed. The difference matters to
+ *  the reader: one is a missing routine, the other is a broken pipe, and the
+ *  page must not blame the first for the second. */
+export type BoardResult =
+  | { status: "ok"; board: Board }
+  | { status: "empty" }
+  | { status: "unavailable" };
+
 // Production reads the kanban from Upstash (written by /hh's publish step).
-// Local dev (no Redis env) falls back to the gitignored content file.
-export async function loadBoard(): Promise<Board | null> {
+// Local dev falls back to the gitignored content file — note that content/board
+// is NOT tracked, so in production this fallback never fires and the store is
+// the only source.
+export async function loadBoardResult(): Promise<BoardResult> {
+  let storeFailed = false;
   try {
     const redis = getRedis();
     if (redis) {
       const data = await redis.get<Board>("board:latest");
-      if (data) return data;
+      if (data) return { status: "ok", board: data };
     }
   } catch {
-    // Cap or transport failure: files still serve.
+    // Over the request cap, or the transport died. Not the same as no board.
+    storeFailed = true;
   }
   try {
     const file = path.join(process.cwd(), "content/board/latest.json");
-    return JSON.parse(await fs.readFile(file, "utf8")) as Board;
+    return { status: "ok", board: JSON.parse(await fs.readFile(file, "utf8")) as Board };
+  } catch {
+    return storeFailed ? { status: "unavailable" } : { status: "empty" };
+  }
+}
+
+export async function loadBoard(): Promise<Board | null> {
+  try {
+    const r = await loadBoardResult();
+    return r.status === "ok" ? r.board : null;
   } catch {
     return null;
   }
