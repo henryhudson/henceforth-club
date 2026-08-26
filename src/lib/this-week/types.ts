@@ -48,6 +48,10 @@ export interface CabinetPost { office: string; name: string; great?: boolean }
  *  so the map component stays free of geography it would otherwise hardcode. */
 export interface MayorSeat { authority: string; name: string; party: string; lon: number; lat: number }
 export interface MostActiveEntry { name: string; party: string; count: number }
+/** One sum of public money named in the week's answers, with what the
+ *  minister said it is for. Extracted deterministically from the record —
+ *  the editorial pass never writes these. */
+export interface MoneyItem { amount: string; department: string; purpose: string }
 export interface OverviewBlock {
   headline: string
   intro: string
@@ -57,6 +61,8 @@ export interface OverviewBlock {
   /** England's regional mayors as a party-coloured map, cabinet-style. */
   mayors?: { title: string; note?: string; seats: MayorSeat[] }
   feature?: { title: string; summary: string }
+  /** The week's public spending, largest first. */
+  money?: MoneyItem[]
   mostActive?: { asker: MostActiveEntry; answerer: MostActiveEntry }
 }
 

@@ -44,6 +44,10 @@ In the SAME JSON file, ALSO write an `overview` object on the digest matching `O
 - `brief` — an array of `{ title, when, note }` items covering the week's oral set-pieces: government statements, urgent questions, Prime Minister's Questions (the run now happens after that day's session — include it), and Royal Assent or similar. Three to five items, one or two sentences each.
 - `feature` — `{ title, summary }`, plain-English.
 - Do NOT write `mostActive` — the wrapper computes and injects it deterministically after this run.
+- Do NOT write `money` either. `scripts/this-week/compute-money.mjs <START> <END>` extracts the week's
+  largest sums straight from the written answers, quoting the minister's own sentence, and the wrapper
+  injects them at `overview.money`. Five items keep the column the same height as the two-leg lead.
+  Since the money column exists, the lead runs in TWO legs rather than three (Henry, 2026-08-26).
 
 Prose rules for `intro`, `brief[].note`, and `feature.summary` (enforced by `src/lib/this-week/overview-prose.test.ts`):
 - Full sentences, plain English, short sentences, full stops freely.
