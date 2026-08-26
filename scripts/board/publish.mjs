@@ -8,7 +8,7 @@
 // TOKEN) — the same ones the site's api/hit + api/stats already use.
 //
 // Keys:
-//   board:latest          -> the board JSON ({ generated, cards })
+//   board:latest          -> the board JSON ({ generated, cards, week })
 //   board:report:<date>   -> one day's report JSON
 //   board:report:dates    -> a set of report dates (for the archive list)
 //   board:gardening       -> the parsed gardening schedule (the Morning

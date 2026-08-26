@@ -3,7 +3,18 @@ import BoardClient, { type WeekSlice } from "./BoardClient";
 
 export const dynamic = "force-dynamic";
 
-async function loadWeekSlice(): Promise<WeekSlice | null> {
+function sliceFromBoard(board: { week?: { weekOf: string; generatedAt?: string; stateOfUnion?: string; weekPlan: WeekSlice["weekPlan"] } }): WeekSlice | null {
+  const week = board.week;
+  if (!week?.weekPlan?.length) return null;
+  return {
+    weekEnd: week.weekOf,
+    generatedAt: week.generatedAt,
+    stateOfUnion: week.stateOfUnion,
+    weekPlan: week.weekPlan,
+  };
+}
+
+async function loadWeekSliceFallback(): Promise<WeekSlice | null> {
   const weeks = await listWeeks();
   const active = weeks[0];
   if (!active) return null;
@@ -18,7 +29,7 @@ async function loadWeekSlice(): Promise<WeekSlice | null> {
 }
 
 export default async function BoardPage() {
-  const [board, week] = await Promise.all([loadBoard(), loadWeekSlice()]);
+  const board = await loadBoard();
   if (!board) {
     return (
       <main className="mx-auto max-w-3xl px-6 py-16 text-center text-muted">
@@ -26,6 +37,7 @@ export default async function BoardPage() {
       </main>
     );
   }
+  const week = sliceFromBoard(board) ?? (await loadWeekSliceFallback());
   return (
     <BoardClient
       generated={board.generated}

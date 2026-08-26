@@ -166,41 +166,31 @@ func run() async {
     }
     let store = Upstash(baseURL: baseURL, token: token)
 
-    let weekKeys: [String]
-    do { weekKeys = try await store.keys(matching: "board:week:*") }
-    catch { fail("could not list week records: \(error.localizedDescription)") }
-
-    // An empty read is an error, never a deletion. See spec decision four.
-    guard !weekKeys.isEmpty else { fail("no week records found. Refusing to touch the calendar.") }
-
-    // The store's key listing order is not contractual. plannedDays overwrites
-    // by date unconditionally when the same date appears in two week records,
-    // so whichever record is decoded last wins that date. The keys embed an
-    // ISO date, so sorting them ascending makes the newest record the one
-    // decoded last, and therefore the one that deterministically wins,
-    // instead of leaving the winner to whatever order the store returns.
-    let sortedWeekKeys = weekKeys.sorted()
-
     let weeks: [WeekRecord]
     let cards: [BoardCard]
     do {
-        var found: [WeekRecord] = []
-        for key in sortedWeekKeys {
-            // A listed key that fetches to nothing must fail loudly, not be
-            // skipped. The days below are derived only from weeks that did
-            // load, so the partial-loss guard further down never sees a week
-            // that vanished between the listing and the fetch: it would read
-            // as a week with no plan at all, and every date that belonged to
-            // it would sync as no longer planned and have its events deleted.
-            guard let document = try await store.document(at: key) else {
-                fail("week record \(key) was listed but fetched to nothing.")
-            }
-            found.append(try decode(WeekRecord.self, from: document))
+        guard let boardDocument = try await store.document(at: "board:latest") else {
+            fail("board:latest was listed but fetched to nothing.")
         }
-        weeks = found
-        struct Board: Decodable, Sendable { let cards: [BoardCard]? }
-        cards = try await store.document(at: "board:latest")
-            .map { try decode(Board.self, from: $0) }?.cards ?? []
+        let board = try decode(BoardDocument.self, from: boardDocument)
+        cards = board.cards ?? []
+        if let plan = board.week?.weekPlan, !plan.isEmpty {
+            weeks = [WeekRecord(weekPlan: plan)]
+        } else {
+            // Older stores keep the plan on a separate week document.
+            let weekKeys: [String]
+            do { weekKeys = try await store.keys(matching: "board:week:*") }
+            catch { fail("could not list week records: \(error.localizedDescription)") }
+            guard !weekKeys.isEmpty else { fail("no week on the board, and no week records found. Refusing to touch the calendar.") }
+            var found: [WeekRecord] = []
+            for key in weekKeys.sorted() {
+                guard let document = try await store.document(at: key) else {
+                    fail("week record \(key) was listed but fetched to nothing.")
+                }
+                found.append(try decode(WeekRecord.self, from: document))
+            }
+            weeks = found
+        }
     } catch { fail("could not read the board: \(error.localizedDescription)") }
 
     let days = plannedDays(weeks: weeks, cards: cards)

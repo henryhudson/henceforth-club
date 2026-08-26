@@ -1,13 +1,14 @@
-// Called by /hh each morning: patch today's major events (and done-marks) into the current week's
-// planner, then republish — no redeploy. Reads the latest published week (Upstash → file fallback).
+// Called by /hh each morning: patch today's major events (and done-marks) into
+// the board's live week, then republish — no redeploy. The board is the ledger;
+// the weekly newspaper is a snapshot, not a second planner.
 // Usage: node --env-file=.env.local scripts/board/hh-plan-update.mjs <today> '{"events":[...],"done":[...]}'
 
 import { Redis } from "@upstash/redis";
-import { readFile, readdir, writeFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
-import { weekOfFor, setDayEvents, markEventDone, rollForward } from "./week-plan.mjs";
+import { weekOfFor, weekSliceFromReport, withWeek, patchBoardWeek } from "./week-plan.mjs";
 import { WEEKDAYS } from "./whh-aggregate.mjs";
-import { mirrorWeekToBoardViewer } from "./local-mirror.mjs";
+import { writeBoardFiles } from "./local-mirror.mjs";
 
 const today = process.argv[2] ?? new Date().toISOString().slice(0, 10);
 const payload = JSON.parse(process.argv[3] ?? "{}");
@@ -19,58 +20,73 @@ const weekday = WEEKDAYS[new Date(`${today}T00:00:00Z`).getUTCDay()];
 const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 const redis = url && token ? new Redis({ url, token }) : null;
-const DIR = path.join(process.cwd(), "content/board/weeks");
+const ROOT = process.cwd();
+const LATEST = path.join(ROOT, "content/board/latest.json");
+const WEEKS = path.join(ROOT, "content/board/weeks");
 
-async function latestWeek() {
-  if (redis) {
-    const dates = await redis.smembers("board:weeks");
-    if (dates?.length) {
-      const date = [...dates].sort().reverse()[0];
-      const week = await redis.get(`board:week:${date}`);
-      if (week) return { date, week };
-    }
-  }
+async function loadBoard() {
   try {
-    const files = (await readdir(DIR)).filter((f) => f.endsWith(".json")).sort().reverse();
-    if (files.length) {
-      const date = files[0].replace(/\.json$/, "");
-      return { date, week: JSON.parse(await readFile(path.join(DIR, files[0]), "utf8")) };
+    if (redis) {
+      const data = await redis.get("board:latest");
+      if (data) return data;
     }
-  } catch { /* none on disk */ }
-  return null;
+  } catch { /* cap or transport — files still serve */ }
+  try {
+    return JSON.parse(await readFile(LATEST, "utf8"));
+  } catch {
+    return null;
+  }
 }
 
-const found = await latestWeek();
-if (!found) { console.error("no week planner to update — run /whh first"); process.exit(1); }
-const { date, week } = found;
+async function migrateWeekOnto(board) {
+  try {
+    const files = (await readdir(WEEKS)).filter((f) => f.endsWith(".json")).sort().reverse();
+    for (const f of files) {
+      const week = JSON.parse(await readFile(path.join(WEEKS, f), "utf8"));
+      const slice = weekSliceFromReport(week);
+      if (slice.weekOf === weekOfFor(today) && slice.weekPlan.length) {
+        return withWeek(board, slice);
+      }
+    }
+  } catch { /* no weeks on disk */ }
+  return board;
+}
 
-// Don't patch a planner from a previous week — /whh must lay out the current week first.
-const planWeekOf = week.retro?.weekPlan?.[0]?.date;
-if (planWeekOf !== weekOfFor(today)) {
-  console.error(`latest planner (week of ${planWeekOf}) is not the current week (of ${weekOfFor(today)}) — run /whh for this week first`);
+let board = await loadBoard();
+if (!board) { console.error("no board to update — run /hh first"); process.exit(1); }
+if (!board.week?.weekPlan?.length) board = await migrateWeekOnto(board);
+if (!board.week?.weekPlan?.length) {
+  console.error("no week on the board — run /whh first");
   process.exit(1);
 }
 
-let plan = week.retro.weekPlan;
-if (events.length) plan = setDayEvents(plan, weekday, events);
-else if (roll) plan = rollForward(plan, weekday); // carry undone past work onto today
-// markEventDone matches the EXACT label — a fragment marks nothing, and the
-// old summary line still claimed "N marked done" (it cost a whole pass of
-// done-marks on 2026-07-14). Refuse the run when any label matches no task;
-// an already-done exact label still counts as matched (idempotent re-marks).
+const planWeekOf = board.week.weekOf || board.week.weekPlan[0]?.date;
+if (planWeekOf !== weekOfFor(today)) {
+  console.error(`board week (week of ${planWeekOf}) is not the current week (of ${weekOfFor(today)}) — run /whh for this week first`);
+  process.exit(1);
+}
+
+// markEventDone matches the EXACT label — a fragment marks nothing.
+const afterEvents = events.length
+  ? patchBoardWeek(board, { weekday, events })
+  : roll
+    ? patchBoardWeek(board, { weekday, roll: true })
+    : board;
 const dayLabels = new Set(
-  plan.filter((d) => d.weekday === weekday)
-      .flatMap((d) => d.tasks.map((t) => (typeof t === "string" ? t : t.label))),
+  (afterEvents.week.weekPlan.find((d) => d.weekday === weekday)?.tasks ?? [])
+    .map((t) => (typeof t === "string" ? t : t.label)),
 );
 const missed = done.filter((label) => !dayLabels.has(label));
 if (missed.length) {
   console.error(`no task matched ${missed.length} done label(s) on ${weekday} — labels must be EXACT:\n  ${missed.join("\n  ")}`);
   process.exit(1);
 }
-for (const label of done) plan = markEventDone(plan, weekday, label);
-week.retro.weekPlan = plan;
+board = patchBoardWeek(afterEvents, { weekday, done });
 
-await writeFile(path.join(DIR, `${date}.json`), JSON.stringify(week, null, 2) + "\n");
-await mirrorWeekToBoardViewer(week);
-if (redis) { await redis.set(`board:week:${date}`, week); await redis.sadd("board:weeks", date); }
-console.log(`updated ${weekday} on board:week:${date} — ${roll && !events.length ? "rolled forward, " : ""}${events.length} event(s) set, ${done.length} marked done`);
+await writeBoardFiles(board, { root: ROOT });
+try {
+  if (redis) await redis.set("board:latest", board);
+} catch (e) {
+  console.error("store write failed (board files still updated):", e.message);
+}
+console.log(`updated ${weekday} on the board week — ${roll && !events.length ? "rolled forward, " : ""}${events.length} event(s) set, ${done.length} marked done`);

@@ -182,7 +182,13 @@ export async function loadWeek(date: string): Promise<WeekReport | null> {
   catch { return null; }
 }
 
-export type Board = { generated: string; cards: Card[]; log?: string };
+export type BoardWeek = {
+  weekOf: string;
+  generatedAt?: string;
+  stateOfUnion?: string;
+  weekPlan: PlanDay[];
+};
+export type Board = { generated: string; cards: Card[]; log?: string; week?: BoardWeek };
 
 // The gardening schedule, published from Henry's laptop by publish.mjs —
 // Upstash-only (the source file lives outside the repo, so there is no local

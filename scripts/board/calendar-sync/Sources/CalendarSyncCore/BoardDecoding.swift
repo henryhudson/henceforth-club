@@ -1,7 +1,10 @@
 import Foundation
 
 public struct WeekRecord: Decodable, Sendable {
-    public struct Retro: Decodable, Sendable { public let weekPlan: [PlanDay]? }
+    public struct Retro: Decodable, Sendable {
+        public let weekPlan: [PlanDay]?
+        public init(weekPlan: [PlanDay]?) { self.weekPlan = weekPlan }
+    }
     public struct PlanDay: Decodable, Sendable {
         public let date: String
         public let isShipDay: Bool?
@@ -29,6 +32,19 @@ public struct WeekRecord: Decodable, Sendable {
         }
     }
     public let retro: Retro?
+    public init(weekPlan: [PlanDay]) {
+        self.retro = Retro(weekPlan: weekPlan)
+    }
+}
+
+/// The live plan sits on the board. Older stores still keep a separate week document.
+public struct BoardDocument: Decodable, Sendable {
+    public struct Week: Decodable, Sendable {
+        public let weekOf: String?
+        public let weekPlan: [WeekRecord.PlanDay]?
+    }
+    public let cards: [BoardCard]?
+    public let week: Week?
 }
 
 public struct BoardCard: Decodable, Sendable {
@@ -53,6 +69,10 @@ private func components(fromPlainDate s: String) -> DateComponents? {
 
 private func dayKey(_ c: DateComponents) -> String {
     "\(c.year ?? 0)-\(c.month ?? 0)-\(c.day ?? 0)"
+}
+
+public func plannedDays(plan: [WeekRecord.PlanDay], cards: [BoardCard]) -> [PlannedDay] {
+    plannedDays(weeks: [WeekRecord(weekPlan: plan)], cards: cards)
 }
 
 public func plannedDays(weeks: [WeekRecord], cards: [BoardCard]) -> [PlannedDay] {

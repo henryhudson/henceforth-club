@@ -32,20 +32,27 @@ export default async function DailyEdition({ params }: { params: Promise<{ date:
   }
 
   // The week-ahead diary and the open board, both best-effort: a failure to
-  // load either must never take the edition down.
+  // load either must never take the edition down. The live plan sits on the
+  // board; older editions fall back to the weekly newspaper copy.
   let weekAhead: WeekAheadDay[] = [];
-  try {
-    const weekKey = (await listWeeks()).find((w) => w <= date);
-    weekAhead = weekAheadFrom(weekKey ? await loadWeek(weekKey) : null, date);
-  } catch {
-    weekAhead = [];
-  }
   let boardOpen: BoardOpen | null = null;
   try {
     const board = await loadBoard();
     boardOpen = board ? openCards(board, date) : null;
+    if (board?.week?.weekPlan?.length) {
+      weekAhead = weekAheadFrom(board.week.weekPlan, date);
+    }
   } catch {
     boardOpen = null;
+  }
+  if (weekAhead.length === 0) {
+    try {
+      const weekKey = (await listWeeks()).find((w) => w <= date);
+      const archived = weekKey ? await loadWeek(weekKey) : null;
+      weekAhead = weekAheadFrom(archived?.retro?.weekPlan, date);
+    } catch {
+      weekAhead = [];
+    }
   }
   // The garden diary: the content rhythms are excluded because the week
   // planner already carries them on the sheet.
