@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reddit for transaction ids — folklore board design</title>
+<style>
+  :root { --bg:#f4ecd8; --ink:#2a2318; --muted:#6b5d45; --rule:#c9b98f; --accent:#8b3a1a; --card:#faf4e4; --shadow:0 1px 3px rgba(60,40,10,0.15); }
+  *{box-sizing:border-box;} body{margin:0;padding:0 0 80px;background:var(--bg);color:var(--ink);font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-size:17px;line-height:1.68;}
+  .wrap{max-width:860px;margin:0 auto;padding:56px 32px;}
+  header.doc{margin-bottom:40px;border-bottom:3px double var(--rule);padding-bottom:26px;}
+  .eyebrow{font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px;}
+  h1{font-size:33px;line-height:1.16;margin:0 0 12px;font-weight:700;}
+  h2{font-size:24px;margin:46px 0 12px;padding-top:18px;border-top:1px solid var(--rule);}
+  h3{font-size:19px;margin:26px 0 8px;}
+  .lede{font-size:19px;color:var(--muted);margin:0;font-style:italic;}
+  p{margin:13px 0;}
+  code{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:0.85em;background:rgba(120,90,30,0.12);padding:2px 6px;border-radius:4px;}
+  pre{background:#2a2318;color:#f0e6cf;padding:16px 18px;border-radius:8px;overflow-x:auto;} pre code{background:none;padding:0;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;background:var(--card);}
+  th,td{text-align:left;padding:9px 12px;border:1px solid var(--rule);vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .decision{background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 18px;margin:18px 0;box-shadow:var(--shadow);}
+  .decision strong{color:var(--accent);}
+  ul{margin:12px 0;padding-left:26px;} li{margin:6px 0;}
+  .flow{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px 20px;margin:16px 0;box-shadow:var(--shadow);}
+  .mock{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:12.5px;line-height:1.5;white-space:pre;background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px 18px;overflow-x:auto;box-shadow:var(--shadow);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+<div class="eyebrow">Design spec &middot; 2026-08-26 &middot; henceforth.club/folklore &middot; status: DRAFT for Henry's review</div>
+<h1>Reddit for transaction ids</h1>
+<p class="lede">Paste a transaction id. It is a thread. People vote. The winner is paid at the end of the day. Twetch, Treechat, and folklore archives are the same object: sixty-four hex characters on Bitcoin.</p>
+</header>
+
+<p><strong>What exists.</strong> <code>/folklore/tx/&lt;id&gt;</code> already reads a transaction straight from the chain with no index — but it only understands a folklore link/comment JSON blob or a <code>SocialArchive</code>. A Twetch or Treechat post at the same id is <code>notFound()</code>. Submit (<code>/folklore/submit</code>) is built and dark; <code>validateLink</code> demands an https URL. Comments already parent on a transaction id. Elo already folds an append-only duel ledger. Kudos already accrue as <code>earned</code> and <code>markSettled</code> after an on-chain pay. The fifteen-second worker is retired and stays retired. This document is the product that those pieces were waiting for.</p>
+
+<p><strong>The ask.</strong> Henry, 2026-08-26: <em>&ldquo;like reddit but for txids&rdquo;</em> — after agreeing the board is submit-your-own, Elo-ranked, paid once a day, with a cheap path for what is already on Bitcoin and a dear path for an X export.</p>
+
+<div class="decision"><strong>Decision 1 &mdash; the submission is a target transaction id, not an https URL.</strong> The July 19 board was Reddit for web links. This board is Reddit for Bitcoin objects. The paste field accepts a 64-character hex id, or a URL that contains one (folklore's own transaction page, WhatsOnChain, Treechat <code>/t/&lt;id&gt;</code>, an explorer). Extraction is a pure function. A title is required (300 characters, same cap). Optional bound handle <code>by</code>, proved the same way as today (spec C binding over <code>submitMessage</code>). Anonymous remains legal and cannot earn.</div>
+
+<div class="decision"><strong>Decision 2 &mdash; two identifiers, never confused.</strong> The <em>target</em> is the transaction being listed (the Twetch post, the Treechat post, the archive). The <em>stamp</em> is the folklore record the submitter broadcasts to pay the floor and claim the listing. The board, the Elo table, the comment parent, and the canonical URL <code>/folklore/tx/&lt;target&gt;</code> all key on the <strong>target</strong>. The stamp is proof of payment plus title and <code>by</code>. Visiting the stamp's own id shows the record and a link through to the target — it is not a second thread.</div>
+
+<div class="decision"><strong>Decision 3 &mdash; one board row per target.</strong> A second stamp for the same target is refused as <code>already-listed</code> (the index write is <code>nx</code> on <code>link:&lt;target&gt;</code>). July 19 allowed duplicate https URLs because two URLs can be the same site; two pastes of the same transaction id are the same object, and Elo cannot sanely duel a post against itself. The first successful stamp owns the row and the kudos earner. Comments all hang on the target, so there is one thread.</div>
+
+<h2>1 &middot; The record</h2>
+<p>Extend the existing folklore link, do not invent a third kind. Legacy https links stay valid forever.</p>
+<pre><code>{ "v": 1, "app": "folklore", "kind": "link",
+  "txid": "&lt;64 hex target&gt;",
+  "title": "…",
+  "by": "handle?" }
+
+{ "v": 1, "app": "folklore", "kind": "link",
+  "url": "https://…",          // legacy, still parsed
+  "title": "…",
+  "by": "handle?" }</code></pre>
+<p><code>validateLink</code> accepts a row when the title is in (0, 300] and <em>either</em> <code>txid</code> matches the existing <code>TXID_RE</code> <em>or</em> <code>url</code> is http(s). If both are present, <code>txid</code> is the target. Comments are unchanged: <code>parent</code> is a transaction id — for a listed target, that parent <em>is</em> the target.</p>
+<p>The stamp that goes on chain is this JSON in <code>OP_RETURN</code>, plus a payment output of at least the live ten-pence floor to the published revenue address <code>1GsP511T8e4VjxYdAGnMYdDd6sWxWybcMP</code> (the same address the retired worker paid premium to). Miner fee is the submitter's. No custody, no job, no fifteen-second poller.</p>
+<p>Submit is flag-dark today, so there are no production stamp members to migrate. Any future https-only legacy row keeps today's behaviour: member is the stamp id, title links out to <code>url</code>, comments parent on the stamp.</p>
+
+<div class="decision"><strong>Decision 4 &mdash; the submitter signs the stamp. The site never holds a key.</strong> The cheap path is not spec B. The visitor (browser wallet or Henceforth) broadcasts the stamp themselves. They <code>POST /api/folklore/index</code> with the stamp's transaction id. The route fetches that transaction, parses the record, checks the revenue output against the live floor, and <code>addLinkToBoard(target, record)</code>. If the store is down, the chain still holds the stamp; a retry indexes it. The retired worker is not revived. The dear path (X export) stays the existing archive inscription, still flag-dark, still non-custodial in the app.</div>
+
+<h2>2 &middot; Submit</h2>
+<div class="flow">
+<p><strong>Paste.</strong> The field takes a transaction id or a URL. <code>extractTargetTxid(input)</code> (pure, tested) returns 64 hex or null. Case-insensitive hex; output is lowercase.</p>
+<p><strong>Preview.</strong> The form fetches <code>/folklore/tx/&lt;target&gt;</code>'s parse (or a small <code>GET /api/folklore/preview?txid=</code> that uses the same parser). The submitter sees the card they are listing — Twetch chip, Treechat chip, archive handle, or an honest &ldquo;on Bitcoin, not a post we can render&rdquo; with an explorer link. They can still list an opaque id: Reddit does not require that we can iframe the destination.</p>
+<p><strong>Title.</strong> Required. Default, when the parse has text, is the first line of that text clipped to 300 characters. The submitter may edit it.</p>
+<p><strong>Quote.</strong> One number: miner fee for this tiny record + ten pence at the live rate, same <code>quoteLink</code> as today. Shown before they sign. The revenue output must meet the floor <em>at index time</em> (live rate). If bitcoin moved between quote and broadcast, a shortfall is refused with <code>floor-short</code> and they can bump and retry; the stamp is not indexed. Documented, not silent.</p>
+<p><strong>Sign and broadcast.</strong> Wallet in the browser, or Henceforth. Site does not build a job.</p>
+<p><strong>Index.</strong> On <code>POST /api/folklore/index</code>: target not already listed; record valid; revenue output sufficient; then cache, board, log — existing <code>addLinkToBoard</code> with member <code>link:&lt;target&gt;</code> (today the member is the stamp's id; this spec changes the member to the <strong>target</strong>).</p>
+</div>
+
+<div class="decision"><strong>Decision 5 &mdash; the board member is <code>link:&lt;target&gt;</code>.</strong> Today's index uses the stamp's transaction id as the member, because the URL <em>was</em> the object. Now the object is the target. Elo <code>postId</code>, comment <code>parent</code>, and the card's permalink all equal the target. <code>folklore:link:&lt;target&gt;</code> caches the validated record (title, <code>by</code>, stamp id). A retry never resets kudos (<code>nx</code> as today).</div>
+
+<h2>3 &middot; The reader</h2>
+<p><code>/folklore/tx/&lt;id&gt;</code> stays the canonical page. Parse order, first match wins:</p>
+<ol>
+<li>Folklore comment → redirect to <code>/folklore/tx/&lt;parent&gt;#&lt;id&gt;</code> (comments have no standalone page, same as July 19 §8).</li>
+<li>Folklore link whose <code>txid</code> field is <em>another</em> id (this page is a stamp) → redirect to that target.</li>
+<li>Magic Attribute Protocol post (<code>app</code> twetch, treechat, or other Bitcoin Schema <code>type=post</code>) → post card, source chip from <code>app</code>.</li>
+<li><code>SocialArchive</code> JSON → today's profile rendering.</li>
+<li>Folklore link with only a legacy <code>url</code> → today's link thread.</li>
+<li>Transaction exists but none of the above → 200 with title, short id, explorer link, comment thread. Not a 404. The id is listable.</li>
+<li>No such transaction → 404.</li>
+</ol>
+<p>The Magic Attribute Protocol parser is pure: script bytes in, a post or null out. Fixtures: one real Twetch transaction, one real Treechat transaction, one hostile/non-post. Media from B-protocol pushes or ordinal outpoints on <em>that</em> transaction, never copied. Source chip: <code>twetch</code> → Twetch, <code>treechat</code> (pin the live <code>app</code> string from the fixture before coding) → Treechat, <code>SocialArchive.source === "x"</code> → X, else folklore.</p>
+
+<div class="mock">/folklore
+┌─────────────────────────────────────────┐
+│  A cello note                    Twetch │
+│  3 comments · by @henry · elo 1542      │
+│                                         │
+│  Kepler's laws                   X      │
+│  1 comment · elo 1500                   │
+│                                         │
+│  upvalue is just kudos        Treechat  │
+│  0 comments · by @gavin · elo 1610      │
+└─────────────────────────────────────────┘
+click row → /folklore/tx/&lt;target&gt;
+  body of the target (parsed) + comments
+  ⛓ explorer</div>
+
+<h2>4 &middot; Ranking and money</h2>
+<p>Two numbers, never mixed:</p>
+<table>
+<tr><th></th><th>What</th><th>Where</th></tr>
+<tr><td>Elo</td><td>Feed order. Two listed targets dealt, one tap, <code>applyDuel</code>. Start 1500, K 40 until twenty duels then 16. Undueled sit at 1500. A tap on a row that has no bound <code>by</code> still updates Elo (the table does not need an earner) but pays nobody.</td><td><code>kudos:duels</code> fold, <code>sortPostsByElo</code>. Pool = listed targets that parse as arena-eligible (text or media) plus today's archive pool.</td></tr>
+<tr><td>Kudos</td><td>The pot. A paying tap debits the voter's float and accrues <code>earned</code> on the winning row's <code>by</code>. Conservation unchanged: <code>funded = float + earned + settled</code>.</td><td>Existing float module.</td></tr>
+</table>
+<div class="decision"><strong>Decision 6 &mdash; Elo ranks; kudos pays; the mini settles once a day.</strong> A free Elo tap is allowed only if we accept that it moves rank without moving money. Default for v1: a tap <em>is</em> a kudos debit (existing duel debit + cap), so every rank change has a pot. Once a day a launchd calendar job on the mini (not KeepAlive, not fifteen seconds) reads each handle's <code>earned</code>, skips sub-dust (546 satoshis, already a constant), pays the bound address from a dedicated settlement purse, then <code>markSettled</code>. Failure: leave <code>earned</code> untouched, retry tomorrow. No bound address → skip, do not burn the accrual.</div>
+<p>Twetch likes and Treechat upvalue do not enter Elo or kudos. They may show on the card as &ldquo;earned on their chain&rdquo; when we can read them; they never mint folklore kudos.</p>
+
+<h2>5 &middot; The dear path (unchanged)</h2>
+<p>X is not a transaction id. The visitor's own export is <code>Portable</code> and may be inscribed as <code>SocialArchive</code>. That is the existing archive flow, still flag-dark, still non-custodial in the app. Once inscribed, the resulting transaction id is a target like any other and can be listed cheaply — or the archive inscription itself can be auto-listed as a stamp with title from the handle, so a first archive appears on the board without a second payment. Auto-list is v1: the archive's own transaction is the target; no extra stamp if the archive already paid more than the floor.</p>
+<p>Do not fetch Twetch or Treechat from a website and re-inscribe them. Their cheap path is paste (or a later &ldquo;scan my addresses&rdquo; that emits target ids into this same submit).</p>
+
+<h2>6 &middot; Failure modes</h2>
+<table>
+<tr><th>Case</th><th>Behaviour</th></tr>
+<tr><td>Paste is not 64 hex and contains no id</td><td>Refuse before preview. No network.</td></tr>
+<tr><td>Target transaction missing</td><td>Preview says so; submit disabled until it confirms (or the submitter waits). Index refuses <code>unknown-tx</code>.</td></tr>
+<tr><td>Target already listed</td><td><code>already-listed</code> with a link to the existing thread. No second row.</td></tr>
+<tr><td>Stamp has no / short revenue output</td><td><code>floor-short</code>. Not indexed. They can re-broadcast with a larger output.</td></tr>
+<tr><td>Stamp record invalid</td><td>Invisible, same as any hostile <code>OP_RETURN</code>.</td></tr>
+<tr><td><code>by</code> claimed but unsigned / unbound</td><td>Refuse before they sign, never strip after payment.</td></tr>
+<tr><td>Anonymous stamp</td><td>Listed. Elo can move. Kudos taps on it do not accrue (existing conservation). UI does not offer a paying control that must refuse.</td></tr>
+<tr><td>MAP parse fails, tx exists</td><td>Opaque card + comments. Still listable.</td></tr>
+<tr><td>Index Redis down</td><td>Stamp is on chain. Retry <code>POST /api/folklore/index</code>. The site is an opinion (July 19 Decision 2).</td></tr>
+<tr><td>Daily pay fails / dust</td><td>Accrual stays. Next day. Sub-dust rolls.</td></tr>
+<tr><td>Unlawful content</td><td>Delist the target from <code>folklore:board</code>. Chain unchanged. Same lever as July 19 §7.</td></tr>
+</table>
+
+<h2>7 &middot; What v1 is not</h2>
+<ul>
+<li>Not a Twetch or Treechat scrape, not JungleBus, not the retired worker.</li>
+<li>Not re-inscribing on-chain posts, not a blob copy of their media.</li>
+<li>Not Hodlocker as a named source (the parser will still show a Bitcoin Schema post if <code>type=post</code>).</li>
+<li>Not https-only links as the main submit (legacy rows still render).</li>
+<li>Not a free tap that pays winners from Henry's pocket — v1 taps spend float.</li>
+<li>Not app-side bulk submit of other people's histories (a later &ldquo;scan my Twetch keys&rdquo; emits ids into this form).</li>
+</ul>
+
+<h2>8 &middot; Tests (behaviour is not shipped until asserted)</h2>
+<ul>
+<li><code>extractTargetTxid</code> — raw hex, mixed case, folklore/tx URL, WhatsOnChain URL, Treechat <code>/t/</code>, junk → null, two ids in one string → first well-formed 64-hex run.</li>
+<li><code>validateLink</code> — txid+title ok; https+title ok (legacy); empty title refuse; both present → target is txid; comment parent still 64 hex.</li>
+<li>Reader parse order — fixtures: Twetch MAP, Treechat MAP, SocialArchive, stamp that points at a target (redirect), comment (redirect), opaque tx, missing tx.</li>
+<li>Index — first stamp of a target lists; second is <code>already-listed</code>; short revenue output refused; unsigned <code>by</code> refused; anonymous lists and cannot accrue.</li>
+<li>Elo — listed target is a <code>DealCandidate</code> with <code>postId === target</code>; two stamps cannot produce two candidates for one target.</li>
+<li>Quote — floor still ten pence at a live rate; no rate → no quote.</li>
+</ul>
+
+<h2>9 &middot; Flags and go-live</h2>
+<p><code>FOLKLORE_SUBMIT_ENABLED</code> stays off until: (1) a funded end-to-end of the wallet-signed stamp (real floor paid to revenue, index live, row on <code>/folklore</code>, thread at <code>/folklore/tx/&lt;target&gt;</code>), (2) the Magic Attribute Protocol parser has fixtures from live Twetch and Treechat transactions, (3) a dry run of the daily settler against a test handle. Elo/kudos remain behind <code>KUDOS_ENABLED</code> as today. The archive zip remains behind <code>XFOLKLORE_WEB_ARCHIVE_ENABLED</code>.</p>
+
+<h2>10 &middot; Open questions for Henry</h2>
+<ul>
+<li><strong>Q1.</strong> Is the ten-pence floor still right when the stamp is user-signed (they also pay the miner fee), or drop to miner-fee-only and keep the floor as the revenue output anyway? Recommendation: keep the floor. Spam is the reason it exists.</li>
+<li><strong>Q2.</strong> Browser wallet or Henceforth as the first signer? Recommendation: Henceforth first (the user already has it); browser if 1sat connect is a short add. Same stamp bytes either way.</li>
+<li><strong>Q3.</strong> Pin one public Treechat post as the MAP fixture — a URL or id.</li>
+</ul>
+
+<p style="margin-top:40px;color:var(--muted);font-style:italic;">This spec supersedes the 2026-08-25 ranking note for product shape. Elo, daily kudos, two prices, and no daemon stand. The unit is a transaction id. No money-path task starts before an adversarial review of Decisions 4 and 6.</p>
+
+</div>
+</body>
+</html>
