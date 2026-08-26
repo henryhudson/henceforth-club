@@ -91,7 +91,10 @@
 
 .legs2 {
   column-count: 2;
-  column-gap: 4mm;
+  /* A rule sits in the middle of the gap, so 4mm leaves only 2mm of air each
+     side and the two legs read as crammed against it (Henry, 2026-08-26).
+     Two legs have the measure to spare, so give the rule room to breathe. */
+  column-gap: 7mm;
   column-rule: .5pt solid #999;
   text-align: justify;
   hyphens: auto;
