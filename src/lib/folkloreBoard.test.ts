@@ -135,6 +135,20 @@ describe("addLinkToBoard", () => {
     expect((await indexSince(0, redis)).txids).toEqual([TXID_A]);
   });
 
+  it("a txid-link ranks under the target, even when the stamp id is passed in", async () => {
+    const redis = fakeRedis();
+    const stamp = "d".repeat(64);
+    const listed = validateLink(TXID_A, "On chain");
+    if (!listed) throw new Error("expected record");
+    await addLinkToBoard(stamp, listed, 1_000, redis);
+    expect(await boardTop(10, redis)).toEqual([
+      { member: linkMember(TXID_A), score: LINK_SCORE_OFFSET },
+    ]);
+    expect(await readLinkRecord(TXID_A, redis)).toEqual({ kind: "record", record: listed });
+    expect(await isBoardLink(TXID_A, redis)).toBe(true);
+    expect(await isBoardLink(stamp, redis)).toBe(false);
+  });
+
   it("is retry-safe: a re-add never resets the kudos score or the log stamp", async () => {
     const redis = fakeRedis();
     await addLinkToBoard(TXID_A, LINK, 1_000, redis);

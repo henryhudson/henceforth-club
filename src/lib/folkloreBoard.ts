@@ -80,9 +80,10 @@ export async function addLinkToBoard(
   redis: Redis | null = getRedis(),
 ): Promise<boolean> {
   if (!redis) return false;
-  await redis.set(linkKey(txid), record);
-  await redis.zadd(BOARD_KEY, { nx: true }, { score: LINK_SCORE_OFFSET, member: linkMember(txid) });
-  await redis.zadd(LOG_KEY, { nx: true }, { score: nowMs, member: txid });
+  const target = record.kind === "link" && record.txid ? record.txid : txid;
+  await redis.set(linkKey(target), record);
+  await redis.zadd(BOARD_KEY, { nx: true }, { score: LINK_SCORE_OFFSET, member: linkMember(target) });
+  await redis.zadd(LOG_KEY, { nx: true }, { score: nowMs, member: target });
   return true;
 }
 

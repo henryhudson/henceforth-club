@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { socialArchiveToXArchive } from "../../onchain";
 import { recordFromScripts, type FolkloreLink } from "../../linkRecord";
 import { assembleThread } from "../thread";
+import { classifyTx } from "../classify";
 import { fetchTxArchiveWithTime, fetchTxScripts } from "@/lib/whatsonchain";
 import { txExplorerUrl } from "@/lib/explorer";
 import { commentTxids } from "@/lib/folkloreBoard";
@@ -30,13 +31,36 @@ export async function generateMetadata(
   return { title: `Archived profile — ${txid.slice(0, 12)}…` };
 }
 
+function sourceLabel(source: string): string {
+  if (source === "twetch") return "Twetch";
+  if (source === "treechat") return "Treechat";
+  if (source === "x") return "X";
+  return source;
+}
+
 export default async function TxPage(
   { params }: { params: Promise<{ txid: string }> },
 ) {
   const { txid } = await params;
   const scripts = await fetchTxScripts(txid);
-  const record = scripts ? recordFromScripts(scripts) : null;
-  if (record?.kind === "link") return <LinkThread txid={txid} link={record} />;
+  if (!scripts) notFound();
+  const classified = classifyTx(scripts, txid);
+  if (classified.kind === "comment") redirect(`/folklore/tx/${classified.parent}`);
+  if (classified.kind === "stamp") redirect(`/folklore/tx/${classified.target}`);
+  if (classified.kind === "legacy-link") return <LinkThread txid={txid} link={classified.record} />;
+  if (classified.kind === "map") {
+    return (
+      <TargetThread
+        txid={txid}
+        title={classified.post.text.trim() || shortTxid(txid)}
+        body={classified.post.text}
+        source={sourceLabel(classified.source)}
+      />
+    );
+  }
+  if (classified.kind === "opaque") {
+    return <TargetThread txid={txid} title={shortTxid(txid)} body="" source="Bitcoin" />;
+  }
 
   const result = await fetchTxArchiveWithTime(txid);
   if (!result) notFound();
@@ -129,6 +153,65 @@ async function LinkThread({ txid, link }: { txid: string; link: FolkloreLink }) 
                     {shortTxid(comment.txid)} ↗
                   </a>
                 </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-muted">No comments yet.</p>
+        )}
+      </section>
+    </div>
+  );
+}
+
+async function TargetThread({
+  txid,
+  title,
+  body,
+  source,
+}: {
+  txid: string;
+  title: string;
+  body: string;
+  source: string;
+}) {
+  const ids = await commentTxids(txid);
+  const fetched = await Promise.all(
+    ids.map(async (id) => {
+      const commentScripts = await fetchTxScripts(id);
+      return { txid: id, record: commentScripts ? recordFromScripts(commentScripts) : null };
+    }),
+  );
+  const thread = assembleThread(txid, fetched);
+  return (
+    <div className="mx-auto max-w-2xl px-6 py-16">
+      <header>
+        <p className="ledger-label">{source}</p>
+        <h1 className="mt-3 text-2xl font-semibold text-foreground">{title}</h1>
+        {body.trim() && body.trim() !== title ? (
+          <p className="mt-4 whitespace-pre-wrap text-foreground">{body}</p>
+        ) : null}
+        <p className="mt-2 font-mono text-[11px] text-muted">
+          <a
+            href={txExplorerUrl(txid)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition-colors hover:text-accent hover:underline"
+          >
+            {shortTxid(txid)} ↗
+          </a>
+        </p>
+      </header>
+      <section className="mt-10">
+        <h2 className="ledger-label">
+          {thread.length.toLocaleString("en-GB")} comment{thread.length === 1 ? "" : "s"} · read
+          from the chain
+        </h2>
+        {thread.length > 0 ? (
+          <div className="mt-3 divide-y divide-card-border border-y border-card-border">
+            {thread.map((comment) => (
+              <div key={comment.txid} className="px-4 py-4">
+                <p className="whitespace-pre-wrap text-foreground">{comment.text}</p>
               </div>
             ))}
           </div>
