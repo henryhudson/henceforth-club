@@ -12,10 +12,8 @@ export default function TheMoney({ items }: { items: MoneyItem[] }) {
       {items.map((m, i) => (
         <div key={i} className={s.moneyRow}>
           <span className={s.moneyAmount}>{m.amount}</span>
-          <p className={s.moneyPurpose}>
-            <span className={s.moneyDept}>{m.department}</span>
-            {m.purpose}
-          </p>
+          <span className={s.moneyDept}>{m.department}</span>
+          <p className={s.moneyPurpose}>{m.purpose}</p>
         </div>
       ))}
     </>

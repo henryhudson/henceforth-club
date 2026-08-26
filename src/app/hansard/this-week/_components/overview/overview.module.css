@@ -100,10 +100,14 @@
 .legs2 p { margin: 0; }
 .legs2 p + p { text-indent: 3mm; }
 
-.moneyRow { display: grid; grid-template-columns: max-content 1fr; gap: 0 1.6mm; margin: 0 0 1.1mm; }
-.moneyAmount { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.moneyPurpose { margin: 0; }
-.moneyDept { display: block; font-size: .92em; letter-spacing: .02em; text-transform: uppercase; }
+/* The sum sits ABOVE its sentence, like a sub-heading, rather than hanging in a
+   column beside it — a narrow measure makes the side-by-side form read oddly
+   (Henry, 2026-08-26). */
+.moneyRow { display: block; margin: 0 0 1.6mm; }
+.moneyRow + .moneyRow { border-top: .5pt solid #999; padding-top: 1.4mm; }
+.moneyAmount { display: block; font-weight: 700; font-size: 1.18em; font-variant-numeric: tabular-nums; line-height: 1.05; }
+.moneyDept { display: block; font-size: .88em; letter-spacing: .04em; text-transform: uppercase; margin: 0 0 .3mm; }
+.moneyPurpose { margin: 0; text-align: justify; hyphens: auto; -webkit-hyphens: auto; }
 
 .legs3 {
   column-count: 3;
