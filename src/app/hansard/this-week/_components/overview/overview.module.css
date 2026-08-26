@@ -69,7 +69,11 @@
 .band {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 0 4mm;
+  /* The separator is drawn on each column's left edge and pulled 4mm into the
+     gap, so the gap must be TWICE the pad or the preceding column's text runs
+     flush against the rule with no clearance at all. 8mm gives 4mm either side
+     (Henry, 2026-08-26). */
+  gap: 0 8mm;
   border-top: 1.5pt solid #111;
   padding-top: 1.6mm;
   margin: 0 0 3.2mm;
