@@ -1,5 +1,6 @@
 import type { DigestData } from '@/lib/this-week/types'
 import s from './overview.module.css'
+import TheMoney from './TheMoney'
 import A4Sheet from './A4Sheet'
 import Masthead from './Masthead'
 import WeekInBrief from './WeekInBrief'
@@ -24,6 +25,7 @@ export default function Overview({ digest, week }: { digest: DigestData; week: s
   const ov = digest.overview
   const headline = ov?.headline || digest.headline || (digest.mode === 'recess' ? 'Parliament in recess' : digest.windowLabel)
   const intro = digest.intro || ov?.intro || ''
+  const money = ov?.money ?? []
   const brief = ov?.brief ?? []
   const hasData = Boolean(digest.highlights?.votes?.length || digest.departments?.length)
   // A recess week has no divisions to box beside the lead, so the sidebar
@@ -69,11 +71,24 @@ export default function Overview({ digest, week }: { digest: DigestData; week: s
           has content and the lead takes the whole measure instead of leaving
           a blank ruled column. */}
       <div className={s.band}>
-        <div className={hasData || sideBrief.length > 0 ? s.lead : s.leadFull}>
-          <div className={s.legs3}>
+        <div
+          className={
+            money.length > 0
+              ? s.leadTwo
+              : hasData || sideBrief.length > 0
+                ? s.lead
+                : s.leadFull
+          }
+        >
+          <div className={money.length > 0 ? s.legs2 : s.legs3}>
             <p className={s.drop}>{intro}</p>
           </div>
         </div>
+        {money.length > 0 && (
+          <div className={s.money}>
+            <TheMoney items={money} />
+          </div>
+        )}
         {(hasData || sideBrief.length > 0) && (
           <aside className={s.side}>
             {hasData ? (
