@@ -15,9 +15,12 @@ export type FolkloreLink = {
   v: 1;
   app: "folklore";
   kind: "link";
-  url: string;
   title: string;
   by?: string;
+  /** Target transaction being listed. Preferred over `url`. */
+  txid?: string;
+  /** Legacy https destination. */
+  url?: string;
 };
 export type FolkloreComment = {
   v: 1;
@@ -38,10 +41,15 @@ const httpUrl = (u: string): boolean => {
   }
 };
 
-export function validateLink(url: string, title: string, by?: string): FolkloreLink | null {
+export function validateLink(urlOrTxid: string, title: string, by?: string): FolkloreLink | null {
   const t = title.trim();
-  if (!httpUrl(url) || t.length === 0 || t.length > TITLE_MAX) return null;
-  return { v: 1, app: "folklore", kind: "link", url, title: t, ...(by ? { by } : {}) };
+  if (t.length === 0 || t.length > TITLE_MAX) return null;
+  const byField = by ? { by } : {};
+  if (TXID_RE.test(urlOrTxid)) {
+    return { v: 1, app: "folklore", kind: "link", txid: urlOrTxid.toLowerCase(), title: t, ...byField };
+  }
+  if (!httpUrl(urlOrTxid)) return null;
+  return { v: 1, app: "folklore", kind: "link", url: urlOrTxid, title: t, ...byField };
 }
 
 export function validateComment(parent: string, text: string, by?: string): FolkloreComment | null {
@@ -87,8 +95,10 @@ export function recordFromValue(j: unknown): FolkloreRecord | null {
   if (typeof j !== "object" || j === null) return null;
   const o = j as Record<string, unknown>;
   if (o.v !== 1 || o.app !== "folklore") return null;
-  if (o.kind === "link" && typeof o.url === "string" && typeof o.title === "string") {
-    return validateLink(o.url, o.title, typeof o.by === "string" ? o.by : undefined);
+  if (o.kind === "link" && typeof o.title === "string") {
+    const target = typeof o.txid === "string" ? o.txid : typeof o.url === "string" ? o.url : null;
+    if (target === null) return null;
+    return validateLink(target, o.title, typeof o.by === "string" ? o.by : undefined);
   }
   if (o.kind === "comment" && typeof o.parent === "string" && typeof o.text === "string") {
     return validateComment(o.parent, o.text, typeof o.by === "string" ? o.by : undefined);

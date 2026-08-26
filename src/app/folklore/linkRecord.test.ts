@@ -35,6 +35,25 @@ describe("validateLink and validateComment — total, null on refusal", () => {
     });
   });
 
+  it("a 64-hex paste is a target id, not a url", () => {
+    const rec = validateLink(TXID.toUpperCase(), "On chain");
+    expect(rec).toEqual({
+      v: 1,
+      app: "folklore",
+      kind: "link",
+      txid: TXID,
+      title: "On chain",
+    });
+    expect(rec && "url" in rec).toBe(false);
+  });
+
+  it("a txid-only JSON record round-trips through script pushdata", () => {
+    const rec = validateLink(TXID, "On chain");
+    if (!rec) throw new Error("expected record");
+    const hex = "6a" + pushdataHex(encodeRecord(rec));
+    expect(recordFromScripts([hex])).toEqual(rec);
+  });
+
   it("omits `by` entirely when absent", () => {
     const rec = validateLink("https://example.com", "t");
     expect(rec).not.toBeNull();

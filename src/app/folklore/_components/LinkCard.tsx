@@ -30,7 +30,10 @@ export default function LinkCard({
   kudos: number;
   comments: number;
 }) {
-  const domain = new URL(record.url).hostname;
+  const target = record.txid ?? txid;
+  const href = record.url ?? `/folklore/tx/${target}`;
+  const detail = record.url ? new URL(record.url).hostname : shortTxid(target);
+  const external = Boolean(record.url);
   return (
     <div className="group flex items-center gap-4 px-4 py-4 transition-colors hover:bg-card-bg">
       <span
@@ -40,13 +43,16 @@ export default function LinkCard({
         ↗
       </span>
       <div className="min-w-0 flex-1">
-        <a href={record.url} target="_blank" rel="noopener noreferrer">
+        <a
+          href={href}
+          {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+        >
           <p className="truncate font-semibold text-foreground transition-colors group-hover:text-accent">
             {record.title}
           </p>
         </a>
         <p className="mt-0.5 font-mono text-[11px] text-muted">
-          {domain}
+          {detail}
           {record.by && ` · by @${record.by}`}
           {" · "}
           {record.by ? (

@@ -85,16 +85,15 @@ async function LinkThread({ txid, link }: { txid: string; link: FolkloreLink }) 
         <p className="ledger-label">A link on the folklore board</p>
         <h1 className="mt-3 text-2xl font-semibold text-foreground">
           <a
-            href={link.url}
-            target="_blank"
-            rel="noopener noreferrer"
+            href={link.url ?? `/folklore/tx/${link.txid ?? txid}`}
+            {...(link.url ? { target: "_blank", rel: "noopener noreferrer" } : {})}
             className="transition-colors hover:text-accent hover:underline"
           >
             {link.title}
           </a>
         </h1>
         <p className="mt-2 font-mono text-[11px] text-muted">
-          {new URL(link.url).hostname}
+          {link.url ? new URL(link.url).hostname : shortTxid(link.txid ?? txid)}
           {link.by && ` · by @${link.by}`}
           {" · "}
           <a
