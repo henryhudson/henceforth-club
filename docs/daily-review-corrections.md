@@ -6,6 +6,11 @@ records that sweep's **rejections and dismissals**, newest first, so a later run
 re-flag what a prior run already refuted. Confirmed findings go to the Morning Board, not
 here. Cite `file:line` (or the live probe) so each verdict is independently re-derivable.
 
+## 2026-08-27 — two of four folklore findings killed by refutation
+
+- **REJECTED: "the Magic Attribute Protocol reader applies none of the caps the module's own doctrine requires."** The headline claim is refuted by the doctrine's own text, and the alleged harm is inverted. Do not re-flag without quoting the doctrine.
+- **REJECTED: "extractTargetTxid has no callers, its spec-mandated multiple-id test is missing, and it silently truncates."** The arithmetic half is correct but inert; the harm half is inverted, so it does not stand as a defect. Verified true but not a defect.
+
 ## 2026-08-26 — the outage message is a defect; two worker findings are dormant, and four readings were falsified before filing
 
 - **PRINT DEFECT found by rendering it — the Morning Edition drops emergencies past the third, silently** [FACT, read this run]. `MorningSheet.tsx:138` builds the stop-press band as `report.emergencies.slice(0, 3)`. Today's report carried four, so the fourth never reached the sheet, and nothing in the page, the render or the publish said so. The sheet reads as complete when it is not, which is the same failure shape as this morning's screenshot gate. Today it cost nothing, because the dropped item (write This Week in Parliament) also prints as a plan item, and the report was cut back to three deliberately. **Fix:** render every emergency, or print an explicit "and N more" line when the band is capped. Never truncate in silence.
