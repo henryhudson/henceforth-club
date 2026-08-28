@@ -1,4 +1,5 @@
 import { listWeeks, loadBoardResult, loadWeek } from "@/lib/board-data";
+import { boardGeneratedAt, describeFreshness } from "@/lib/board-freshness";
 import BoardClient, { type WeekSlice } from "./BoardClient";
 
 export const dynamic = "force-dynamic";
@@ -36,9 +37,13 @@ export default async function BoardPage() {
     );
   }
   const board = result.board;
+  // Derived on the server: a client component computing this from its own
+  // clock would hydrate mismatched, and the age must be the server's view.
+  const freshness = describeFreshness(boardGeneratedAt(board), new Date());
   return (
     <BoardClient
       generated={board.generated}
+      freshness={freshness}
       initialCards={board.cards}
       week={week}
     />
