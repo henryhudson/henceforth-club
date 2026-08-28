@@ -6,6 +6,11 @@ records that sweep's **rejections and dismissals**, newest first, so a later run
 re-flag what a prior run already refuted. Confirmed findings go to the Morning Board, not
 here. Cite `file:line` (or the live probe) so each verdict is independently re-derivable.
 
+## 2026-08-28 — two of five site findings killed, both on the primary test
+
+- **REJECTED: "The 06:00 job's store-write failure prints a reassuring message, still reports success, and exits 0, so the loss ratchets unseen."** Refuted on the primary test: the quoted code does not exist in the checked-out tree. `scripts/board/hh-plan-update.mjs` is 76 lines; repo-wide greps for `writeBoardFiles`, `store write failed` and `board files still updated` return **zero** hits across the main checkout, all twelve worktrees and the sibling checkouts. The current script has no try/catch around the store write, so a refusal throws and the process exits **non-zero**. The swallow-and-report-success shape is real but lives only on the unmerged branch `board-owns-week-plan` (pull request 64) and is already carded from 2026-08-27. **Note the correction this forced on our own card:** the framing 'it will clobber again the moment the store answers' was wrong, because the checkout has moved off that branch since 27 August.
+- **REJECTED: "writeBoardFiles fabricates weekEnd = weekOf in the derived week mirror."** `scripts/board/local-mirror.mjs` is 27 lines; the cited lines 48-55, 51 and 62 are all past end of file. The only assignment is `weekEnd: week.weekEnd` at line 17, which is correct, and it is the very line the finding claimed was broken. Three cited identifiers do not exist anywhere in the repository.
+
 ## 2026-08-27 — two of four folklore findings killed by refutation
 
 - **REJECTED: "the Magic Attribute Protocol reader applies none of the caps the module's own doctrine requires."** The headline claim is refuted by the doctrine's own text, and the alleged harm is inverted. Do not re-flag without quoting the doctrine.
