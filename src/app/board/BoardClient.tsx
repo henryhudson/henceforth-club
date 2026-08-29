@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PlanDay } from "@/lib/board-data";
 import "./morning-board.css";
+import type { Freshness } from "@/lib/board-freshness";
 
 export type Card = {
   id: string;
@@ -106,10 +107,13 @@ function taskDone(t: string | { label: string; done?: boolean }): boolean {
 
 export default function BoardClient({
   generated,
+  freshness,
   initialCards,
   week,
 }: {
   generated: string;
+  /** How old the served board is, computed on the server. */
+  freshness?: Freshness;
   initialCards: Card[];
   week: WeekSlice | null;
 }) {
@@ -245,6 +249,15 @@ export default function BoardClient({
             <div className="mb-today-long">{todayLong}</div>
             <div className="mb-stamps">
               board {generated.split(" · ")[0]}
+              {freshness &&
+                (freshness.stale ? (
+                  <strong title="This board is older than a day. The store it is published from may not be accepting writes.">
+                    {" · "}
+                    {freshness.label}
+                  </strong>
+                ) : (
+                  <>{` · ${freshness.label}`}</>
+                ))}
               {week?.generatedAt ? ` · week ${week.generatedAt.slice(0, 10)}` : ""}
             </div>
             <div className="mb-header-actions">
