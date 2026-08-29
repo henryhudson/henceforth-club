@@ -6,6 +6,35 @@ records that sweep's **rejections and dismissals**, newest first, so a later run
 re-flag what a prior run already refuted. Confirmed findings go to the Morning Board, not
 here. Cite `file:line` (or the live probe) so each verdict is independently re-derivable.
 
+## 2026-08-29 — nothing rejected; one finding re-derived independently and NOT re-filed
+
+`origin/main` has not moved since yesterday's ledger commit (`522f67ecb081`), so there were
+zero shipping commits to review. All four findings raised against repository and production
+state survived adversarial refutation at high confidence and are carded, not rejected.
+
+**Recorded here because it is a near-miss duplicate.** Reading `scripts/board/daily-reach.mjs`
+from scratch this morning, the adjudicator independently derived that `siteViews` violates
+its own docstring: the comment at `:148` states "A failed read is different: null, never
+zero", the guard at `:161` tests only the `views:total` read, and `:164` then coerces every
+refused day-read to zero with `n ?? 0`. This is **already carded** as
+`finding-site-unknown-renders-as-zero-2026-08-28`, which names the same lines, so it was
+**not re-filed** — it was appended to that card as corroborating evidence.
+
+The corroboration is worth keeping: the failure was *observed live* today rather than
+predicted. Two runs of the reach pull minutes apart returned site week **13**, then **0**,
+with `total` unchanged at 1,199. Also established: commit `0c9dc35`, titled "a failed read
+is not an empty board, nor a zero", touched `page.tsx`, `MorningSheet.tsx`, `Accordion.tsx`
+and `board-data.ts` — and never `daily-reach.mjs`. The principle was applied to the renderer
+and not to the collector.
+
+**One finding went unadjudicated and is named rather than buried.** The site review produced
+five candidates; the workflow capped adversarial refutation at four per repository, so F5
+("`board-data.ts` on main has no staleness detection") was never refuted. It is not carded
+separately: on inspection it restates the consequence of the unmerged pull request 65 rather
+than an independent defect, and it is folded into `ops-keyvalue-store-exhausted-2026-08-28`.
+The cap was the adjudicator's own scripting error, the same shape as the 2026-08-27 slice
+cap, and is recorded so it is not repeated a third time.
+
 ## 2026-08-28 — two of five site findings killed, both on the primary test
 
 - **REJECTED: "The 06:00 job's store-write failure prints a reassuring message, still reports success, and exits 0, so the loss ratchets unseen."** Refuted on the primary test: the quoted code does not exist in the checked-out tree. `scripts/board/hh-plan-update.mjs` is 76 lines; repo-wide greps for `writeBoardFiles`, `store write failed` and `board files still updated` return **zero** hits across the main checkout, all twelve worktrees and the sibling checkouts. The current script has no try/catch around the store write, so a refusal throws and the process exits **non-zero**. The swallow-and-report-success shape is real but lives only on the unmerged branch `board-owns-week-plan` (pull request 64) and is already carded from 2026-08-27. **Note the correction this forced on our own card:** the framing 'it will clobber again the moment the store answers' was wrong, because the checkout has moved off that branch since 27 August.
