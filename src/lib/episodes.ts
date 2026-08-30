@@ -720,6 +720,62 @@ export const episodes: Episode[] = [
     ],
     video: { mp4: "/learn/fees-and-change/episode.mp4" },
   },
+  {
+    number: 14,
+    slug: "signatures",
+    title: "Signatures",
+    dek: "A signature is a claim only a key can make, and anyone can check. Change one character and the claim is dead; a payment is the same mathematics.",
+    published: true,
+    durationSec: 124,
+    music: { season: "Handel", piece: "Water Music · Lentement (United States Marine Band, public domain)" },
+    concepts: [
+      "A signature is a claim only a key can make, and anyone can check it without the key.",
+      "Verification is exact: change one character of the message and the claim is dead.",
+      "The address is the public half; the key that made the signature never travels.",
+      "A payment is a signed message whose message is the transaction, and op_checksig is the same check.",
+    ],
+    // Curated to commands that run on a fresh install — lesson narration words
+    // (sig-intro, sig-claim, sig-bridge, sig-close) are excluded; a new app
+    // hasn't defined them. The message was signed with a throwaway key made
+    // for the episode and discarded; nothing here needs a wallet.
+    codeAlong: [
+      "verify-msg 15QrsxL3RfpX9kVC9WXpFp9HhXGZjFrBuw INTO/HNQJs7JMiJvxrLLAL6+lfQPSY9vjQRlaaWGkO0IH/z8TkDQPXbDFqS4+6SmJ0f4ZFzJPWddC8NFjzH3IVA= i am henceforth",
+      ".",
+      "verify-msg 15QrsxL3RfpX9kVC9WXpFp9HhXGZjFrBuw INTO/HNQJs7JMiJvxrLLAL6+lfQPSY9vjQRlaaWGkO0IH/z8TkDQPXbDFqS4+6SmJ0f4ZFzJPWddC8NFjzH3IVA= i am hencef0rth",
+      ".",
+      "checksig-fixture",
+      "op_checksig",
+    ],
+    transcript: [
+      "how do you prove it's yours?",
+      "episode fourteen. signatures.",
+      "a signature is a claim only one secret can make.",
+      "and anyone can check it.",
+      "i signed a message earlier. with a key. here it is.",
+      "the message: i am henceforth",
+      "the address: 15QrsxL3RfpX9kVC9WXpFp9HhXGZjFrBuw",
+      "the signature: INTO/HNQJs7JMiJvxrLLAL6+lfQPSY9vjQRlaaWGkO0IH/z8TkDQPXbDFqS4+6SmJ0f4ZFzJPWddC8NFjzH3IVA=",
+      "the secret stays home. the signature travels.",
+      "three things. the words, the address, and the claim.",
+      "you don't need my key to check it. nobody does.",
+      "valid. the key behind that address made this.",
+      "minus one is yes.",
+      "now i change one letter of the message. a zero for an o.",
+      "invalid. one character, and the claim is dead.",
+      "zero is no.",
+      "a payment is a signed message too.",
+      "the message is the transaction.",
+      "and the check is op_checksig.",
+      "remember the finale? a signed payment, ready to check.",
+      "the signature and the key are on the stack. now the check.",
+      "the same yes. a message or a payment. one mathematics.",
+      "only the secret can make it.",
+      "anyone can check it.",
+      "that is what yours means.",
+      "henceforth.",
+    ],
+    video: { mp4: "/learn/signatures/episode.mp4" },
+  },
 ];
 
 const byNumber = [...episodes].sort((a, b) => a.number - b.number);
