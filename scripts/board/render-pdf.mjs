@@ -15,14 +15,14 @@
 // RENDER_PDF_BASE=http://localhost:3111, so the render exercises the branch's
 // own print stylesheet instead of the live site (which doesn't have it yet).
 import puppeteer from "puppeteer-core";
-import { createCipheriv, createHmac, randomBytes } from "node:crypto";
+import { createHmac } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { execSync } from "node:child_process";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { PDFDocument } from "pdf-lib";
 import { Redis } from "@upstash/redis";
-import { LockingScript, OP, P2PKH, PrivateKey, SatoshisPerKilobyte, Transaction, Utils } from "@bsv/sdk";
+import { changeOutputIndex, inscribeDocument } from "./chain-put.mjs";
 
 const SITE = process.env.RENDER_PDF_BASE ?? "https://www.henceforth.club";
 const SITE_HOST = new URL(SITE).hostname;
@@ -32,35 +32,15 @@ const SITE_HOST = new URL(SITE).hostname;
 // raise the number; the render must fail loudly. (History: the daily ran two
 // pages 2026-08-04 to 2026-08-19, when the report was set at book size.)
 const BUDGET = { daily: 1, week: 1 };
-// Keep in sync with src/lib/board-pdf-crypto.ts (the script cannot import TypeScript).
-const INSCRIPTION_MARKER = "HHRPT1";
-// Expected fees at 100 satoshis per kilobyte (the rate BOTH transaction
-// processors advertise — arc.taal.com/v1/policy and arc.gorillapool.io/v1/policy,
-// checked 2026-07-07): the ONE-page daily ran ≈ 5,250 satoshis; the TWO-page
-// budget (Henry's 2026-08-04 decision, see BUDGET above) roughly doubles the
-// artifact and the first two-page edition computed 24,840 (2026-08-09). The
-// ceiling is generous headroom above that two-page expectation — its job is
-// catching pathologies, not budgeting: the sdk's Transaction.fee() silently
-// DELETES the change output when change <= 0, so without the assertions below
-// a pathological fee rate or a low-balance key would burn the whole input as
-// miner fee. Never broadcast a transaction whose only output is the OP_RETURN.
-const FEE_CEILING_SATS = 30_000;
+// The transaction itself — sealing, the envelope, the fee, the guard that no
+// transaction is ever broadcast whose only output is data, signing and the
+// broadcast — lives in chain-put.mjs, shared with every surface that goes on
+// the chain. This script renders, holds the page budget, and indexes.
 
 function mintSession(secret, ttlMs = 10 * 60 * 1000) {
   const payload = Buffer.from(JSON.stringify({ exp: Date.now() + ttlMs })).toString("base64url");
   const sig = createHmac("sha256", secret).update(payload).digest("base64url");
   return `${payload}.${sig}`;
-}
-
-// Mirrors src/lib/board-pdf-crypto.ts encryptPdf — node:crypto aes-256-gcm,
-// nonce = randomBytes(12), payload = nonce ‖ tag ‖ ciphertext.
-function encryptPdf(pdf, keyHex) {
-  const key = Buffer.from(keyHex, "hex");
-  const nonce = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", key, nonce);
-  const ciphertext = Buffer.concat([cipher.update(pdf), cipher.final()]);
-  const tag = cipher.getAuthTag();
-  return Buffer.concat([nonce, tag, ciphertext]);
 }
 
 let redisClient;
@@ -72,14 +52,9 @@ function getRedisClient() {
   return redisClient;
 }
 
-/** The change output a follow-up inscription can spend, or -1. */
-function changeOutputIndex(tx) {
-  return tx.outputs.findIndex((o) => o.change === true && (o.satoshis ?? 0) > 0);
-}
-
-// Builds, fees, signs, broadcasts, and indexes one inscription. Returns the
-// broadcast Transaction so the NEXT inscription in the same run can spend its
-// change output in process — re-fetching UTXOs between jobs would either
+// Indexes one inscription; the transaction itself is chain-put.mjs. Returns
+// the broadcast Transaction so the NEXT inscription in the same run can spend
+// its change output in process — re-fetching UTXOs between jobs would either
 // double-spend (stale list) or miss the just-created change (not yet indexed).
 async function inscribe(kind, date, pdf, prevTx, dryRun) {
   // One inscription per edition, ever. A date that already carries a
@@ -94,116 +69,29 @@ async function inscribe(kind, date, pdf, prevTx, dryRun) {
     console.log(`${kind} ${date} is already inscribed (${existing}) — inscription skipped, local copy refreshed`);
     return null;
   }
-  const key = PrivateKey.fromWif(process.env.BOARD_ARCHIVE_WIF);
-  const address = key.toAddress();
-  const payload = encryptPdf(Buffer.from(pdf), process.env.BOARD_ARCHIVE_KEY);
-
-  let sourceTransaction;
-  let sourceOutputIndex;
-  let sourceLabel;
-  if (prevTx) {
-    const changeIndex = changeOutputIndex(prevTx);
-    if (changeIndex < 0) throw new Error("previous transaction in this run has no change output to chain from");
-    sourceTransaction = prevTx;
-    sourceOutputIndex = changeIndex;
-    sourceLabel = "previous transaction's change";
-  } else if (dryRun) {
-    sourceTransaction = new Transaction();
-    sourceTransaction.addOutput({ lockingScript: new P2PKH().lock(address), satoshis: 10_000 });
-    sourceOutputIndex = 0;
-    sourceLabel = "fake 10000-satoshi utxo";
-  } else {
-    // Mempool-inclusive endpoint (the plain /unspent one is deprecated and
-    // confirmed-only, which hides freshly broadcast change). Response shape:
-    // { address, script, result: [{ height, tx_pos, tx_hash, value,
-    //   isSpentInMempoolTx, status }] } — verified against the live API.
-    const unspentResp = await fetch(`https://api.whatsonchain.com/v1/bsv/main/address/${address}/unspent/all`);
-    if (!unspentResp.ok) throw new Error(`fetching unspent outputs for ${address} failed: ${await unspentResp.text()}`);
-    const { result } = await unspentResp.json();
-    const spendable = (Array.isArray(result) ? result : []).filter((u) => !u.isSpentInMempoolTx);
-    if (spendable.length === 0) {
-      throw new Error(
-        `no spendable outputs for ${address} — either the archive key is unfunded (send a small amount of BSV first) or its change is still propagating (retry shortly)`,
-      );
-    }
-    const utxo = spendable.reduce((largest, u) => (u.value > largest.value ? u : largest));
-
-    const sourceHexResp = await fetch(`https://api.whatsonchain.com/v1/bsv/main/tx/${utxo.tx_hash}/hex`);
-    if (!sourceHexResp.ok) throw new Error(`fetching source tx ${utxo.tx_hash} failed: ${await sourceHexResp.text()}`);
-    sourceTransaction = Transaction.fromHex((await sourceHexResp.text()).trim());
-    sourceOutputIndex = utxo.tx_pos;
-    sourceLabel = `utxo ${utxo.tx_hash}:${utxo.tx_pos}`;
-  }
-  const inputValue = sourceTransaction.outputs[sourceOutputIndex].satoshis ?? 0;
-
-  const tx = new Transaction();
-  tx.addInput({
-    sourceTransaction,
-    sourceOutputIndex,
-    unlockingScriptTemplate: new P2PKH().unlock(key),
+  const out = await inscribeDocument({
+    wif: process.env.BOARD_ARCHIVE_WIF,
+    keyHex: process.env.BOARD_ARCHIVE_KEY,
+    surface: `${kind}-edition`,
+    date,
+    bytes: Buffer.from(pdf),
+    prevTx,
+    dryRun,
   });
+  if (dryRun) return out.tx;
 
-  const opReturn = new LockingScript()
-    .writeOpCode(OP.OP_FALSE)
-    .writeOpCode(OP.OP_RETURN)
-    .writeBin(Utils.toArray(INSCRIPTION_MARKER, "utf8"))
-    .writeBin(Utils.toArray(kind, "utf8"))
-    .writeBin(Utils.toArray(date, "utf8"))
-    .writeBin(Array.from(payload));
-  tx.addOutput({ lockingScript: opReturn, satoshis: 0 });
-  tx.addP2PKHOutput(address); // change output; sdk computes the amount via fee()
-
-  // 100 sat/kb in BOTH modes — the rate both miners' policy endpoints advertise
-  // (see FEE_CEILING_SATS note). Pinned rather than LivePolicy so dry-run and live
-  // price identically and deterministically; pinning at less than the advertised
-  // policy risks an accepted-but-never-mined transaction that the script would
-  // index as success (adversarial review, 2026-07-07).
-  await tx.fee(new SatoshisPerKilobyte(100));
-
-  // Guard against the sdk's silent change deletion (see FEE_CEILING_SATS note).
-  const fee = tx.getFee();
-  const changeOut = tx.outputs.find((o) => o.change === true && (o.satoshis ?? 0) > 0);
-  if (!changeOut) {
-    throw new Error(`refusing to sign: fee ${fee} satoshis would consume the entire ${inputValue}-satoshi input, leaving no change output`);
-  }
-  if (fee > FEE_CEILING_SATS) {
-    throw new Error(`refusing to sign: computed fee ${fee} satoshis exceeds the ${FEE_CEILING_SATS}-satoshi ceiling (input ${inputValue} satoshis)`);
-  }
-  await tx.sign();
-
-  if (dryRun) {
-    console.log(
-      `dry-run ${kind} ${date}: fee ${fee} satoshis, change ${changeOut.satoshis} satoshis ` +
-        `(input ${inputValue} satoshis, ${payload.length}-byte payload, source: ${sourceLabel}) — not broadcast`,
-    );
-    return tx;
-  }
-
-  const broadcastResp = await fetch("https://api.whatsonchain.com/v1/bsv/main/tx/raw", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ txhex: tx.toHex() }),
-  });
-  // WhatsOnChain answers with the txid, possibly JSON-quoted — strip and normalize.
-  const body = (await broadcastResp.text()).trim().replace(/^"+|"+$/g, "");
-  if (!broadcastResp.ok || !/^[0-9a-fA-F]{64}$/.test(body)) {
-    throw new Error(`broadcast failed: ${body}`);
-  }
-  const txid = body.toLowerCase(); // servePdf's index guard requires lowercase
-
-  // Log BEFORE indexing: if the SET fails, the txid must survive on screen so
-  // the inscription (already paid for) can be hand-indexed.
-  console.log(`inscribed ${kind} ${date} → ${txid} (${pdf.length} bytes, fee ${fee} satoshis)`);
+  // chain-put has already printed the id, so if the SET below fails the
+  // inscription (already paid for) survives on screen to be hand-indexed.
   try {
-    await getRedisClient().set(`board:pdftx:${kind}:${date}`, txid);
+    await getRedisClient().set(`board:pdftx:${kind}:${date}`, out.txid);
   } catch (e) {
     const err = new Error(
-      `broadcast succeeded but indexing failed (${e.message}) — hand-index with: SET board:pdftx:${kind}:${date} = ${txid}`,
+      `broadcast succeeded but indexing failed (${e.message}) — hand-index with: SET board:pdftx:${kind}:${date} = ${out.txid}`,
     );
-    err.tx = tx; // let the job loop keep chaining off this transaction's change
+    err.tx = out.tx; // let the job loop keep chaining off this transaction's change
     throw err;
   }
-  return tx;
+  return out.tx;
 }
 
 async function render(browser, kind, date, outPath, prevTx, dryRun) {

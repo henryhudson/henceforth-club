@@ -1,4 +1,5 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import { gunzipSync } from "node:zlib";
 
 const NONCE_LENGTH = 12;
 const TAG_LENGTH = 16;
@@ -22,4 +23,12 @@ export function decryptPdf(payload: Uint8Array, keyHex: string): Uint8Array {
   const decipher = createDecipheriv("aes-256-gcm", key, nonce);
   decipher.setAuthTag(tag);
   return new Uint8Array(Buffer.concat([decipher.update(ciphertext), decipher.final()]));
+}
+
+/** The chain envelope's payload (scripts/board/chain-put-core.mjs sealPayload):
+ *  gzip first, then the same nonce ‖ tag ‖ ciphertext. Decrypt, then
+ *  decompress; a wrong key or a touched byte fails the tag and throws before
+ *  any byte is returned. */
+export function openSealed(payload: Uint8Array, keyHex: string): Uint8Array {
+  return new Uint8Array(gunzipSync(Buffer.from(decryptPdf(payload, keyHex))));
 }
