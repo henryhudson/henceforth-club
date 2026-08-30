@@ -6,6 +6,39 @@ records that sweep's **rejections and dismissals**, newest first, so a later run
 re-flag what a prior run already refuted. Confirmed findings go to the Morning Board, not
 here. Cite `file:line` (or the live probe) so each verdict is independently re-derivable.
 
+## 2026-08-30 — one finding against the 65 merge, rejected on live evidence the refuter did not use
+
+Reviewed `origin/main` at `04226ee992cf`, the merge of pull request 65 (eleven files). The
+repo gate passed on the range: `npm test` green, and `tsc --noEmit` clean for the first time
+since 25 August. One candidate finding, and it survived adversarial refutation; it is rejected
+here anyway, because the refuter reasoned from the client library's `request()` without
+reading the pipeline executor, and two live runs contradict the claim.
+
+**Rejected: "`summarise` groups on the full reason string, which embeds the Upstash client's
+per-command error echo, so a systemic refusal fragments into one line per key and never
+collapses."** The premise is that `set`/`sadd` throw from `request()` at
+`node_modules/@upstash/redis/chunk-IH7W44G6.mjs:203`, whose message appends
+`command was: ${JSON.stringify(req.body)}`. They do not, in the shipping configuration:
+`enableAutoPipelining` defaults to **true** (`:4364`), commands route through
+`withAutoPipeline` (`:3960`), and its throw at `:4003` is `Command failed: ${error}` with
+**no command echo**. Every refused write in a systemic outage therefore carries the identical
+message, and the grouping collapses, which is exactly what was observed on the two live runs
+against the over-quota store: 28 August, `68 of 68 step(s)` in one group; 29 August,
+`69 of 69 step(s)` in one group, `board:latest` grouped with the reports. A finding that says
+this "never" happens is refuted by it having happened twice.
+
+**What survives is fragility, not a defect, and it is parked
+(`parked-publish-core-group-by-kind-2026-08-30`).** The direct path at `:203` does echo the
+command, and this morning's `smembers` in `hh-plan-update.mjs` took it (the log reads
+`command was: ["smembers","board:weeks"]`). Grouping by `kind` rather than the interpolated
+reason would remove the dependence on message shape, and the grouping test should feed distinct
+same-cause messages rather than one reused literal. Fold in on the next touch of the file.
+
+**Lesson for the refuter, recorded so it is reused:** when a finding names a library's throw
+path, check the library's *default configuration* and, where a live log exists, the shape of
+the message actually observed. The refuter cited `:4003` as "a different code path, not the
+one set/sadd use" and was wrong about which path is the default.
+
 ## 2026-08-29 — nothing rejected; one finding re-derived independently and NOT re-filed
 
 `origin/main` has not moved since yesterday's ledger commit (`522f67ecb081`), so there were
