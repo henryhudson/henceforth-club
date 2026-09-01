@@ -72,7 +72,7 @@ async function sourceFor({ address, prevTx, dryRun, fetchImpl }) {
  *  change in process, plus what a caller needs to log and index. */
 export async function inscribeDocument({
   wif, keyHex, surface, date, bytes, previousTxid = "", prevTx = null,
-  dryRun = false, fetchImpl = fetch, log = console.log,
+  feeCeiling = FEE_CEILING_SATS, dryRun = false, fetchImpl = fetch, log = console.log,
 }) {
   const key = PrivateKey.fromWif(wif);
   const address = key.toAddress();
@@ -92,8 +92,8 @@ export async function inscribeDocument({
   await tx.fee(new SatoshisPerKilobyte(FEE_RATE_SATS_PER_KB));
   const fee = tx.getFee();
   const change = assertHasChange(tx.outputs); // never a data-only transaction
-  if (fee > FEE_CEILING_SATS) {
-    throw new Error(`refusing to sign: computed fee ${fee} satoshis exceeds the ${FEE_CEILING_SATS}-satoshi ceiling (input ${inputValue} satoshis)`);
+  if (fee > feeCeiling) {
+    throw new Error(`refusing to sign: computed fee ${fee} satoshis exceeds the ${feeCeiling}-satoshi ceiling (input ${inputValue} satoshis)`);
   }
   await tx.sign();
 

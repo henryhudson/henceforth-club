@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { randomBytes } from "node:crypto";
 import { OP, PrivateKey, Script, Transaction, Utils } from "@bsv/sdk";
 import { DRY_RUN_SOURCE_SATS, FEE_CEILING_SATS, changeOutputIndex, inscribeDocument } from "./chain-put.mjs";
 import { INSCRIPTION_MARKER, openPayload, parseEnvelope } from "./chain-put-core.mjs";
@@ -21,6 +22,20 @@ function envelopePushes(built) {
   }
   return null;
 }
+
+describe("the fee ceiling", () => {
+  it("is per document: a payload the shared ceiling refuses signs under a raised one", async () => {
+    const big = randomBytes(400_000);
+    await expect(inscribeDocument({
+      wif: WIF, keyHex: KEY, surface: "board-done", date: "2026-09-01", bytes: big, dryRun: true, log: () => {},
+    })).rejects.toThrow(/exceeds the 30000-satoshi ceiling/);
+    const out = await inscribeDocument({
+      wif: WIF, keyHex: KEY, surface: "board-done", date: "2026-09-01", bytes: big, feeCeiling: 80_000, dryRun: true, log: () => {},
+    });
+    expect(out.fee).toBeGreaterThan(30_000);
+    expect(out.fee).toBeLessThanOrEqual(80_000);
+  });
+});
 
 describe("inscribing a document, dry run", () => {
   it("builds a signed transaction carrying the envelope and a change output, and touches no network", async () => {

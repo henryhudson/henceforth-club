@@ -31,6 +31,14 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { parseGardeningSchedule } from "./gardening-core.mjs";
 import { STORE_REFUSED, classifyReadError, reasonFor, summarise } from "./publish-core.mjs";
+import { publishToChain } from "./chain-publish.mjs";
+import { BOARD_SURFACE, DONE_SURFACE, GARDENING_SURFACE, canonicalBytes, reportSurface, splitBoard, weekSurface } from "./chain-publish-core.mjs";
+
+// The done ledger is the bulk of the board — some three hundred cards of
+// prose sealing to a few hundred kilobytes — and it is inscribed only when a
+// card lands in done. Its ceiling is sized for that document with two years
+// of growth, not for pathologies; the shared ceiling still guards the rest.
+const DONE_FEE_CEILING_SATS = 80_000;
 
 const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -44,6 +52,10 @@ if (!url || !token) {
 
 const redis = new Redis({ url, token });
 const root = process.cwd();
+
+// Every document this run holds, in the form the chain carries it. Collected
+// beside the store writes and inscribed after them (task four of the archive).
+const documents = [];
 
 /** Every step this run attempted, so the summary can be honest about all of them. */
 const steps = [];
@@ -60,6 +72,9 @@ try {
   failed("board:latest", classifyReadError(e), e.message);
 }
 if (board) {
+  const { latest, done } = splitBoard(board);
+  documents.push({ surface: BOARD_SURFACE, bytes: canonicalBytes(latest) });
+  documents.push({ surface: DONE_SURFACE, bytes: canonicalBytes(done), feeCeiling: DONE_FEE_CEILING_SATS });
   try {
     await redis.set("board:latest", board);
     ok("board:latest");
@@ -86,6 +101,7 @@ for (const f of reportFiles ?? []) {
     failed(`board:report:${date}`, classifyReadError(e), e.message);
     continue;
   }
+  documents.push({ surface: reportSurface(date), bytes: canonicalBytes(report) });
   try {
     await redis.set(`board:report:${date}`, report);
     await redis.sadd("board:report:dates", date);
@@ -94,6 +110,21 @@ for (const f of reportFiles ?? []) {
   } catch (e) {
     failed(`board:report:${date}`, STORE_REFUSED, e.message);
   }
+}
+
+// Weeks ride the chain from here (their store writes stay in publish-week.mjs).
+try {
+  const weekDir = path.join(root, "content/board/weeks");
+  for (const f of (await readdir(weekDir)).filter((n) => n.endsWith(".json"))) {
+    const date = f.replace(/\.json$/, "");
+    try {
+      documents.push({ surface: weekSurface(date), bytes: canonicalBytes(JSON.parse(await readFile(path.join(weekDir, f), "utf8"))) });
+    } catch (e) {
+      failed(`chain:${weekSurface(date)}`, classifyReadError(e), e.message);
+    }
+  }
+} catch {
+  // No weeks directory is not a failure — a fresh checkout has none.
 }
 
 // Gardening (Henry, 2026-08-20: the Morning Edition doubles as a calendar).
@@ -117,14 +148,37 @@ if (jobs !== null) {
       "board:gardening NOT updated: the schedule parsed to zero dated rows — the last published diary stands",
     );
   } else {
+    const gardening = { updated: new Date().toISOString(), jobs };
+    documents.push({ surface: GARDENING_SURFACE, bytes: canonicalBytes(gardening) });
     try {
-      await redis.set("board:gardening", { updated: new Date().toISOString(), jobs });
+      await redis.set("board:gardening", gardening);
       ok("board:gardening");
       console.log(`published board:gardening (${jobs.length} dated rows)`);
     } catch (e) {
       failed("board:gardening", STORE_REFUSED, e.message);
     }
   }
+}
+
+// The chain. Every surface whose content changed since its last inscription
+// goes on the chain, then the head naming them all; a refusal is a failed
+// step like any store refusal. The mini has no archive key and publishes
+// store-only, and says so. --no-chain skips it on purpose; --dry-run prices
+// and signs everything without broadcasting.
+if (process.argv.includes("--no-chain")) {
+  console.log("chain: skipped (--no-chain)");
+} else if (!process.env.BOARD_ARCHIVE_WIF || !process.env.BOARD_ARCHIVE_KEY) {
+  console.log("chain: the archive key is not configured here — store only");
+} else {
+  const chain = await publishToChain({
+    documents,
+    ledgerPath: path.join(root, "content/board/.chain-ledger.json"),
+    wif: process.env.BOARD_ARCHIVE_WIF,
+    keyHex: process.env.BOARD_ARCHIVE_KEY,
+    date: new Date().toISOString().slice(0, 10),
+    dryRun: process.argv.includes("--dry-run"),
+  });
+  steps.push(...chain.steps);
 }
 
 const { exitCode, lines } = summarise(steps);
