@@ -109,7 +109,8 @@ function fakeRedis(): Redis {
     },
     llen: async (key: string) => (lists.get(key) ?? []).length,
     get: async (key: string) => kv.get(key) ?? null,
-    set: async (key: string, value: unknown) => {
+    set: async (key: string, value: unknown, opts?: { nx?: boolean }) => {
+      if (opts?.nx && kv.has(key)) return null;
       kv.set(key, value);
       return "OK";
     },
@@ -133,6 +134,15 @@ describe("addLinkToBoard", () => {
     ]);
     expect(await readLinkRecord(TXID_A, redis)).toEqual({ kind: "record", record: LINK });
     expect((await indexSince(0, redis)).txids).toEqual([TXID_A]);
+  });
+
+  it("a second stamp for the same target never replaces the first submitter's record", async () => {
+    const redis = fakeRedis();
+    await addLinkToBoard(TXID_A, LINK, 1_000, redis);
+    const later = validateLink(TXID_A, "A later claim on the same target", "latecomer");
+    if (!later) throw new Error("expected record");
+    await addLinkToBoard(TXID_A, later, 2_000, redis);
+    expect(await readLinkRecord(TXID_A, redis)).toEqual({ kind: "record", record: LINK });
   });
 
   it("a txid-link ranks under the target, even when the stamp id is passed in", async () => {

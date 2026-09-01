@@ -151,6 +151,12 @@ export async function fetchTxArchiveWithTime(
   return { archive, time: await fetchConfirmedTime(txid, fetchFn) };
 }
 
+/** The confirmation time alone, for a caller that already holds the archive
+ *  (the transaction page, whose classifier parsed it from the same scripts). */
+export async function fetchTxTime(txid: string, fetchFn: typeof fetch = fetch): Promise<number | undefined> {
+  return fetchConfirmedTime(txid, fetchFn);
+}
+
 async function fetchConfirmedTime(
   txid: string,
   fetchFn: typeof fetch,

@@ -81,7 +81,10 @@ export async function addLinkToBoard(
 ): Promise<boolean> {
   if (!redis) return false;
   const target = record.kind === "link" && record.txid ? record.txid : txid;
-  await redis.set(linkKey(target), record);
+  // nx, like the two zadds beside it: the first successful stamp owns the
+  // row, and a second stamp for the same target can never replace the cached
+  // title or the kudos earner (specification, Decision 3).
+  await redis.set(linkKey(target), record, { nx: true });
   await redis.zadd(BOARD_KEY, { nx: true }, { score: LINK_SCORE_OFFSET, member: linkMember(target) });
   await redis.zadd(LOG_KEY, { nx: true }, { score: nowMs, member: target });
   return true;

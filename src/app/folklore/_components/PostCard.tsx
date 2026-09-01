@@ -28,9 +28,7 @@ export function formatUnixSeconds(seconds?: number): string {
 
 /** The first six and last four hex characters of a txid, for the outpoint
  * chip — matching how block explorers usually elide a long hash. */
-export function shortTxid(txid: string): string {
-  return `${txid.slice(0, 6)}…${txid.slice(-4)}`;
-}
+export { shortTxid } from "../shortTxid";
 
 // Declared at module scope (not inside a render body) so it isn't re-created —
 // and its state reset — on every render. Takes what it needs as props.
