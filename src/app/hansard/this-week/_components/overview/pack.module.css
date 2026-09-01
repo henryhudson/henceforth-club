@@ -1,0 +1,49 @@
+.pack {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+:global(.a4-print-root[data-fitting]) .pack {
+  overflow: visible;
+}
+
+.measure {
+  position: absolute;
+  /* Off the sheet so a full-height measuring copy cannot extend the page,
+     but still in-flow enough that offsetHeight is the real column height. */
+  left: -200vw;
+  top: 0;
+  width: calc((100% - 3 * 8mm) / 4 - 4mm);
+  visibility: hidden;
+  pointer-events: none;
+}
+/* The print sheet un-hides every descendant; keep the measuring copy dark. */
+.measure,
+.measure * {
+  visibility: hidden !important;
+}
+
+.cols {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0 8mm;
+  align-items: start;
+  min-height: 100%;
+}
+
+.col {
+  min-width: 0;
+}
+
+.col + .col {
+  border-left: 0.5pt solid #999;
+  padding-left: 4mm;
+  margin-left: -4mm;
+}
+
+.item + .item {
+  margin-top: 2.2mm;
+}
