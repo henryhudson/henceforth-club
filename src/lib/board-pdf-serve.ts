@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { OP, Script, Transaction, Utils } from "@bsv/sdk";
-import { decryptPdf } from "./board-pdf-crypto";
-import { INSCRIPTION_MARKER, downloadFilename, type EditionKind } from "./board-pdf";
+import { decryptPdf, openSealed } from "./board-pdf-crypto";
+import { CHAIN_MARKER, INSCRIPTION_MARKER, downloadFilename, type EditionKind } from "./board-pdf";
 import { getRedis } from "./redis";
 
 const notRendered = () =>
@@ -24,27 +24,35 @@ export async function servePdf(kind: EditionKind, date: string): Promise<Respons
 
     // The SDK's chunk parser stops at OP_RETURN and lumps everything after it
     // into that chunk's raw `data` — re-parse that blob to get the pushdata
-    // fields (marker, kind, date, payload) individually.
+    // fields individually. Two envelopes are read: the chain envelope every
+    // inscription since 2026-08-30 carries (six fields, sealed payload), and
+    // the legacy one before it (four fields, encrypted payload).
     const tx = Transaction.fromHex(hex);
-    let payload: number[] | undefined;
+    let found: { sealed: number[] } | { encrypted: number[] } | null = null;
     for (const o of tx.outputs) {
       const [op0, op1] = o.lockingScript.chunks;
       if (op0?.op !== OP.OP_FALSE || op1?.op !== OP.OP_RETURN || !op1.data) continue;
       const fields = Script.fromBinary(op1.data).chunks;
-      if (fields.length !== 4) continue;
-      const [marker, fieldKind, fieldDate, fieldPayload] = fields;
-      if (!marker.data || Utils.toUTF8(marker.data) !== INSCRIPTION_MARKER) continue;
-      if (!fieldKind.data || Utils.toUTF8(fieldKind.data) !== kind) continue;
-      if (!fieldDate.data || Utils.toUTF8(fieldDate.data) !== date) continue;
-      if (!fieldPayload.data) continue;
-      payload = fieldPayload.data;
-      break;
+      const text = (i: number): string | null => {
+        const data = fields[i]?.data;
+        return data ? Utils.toUTF8(data) : null;
+      };
+      const sealed = fields[5]?.data;
+      if (fields.length === 6 && sealed && text(0) === CHAIN_MARKER && text(1) === `${kind}-edition` && text(2) === date) {
+        found = { sealed };
+        break;
+      }
+      const encrypted = fields[3]?.data;
+      if (fields.length === 4 && encrypted && text(0) === INSCRIPTION_MARKER && text(1) === kind && text(2) === date) {
+        found = { encrypted };
+        break;
+      }
     }
-    if (!payload) return notRendered();
+    if (!found) return notRendered();
 
     const key = process.env.BOARD_ARCHIVE_KEY;
     if (!key) return notRendered();
-    const pdf = decryptPdf(new Uint8Array(payload), key);
+    const pdf = "sealed" in found ? openSealed(new Uint8Array(found.sealed), key) : decryptPdf(new Uint8Array(found.encrypted), key);
 
     return new Response(new Uint8Array(pdf), {
       headers: {
