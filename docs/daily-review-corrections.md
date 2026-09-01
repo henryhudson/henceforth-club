@@ -6,6 +6,25 @@ records that sweep's **rejections and dismissals**, newest first, so a later run
 re-flag what a prior run already refuted. Confirmed findings go to the Morning Board, not
 here. Cite `file:line` (or the live probe) so each verdict is independently re-derivable.
 
+## 2026-09-01 — one killed: "pull request 64 is NOW conflicting" is a standing fact, not news
+
+Reviewed `origin/main` at `9b3e9c2fcf89` (no shipping commits since 30 August; the sweep's
+substance was live probes and the pull-request queue). Four candidate findings; three survived
+refutation (the untracked 26 August digest draft, the store recovery with seven burned-in zero
+days, pull request 66 finished-and-unmerged) and went to the board. One killed:
+
+**Rejected: "Status change on the standing pull-request-64 card: now CONFLICTING with a failing
+Vercel check."** The raw observations verify (gh: `CONFLICTING` / `DIRTY`, Vercel FAILURE,
+untouched since 2026-08-26T13:16Z) — but the claimed *change* is false: the standing card
+`finding-site-two-week-files-2026-08-29` recorded exactly this state in its 29 and 30 August
+entries ("blocked … by a real conflict with main's later edit of `board/page.tsx`"). A
+still-true fact re-observed is evidence for the standing card, not a new finding. The card's
+pull (rebase `board-owns-week-plan`, resolve, merge) already stands.
+
+Also for the record, not rejections: the apex-307 and warm-timing conventions were applied per
+the 2026-08-14 and 2026-07-29 entries; the money gate answered 503 fail-closed; `/board`
+challenged to its login page.
+
 ## 2026-08-30 — one finding against the 65 merge, rejected on live evidence the refuter did not use
 
 Reviewed `origin/main` at `04226ee992cf`, the merge of pull request 65 (eleven files). The
