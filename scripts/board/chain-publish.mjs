@@ -28,6 +28,31 @@ export async function writeLedger(path, ledger) {
   await writeFile(path, JSON.stringify(ledger, null, 2) + "\n");
 }
 
+/** Remember one inscription that already landed (an edition, rendered and
+ *  broadcast elsewhere) so the next head names it. */
+export async function recordInscription({ ledgerPath, surface, txid, bytes, date }) {
+  const ledger = withInscription(await readLedger(ledgerPath), { surface, txid, sha256: digestOf(bytes), date });
+  await writeLedger(ledgerPath, ledger);
+  return ledger;
+}
+
+/** Inscribe a head naming every surface the ledger knows — plus `also`, the
+ *  inscription this head follows, so a dry run prices the real head and a
+ *  real run never depends on a ledger write — spending `prevTx`'s change so
+ *  it lands strictly after it. */
+export async function inscribeHeadFor({
+  ledgerPath, wif, keyHex, date, also = {}, prevTx = null, dryRun = false, fetchImpl = fetch, log = console.log,
+}) {
+  const ledger = await readLedger(ledgerPath);
+  const out = await inscribeHead({
+    wif, keyHex, date, surfaces: { ...headSurfaces(ledger), ...also },
+    previousHeadTxid: ledger.head?.txid ?? "", prevTx, dryRun, fetchImpl, log,
+  });
+  const txid = out.txid ?? out.tx.id("hex");
+  if (!dryRun) await writeLedger(ledgerPath, withHead(ledger, { txid, date }));
+  return out;
+}
+
 /** Inscribe what changed, then the head. Returns the publish steps this run
  *  contributes and the ledger as it stands. Dry runs price and sign every
  *  transaction without broadcasting or writing the ledger. */

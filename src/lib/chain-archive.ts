@@ -29,6 +29,7 @@ export const SURFACE = {
   gardening: "board-gardening",
   report: (date: string): string => `board-report-${date}`,
   week: (date: string): string => `board-week-${date}`,
+  edition: (kind: string, date: string): string => `${kind}-edition-${date}`,
 } as const;
 const REPORT_PREFIX = "board-report-";
 const WEEK_PREFIX = "board-week-";

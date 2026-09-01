@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PrivateKey } from "@bsv/sdk";
-import { publishToChain, readLedger, writeLedger } from "./chain-publish.mjs";
+import { inscribeHeadFor, publishToChain, readLedger, recordInscription, writeLedger } from "./chain-publish.mjs";
 import { EMPTY_LEDGER, canonicalBytes, withInscription } from "./chain-publish-core.mjs";
 
 const WIF = PrivateKey.fromString("1".repeat(64), 16).toWif();
@@ -30,6 +30,35 @@ describe("the ledger on disk", () => {
     const ledger = withInscription(EMPTY_LEDGER, { surface: "board-latest", txid: "a".repeat(64), sha256: "x", date: "2026-09-01" });
     await writeLedger(path, ledger);
     expect(await readLedger(path)).toEqual(ledger);
+  });
+});
+
+describe("an edition joining the index", () => {
+  it("is remembered, and the next head names it beside everything else", async () => {
+    const path = join(dir, "ledger.json");
+    const first = await publishToChain({
+      documents: docs(), ledgerPath: path, wif: WIF, keyHex: KEY, date: "2026-09-01", dryRun: true, log: quiet,
+    });
+    await writeLedger(path, first.ledger);
+    const pdf = Buffer.from("%PDF-1.4 an edition");
+    await recordInscription({ ledgerPath: path, surface: "daily-edition-2026-09-01", txid: "c".repeat(64), bytes: pdf, date: "2026-09-01" });
+    const head = await inscribeHeadFor({ ledgerPath: path, wif: WIF, keyHex: KEY, date: "2026-09-01", dryRun: true, log: quiet });
+    expect(head.tx).toBeTruthy();
+    const ledger = await readLedger(path);
+    expect(Object.keys(ledger.surfaces).sort()).toEqual(["board-latest", "board-report-2026-09-01", "daily-edition-2026-09-01"]);
+    expect(ledger.surfaces["daily-edition-2026-09-01"].txid).toBe("c".repeat(64));
+    // A dry-run head does not move the ledger's head.
+    expect(ledger.head).toEqual(first.ledger.head);
+  });
+
+  it("names the edition it follows even before the ledger holds it — a dry run prices the real head", async () => {
+    const path = join(dir, "ledger.json");
+    const head = await inscribeHeadFor({
+      ledgerPath: path, wif: WIF, keyHex: KEY, date: "2026-09-01",
+      also: { "daily-edition-2026-09-01": "c".repeat(64) }, dryRun: true, log: quiet,
+    });
+    expect(head.tx).toBeTruthy();
+    expect(await readLedger(path)).toEqual(EMPTY_LEDGER);
   });
 });
 

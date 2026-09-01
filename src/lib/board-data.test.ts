@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { promises as fs } from "fs";
 import { getRedis } from "@/lib/redis";
 import { readFromHead, resolveHead } from "./chain-archive";
-import { listDates, loadBoard, loadBoardResult, loadGardening, resetChainMemoForTests } from "./board-data";
+import { chainSurfaceTxid, listDates, loadBoard, loadBoardResult, loadGardening, resetChainMemoForTests } from "./board-data";
 
 vi.mock("@/lib/redis", () => ({ getRedis: vi.fn() }));
 vi.mock("fs", () => ({ promises: { readFile: vi.fn(), readdir: vi.fn() } }));
@@ -151,6 +151,13 @@ describe("the chain is asked first", () => {
       headNaming({ "board-report-2026-09-01": TXID, "board-report-2026-08-31": TXID, "board-latest": TXID }),
     );
     await expect(listDates()).resolves.toEqual(["2026-09-01", "2026-08-31"]);
+  });
+
+  it("an edition's transaction is read off the head, and null when the head does not name it", async () => {
+    mockResolveHead.mockResolvedValue(headNaming({ "daily-edition-2026-09-01": TXID, "board-latest": TXID }));
+    await expect(chainSurfaceTxid("daily-edition-2026-09-01")).resolves.toBe(TXID);
+    await expect(chainSurfaceTxid("daily-edition-2026-08-31")).resolves.toBeNull();
+    expect(mockResolveHead).toHaveBeenCalledTimes(1);
   });
 
   it("without an archive key the chain is never consulted", async () => {

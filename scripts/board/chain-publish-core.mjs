@@ -14,6 +14,10 @@ export const DONE_SURFACE = "board-done";
 export const GARDENING_SURFACE = "board-gardening";
 export const reportSurface = (date) => `board-report-${date}`;
 export const weekSurface = (date) => `board-week-${date}`;
+/** An edition's key in the head. The envelope's own surface stays
+ *  `<kind>-edition` with the date beside it, as every edition since
+ *  2026-08-30 carries; the head needs one key per edition, so the date joins. */
+export const editionSurface = (kind, date) => `${kind}-edition-${date}`;
 
 /** The board is two documents on the chain. The live columns and the week
  *  change on every publish and seal small; the done ledger is the bulk of the
@@ -58,6 +62,30 @@ export function withInscription(ledger, { surface, txid, sha256, date }) {
 /** The ledger after a head landed. */
 export function withHead(ledger, { txid, date }) {
   return { ...ledger, head: { txid, date } };
+}
+
+/** Fold the store's edition index (board:pdftx:<kind>:<date> → txid) into the
+ *  ledger without overwriting anything it already holds. Pure. */
+export function backfillEntries(ledger, pairs) {
+  let next = ledger;
+  const added = [];
+  const skipped = [];
+  const invalid = [];
+  for (const { key, txid } of pairs) {
+    const m = /^board:pdftx:(daily|week):(\d{4}-\d{2}-\d{2})$/.exec(key ?? "");
+    if (!m || typeof txid !== "string" || !/^[0-9a-f]{64}$/.test(txid)) {
+      invalid.push(key);
+      continue;
+    }
+    const surface = editionSurface(m[1], m[2]);
+    if (next.surfaces[surface]) {
+      skipped.push(surface);
+      continue;
+    }
+    next = withInscription(next, { surface, txid, sha256: "backfilled", date: m[2] });
+    added.push(surface);
+  }
+  return { ledger: next, added, skipped, invalid };
 }
 
 /** What the next head names: every known surface's current transaction. */

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   EMPTY_LEDGER,
+  backfillEntries,
   canonicalBytes,
+  editionSurface,
   splitBoard,
   changedDocuments,
   digestOf,
@@ -54,7 +56,27 @@ describe("splitting the board", () => {
 
 describe("surface names", () => {
   it("are lowercase slugs the envelope accepts", () => {
-    for (const s of [reportSurface("2026-09-01"), weekSurface("2026-08-30")]) expect(s).toMatch(/^[a-z][a-z0-9-]*$/);
+    for (const s of [reportSurface("2026-09-01"), weekSurface("2026-08-30"), editionSurface("daily", "2026-09-01")]) {
+      expect(s).toMatch(/^[a-z][a-z0-9-]*$/);
+    }
+  });
+});
+
+describe("backfilling the editions from the store's index", () => {
+  it("adds every well-formed edition, keeps what the ledger already holds, and names what it ignored", () => {
+    const held = withInscription(EMPTY_LEDGER, { surface: "daily-edition-2026-08-30", txid: TXID_A, sha256: "x", date: "2026-08-30" });
+    const { ledger, added, skipped, invalid } = backfillEntries(held, [
+      { key: "board:pdftx:daily:2026-08-30", txid: TXID_B },
+      { key: "board:pdftx:daily:2026-08-31", txid: TXID_B },
+      { key: "board:pdftx:week:2026-08-23", txid: TXID_A },
+      { key: "board:pdftx:daily:2026-09-01", txid: null },
+      { key: "board:other:key", txid: TXID_A },
+    ]);
+    expect(added).toEqual(["daily-edition-2026-08-31", "week-edition-2026-08-23"]);
+    expect(skipped).toEqual(["daily-edition-2026-08-30"]);
+    expect(invalid).toEqual(["board:pdftx:daily:2026-09-01", "board:other:key"]);
+    expect(ledger.surfaces["daily-edition-2026-08-30"].txid).toBe(TXID_A);
+    expect(ledger.surfaces["week-edition-2026-08-23"]).toEqual({ txid: TXID_A, sha256: "backfilled", date: "2026-08-23" });
   });
 });
 
