@@ -6,6 +6,97 @@ records that sweep's **rejections and dismissals**, newest first, so a later run
 re-flag what a prior run already refuted. Confirmed findings go to the Morning Board, not
 here. Cite `file:line` (or the live probe) so each verdict is independently re-derivable.
 
+## 2026-09-01 — one killed: "pull request 64 is NOW conflicting" is a standing fact, not news
+
+Reviewed `origin/main` at `9b3e9c2fcf89` (no shipping commits since 30 August; the sweep's
+substance was live probes and the pull-request queue). Four candidate findings; three survived
+refutation (the untracked 26 August digest draft, the store recovery with seven burned-in zero
+days, pull request 66 finished-and-unmerged) and went to the board. One killed:
+
+**Rejected: "Status change on the standing pull-request-64 card: now CONFLICTING with a failing
+Vercel check."** The raw observations verify (gh: `CONFLICTING` / `DIRTY`, Vercel FAILURE,
+untouched since 2026-08-26T13:16Z) — but the claimed *change* is false: the standing card
+`finding-site-two-week-files-2026-08-29` recorded exactly this state in its 29 and 30 August
+entries ("blocked … by a real conflict with main's later edit of `board/page.tsx`"). A
+still-true fact re-observed is evidence for the standing card, not a new finding. The card's
+pull (rebase `board-owns-week-plan`, resolve, merge) already stands.
+
+Also for the record, not rejections: the apex-307 and warm-timing conventions were applied per
+the 2026-08-14 and 2026-07-29 entries; the money gate answered 503 fail-closed; `/board`
+challenged to its login page.
+
+## 2026-08-30 — one finding against the 65 merge, rejected on live evidence the refuter did not use
+
+Reviewed `origin/main` at `04226ee992cf`, the merge of pull request 65 (eleven files). The
+repo gate passed on the range: `npm test` green, and `tsc --noEmit` clean for the first time
+since 25 August. One candidate finding, and it survived adversarial refutation; it is rejected
+here anyway, because the refuter reasoned from the client library's `request()` without
+reading the pipeline executor, and two live runs contradict the claim.
+
+**Rejected: "`summarise` groups on the full reason string, which embeds the Upstash client's
+per-command error echo, so a systemic refusal fragments into one line per key and never
+collapses."** The premise is that `set`/`sadd` throw from `request()` at
+`node_modules/@upstash/redis/chunk-IH7W44G6.mjs:203`, whose message appends
+`command was: ${JSON.stringify(req.body)}`. They do not, in the shipping configuration:
+`enableAutoPipelining` defaults to **true** (`:4364`), commands route through
+`withAutoPipeline` (`:3960`), and its throw at `:4003` is `Command failed: ${error}` with
+**no command echo**. Every refused write in a systemic outage therefore carries the identical
+message, and the grouping collapses, which is exactly what was observed on the two live runs
+against the over-quota store: 28 August, `68 of 68 step(s)` in one group; 29 August,
+`69 of 69 step(s)` in one group, `board:latest` grouped with the reports. A finding that says
+this "never" happens is refuted by it having happened twice.
+
+**What survives is fragility, not a defect, and it is parked
+(`parked-publish-core-group-by-kind-2026-08-30`).** The direct path at `:203` does echo the
+command, and this morning's `smembers` in `hh-plan-update.mjs` took it (the log reads
+`command was: ["smembers","board:weeks"]`). Grouping by `kind` rather than the interpolated
+reason would remove the dependence on message shape, and the grouping test should feed distinct
+same-cause messages rather than one reused literal. Fold in on the next touch of the file.
+
+**Lesson for the refuter, recorded so it is reused:** when a finding names a library's throw
+path, check the library's *default configuration* and, where a live log exists, the shape of
+the message actually observed. The refuter cited `:4003` as "a different code path, not the
+one set/sadd use" and was wrong about which path is the default.
+
+## 2026-08-29 — nothing rejected; one finding re-derived independently and NOT re-filed
+
+`origin/main` has not moved since yesterday's ledger commit (`522f67ecb081`), so there were
+zero shipping commits to review. All four findings raised against repository and production
+state survived adversarial refutation at high confidence and are carded, not rejected.
+
+**Recorded here because it is a near-miss duplicate.** Reading `scripts/board/daily-reach.mjs`
+from scratch this morning, the adjudicator independently derived that `siteViews` violates
+its own docstring: the comment at `:148` states "A failed read is different: null, never
+zero", the guard at `:161` tests only the `views:total` read, and `:164` then coerces every
+refused day-read to zero with `n ?? 0`. This is **already carded** as
+`finding-site-unknown-renders-as-zero-2026-08-28`, which names the same lines, so it was
+**not re-filed** — it was appended to that card as corroborating evidence.
+
+The corroboration is worth keeping: the failure was *observed live* today rather than
+predicted. Two runs of the reach pull minutes apart returned site week **13**, then **0**,
+with `total` unchanged at 1,199. Also established: commit `0c9dc35`, titled "a failed read
+is not an empty board, nor a zero", touched `page.tsx`, `MorningSheet.tsx`, `Accordion.tsx`
+and `board-data.ts` — and never `daily-reach.mjs`. The principle was applied to the renderer
+and not to the collector.
+
+**One finding went unadjudicated and is named rather than buried.** The site review produced
+five candidates; the workflow capped adversarial refutation at four per repository, so F5
+("`board-data.ts` on main has no staleness detection") was never refuted. It is not carded
+separately: on inspection it restates the consequence of the unmerged pull request 65 rather
+than an independent defect, and it is folded into `ops-keyvalue-store-exhausted-2026-08-28`.
+The cap was the adjudicator's own scripting error, the same shape as the 2026-08-27 slice
+cap, and is recorded so it is not repeated a third time.
+
+## 2026-08-28 — two of five site findings killed, both on the primary test
+
+- **REJECTED: "The 06:00 job's store-write failure prints a reassuring message, still reports success, and exits 0, so the loss ratchets unseen."** Refuted on the primary test: the quoted code does not exist in the checked-out tree. `scripts/board/hh-plan-update.mjs` is 76 lines; repo-wide greps for `writeBoardFiles`, `store write failed` and `board files still updated` return **zero** hits across the main checkout, all twelve worktrees and the sibling checkouts. The current script has no try/catch around the store write, so a refusal throws and the process exits **non-zero**. The swallow-and-report-success shape is real but lives only on the unmerged branch `board-owns-week-plan` (pull request 64) and is already carded from 2026-08-27. **Note the correction this forced on our own card:** the framing 'it will clobber again the moment the store answers' was wrong, because the checkout has moved off that branch since 27 August.
+- **REJECTED: "writeBoardFiles fabricates weekEnd = weekOf in the derived week mirror."** `scripts/board/local-mirror.mjs` is 27 lines; the cited lines 48-55, 51 and 62 are all past end of file. The only assignment is `weekEnd: week.weekEnd` at line 17, which is correct, and it is the very line the finding claimed was broken. Three cited identifiers do not exist anywhere in the repository.
+
+## 2026-08-27 — two of four folklore findings killed by refutation
+
+- **REJECTED: "the Magic Attribute Protocol reader applies none of the caps the module's own doctrine requires."** The headline claim is refuted by the doctrine's own text, and the alleged harm is inverted. Do not re-flag without quoting the doctrine.
+- **REJECTED: "extractTargetTxid has no callers, its spec-mandated multiple-id test is missing, and it silently truncates."** The arithmetic half is correct but inert; the harm half is inverted, so it does not stand as a defect. Verified true but not a defect.
+
 ## 2026-08-26 — the outage message is a defect; two worker findings are dormant, and four readings were falsified before filing
 
 - **PRINT DEFECT found by rendering it — the Morning Edition drops emergencies past the third, silently** [FACT, read this run]. `MorningSheet.tsx:138` builds the stop-press band as `report.emergencies.slice(0, 3)`. Today's report carried four, so the fourth never reached the sheet, and nothing in the page, the render or the publish said so. The sheet reads as complete when it is not, which is the same failure shape as this morning's screenshot gate. Today it cost nothing, because the dropped item (write This Week in Parliament) also prints as a plan item, and the report was cut back to three deliberately. **Fix:** render every emergency, or print an explicit "and N more" line when the band is capped. Never truncate in silence.

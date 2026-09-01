@@ -1,0 +1,89 @@
+{
+  "week": "2026-08-26",
+  "windowLabel": "19 Aug – 26 Aug 2026",
+  "mode": "recess",
+  "generatedAt": "2026-08-26T13:40:00.000Z",
+  "recessReturnISO": "2026-09-01T00:00:00.000Z",
+  "stats": {
+    "divisions": 0,
+    "questions": 0,
+    "distinctAskers": 0
+  },
+  "departments": [],
+  "topTopics": [],
+  "qa": [],
+  "intro": "The cost of heating a house in Britain was settled this week by a body that is not Parliament, on a day when Parliament could not have asked about it. On Wednesday 26 August Ofgem raised the energy price cap by 4%, from £1,663 to £1,723 a year for a household using a typical amount of gas and electricity, an extra £60 a year or £5 a month, for the quarter beginning 1 October. Gas does the work: gas bills rise 8%, while electricity stays, in the regulator’s word, “broadly stable”, because “the Government’s decision to remove VAT from all domestic electricity bills is reflected in this update” — without which the cap would have stood some £45 higher. Twenty-two million households on default tariffs are inside the cap; about eleven million on fixed deals are not. “High international gas prices are continuing to drive energy costs in the UK,” said Neil Kenward, the regulator’s Director General for Markets, adding that prices “remain 52% below the height of the energy crisis in 2022.” Against that, the parliamentary record for the week is a blank: not one word was spoken in either chamber, not one written statement was made in either House, and of the 134 written answers that arrived, exactly one mentions energy at all, and it concerns laser weapons. The House returns on 1 September, five days after the decision. What the written record did carry was a study in economy. Ninety-five distinct texts answered those 134 questions; sixty-one of them were answered in groups, one reply serving two, three, five, and in the largest case ten. Lord Hunt of Kings Heath put eleven questions about the training of doctors and had ten of them met by a single answer. On 14 July Maya Ellis, the Labour member for Ribble Valley, tabled five separate and carefully distinct questions about how the health service records a miscarriage — whether the Maternity Services Data Set will collect the second trimester, whether the Digital Maternity Record Standard will code the outcome, how the coming Single Patient Record might stop one loss being counted twice. Forty-two days later, on 25 August, Alison McGovern answered all five with one text, and that text contains the finding: “It is not currently mandatory for trusts to record second trimester miscarriage through the Maternity Services Data Set (MSDS).” The remedy is real and distant, maternity being a priority pathway for the Single Patient Record with “early implementation starting in 2027”. Elsewhere the numbers spoke: referrals to children’s mental health services have risen from around 70,000 a month in March 2016 to almost 130,000 a month in March 2026. The register still holds 650 members, unchanged since the by-election of 13 August.",
+  "overview": {
+    "headline": "The price cap rises while the House is away",
+    "intro": "Ofgem raised the energy price cap by 4% on Wednesday 26 August. A household using a typical amount of gas and electricity will pay £1,723 a year from 1 October, up from £1,663, which is £60 more a year. Gas bills rise 8%. Electricity is broadly stable because the Government has removed value added tax from domestic electricity bills, without which the cap would have been about £45 higher. Twenty-two million households on default tariffs are covered. Parliament had no part in any of it. Not one word was spoken in either chamber this week and no written statement was made in either House. The Commons returns on 1 September, five days after the decision.",
+    "brief": [
+      {
+        "title": "The energy price cap rises 4% from October",
+        "when": "Announced Wednesday 26 August",
+        "note": "Ofgem set the cap at £1,723 a year for a household using a typical amount of gas and electricity, up from £1,663. That is £60 a year more, or £5 a month, for the quarter beginning 1 October. Gas bills rise 8% while electricity stays broadly stable, because value added tax has been removed from domestic electricity. Ofgem says the cap would have been about £45 higher without it. Twenty-two million households are covered and about eleven million on fixed deals are not."
+      },
+      {
+        "title": "Not one word was spoken in either chamber",
+        "when": "19 to 26 August",
+        "note": "The parliamentary record for the week is empty. There were no divisions, no questions tabled, no bill stage sat, and no written statement was made in either House. Of the 134 written answers that arrived, exactly one mentions energy, and it is about laser weapons. The House cannot ask about the price cap until it returns."
+      },
+      {
+        "title": "Thirty per cent, but the answer does not say of what",
+        "when": "Answered Wednesday 19 August",
+        "note": "The Department of Health and Social Care told Helen Morgan and Munira Wilson that the capital budget for health is due to reach £15 billion by 2029/30, over 30% higher than 2024/25. Neither answer says whether that is cash or real terms. Read as cash, which is the usual convention, five years of inflation at the Bank of England target of 2% would leave a real increase nearer 18%, and at the 2.9% the Office for National Statistics recorded in July, nearer 13%. Average inflation above about 5.4% a year would turn the rise into a cut."
+      },
+      {
+        "title": "Ten questions, one answer",
+        "when": "Answered during the week",
+        "note": "Ninety-five distinct texts answered the week's 134 written questions. Sixty-one questions were answered in groups, one reply serving two, three, five or ten. Lord Hunt of Kings Heath put eleven questions about the training of doctors and ten of them received the same answer. Maya Ellis of Labour asked five distinct questions about miscarriage records and all five received one reply."
+      },
+      {
+        "title": "What the state does not count",
+        "when": "Answered Tuesday 25 August",
+        "note": "The answer to Maya Ellis states that it is not currently mandatory for trusts to record second trimester miscarriage through the Maternity Services Data Set. It says most miscarriages happen outside healthcare settings and that disclosure is the choice of the woman affected. Maternity is a priority pathway for the Single Patient Record, with early implementation starting in 2027."
+      },
+      {
+        "title": "When Parliament comes back",
+        "when": "Tuesday 1 September",
+        "note": "The summer recess runs to 31 August. The register still holds 650 members, unchanged since the by-election of 13 August. The week also heard that referrals to children's mental health services rose from around 70,000 a month in March 2016 to almost 130,000 a month in March 2026."
+      }
+    ],
+    "feature": {
+      "title": "The miscarriages the record does not hold",
+      "summary": "A thing the state does not count is a thing it cannot plan for. The answer given five times over on 25 August is candid about the difficulty. Most miscarriages happen away from hospital, and whether to tell a clinician is the woman's decision, which no data set can compel. But between that honest limit and the present position lies a gap the department chose. A second trimester loss, one that happens well into a pregnancy and often in a hospital, is still not something trusts are required to record. The remedy exists and has a date attached to it. Maternity is a priority for the Single Patient Record and early implementation starts in 2027. Until then the answer to how many women this happens to each year is that nobody is obliged to write it down."
+    },
+    "money": [
+      {
+        "amount": "£307.5 billion",
+        "department": "Education",
+        "purpose": "The total outstanding balance of student loan debt, that includes tuition fee and maintenance loans, across all student loan…"
+      },
+      {
+        "amount": "£169.5 billion",
+        "department": "Education",
+        "purpose": "As of 26 July 2026, the outstanding balance of tuition fee loans for further and higher education was £169.5 billion."
+      },
+      {
+        "amount": "£20 billion",
+        "department": "Defence",
+        "purpose": "The DIP also sets out plans to invest at least £20 billion in new weapons and munitions between 2030 and 2035, including DEW for…"
+      },
+      {
+        "amount": "£15 billion",
+        "department": "Health",
+        "purpose": "The capital budget for health is due to increase to £15 billion by 2029/30, over 30% higher than 2024/25."
+      },
+      {
+        "amount": "£3.7 billion",
+        "department": "Education",
+        "purpose": "We are investing at least £3.7 billion in high needs capital funding between 2025/2026 and 2029/2030, to support local…"
+      }
+    ]
+  },
+  "highlights": {
+    "votes": [],
+    "questions": [],
+    "bills": []
+  },
+  "status": "draft"
+}

@@ -188,7 +188,7 @@ export type BoardWeek = {
   stateOfUnion?: string;
   weekPlan: PlanDay[];
 };
-export type Board = { generated: string; cards: Card[]; log?: string; week?: BoardWeek };
+export type Board = { generated: string; generatedAt?: string; cards: Card[]; log?: string; week?: BoardWeek };
 
 // The gardening schedule, published from Henry's laptop by publish.mjs —
 // Upstash-only (the source file lives outside the repo, so there is no local

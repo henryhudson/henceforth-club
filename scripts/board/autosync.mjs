@@ -43,7 +43,18 @@ async function regenLatest() {
   if (!board || typeof board.generated !== "string" || !Array.isArray(board.cards)) {
     throw new Error("board-data.js did not yield { generated, cards } (mid-edit?)");
   }
-  await writeFile(LATEST, JSON.stringify({ generated: board.generated, cards: board.cards }, null, 2) + "\n");
+  // generatedAt is the machine-readable sibling of the prose `generated`
+  // line: the site ages the board on this, never on the sentence, which is
+  // rendered verbatim and carries no timezone. Stamped when the mirror is
+  // regenerated, which is when the canonical board last changed.
+  await writeFile(
+    LATEST,
+    JSON.stringify(
+      { generated: board.generated, generatedAt: new Date().toISOString(), cards: board.cards },
+      null,
+      2,
+    ) + "\n",
+  );
   return board.cards.length;
 }
 

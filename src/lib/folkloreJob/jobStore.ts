@@ -97,8 +97,12 @@ export async function backfillJobIndex(): Promise<number> {
     .filter((k) => !k.startsWith(PAYLOAD_PREFIX))
     .map((k) => k.slice(JOB_PREFIX.length))
     .filter((id) => id.length > 0);
-  if (ids.length === 0) return 0;
-  await redis.sadd(IDS_KEY, ...ids);
+  // Destructured rather than spread: sadd's signature is (key, member,
+  // ...members), and a bare string[] spread does not satisfy it. This guard
+  // replaces the length check it used to duplicate.
+  const [first, ...rest] = ids;
+  if (first === undefined) return 0;
+  await redis.sadd(IDS_KEY, first, ...rest);
   return ids.length;
 }
 
