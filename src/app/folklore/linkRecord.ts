@@ -107,6 +107,10 @@ export function recordFromValue(j: unknown): FolkloreRecord | null {
 }
 
 function tryParse(bytes: Uint8Array): FolkloreRecord | null {
+  // A record is always a JSON object, so a chunk that does not open with a
+  // brace is skipped before the decoder runs — an archive blob is no longer
+  // decoded, parsed, and thrown away one line later.
+  if (bytes[0] !== 0x7b) return null;
   try {
     return recordFromValue(JSON.parse(new TextDecoder().decode(bytes)));
   } catch {
