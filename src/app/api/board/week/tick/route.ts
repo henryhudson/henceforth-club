@@ -24,8 +24,37 @@ export async function POST(req: Request) {
   }
 
   const redis = getRedis();
-  if (!redis) return NextResponse.json({ error: "no store" }, { status: 503 });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let board: any = null;
+  try {
+    if (redis) board = await redis.get("board:latest");
+  } catch {
+    /* cap — try the week key fallback below */
+  }
 
+  if (board?.week?.weekPlan) {
+    const dayEntry = board.week.weekPlan.find((d: { date: string }) => d.date === day);
+    const task = dayEntry?.tasks?.[index];
+    if (task === undefined) return NextResponse.json({ error: "no task" }, { status: 404 });
+    const base: { label: string; start?: number; end?: number } = {
+      label: typeof task === "string" ? task : task.label,
+    };
+    if (typeof task === "object") {
+      if (task.start != null) base.start = task.start;
+      if (task.end != null) base.end = task.end;
+    }
+    dayEntry.tasks[index] = done ? { ...base, done: true } : base;
+    try {
+      if (redis) await redis.set("board:latest", board);
+    } catch {
+      return NextResponse.json({ error: "store unavailable" }, { status: 503 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  // Older clients still post a week-end key. Keep writing that document until
+  // a /whh has put the plan on the board.
+  if (!redis) return NextResponse.json({ error: "no store" }, { status: 503 });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const w = await redis.get<any>(`board:week:${week}`);
   const dayEntry = w?.retro?.weekPlan?.find((d: { date: string }) => d.date === day);

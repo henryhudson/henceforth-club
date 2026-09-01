@@ -4,7 +4,18 @@ import BoardClient, { type WeekSlice } from "./BoardClient";
 
 export const dynamic = "force-dynamic";
 
-async function loadWeekSlice(): Promise<WeekSlice | null> {
+function sliceFromBoard(board: { week?: { weekOf: string; generatedAt?: string; stateOfUnion?: string; weekPlan: WeekSlice["weekPlan"] } }): WeekSlice | null {
+  const week = board.week;
+  if (!week?.weekPlan?.length) return null;
+  return {
+    weekEnd: week.weekOf,
+    generatedAt: week.generatedAt,
+    stateOfUnion: week.stateOfUnion,
+    weekPlan: week.weekPlan,
+  };
+}
+
+async function loadWeekSliceFallback(): Promise<WeekSlice | null> {
   const weeks = await listWeeks();
   const active = weeks[0];
   if (!active) return null;
@@ -19,7 +30,7 @@ async function loadWeekSlice(): Promise<WeekSlice | null> {
 }
 
 export default async function BoardPage() {
-  const [result, week] = await Promise.all([loadBoardResult(), loadWeekSlice()]);
+  const result = await loadBoardResult();
   if (result.status !== "ok") {
     return (
       <main className="mx-auto max-w-3xl px-6 py-16 text-center text-muted">
@@ -37,6 +48,7 @@ export default async function BoardPage() {
     );
   }
   const board = result.board;
+  const week = sliceFromBoard(board) ?? (await loadWeekSliceFallback());
   // Derived on the server: a client component computing this from its own
   // clock would hydrate mismatched, and the age must be the server's view.
   const freshness = describeFreshness(boardGeneratedAt(board), new Date());

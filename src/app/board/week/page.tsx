@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import WeekPlanner from "./WeekPlanner";
 import { listWeeks, loadBoard, loadWeek } from "@/lib/board-data";
@@ -7,8 +8,10 @@ export const dynamic = "force-dynamic";
 
 export default async function WeekPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
   const { date } = await searchParams;
+  // The live plan sits on the board. A date-less visit is the current week.
+  if (!date) redirect("/board");
   const [weeks, board] = await Promise.all([listWeeks(), loadBoard()]);
-  const active = date && weeks.includes(date) ? date : weeks[0];
+  const active = weeks.includes(date) ? date : weeks[0];
   const w = active ? await loadWeek(active) : null;
 
   // What each day of the week actually shipped, from the kanban's done column.
@@ -17,7 +20,7 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
   return (
     <main className="mx-auto px-6 py-10">
       <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Weekly Schedule</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Past weeks</h1>
         <div className="flex gap-3 text-sm text-accent-green">
           <Link href="/board" className="underline">Board</Link>
           <Link href="/board/reports" className="underline">Reports</Link>
@@ -31,8 +34,8 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
         <>
           {w.retro.weekPlan?.length ? (
             <>
-              <h2 className="mt-10 border-b border-card-border pb-1 text-xl font-bold">This week&apos;s plan</h2>
-              <p className="mt-1 text-xs text-muted">Wednesday is update &amp; review · article day. Tick tasks off as you go.</p>
+              <h2 className="mt-10 border-b border-card-border pb-1 text-xl font-bold">Archived plan</h2>
+              <p className="mt-1 text-xs text-muted">The live week sits on the <Link href="/board" className="underline">board</Link>. This is the newspaper snapshot.</p>
               <WeekPlanner days={w.retro.weekPlan} weekKey={w.weekEnd} shipped={shipped} />
             </>
           ) : null}

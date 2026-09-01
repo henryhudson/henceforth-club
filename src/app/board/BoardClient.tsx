@@ -121,6 +121,7 @@ export default function BoardClient({
   const [filter, setFilter] = useState("all");
   const [dragId, setDragId] = useState<string | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [ticks, setTicks] = useState<Record<string, boolean>>({});
   const todayISO = useMemo(() => new Date().toLocaleDateString("en-CA"), []);
   const todayRef = useRef<HTMLDivElement | null>(null);
   const weekRef = useRef<HTMLElement | null>(null);
@@ -181,6 +182,17 @@ export default function BoardClient({
       rail?.removeEventListener("scroll", lightBand);
     };
   }, [week, cards, theme]);
+
+  function tick(dayDate: string, index: number, next: boolean) {
+    setTicks((o) => ({ ...o, [`${dayDate}:${index}`]: next }));
+    fetch("/api/board/week/tick", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ week: week?.weekEnd, day: dayDate, index, done: next }),
+    }).catch(() => {
+      /* keep the optimistic state; reconciles on reload */
+    });
+  }
 
   function persist(next: Card[]) {
     const map: Record<string, { col: string; rev: number; movedAt?: string; doneAt?: string }> = {};
@@ -354,12 +366,18 @@ export default function BoardClient({
                     ) : (
                       <ul>
                         {tasks.map((t, i) => {
-                          const done = taskDone(t);
+                          const done = ticks[`${day.date}:${i}`] ?? taskDone(t);
                           return (
                             <li key={i} className={done ? "done" : undefined}>
-                              <span className={`box ${done ? "" : "open"}`} aria-hidden>
+                              <button
+                                type="button"
+                                className={`box ${done ? "" : "open"}`}
+                                aria-pressed={done}
+                                aria-label={done ? `Mark not done: ${taskLabel(t)}` : `Mark done: ${taskLabel(t)}`}
+                                onClick={() => tick(day.date, i, !done)}
+                              >
                                 {done ? "✓" : "□"}
-                              </span>
+                              </button>
                               <span>{taskLabel(t)}</span>
                             </li>
                           );

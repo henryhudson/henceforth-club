@@ -5,7 +5,7 @@
 import { readFile, readdir, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { windowDates, buildRetro, weekStripDates, buildWeekStrip, weekPlanSkeleton, addDays } from "./whh-aggregate.mjs";
-import { mirrorWeekToBoardViewer } from "./local-mirror.mjs";
+import { attachWeekToBoardFiles } from "./local-mirror.mjs";
 import { pullSales } from "./asc-client.mjs";
 import { pullAnalyticsDownloads } from "./asc-analytics.mjs";
 import { pullAppState } from "./app-state.mjs";
@@ -91,7 +91,7 @@ export async function run({ endDate, days = 7 }) {
   await mkdir(WEEKS_DIR, { recursive: true });
   // Keyed by the review-end date (endDate), the day the retrospective was run.
   await writeFile(path.join(WEEKS_DIR, `${endDate}.json`), JSON.stringify(week, null, 2) + "\n");
-  await mirrorWeekToBoardViewer(week);
+  await attachWeekToBoardFiles(week);
   return week;
 }
 

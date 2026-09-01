@@ -76,6 +76,21 @@ struct BoardDecodingTests {
         ])
     }
 
+    @Test("the live week on the board is enough to plan the calendar")
+    func boardWeekIsThePlan() throws {
+        let json = """
+        {"generated":"2026-08-26 12:00","cards":[],"week":{"weekOf":"2026-08-23","weekPlan":[
+          {"date":"2026-08-26","weekday":"Wed","isReviewDay":true,
+           "tasks":[{"label":"Archive the three apps","done":false}]}
+        ]}}
+        """
+        let board = try JSONDecoder().decode(BoardDocument.self, from: Data(json.utf8))
+        let days = plannedDays(plan: board.week!.weekPlan!, cards: [])
+        #expect(days.count == 1)
+        #expect(days[0].date.day == 26)
+        #expect(days[0].tasks == [PlannedTask(label: "Archive the three apps", done: false)])
+    }
+
     @Test("days that cross a month boundary come back in true chronological order")
     func monthBoundaryOrdering() throws {
         // "9" sorts after "1" as a string, so an unpadded string sort would

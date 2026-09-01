@@ -1,4 +1,4 @@
-import type { Report, Finding, Emergency, WeekReport, Board } from "@/lib/board-data";
+import type { Report, Finding, Emergency, Board, PlanDay } from "@/lib/board-data";
 import type { DiaryEntry } from "@/lib/gardening";
 import { isRowHigh, longDate, reachCell, sparkPoints } from "@/lib/report-helpers";
 import A4Sheet from "@/app/hansard/this-week/_components/overview/A4Sheet";
@@ -26,9 +26,9 @@ function clip(text: string, max: number): string {
  *  read type-aware: planner tasks mix plain strings and {label, done}.
  *  Capped hard — the sheet is a fixed A4 and the one-page budget fails the
  *  render loudly, so open-ended sources must bound themselves here. */
-export function weekAheadFrom(week: WeekReport | null, fromDate: string): WeekAheadDay[] {
-  const plan = week?.retro?.weekPlan ?? [];
-  return plan
+export function weekAheadFrom(plan: PlanDay[] | null | undefined, fromDate: string): WeekAheadDay[] {
+  const days = plan ?? [];
+  return days
     .filter((day) => day.date >= fromDate)
     .map((day) => {
       const tasks = (day.tasks ?? []).map((t) =>
