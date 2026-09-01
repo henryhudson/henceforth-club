@@ -46,6 +46,14 @@ describe("loadBoardResult", () => {
     await expect(loadBoardResult()).resolves.toEqual({ status: "empty" });
   });
 
+  it("reports unavailable, not empty, when no store is configured and no file backs it up", async () => {
+    // The third face of "a failed read is not an empty board": a site that
+    // cannot see the store must not tell the reader to run /hh.
+    mockGetRedis.mockReturnValue(null as never);
+    mockReadFile.mockRejectedValue(new Error("ENOENT"));
+    await expect(loadBoardResult()).resolves.toEqual({ status: "unavailable" });
+  });
+
   it("still serves the local file when the store is down, which is how dev works", async () => {
     mockGetRedis.mockReturnValue({ get: vi.fn().mockRejectedValue(new Error("down")) } as never);
     mockReadFile.mockResolvedValue(JSON.stringify(board));
