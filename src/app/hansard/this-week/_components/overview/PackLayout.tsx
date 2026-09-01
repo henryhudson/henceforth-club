@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { flushSync } from "react-dom";
-import { packColumns, type Placement } from "@/lib/print/pack";
+import { packColumns, type PackResult, type Placement } from "@/lib/print/pack";
 import s from "./pack.module.css";
 
 export type SquareProps = {
@@ -59,9 +59,10 @@ function groupByColumn(placements: Placement[], columnCount: number): Placement[
   return cols;
 }
 
-function readPack(root: HTMLElement, columnCount: number, slotPx: number): Placement[] {
+function readPack(root: HTMLElement, columnCount: number, slotPx: number): PackResult {
+  const empty: PackResult = { placements: [], columnHeights: [0, 0, 0, 0], makespan: 0, splitIds: [] };
   const measure = root.querySelector("[data-pack-measure]");
-  if (!(measure instanceof HTMLElement)) return [];
+  if (!(measure instanceof HTMLElement)) return empty;
   const items = [...measure.querySelectorAll("[data-pack-id]")].flatMap((node) => {
     if (!(node instanceof HTMLElement)) return [];
     const id = node.getAttribute("data-pack-id");
@@ -75,9 +76,9 @@ function readPack(root: HTMLElement, columnCount: number, slotPx: number): Place
       },
     ];
   });
-  if (slotPx <= 0) return [];
+  if (slotPx <= 0) return empty;
   const gap = 2.2 * (96 / 25.4);
-  return packColumns(items, slotPx, columnCount, gap).placements;
+  return packColumns(items, slotPx, columnCount, gap);
 }
 
 function Fragment({
@@ -110,7 +111,6 @@ export default function PackLayout({
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const packedKey = useRef("");
-  const slotRef = useRef(0);
   const [placements, setPlacements] = useState<Placement[]>([]);
   const squares = readSquares(children);
   const byId = new Map(squares.map((sq) => [sq.id, sq]));
@@ -123,12 +123,12 @@ export default function PackLayout({
     const root = rootRef.current;
     if (!root) return;
     const run = () => {
-      if (!slotRef.current && root.clientHeight > 0) slotRef.current = root.clientHeight;
-      const next = readPack(root, columnCount, slotRef.current);
-      const key = JSON.stringify(next);
+      const result = readPack(root, columnCount, root.clientHeight);
+      root.dataset.packMakespan = String(result.makespan);
+      const key = JSON.stringify(result.placements);
       if (key === packedKey.current) return;
       packedKey.current = key;
-      flushSync(() => setPlacements(next));
+      flushSync(() => setPlacements(result.placements));
     };
     run();
     root.addEventListener("newspaper-fit", run);

@@ -16,7 +16,9 @@
      but still in-flow enough that offsetHeight is the real column height. */
   left: -200vw;
   top: 0;
-  width: calc((100% - 3 * 8mm) / 4 - 4mm);
+  /* Same 1fr as a placed column: the 4mm pad is cancelled by a -4mm pull
+     into the gap, so subtracting it here made copy look taller than it sits. */
+  width: calc((100% - 3 * 8mm) / 4);
   visibility: hidden;
   pointer-events: none;
 }
@@ -30,12 +32,18 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0 8mm;
-  align-items: start;
+  align-items: stretch;
+  height: 100%;
   min-height: 100%;
 }
 
 .col {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  gap: 2.2mm;
 }
 
 .col + .col {
@@ -44,6 +52,12 @@
   margin-left: -4mm;
 }
 
-.item + .item {
-  margin-top: 2.2mm;
+.item {
+  flex: 0 0 auto;
+}
+
+/* Old equal-height bands used height: 100% on boxed squares; in a packed
+   column that stretches the box and leaves a hole between neighbours. */
+.item > * {
+  height: auto;
 }
