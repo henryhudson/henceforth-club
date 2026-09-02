@@ -115,9 +115,19 @@ export async function broadcastRaw(hex, { fetchImpl = fetch, sleep = wait, log =
   throw new Error(`broadcast failed: ${last}`);
 }
 
-/** The change output a follow-up inscription can spend, or -1. */
-export function changeOutputIndex(tx) {
-  return tx.outputs.findIndex((o) => o.change === true && (o.satoshis ?? 0) > 0);
+/** The change output a follow-up inscription can spend, or -1. A transaction
+ *  built in this process carries a change flag; one parsed back from the chain
+ *  does not, so with the archive address given, the change is the last output
+ *  that pays it — ours carry one data output and one payment home. */
+export function changeOutputIndex(tx, address = null) {
+  const flagged = tx.outputs.findIndex((o) => o.change === true && (o.satoshis ?? 0) > 0);
+  if (flagged >= 0 || !address) return flagged;
+  const home = new P2PKH().lock(address).toHex();
+  for (let i = tx.outputs.length - 1; i >= 0; i--) {
+    const o = tx.outputs[i];
+    if ((o.satoshis ?? 0) > 0 && o.lockingScript?.toHex?.() === home) return i;
+  }
+  return -1;
 }
 
 // Where the input comes from, in order of preference: the previous
@@ -126,7 +136,7 @@ export function changeOutputIndex(tx) {
 // reports for the key's address.
 async function sourceFor({ address, prevTx, dryRun, fetchImpl, sleep = wait, log = console.log }) {
   if (prevTx) {
-    const changeIndex = changeOutputIndex(prevTx);
+    const changeIndex = changeOutputIndex(prevTx, address);
     if (changeIndex < 0) throw new Error("previous transaction in this run has no change output to chain from");
     return { sourceTransaction: prevTx, sourceOutputIndex: changeIndex, sourceLabel: "previous transaction's change" };
   }

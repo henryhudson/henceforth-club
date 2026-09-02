@@ -26,7 +26,7 @@ export declare function inscribeDocument(args: {
   log?: (line: string) => void;
 }): Promise<InscriptionSummary>;
 
-export declare function changeOutputIndex(tx: Transaction): number;
+export declare function changeOutputIndex(tx: unknown, address?: string | null): number;
 export declare const FEE_RATE_SATS_PER_KB: number;
 export declare const FEE_CEILING_SATS: number;
 export declare const DRY_RUN_SOURCE_SATS: number;
