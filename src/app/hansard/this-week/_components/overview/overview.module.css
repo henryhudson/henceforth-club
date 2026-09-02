@@ -369,3 +369,21 @@ h3.sectionTitle:first-child { margin-top: 0; border-top: none; padding-top: 0; }
 .mayorAuthority { color: #444; flex: 1; }
 .mayorName { font-weight: 700; color: #111; white-space: nowrap; }
 .mayorTally { font: italic .857em/1.25 Georgia, serif; color: #444; margin: .8mm 0 0; }
+
+/* ── the seat that is empty ── */
+.vacancySeat { margin: 0 0 .9mm; font: .857em/1.2 Georgia, 'Times New Roman', serif; color: #111; text-indent: 0; }
+.vacancyList { list-style: none; margin: 0 0 .9mm; padding: 0; }
+.vacancyRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: baseline;
+  gap: 0 1.2mm;
+  font: .786em/1.35 -apple-system, sans-serif;
+  color: #222;
+}
+.vacancyRow + .vacancyRow { border-top: .25pt solid #ccc; }
+.vacancyWhen { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The leader between the two, drawn rather than typed with full stops. */
+.vacancyRule { border-bottom: .25pt dotted #999; align-self: center; width: 3mm; }
+.vacancyPoll { font-weight: 700; color: #111; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.vacancyRuleNote { margin: 0; font: .714em/1.3 -apple-system, sans-serif; color: #444; text-indent: 0; }

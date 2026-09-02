@@ -9,6 +9,7 @@ import Cabinet from './Cabinet'
 import Mayors from './Mayors'
 import DivisionsBlock from './DivisionsBlock'
 import DepartmentChart from './DepartmentChart'
+import Vacancy from './Vacancy'
 import MostAskedSubjects from './MostAskedSubjects'
 import TopQuestions from './TopQuestions'
 import Feature from './Feature'
@@ -108,6 +109,11 @@ export default function Overview({ digest, week }: { digest: DigestData; week: s
         {qa.length > 0 && (
           <Square id="qa" className={s.sq}>
             <TopQuestions qa={qa} />
+          </Square>
+        )}
+        {ov?.vacancy && (
+          <Square id="vacancy" className={s.sq}>
+            <Vacancy vacancy={ov.vacancy} />
           </Square>
         )}
         {ov?.mostActive && (

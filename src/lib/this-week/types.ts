@@ -52,6 +52,23 @@ export interface MostActiveEntry { name: string; party: string; count: number }
  *  minister said it is for. Extracted deterministically from the record —
  *  the editorial pass never writes these. */
 export interface MoneyItem { amount: string; department: string; purpose: string }
+/** A seat with no Member, and the days a poll could fall on. The scenarios
+ *  are days the writ might be received; the page works the poll out from them.
+ *  `bankHolidays` travels with the issue so the arithmetic on an archived
+ *  edition is the arithmetic that was printed. */
+export interface VacancyBlock {
+  seat: string
+  member: string
+  party: string
+  /** The day the seat fell vacant. */
+  sinceISO: string
+  /** How it fell vacant, as a phrase that follows "left the House". */
+  reason: string
+  writMoved: boolean
+  writScenarios: { label: string; writISO: string }[]
+  bankHolidays: string[]
+}
+
 export interface OverviewBlock {
   headline: string
   intro: string
@@ -64,6 +81,8 @@ export interface OverviewBlock {
   /** The week's public spending, largest first. */
   money?: MoneyItem[]
   mostActive?: { asker: MostActiveEntry; answerer: MostActiveEntry }
+  /** A seat left empty this week, and when its by-election could fall. */
+  vacancy?: VacancyBlock
 }
 
 export interface DigestData {
