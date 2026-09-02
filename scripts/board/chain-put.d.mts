@@ -38,3 +38,7 @@ export declare function broadcastRaw(
   opts?: { fetchImpl?: typeof fetch; sleep?: (ms: number) => Promise<void>; log?: (message: string) => void },
 ): Promise<string>;
 export declare function txidFromBroadcast(body: string): string | null;
+export declare function fetchIndexer(
+  path: string,
+  opts?: { fetchImpl?: typeof fetch; sleep?: (ms: number) => Promise<void>; log?: (message: string) => void },
+): Promise<string>;
