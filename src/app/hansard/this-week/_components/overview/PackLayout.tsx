@@ -66,6 +66,22 @@ function lineHeightOf(node: HTMLElement): number {
   return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
+/** The bottoms of the copy's rendered boxes, as offsets from the square's top:
+ *  every line box of text and every block's border box, deduplicated and sorted.
+ *  These are the only places a fragment may end. */
+function lineCutsOf(node: HTMLElement): number[] {
+  const top = node.getBoundingClientRect().top;
+  const range = document.createRange();
+  range.selectNodeContents(node);
+  const bottoms = new Set<number>();
+  for (const rect of range.getClientRects()) {
+    if (rect.height <= 0) continue;
+    bottoms.add(Math.round((rect.bottom - top) * 100) / 100);
+  }
+  range.detach();
+  return [...bottoms].sort((a, b) => a - b);
+}
+
 function readPack(root: HTMLElement, columnCount: number, slotPx: number): PackResult {
   const empty: PackResult = { placements: [], columnHeights: [0, 0, 0, 0], makespan: 0, splitIds: [] };
   const measure = root.querySelector("[data-pack-measure]");
@@ -81,6 +97,7 @@ function readPack(root: HTMLElement, columnCount: number, slotPx: number): PackR
         lead: node.hasAttribute("data-pack-lead"),
         continues: node.hasAttribute("data-pack-continues"),
         lineHeight: lineHeightOf(node),
+        cuts: lineCutsOf(node),
       },
     ];
   });
