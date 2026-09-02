@@ -31,6 +31,12 @@ export function shortenDept(s: string): string {
     .replace('Department for Business and Trade', 'Business and Trade').replace('Department for Energy Security and Net Zero', 'Energy')
     .replace('Department for Work and Pensions', 'Work and Pensions')
     .replace('Foreign, Commonwealth and Development Office', 'Foreign Office')
+    .replace('Department for Business, Innovation, Science and Trade', 'Business')
+    .replace('Department for Science, Innovation and Technology', 'Science')
+    .replace('Department for Culture, Media and Sport', 'Culture')
+    // Whatever a future machinery-of-government change is called, the chart
+    // gets the domain, not the boilerplate.
+    .replace(/^(?:Department (?:for|of) (?:the )?|Ministry of |Office of the )/, '')
     .replace(/^(\d+) other departments$/, '$1 others')
 }
 

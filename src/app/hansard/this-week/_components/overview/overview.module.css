@@ -224,11 +224,24 @@ h3.sectionTitle:first-child { margin-top: 0; border-top: none; padding-top: 0; }
 /* ── written questions by department (agate bars) ── */
 .chart {
   display: grid;
-  grid-template-columns: max-content 1fr max-content;
+  /* minmax(0, …) on the label: a max-content column is free to grow WIDER than
+     its container, and on 2 September a department named in full ("Department
+     for Business, Innovation, Science and Trade") pushed the bars and the
+     counts out of the column and over the next one. The label may now shrink,
+     and a name with nowhere to go is trimmed instead of moving the page. */
+  grid-template-columns: minmax(0, max-content) 1fr max-content;
   gap: .8mm 1.6mm;
   align-items: center;
 }
-.bl { font: .786em/1.15 -apple-system, sans-serif; color: #222; text-align: right; white-space: nowrap; }
+.bl {
+  font: .786em/1.15 -apple-system, sans-serif;
+  color: #222;
+  text-align: right;
+  white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .bt { background: #eee; height: .7em; }
 .bt i { display: block; height: .7em; background: #6b2b6b; }
 .bv { font: 700 .786em/1 -apple-system, sans-serif; color: #111; text-align: right; font-variant-numeric: tabular-nums; }
