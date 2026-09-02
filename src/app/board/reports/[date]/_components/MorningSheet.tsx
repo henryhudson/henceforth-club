@@ -2,6 +2,7 @@ import type { Report, Finding, Emergency, Board, PlanDay } from "@/lib/board-dat
 import type { DiaryEntry } from "@/lib/gardening";
 import { isRowHigh, longDate, reachCell, sparkPoints } from "@/lib/report-helpers";
 import A4Sheet from "@/app/hansard/this-week/_components/overview/A4Sheet";
+import PackLayout, { Square } from "@/app/hansard/this-week/_components/overview/PackLayout";
 import s from "./morning.module.css";
 
 export type WeekAheadDay = { label: string; tasks: { label: string; done: boolean }[] };
@@ -202,177 +203,156 @@ export default function MorningSheet({
           </>
         )}
 
-        {/* ── BAND A · the lead module across three legs, the verdicts boxed beside ── */}
-        <div className={s.band}>
-          <div className={s.mod3}>
-            <p className={s.byline}>From the morning review · the four desks</p>
-            <div className={s.legs3}>
-              {leadSections.map((sec, si) => (
-                <div key={sec.heading} style={{ display: "contents" }}>
-                  {si > 0 && <div className={s.sectionTitle}>{sec.heading}</div>}
-                  {sec.body.split("\n\n").map((p, pi) => (
-                    <p
-                      key={pi}
-                      className={si === 0 && pi === 0 ? s.drop : si > 0 && pi === 0 ? s.noIndent : undefined}
-                    >
-                      {p}
-                    </p>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className={s.mod1}>
-            {/* The per-finding list is web-only matter below the sheet — on the
-                printed page the review narrative carries the substance, so the
-                box holds only the counts (Henry's trim, 2026-08-21). */}
-            <div className={`${s.sq} ${s.agate}`}>
-              <div className={s.sectionTitle}>The verdicts, in brief</div>
-              {(report.summary.confirmed || report.summary.rejected || report.summary.alreadyResolved) ? (
-                <p className={s.ticks} aria-hidden>
-                  {"■".repeat(report.summary.confirmed ?? 0)}
-                  {"□".repeat(report.summary.rejected ?? 0)}
-                  {"▪".repeat(report.summary.alreadyResolved ?? 0)}
-                </p>
-              ) : null}
-              <p>{summarySentence(report.summary)}</p>
-              {cleanApps.length > 0 && (
-                <p>
-                  <b>Clean:</b> {cleanApps.join(", ")} — zero findings{findings.length > 0 ? " each" : ""}.
-                </p>
-              )}
-              {findings.length > 0 && !report.summary.rejected && (
-                <p>Every finding survived adversarial refutation.</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* ── BAND B · the plan wide, the numbers wide ── */}
-        <div className={s.band}>
-          <div className={s.mod2}>
-            <div className={s.sectionTitle}>The plan of the day</div>
-            <div className={s.legs2}>
-              {report.plan?.lead && (
-                <p className={s.noIndent}>
-                  <i>{report.plan.lead}</i>
-                </p>
-              )}
-              {planItems.map((it) => (
-                <p key={it.id ?? it.title}>
-                  <b>{it.title}.</b> {it.detail}
-                </p>
-              ))}
-            </div>
-          </div>
-          <div className={s.mod2}>
-            <div className={s.sectionTitle}>The numbers</div>
-            <div className={s.legs2}>
-              {numbersSection &&
-                numbersSection.body.split("\n\n").map((p, i) => (
-                  <p key={i} className={i === 0 ? s.noIndent : undefined}>
+        <p className={s.byline}>From the morning review · the four desks</p>
+        {/* Squares pack into four columns: one column of type each, continuing
+            only when a square cannot sit whole. Furniture above and the
+            calendar foot stay full-width. */}
+        <PackLayout>
+          <Square id="lead" lead continues className={s.copy}>
+            {leadSections.map((sec, si) => (
+              <div key={sec.heading}>
+                {si > 0 && <div className={s.sectionTitle}>{sec.heading}</div>}
+                {sec.body.split("\n\n").map((p, pi) => (
+                  <p
+                    key={pi}
+                    className={si === 0 && pi === 0 ? s.drop : si > 0 && pi === 0 ? s.noIndent : undefined}
+                  >
                     {p}
                   </p>
                 ))}
-              {dayKeys.length > 0 && (
-                <table className={s.agateTable}>
-                  <thead>
-                    <tr>
-                      <th>Downloads</th>
-                      <th />
-                      {dayKeys.map((d) => (
-                        <th key={d} className={s.n}>
-                          {"SMTWTFS"[new Date(`${d}T12:00:00Z`).getUTCDay()]}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {storeApps.map((a) => {
-                      const row = dayKeys.map((d) => a.week?.[d]);
-                      const spark = sparkPoints(row);
-                      return (
-                        <tr key={a.app}>
-                          <td>{APP_NAMES[a.app] ?? a.app}</td>
-                          <td className={s.sparkCell}>
-                            {spark && (
-                              <svg className={s.spark} viewBox="0 0 42 10" width="42" height="10" aria-hidden>
-                                <polyline fill="none" stroke="currentColor" strokeWidth="0.8" points={spark} />
-                              </svg>
-                            )}
-                          </td>
-                          {row.map((count, i) => (
-                            <td key={dayKeys[i]} className={`${s.n} ${isRowHigh(row, i) ? s.high : ""}`}>
-                              {reachCell(count)}
-                            </td>
-                          ))}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
-              <p className={`${s.agate} ${s.noIndent}`}>
-                {ratingLine && <>Ratings: {ratingLine}. </>}
-                {deckSubs && (
-                  <>
-                    Deck subscriptions: {deckSubs.paying} paying ({deckSubs.monthly} monthly, {deckSubs.yearly} yearly), {deckSubs.trial} in trial.{" "}
-                  </>
-                )}
-                {site && (
-                  <>
-                    The site: {reachCell(site.yesterday)} yesterday · {reachCell(site.week)} this week · {site.total.toLocaleString("en-GB")} all-time.
-                  </>
-                )}
-                {report.reach?.dataThrough && <> Store data through {report.reach.dataThrough}.</>}
+              </div>
+            ))}
+          </Square>
+          <Square id="verdicts" className={`${s.sq} ${s.agate}`}>
+            <div className={s.sectionTitle}>The verdicts, in brief</div>
+            {(report.summary.confirmed || report.summary.rejected || report.summary.alreadyResolved) ? (
+              <p className={s.ticks} aria-hidden>
+                {"■".repeat(report.summary.confirmed ?? 0)}
+                {"□".repeat(report.summary.rejected ?? 0)}
+                {"▪".repeat(report.summary.alreadyResolved ?? 0)}
               </p>
-            </div>
-          </div>
-        </div>
-
-        {/* ── BAND C · the squares: ship list, decisions, not-today ── */}
-        <div className={`${s.band} ${s.bandLight}`}>
-          <div className={s.mod2}>
-            <div className={`${s.sq} ${s.agate}`}>
-              <div className={s.sectionTitle}>The ship list</div>
-              {report.appStore?.apps.map((a) => (
-                <p key={a.app}>
-                  <b>{APP_NAMES[a.app] ?? a.app}</b> · {a.status} {a.version}
-                  {a.daysSince != null && (
-                    <>
-                      , day {a.daysSince}{" "}
-                      <span
-                        className={s.stem}
-                        aria-hidden
-                        style={{ width: `${Math.min(Math.max(a.daysSince, 1), 14) * 0.5}mm` }}
-                      />
-                    </>
-                  )}
-                  . {a.readyToShip} {a.blocker}
+            ) : null}
+            <p>{summarySentence(report.summary)}</p>
+            {cleanApps.length > 0 && (
+              <p>
+                <b>Clean:</b> {cleanApps.join(", ")} — zero findings{findings.length > 0 ? " each" : ""}.
+              </p>
+            )}
+            {findings.length > 0 && !report.summary.rejected && (
+              <p>Every finding survived adversarial refutation.</p>
+            )}
+          </Square>
+          <Square id="plan" className={s.copy}>
+            <div className={s.sectionTitle}>The plan of the day</div>
+            {report.plan?.lead && (
+              <p className={s.noIndent}>
+                <i>{report.plan.lead}</i>
+              </p>
+            )}
+            {planItems.map((it) => (
+              <p key={it.id ?? it.title}>
+                <b>{it.title}.</b> {it.detail}
+              </p>
+            ))}
+          </Square>
+          <Square id="numbers" className={s.copy}>
+            <div className={s.sectionTitle}>The numbers</div>
+            {numbersSection &&
+              numbersSection.body.split("\n\n").map((p, i) => (
+                <p key={i} className={i === 0 ? s.noIndent : undefined}>
+                  {p}
                 </p>
               ))}
-              {report.appStore && <p>{report.appStore.rule}</p>}
-            </div>
-          </div>
-          <div className={s.mod1}>
-            <div className={`${s.sq} ${s.sqHouse} ${s.agate}`}>
-              <div className={s.sectionTitle}>Decisions before the house</div>
-              {(report.decisions ?? []).map((d) => (
-                <p key={d.card}>
-                  <b>{d.proposal.charAt(0).toUpperCase() + d.proposal.slice(1)}.</b> {cardName(d.card)}: {d.why}
-                </p>
-              ))}
-            </div>
-          </div>
-          <div className={s.mod1}>
-            <div className={`${s.sq} ${s.agate}`}>
+            {dayKeys.length > 0 && (
+              <table className={s.agateTable}>
+                <thead>
+                  <tr>
+                    <th>Downloads</th>
+                    <th />
+                    {dayKeys.map((d) => (
+                      <th key={d} className={s.n}>
+                        {"SMTWTFS"[new Date(`${d}T12:00:00Z`).getUTCDay()]}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {storeApps.map((a) => {
+                    const row = dayKeys.map((d) => a.week?.[d]);
+                    const spark = sparkPoints(row);
+                    return (
+                      <tr key={a.app}>
+                        <td>{APP_NAMES[a.app] ?? a.app}</td>
+                        <td className={s.sparkCell}>
+                          {spark && (
+                            <svg className={s.spark} viewBox="0 0 42 10" width="42" height="10" aria-hidden>
+                              <polyline fill="none" stroke="currentColor" strokeWidth="0.8" points={spark} />
+                            </svg>
+                          )}
+                        </td>
+                        {row.map((count, i) => (
+                          <td key={dayKeys[i]} className={`${s.n} ${isRowHigh(row, i) ? s.high : ""}`}>
+                            {reachCell(count)}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+            <p className={`${s.agate} ${s.noIndent}`}>
+              {ratingLine && <>Ratings: {ratingLine}. </>}
+              {deckSubs && (
+                <>
+                  Deck subscriptions: {deckSubs.paying} paying ({deckSubs.monthly} monthly, {deckSubs.yearly} yearly), {deckSubs.trial} in trial.{" "}
+                </>
+              )}
+              {site && (
+                <>
+                  The site: {reachCell(site.yesterday)} yesterday · {reachCell(site.week)} this week · {site.total.toLocaleString("en-GB")} all-time.
+                </>
+              )}
+              {report.reach?.dataThrough && <> Store data through {report.reach.dataThrough}.</>}
+            </p>
+          </Square>
+          <Square id="ship" className={`${s.sq} ${s.agate}`}>
+            <div className={s.sectionTitle}>The ship list</div>
+            {report.appStore?.apps.map((a) => (
+              <p key={a.app}>
+                <b>{APP_NAMES[a.app] ?? a.app}</b> · {a.status} {a.version}
+                {a.daysSince != null && (
+                  <>
+                    , day {a.daysSince}{" "}
+                    <span
+                      className={s.stem}
+                      aria-hidden
+                      style={{ width: `${Math.min(Math.max(a.daysSince, 1), 14) * 0.5}mm` }}
+                    />
+                  </>
+                )}
+                . {a.readyToShip} {a.blocker}
+              </p>
+            ))}
+            {report.appStore && <p>{report.appStore.rule}</p>}
+          </Square>
+          <Square id="decisions" className={`${s.sq} ${s.sqHouse} ${s.agate}`}>
+            <div className={s.sectionTitle}>Decisions before the house</div>
+            {(report.decisions ?? []).map((d) => (
+              <p key={d.card}>
+                <b>{d.proposal.charAt(0).toUpperCase() + d.proposal.slice(1)}.</b> {cardName(d.card)}: {d.why}
+              </p>
+            ))}
+          </Square>
+          {notToday.length > 0 && (
+            <Square id="notToday" className={`${s.sq} ${s.agate}`}>
               <div className={s.sectionTitle}>Not today, by choice</div>
               {notToday.map((line, i) => (
                 <p key={i}>{line}</p>
               ))}
-            </div>
-          </div>
-        </div>
+            </Square>
+          )}
+        </PackLayout>
 
         {/* ── FOOTER · the reference band: calendar left, board status right.
             Thin rules and small-caps run heads, no boxes — the sheet decelerates

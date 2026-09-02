@@ -1,0 +1,63 @@
+.pack {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+:global(.a4-print-root[data-fitting]) .pack {
+  overflow: visible;
+}
+
+.measure {
+  position: absolute;
+  /* Off the sheet so a full-height measuring copy cannot extend the page,
+     but still in-flow enough that offsetHeight is the real column height. */
+  left: -200vw;
+  top: 0;
+  /* Same 1fr as a placed column: the 4mm pad is cancelled by a -4mm pull
+     into the gap, so subtracting it here made copy look taller than it sits. */
+  width: calc((100% - 3 * 8mm) / 4);
+  visibility: hidden;
+  pointer-events: none;
+}
+/* The print sheet un-hides every descendant; keep the measuring copy dark. */
+.measure,
+.measure * {
+  visibility: hidden !important;
+}
+
+.cols {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0 8mm;
+  align-items: stretch;
+  height: 100%;
+  min-height: 100%;
+}
+
+.col {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  gap: 2.2mm;
+}
+
+.col + .col {
+  border-left: 0.5pt solid #999;
+  padding-left: 4mm;
+  margin-left: -4mm;
+}
+
+.item {
+  flex: 0 0 auto;
+}
+
+/* Old equal-height bands used height: 100% on boxed squares; in a packed
+   column that stretches the box and leaves a hole between neighbours. */
+.item > * {
+  height: auto;
+}
