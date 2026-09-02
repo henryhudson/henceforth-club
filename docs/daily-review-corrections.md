@@ -17,6 +17,20 @@ and `fit.ts` with 190 lines of tests. `fitTypeSize` is bounded (two loops capped
 page budget refuses the page), and every loop terminates by construction. Gate on main: `tsc` clean;
 `vitest` 170 files, 1,692 passed, 2 skipped. No finding.
 
+**The night's work (2 September).** Seven pull requests merged after the morning sweep: 69 (the This Week
+sheets), 74 (the roll writes the store first), 70, 71 and 72 (the archive stack, with 71 and 72 re-merged
+with main and re-gated first), 75 and 76 (the print packer: whole lines, then measured line boxes), 77 (a
+long department name no longer pushes the chart over its neighbour) and 78 (a rate-limited broadcast waits
+and tries the other processor). Two further print defects were found the only way they could be found, by
+reading the page: the sheet clipped silently while the page count read one, and a split cut through a line.
+Both are fixed and the render now refuses a clipped sheet.
+
+**The first chain publish ran.** Thirteen documents inscribed across two runs (four, then nine) before
+WhatsOnChain answered 429 each time; the publisher refused to call either run a publish and the ledger
+resumed cleanly, which is exactly the behaviour pull request 74's sibling work was for. Pull request 78 then
+gave the broadcast a backoff and a second processor. The live read and archive task six still wait on a full
+publish.
+
 **Correction (evening), the packer verdict reversed.** The morning sweep dismissed "the packer can
 overflow a page" on the reasoning that the render's page budget would refuse the page. Wrong: the packed
 sheet is `overflow: hidden`, so a column the packer cannot fit is clipped at the sheet's foot while the page
