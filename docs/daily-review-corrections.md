@@ -35,6 +35,13 @@ and the mirror offered a coin an unconfirmed inscription had already spent, so t
 `txn-mempool-conflict` (86: the first inscription of a run now chains from the ledger's head). Board, thirty-two
 documents and a head are on the chain; the live read passes from head `c714e9cf…`. Archive task six is unblocked.
 
+**The week planner's writer was the autosync, not the planner.** `autosync.mjs` rebuilt the mirror from the Deck
+file with `generated` and `cards` only and published it, so every board edit republished a board without a
+week; the planner writes store, mirror and Deck file together, which made the loss look like its own fault.
+Pull request 87 lifts the record through `autosync-core.mjs`, which carries `week` when the Deck file has one
+(three tests); the launchd job was restarted, the week came back, and Wednesday's done marks were re-applied
+and survived the republish.
+
 **Correction (evening), the packer verdict reversed.** The morning sweep dismissed "the packer can
 overflow a page" on the reasoning that the render's page budget would refuse the page. Wrong: the packed
 sheet is `overflow: hidden`, so a column the packer cannot fit is clipped at the sheet's foot while the page
