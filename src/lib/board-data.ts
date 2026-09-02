@@ -51,7 +51,7 @@ export type ReachApp = {
 export type Reach = {
   dataThrough?: string | null;
   perApp: ReachApp[];
-  site?: { yesterday: number | null; week: number; total: number };
+  site?: { yesterday: number | null; week: number | null; total: number };
 };
 export type Decision = { card: string; proposal: string; why: string };
 export type Emergency = {
@@ -326,6 +326,10 @@ export async function loadBoardResult(): Promise<BoardResult> {
     if (redis) {
       const data = await redis.get<Board>("board:latest");
       if (data) return { status: "ok", board: data };
+    } else {
+      // No store configured is a store the site cannot see, not a board that
+      // was never published; the page must not send the reader to run /hh.
+      storeFailed = true;
     }
   } catch {
     // Over the request cap, or the transport died. Not the same as no board.

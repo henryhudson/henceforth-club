@@ -1,5 +1,16 @@
 import { describe, it, expect } from "vitest";
-import { buildReach, coverageThrough, mergeByDate, readCounter, yesterdayCount } from "./daily-reach.mjs";
+import { buildReach, coverageThrough, mergeByDate, readCounter, siteWeek, yesterdayCount } from "./daily-reach.mjs";
+
+describe("siteWeek", () => {
+  it("sums a week whose every day was read", () => {
+    expect(siteWeek([1, 0, 4, 2, 0, 3, 5])).toBe(15);
+  });
+
+  it("is unknown, not smaller, when any day's read was refused", () => {
+    expect(siteWeek([1, null, 4, 2, 0, 3, 5])).toBeNull();
+    expect(siteWeek([null, null, null, null, null, null, null])).toBeNull();
+  });
+});
 
 describe("mergeByDate", () => {
   it("lets the newest instance restate an earlier date instead of double-counting", () => {

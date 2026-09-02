@@ -147,6 +147,13 @@ async function deckSubscriptions(jwt, today, back = 3) {
  *  + views:total in Upstash). Unlike Apple these have no lag, and an absent day
  *  key IS a real zero — the counter has been live since launch. A failed read is
  *  different: null, never zero — and without a real total, no site block at all. */
+/** Pure: the week's views, or null when any day's read was refused. Summing
+ *  around a refusal would manufacture a smaller week and present it as fact —
+ *  observed live on 2026-08-29, when two pulls minutes apart read 13, then 0. */
+export function siteWeek(counts) {
+  return counts.some((n) => n == null) ? null : counts.reduce((sum, n) => sum + n, 0);
+}
+
 async function siteViews(today, take = 7) {
   const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -161,7 +168,7 @@ async function siteViews(today, take = 7) {
   if (total == null) return null;
   return {
     yesterday: counts.at(-1) ?? null,
-    week: counts.reduce((sum, n) => sum + (n ?? 0), 0),
+    week: siteWeek(counts),
     total,
   };
 }
