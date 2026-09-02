@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { broadcastRaw, BROADCAST_ENDPOINTS } from "./chain-put.mjs";
+import { broadcastRaw, txidFromBroadcast, BROADCAST_ENDPOINTS } from "./chain-put.mjs";
 
 const TXID = "a".repeat(64);
 const ok = () => ({ ok: true, status: 200, text: async () => `"${TXID}"` });
@@ -38,5 +38,42 @@ describe("broadcastRaw", () => {
     await expect(broadcastRaw("00", { fetchImpl, sleep: async () => {}, log: () => {} }))
       .rejects.toThrow(/mandatory-script-verify-flag-failed/);
     expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("txidFromBroadcast", () => {
+  const id = "77176969c2d9f295a92218edc87b9e9232b711542568c6e6ae25e49cdbaa38b7";
+
+  it("reads WhatsOnChain's bare id, quoted or not, in either case", () => {
+    expect(txidFromBroadcast(id)).toBe(id);
+    expect(txidFromBroadcast(`"${id.toUpperCase()}"\n`)).toBe(id);
+  });
+
+  it("reads the mirror's status object, which an id-only reader threw away", () => {
+    const body = JSON.stringify({ status: 200, title: "OK", txid: id, txStatus: "SEEN_ON_NETWORK" });
+    expect(txidFromBroadcast(body)).toBe(id);
+  });
+
+  it("refuses a status object that names a transaction but reports a rejection", () => {
+    expect(txidFromBroadcast(JSON.stringify({ txid: id, txStatus: "REJECTED" }))).toBe(null);
+  });
+
+  it("returns null for an error page or anything else without an id", () => {
+    expect(txidFromBroadcast("<h1>429 Too Many Requests</h1>")).toBe(null);
+    expect(txidFromBroadcast("16: mandatory-script-verify-flag-failed")).toBe(null);
+  });
+});
+
+describe("broadcastRaw over the mirror", () => {
+  const id = "b".repeat(64);
+  it("accepts the mirror's status object after a rate limit", async () => {
+    let n = 0;
+    const fetchImpl = async () => {
+      n += 1;
+      return n === 1
+        ? { ok: false, status: 429, text: async () => "429 Too Many Requests" }
+        : { ok: true, status: 200, text: async () => JSON.stringify({ status: 200, txid: id, txStatus: "SEEN_ON_NETWORK" }) };
+    };
+    expect(await broadcastRaw("00", { fetchImpl, sleep: async () => {}, log: () => {} })).toBe(id);
   });
 });
