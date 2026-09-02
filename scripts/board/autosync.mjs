@@ -14,6 +14,7 @@
 
 import { watch } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
+import { latestFromBoardData } from "./autosync-core.mjs";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -33,29 +34,15 @@ function log(msg) {
 }
 
 // board-data.js is `window.MORNING_BOARD = {...}` (+ a non-rendered `log`).
-// Evaluate it in a shim and lift {generated, cards} — exactly what the site
-// and publish.mjs consume.
+// Lift {generated, cards, week} from it — exactly what the site and
+// publish.mjs consume. generatedAt is the machine-readable sibling of the
+// prose `generated` line: the site ages the board on this, never on the
+// sentence, which is rendered verbatim and carries no timezone. Stamped when
+// the mirror is regenerated, which is when the canonical board last changed.
 async function regenLatest() {
-  const src = await readFile(BOARD_DATA, "utf8");
-  const shim = {};
-  new Function("window", src)(shim);
-  const board = shim.MORNING_BOARD;
-  if (!board || typeof board.generated !== "string" || !Array.isArray(board.cards)) {
-    throw new Error("board-data.js did not yield { generated, cards } (mid-edit?)");
-  }
-  // generatedAt is the machine-readable sibling of the prose `generated`
-  // line: the site ages the board on this, never on the sentence, which is
-  // rendered verbatim and carries no timezone. Stamped when the mirror is
-  // regenerated, which is when the canonical board last changed.
-  await writeFile(
-    LATEST,
-    JSON.stringify(
-      { generated: board.generated, generatedAt: new Date().toISOString(), cards: board.cards },
-      null,
-      2,
-    ) + "\n",
-  );
-  return board.cards.length;
+  const latest = latestFromBoardData(await readFile(BOARD_DATA, "utf8"), new Date().toISOString());
+  await writeFile(LATEST, JSON.stringify(latest, null, 2) + "\n");
+  return latest.cards.length;
 }
 
 function runPublish() {
