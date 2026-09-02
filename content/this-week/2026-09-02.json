@@ -332,7 +332,38 @@
         "department": "Defence",
         "purpose": "As part of Project Royal Oak, £7.1 billion will be invested in HMNB Devonport and Devonport Dockyard over the next decade."
       }
-    ]
+    ],
+    "vacancy": {
+      "seat": "Holborn and St Pancras",
+      "member": "Sir Keir Starmer",
+      "party": "Labour",
+      "sinceISO": "2026-09-01",
+      "reason": "by the Chiltern Hundreds",
+      "writMoved": false,
+      "writScenarios": [
+        {
+          "label": "If the writ goes this week",
+          "writISO": "2026-09-03"
+        },
+        {
+          "label": "A fortnight on",
+          "writISO": "2026-09-17"
+        },
+        {
+          "label": "At the three-month mark",
+          "writISO": "2026-12-01"
+        }
+      ],
+      "bankHolidays": [
+        "2026-12-25",
+        "2026-12-28",
+        "2027-01-01",
+        "2027-03-26",
+        "2027-03-29",
+        "2027-05-03",
+        "2027-05-31"
+      ]
+    }
   },
   "status": "draft"
 }
