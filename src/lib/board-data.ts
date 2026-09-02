@@ -81,6 +81,9 @@ export type Report = {
   appStore?: AppStore;
   apps: AppReport[];
   plan?: Plan;
+  /** The day's own must-dos. The page adds what the board says waits on Henry,
+   *  and the standing daily two, so the list is never only what was typed. */
+  vitals?: { id?: string; label: string; note?: string }[];
   article?: Article;
   reach?: Reach;
   decisions?: Decision[];
