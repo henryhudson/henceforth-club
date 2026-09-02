@@ -11,6 +11,11 @@ export type PackItem = {
    *  fragment ends on a whole line, so a split never shows half a line at the
    *  foot of one column and its other half at the head of the next. */
   lineHeight?: number;
+  /** Offsets from the item's top, ascending, where a fragment may end: the
+   *  bottoms of its rendered line boxes, measured. A heading or a margin puts
+   *  the copy off the line-height grid, so when these are known they decide
+   *  the cut and `lineHeight` is not consulted. */
+  cuts?: number[];
 };
 
 export type Placement = {
@@ -85,6 +90,19 @@ function mostRoom(columns: Column[], pageHeight: number): number {
   return best;
 }
 
+/** The largest cut that fits in `room`, measured from the fragment's own top
+ *  (`clipTop` into the item); 0 when no whole line fits. */
+function lastCutWithin(cuts: number[], clipTop: number, room: number): number {
+  let best = 0;
+  for (const cut of cuts) {
+    const rel = cut - clipTop;
+    if (rel <= 0) continue;
+    if (rel > room) break;
+    best = rel;
+  }
+  return best;
+}
+
 function placeSplit(
   columns: Column[],
   item: PackItem,
@@ -105,8 +123,12 @@ function placeSplit(
       continue;
     }
     let take = Math.min(leftover, room);
-    if (line && take < leftover) {
-      take = Math.floor(take / line) * line;
+    if (take < leftover) {
+      if (item.cuts && item.cuts.length > 0) {
+        take = lastCutWithin(item.cuts, clipTop, room);
+      } else if (line) {
+        take = Math.floor(take / line) * line;
+      }
       if (take <= 0) {
         col += 1;
         continue;

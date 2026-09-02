@@ -63,6 +63,29 @@ describe("packColumns", () => {
     expect(result.makespan).toBe(100);
   });
 
+  it("cuts a continuing square only at its measured line boxes, which beat the line height", () => {
+    // Copy under a 15-high heading: line boxes end at 15 + 12n.
+    const cuts = [15, 27, 39, 51, 63, 75, 87, 99, 111, 123, 135, 147, 150];
+    const items: PackItem[] = [{ id: "lead", height: 150, lead: true, continues: true, lineHeight: 12, cuts }];
+    const result = packColumns(items, 100);
+
+    const parts = fragments(result, "lead");
+    expect(parts).toHaveLength(2);
+    expect(parts[0]).toMatchObject({ column: 0, height: 99, clipTop: 0 });
+    expect(parts[1]).toMatchObject({ column: 1, height: 51, clipTop: 99 });
+  });
+
+  it("skips a column when no whole line box fits its room", () => {
+    const items: PackItem[] = [
+      { id: "filler", height: 95 },
+      { id: "lead", height: 40, lead: true, continues: true, cuts: [15, 27, 39, 40] },
+    ];
+    const result = packColumns(items, 100);
+    const parts = fragments(result, "lead");
+    expect(parts[0]?.column).toBe(0);
+    expect(parts.slice(0, -1).every((p) => [15, 27, 39].includes(p.clipTop + p.height))).toBe(true);
+  });
+
   it("cuts a continuing square on whole lines when its line height is known", () => {
     const items: PackItem[] = [{ id: "lead", height: 150, lead: true, continues: true, lineHeight: 12 }];
     const result = packColumns(items, 100);
