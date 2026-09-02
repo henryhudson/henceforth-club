@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { randomBytes } from "node:crypto";
-import { OP, PrivateKey, Script, Transaction, Utils } from "@bsv/sdk";
+import { OP, P2PKH, PrivateKey, Script, Transaction, Utils } from "@bsv/sdk";
 import { DRY_RUN_SOURCE_SATS, FEE_CEILING_SATS, changeOutputIndex, inscribeDocument } from "./chain-put.mjs";
 import { INSCRIPTION_MARKER, openPayload, parseEnvelope } from "./chain-put-core.mjs";
 
@@ -98,5 +98,23 @@ describe("inscribing a document, dry run", () => {
       wif: WIF, keyHex: KEY, surface: "board", date: "2026-08-30", bytes: randomBytes(1_200_000),
       dryRun: true, fetchImpl: noNetwork, log: () => {},
     })).rejects.toThrow(/only output would be data/);
+  });
+});
+
+describe("changeOutputIndex on a transaction parsed back from the chain", () => {
+  const key = PrivateKey.fromString("3".repeat(64), 16);
+  const address = key.toAddress();
+  it("finds the last output that pays the archive address when no change flag exists", () => {
+    const tx = new Transaction();
+    tx.addOutput({ lockingScript: new P2PKH().lock("1BitcoinEaterAddressDontSendf59kuE"), satoshis: 1 });
+    tx.addOutput({ lockingScript: new P2PKH().lock(address), satoshis: 500 });
+    const parsed = Transaction.fromHex(tx.toHex());
+    expect(changeOutputIndex(parsed)).toBe(-1);
+    expect(changeOutputIndex(parsed, address)).toBe(1);
+  });
+  it("prefers a flagged change output when one exists", () => {
+    const tx = new Transaction();
+    tx.addOutput({ lockingScript: new P2PKH().lock(address), satoshis: 500, change: true });
+    expect(changeOutputIndex(tx, address)).toBe(0);
   });
 });

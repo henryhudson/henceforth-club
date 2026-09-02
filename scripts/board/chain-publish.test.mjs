@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PrivateKey } from "@bsv/sdk";
-import { inscribeHeadFor, publishToChain, readLedger, recordInscription, writeLedger } from "./chain-publish.mjs";
+import { P2PKH, PrivateKey, Transaction } from "@bsv/sdk";
+import { headSourceFor, inscribeHeadFor, publishToChain, readLedger, recordInscription, writeLedger } from "./chain-publish.mjs";
 import { EMPTY_LEDGER, canonicalBytes, withInscription } from "./chain-publish-core.mjs";
 
 const WIF = PrivateKey.fromString("1".repeat(64), 16).toWif();
@@ -120,5 +120,43 @@ describe("publishing to the chain", () => {
     expect(steps[0].reason).toContain("the chain refused the inscription");
     expect(steps.some((s) => s.name === "chain:head")).toBe(false);
     expect(ledger).toEqual(EMPTY_LEDGER);
+  });
+});
+
+describe("chaining from the head", () => {
+  const address = PrivateKey.fromWif(WIF).toAddress();
+  const headTx = () => {
+    const tx = new Transaction();
+    tx.addOutput({ lockingScript: new P2PKH().lock("1BitcoinEaterAddressDontSendf59kuE"), satoshis: 1 }); // the data output stands in
+    tx.addOutput({ lockingScript: new P2PKH().lock(address), satoshis: 90_000 }); // the change home
+    return tx;
+  };
+
+  it("returns the head's transaction when it pays the archive address, with no change flag to read", async () => {
+    const head = headTx();
+    const ledger = { ...EMPTY_LEDGER, head: { txid: head.id("hex"), date: "2026-09-02" } };
+    const fetchImpl = async () => ({ ok: true, status: 200, text: async () => head.toHex() });
+    const got = await headSourceFor({ ledger, wif: WIF, fetchImpl, log: quiet });
+    expect(got?.id("hex")).toBe(head.id("hex"));
+  });
+
+  it("is null with no head, so the indexer scan runs as before", async () => {
+    expect(await headSourceFor({ ledger: EMPTY_LEDGER, wif: WIF, fetchImpl: async () => { throw new Error("must not fetch"); }, log: quiet })).toBe(null);
+  });
+
+  it("is null, and says so, when the head cannot be parsed", async () => {
+    const lines = [];
+    const ledger = { ...EMPTY_LEDGER, head: { txid: "ab".repeat(32), date: "2026-09-02" } };
+    const fetchImpl = async () => ({ ok: true, status: 200, text: async () => "not a transaction" });
+    expect(await headSourceFor({ ledger, wif: WIF, fetchImpl, log: (m) => lines.push(m) })).toBe(null);
+    expect(lines.join(" ")).toMatch(/scanning the indexer instead/);
+  });
+
+  it("is null when the head pays nothing back to the archive address", async () => {
+    const tx = new Transaction();
+    tx.addOutput({ lockingScript: new P2PKH().lock("1BitcoinEaterAddressDontSendf59kuE"), satoshis: 5 });
+    const ledger = { ...EMPTY_LEDGER, head: { txid: tx.id("hex"), date: "2026-09-02" } };
+    const fetchImpl = async () => ({ ok: true, status: 200, text: async () => tx.toHex() });
+    expect(await headSourceFor({ ledger, wif: WIF, fetchImpl, log: quiet })).toBe(null);
   });
 });

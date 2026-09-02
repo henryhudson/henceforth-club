@@ -10,7 +10,8 @@
 // keeps what landed and the next run continues from it.
 
 import { readFile, writeFile } from "node:fs/promises";
-import { inscribeDocument } from "./chain-put.mjs";
+import { PrivateKey, Transaction } from "@bsv/sdk";
+import { changeOutputIndex, fetchIndexer, inscribeDocument } from "./chain-put.mjs";
 import { inscribeHead } from "./chain-head.mjs";
 import { CHAIN_REFUSED, reasonFor } from "./publish-core.mjs";
 import { EMPTY_LEDGER, changedDocuments, digestOf, headSurfaces, withHead, withInscription } from "./chain-publish-core.mjs";
@@ -53,6 +54,31 @@ export async function inscribeHeadFor({
   return out;
 }
 
+/** The head's own transaction, so the run's first inscription chains from its
+ *  change. The ledger knows the head; an indexer's unspent list may not yet
+ *  know which of the archive's own coins are spent. On 2 September a mirror
+ *  offered a coin that one of that night's unconfirmed inscriptions had
+ *  already spent, and the network answered txn-mempool-conflict. Null, with a
+ *  line in the log, when there is no head, it cannot be fetched or parsed, or
+ *  it has no change to spend: the indexer scan is then the fallback it was. */
+export async function headSourceFor({ ledger, wif, fetchImpl = fetch, log = console.log }) {
+  const txid = ledger?.head?.txid;
+  if (!txid) return null;
+  try {
+    const hex = (await fetchIndexer(`/tx/${txid}/hex`, { fetchImpl, log })).trim();
+    const tx = Transaction.fromHex(hex);
+    const address = PrivateKey.fromWif(wif).toAddress();
+    if (changeOutputIndex(tx, address) < 0) {
+      log(`head ${txid} has no change to chain from; scanning the indexer instead`);
+      return null;
+    }
+    return tx;
+  } catch (e) {
+    log(`could not chain from head ${txid} (${e.message}); scanning the indexer instead`);
+    return null;
+  }
+}
+
 /** Inscribe what changed, then the head. Returns the publish steps this run
  *  contributes and the ledger as it stands. Dry runs price and sign every
  *  transaction without broadcasting or writing the ledger. */
@@ -68,7 +94,8 @@ export async function publishToChain({
     return { steps, ledger };
   }
 
-  let prevTx = null;
+  // A dry run prices against a fake source; a real run chains from the head.
+  let prevTx = dryRun ? null : await headSourceFor({ ledger, wif, fetchImpl, log });
   for (const doc of changed) {
     const previousTxid = ledger.surfaces[doc.surface]?.txid ?? "";
     try {
