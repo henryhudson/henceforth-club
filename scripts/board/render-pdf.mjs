@@ -23,6 +23,13 @@ import { join } from "node:path";
 import { PDFDocument } from "pdf-lib";
 import { Redis } from "@upstash/redis";
 import { changeOutputIndex, inscribeDocument } from "./chain-put.mjs";
+import { editionSurface } from "./chain-publish-core.mjs";
+import { inscribeHeadFor, readLedger, recordInscription } from "./chain-publish.mjs";
+
+// The publisher's ledger of everything on the chain; an edition joins it the
+// moment it is broadcast, and the head inscribed right after names it. The
+// store's board:pdftx index is written too, until task six retires it.
+const LEDGER = join(process.cwd(), "content/board/.chain-ledger.json");
 
 const SITE = process.env.RENDER_PDF_BASE ?? "https://www.henceforth.club";
 const SITE_HOST = new URL(SITE).hostname;
@@ -64,11 +71,15 @@ async function inscribe(kind, date, pdf, prevTx, dryRun) {
   // read itself fails: an unreadable index must not block the day's first
   // genuine inscription, and the index write at the end already warns loudly
   // when it cannot record one.
-  const existing = await getRedisClient().get(`board:pdftx:${kind}:${date}`).catch(() => null);
-  if (existing) {
+  const surface = editionSurface(kind, date);
+  const ledger = await readLedger(LEDGER).catch(() => ({ surfaces: {}, head: null }));
+  const existing = ledger.surfaces[surface]?.txid
+    ?? (await getRedisClient().get(`board:pdftx:${kind}:${date}`).catch(() => null));
+  if (existing && !dryRun) {
     console.log(`${kind} ${date} is already inscribed (${existing}) — inscription skipped, local copy refreshed`);
     return null;
   }
+  if (existing) console.log(`${kind} ${date} is already inscribed (${existing}) — dry run prices it again anyway`);
   const out = await inscribeDocument({
     wif: process.env.BOARD_ARCHIVE_WIF,
     keyHex: process.env.BOARD_ARCHIVE_KEY,
@@ -78,20 +89,31 @@ async function inscribe(kind, date, pdf, prevTx, dryRun) {
     prevTx,
     dryRun,
   });
-  if (dryRun) return out.tx;
+  if (!dryRun) {
+    // The ledger is the record now: written before anything that can fail
+    // over the network, so the inscription (already paid for) is never
+    // orphaned. The head inscribed next names it for every reader.
+    await recordInscription({ ledgerPath: LEDGER, surface, txid: out.txid, bytes: pdf, date });
+  }
+  const head = await inscribeHeadFor({
+    ledgerPath: LEDGER,
+    wif: process.env.BOARD_ARCHIVE_WIF,
+    keyHex: process.env.BOARD_ARCHIVE_KEY,
+    date,
+    also: { [surface]: out.txid ?? out.tx.id("hex") },
+    prevTx: out.tx,
+    dryRun,
+  });
+  if (dryRun) return head.tx;
 
-  // chain-put has already printed the id, so if the SET below fails the
-  // inscription (already paid for) survives on screen to be hand-indexed.
+  // The store's index stays written through the transition; a refusal is a
+  // warning, not a failure — the ledger and the head already carry the record.
   try {
     await getRedisClient().set(`board:pdftx:${kind}:${date}`, out.txid);
   } catch (e) {
-    const err = new Error(
-      `broadcast succeeded but indexing failed (${e.message}) — hand-index with: SET board:pdftx:${kind}:${date} = ${out.txid}`,
-    );
-    err.tx = out.tx; // let the job loop keep chaining off this transaction's change
-    throw err;
+    console.warn(`board:pdftx:${kind}:${date} not written to the store (${e.message}); the ledger and the head carry it`);
   }
-  return out.tx;
+  return head.tx; // the next job chains off the head's change
 }
 
 async function render(browser, kind, date, outPath, prevTx, dryRun) {

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { OP, Script, Transaction, Utils } from "@bsv/sdk";
 import { decryptPdf, openSealed } from "./board-pdf-crypto";
 import { CHAIN_MARKER, INSCRIPTION_MARKER, downloadFilename, type EditionKind } from "./board-pdf";
+import { SURFACE } from "./chain-archive";
+import { chainSurfaceTxid } from "./board-data";
 import { getRedis } from "./redis";
 
 const notRendered = () =>
@@ -13,9 +15,14 @@ const notRendered = () =>
 export async function servePdf(kind: EditionKind, date: string): Promise<Response> {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return notRendered();
   try {
-    const redis = getRedis();
-    if (!redis) return notRendered();
-    const txid = await redis.get<string>(`board:pdftx:${kind}:${date}`);
+    // The head names every edition (task five of the archive); the store's
+    // own index is the fallback until task six retires it.
+    let txid = await chainSurfaceTxid(SURFACE.edition(kind, date));
+    if (!txid) {
+      const redis = getRedis();
+      if (!redis) return notRendered();
+      txid = await redis.get<string>(`board:pdftx:${kind}:${date}`);
+    }
     if (!txid || !/^[0-9a-f]{64}$/.test(txid)) return notRendered();
 
     const resp = await fetch(`https://api.whatsonchain.com/v1/bsv/main/tx/${txid}/hex`);

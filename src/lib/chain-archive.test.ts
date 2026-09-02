@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { P2PKH, PrivateKey, Transaction } from "@bsv/sdk";
 import { INDEXER_BASES, SURFACE, parseHeadPayload, readSurface, resolveHead } from "./chain-archive";
-import { BOARD_SURFACE, DONE_SURFACE, GARDENING_SURFACE, reportSurface, weekSurface } from "../../scripts/board/chain-publish-core.mjs";
+import { BOARD_SURFACE, DONE_SURFACE, GARDENING_SURFACE, editionSurface, reportSurface, weekSurface } from "../../scripts/board/chain-publish-core.mjs";
 import { inscribeDocument } from "../../scripts/board/chain-put.mjs";
 import { inscribeHead, parseHeadPayload as parseHeadPayloadMjs } from "../../scripts/board/chain-head.mjs";
 
@@ -181,5 +181,6 @@ describe("the reader and the writer name surfaces the same way", () => {
     expect(SURFACE.gardening).toBe(GARDENING_SURFACE);
     expect(SURFACE.report("2026-09-01")).toBe(reportSurface("2026-09-01"));
     expect(SURFACE.week("2026-08-30")).toBe(weekSurface("2026-08-30"));
+    expect(SURFACE.edition("daily", "2026-09-01")).toBe(editionSurface("daily", "2026-09-01"));
   });
 });

@@ -152,6 +152,14 @@ async function chainDocument<T>(surface: string): Promise<T | null> {
   });
 }
 
+/** The transaction the head names for a surface, or null when the chain is
+ *  not consulted, has no head, or does not name it. */
+export async function chainSurfaceTxid(surface: string): Promise<string | null> {
+  const resolved = await chainHead();
+  if (!resolved || resolved.status !== "ok") return null;
+  return resolved.head.surfaces[surface] ?? null;
+}
+
 /** The dates the head names under a surface prefix, newest first; null when
  *  the chain is not consulted or has nothing to say. */
 async function chainDates(dateOf: (surface: string) => string | null): Promise<string[] | null> {

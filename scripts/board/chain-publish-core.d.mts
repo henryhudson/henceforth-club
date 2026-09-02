@@ -5,6 +5,11 @@ export declare const DONE_SURFACE: string;
 export declare const GARDENING_SURFACE: string;
 export declare function reportSurface(date: string): string;
 export declare function weekSurface(date: string): string;
+export declare function editionSurface(kind: string, date: string): string;
+export declare function backfillEntries(
+  ledger: ChainLedger,
+  pairs: { key: string; txid: unknown }[],
+): { ledger: ChainLedger; added: string[]; skipped: string[]; invalid: string[] };
 export declare function canonicalBytes(document: unknown): Buffer;
 export declare function splitBoard<C extends { col?: string }>(board: { cards?: C[] } & Record<string, unknown>): {
   latest: { cards: C[] } & Record<string, unknown>;
