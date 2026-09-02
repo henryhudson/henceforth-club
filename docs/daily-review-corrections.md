@@ -6,6 +6,34 @@ records that sweep's **rejections and dismissals**, newest first, so a later run
 re-flag what a prior run already refuted. Confirmed findings go to the Morning Board, not
 here. Cite `file:line` (or the live probe) so each verdict is independently re-derivable.
 
+## 2026-09-02 — the site sweep, run by the routine itself: nothing filed, nothing rejected; three notes recorded
+
+Reviewed `origin/main` at `7ccdf5b`. The site finder was refused by the account's session limit, so
+this entry is the routine's own sweep, read in full.
+
+**Range `16c8ae1..7ccdf5b`** (Henry, last night): the print packer and fitter, `src/lib/print/pack.ts`
+and `fit.ts` with 190 lines of tests. `fitTypeSize` is bounded (two loops capped at 60 steps inside the
+6 to 10 point band); `packColumns` never drops copy (an overflow lands in the last column and the render's
+page budget refuses the page), and every loop terminates by construction. Gate on main: `tsc` clean;
+`vitest` 170 files, 1,692 passed, 2 skipped. No finding.
+
+**Pull request 74** read in full: `pickBoard` takes the newer of store and file by `generatedAt` (a tie
+keeps the store), `persistBoard` writes the store first and throws on refusal, `hh-plan-update.mjs` exits 1
+on that throw, and seven tests assert the order and the refusal. Verified; merge-ready. **Pull request 69**:
+`--publish` refuses any digest whose status is not `published` (the `status !== 'published'` guard in
+`render-draft.mjs`), writes `public/this-week/<week>.pdf`, and is the site half of Hansard 1.10.
+
+**Notes, not findings (so tomorrow does not re-derive them):**
+
+- The apex answers 307 to `www.henceforth.club` through Cloudflare; the domain's nameservers are
+  Cloudflare's while Vercel lists its own as intended. Standing since the 24 August go-live. The gates hold
+  when followed: `POST /api/folklore/job` 503, `/board` to `/board/login`.
+- `/folklore` sampled 1.77 s, then 0.31 and 0.43 s: the page declares `revalidate = 3600`, so the first hit
+  after an idle hour is a cold render, not a regression. `/` 0.08 to 0.10 s.
+- 75 views yesterday against a prior thirty-day high of 15: `/api/hit` increments per page load with no
+  dedupe (`route.ts:20-21`), and the evening carried three production deploys and Henry's own print-edition
+  work. Read it as internal until a quiet day repeats it.
+
 ## 2026-09-01 — one killed: "pull request 64 is NOW conflicting" is a standing fact, not news
 
 Reviewed `origin/main` at `9b3e9c2fcf89` (no shipping commits since 30 August; the sweep's
