@@ -90,8 +90,10 @@ try {
   await page.close()
 
   const pages = (await PDFDocument.load(pdf)).getPageCount()
-  if (overflow > 1) {
+  const clipped = overflow > 1
+  if (clipped) {
     console.error(`OVERFLOW: the packed columns overflow the sheet by ${overflow}px at the floor type size — the page clips text; tighten the copy before publishing`)
+    console.error('  not opening it: a clipped sheet is not a proof, and opening one is how a reader ends up reading the fault')
     process.exitCode = 2
   }
   if (pages > 1) {
@@ -108,7 +110,7 @@ try {
   // Blocking open so the viewer launches before the process exits; best-effort so
   // a headless environment never fails the render (matches render-pdf.mjs). Open
   // the PNG — the artifact meant for sharing — falling back to the PDF.
-  if (!publish) {
+  if (!publish && !clipped) {
     try { execSync(`open ${JSON.stringify(png ? pngPath : pdfPath)}`) } catch { /* open is best-effort */ }
   }
   const tail = publish ? ' — published sheet' : (png ? ` and ${pngPath} (${(png.length / 1024).toFixed(0)} KB image) — opened the image` : ' — opened for review')

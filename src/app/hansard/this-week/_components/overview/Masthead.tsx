@@ -1,3 +1,4 @@
+import Headline from './Headline'
 import Link from 'next/link'
 import type { DigestData } from '@/lib/this-week/types'
 import s from './overview.module.css'
@@ -57,7 +58,7 @@ export default function Masthead({
       </div>
       <div className={s.nameplate}>The Hansard</div>
       <div className={s.subtitle}>A weekly digest of the proceedings of the Parliament of the United Kingdom</div>
-      <h1 className={s.headline}>{headline}</h1>
+      <Headline>{headline}</Headline>
     </>
   )
 }
