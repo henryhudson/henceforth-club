@@ -30,3 +30,10 @@ export declare function changeOutputIndex(tx: Transaction): number;
 export declare const FEE_RATE_SATS_PER_KB: number;
 export declare const FEE_CEILING_SATS: number;
 export declare const DRY_RUN_SOURCE_SATS: number;
+
+export declare const BROADCAST_ENDPOINTS: string[];
+export declare const BROADCAST_BACKOFF_MS: number[];
+export declare function broadcastRaw(
+  hex: string,
+  opts?: { fetchImpl?: typeof fetch; sleep?: (ms: number) => Promise<void>; log?: (message: string) => void },
+): Promise<string>;
