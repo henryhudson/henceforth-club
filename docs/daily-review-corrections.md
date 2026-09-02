@@ -17,6 +17,16 @@ and `fit.ts` with 190 lines of tests. `fitTypeSize` is bounded (two loops capped
 page budget refuses the page), and every loop terminates by construction. Gate on main: `tsc` clean;
 `vitest` 170 files, 1,692 passed, 2 skipped. No finding.
 
+**Correction (evening), the packer verdict reversed.** The morning sweep dismissed "the packer can
+overflow a page" on the reasoning that the render's page budget would refuse the page. Wrong: the packed
+sheet is `overflow: hidden`, so a column the packer cannot fit is clipped at the sheet's foot while the page
+count stays one, and the budget check never sees it. Tonight's edition lost the end of its "Not today" box
+and the ship list's Hansard line exactly this way, and a continuing square was cut mid-line at a column break
+(the same line half-visible at the foot of one column and the head of the next). Fixed in pull request 75:
+fragments end on whole lines, `PackLayout` publishes the overflow, the daily render refuses a clipped sheet
+as it refuses a second page, and the draft render exits non-zero. Lesson for the ledger: "one page" is not
+"nothing clipped"; a sheet must be read, not counted.
+
 **Pull request 74** read in full: `pickBoard` takes the newer of store and file by `generatedAt` (a tie
 keeps the store), `persistBoard` writes the store first and throws on refusal, `hh-plan-update.mjs` exits 1
 on that throw, and seven tests assert the order and the refusal. Verified; merge-ready. **Pull request 69**:
