@@ -37,3 +37,4 @@ export declare function broadcastRaw(
   hex: string,
   opts?: { fetchImpl?: typeof fetch; sleep?: (ms: number) => Promise<void>; log?: (message: string) => void },
 ): Promise<string>;
+export declare function txidFromBroadcast(body: string): string | null;

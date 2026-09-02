@@ -39,6 +39,29 @@ export const BROADCAST_BACKOFF_MS = [500, 2_000, 5_000, 10_000, 15_000];
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** The transaction id in a broadcast's answer, or null if it does not carry
+ *  one. WhatsOnChain replies with the bare id, sometimes JSON-quoted; the
+ *  BananaBlocks mirror replies with a status object whose `txid` field holds
+ *  it (`{"status":200,"txStatus":"SEEN_ON_NETWORK","txid":"…"}`). Reading only
+ *  the first shape threw away a transaction the network had already accepted
+ *  and would have inscribed it a second time on the next run. */
+export function txidFromBroadcast(body) {
+  const bare = body.trim().replace(/^"+|"+$/g, "");
+  if (/^[0-9a-fA-F]{64}$/.test(bare)) return bare.toLowerCase();
+  try {
+    const parsed = JSON.parse(body);
+    const txid = parsed?.txid ?? parsed?.data?.txid;
+    if (typeof txid === "string" && /^[0-9a-fA-F]{64}$/.test(txid.trim())) {
+      // A status object that names a transaction but reports a rejection is
+      // not a success: only an accepted one carries the id forward.
+      const status = String(parsed?.txStatus ?? parsed?.status ?? "");
+      if (/^(REJECTED|ERROR)$/i.test(status)) return null;
+      return txid.trim().toLowerCase();
+    }
+  } catch { /* not JSON: fall through to no id */ }
+  return null;
+}
+
 /** Broadcast a signed transaction, alternating processors and waiting out a
  *  rate limit. Returns the transaction id. Any answer that is not a rate
  *  limit fails immediately: a rejected transaction is not retryable, and
@@ -52,10 +75,10 @@ export async function broadcastRaw(hex, { fetchImpl = fetch, sleep = wait, log =
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ txhex: hex }),
     });
-    // The indexer answers with the id, possibly JSON-quoted.
-    const body = (await resp.text()).trim().replace(/^"+|"+$/g, "");
-    if (resp.ok && /^[0-9a-fA-F]{64}$/.test(body)) return body.toLowerCase();
-    last = body;
+    const body = await resp.text();
+    const txid = txidFromBroadcast(body);
+    if (txid) return txid;
+    last = body.trim().replace(/^"+|"+$/g, "");
     const rateLimited = resp.status === 429 || /too many requests/i.test(body);
     if (!rateLimited || attempt === BROADCAST_BACKOFF_MS.length) break;
     const pause = BROADCAST_BACKOFF_MS[attempt];
