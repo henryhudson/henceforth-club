@@ -9,6 +9,7 @@ import path from "node:path";
 import { weekOfFor, weekSliceFromReport, withWeek, patchBoardWeek } from "./week-plan.mjs";
 import { WEEKDAYS } from "./whh-aggregate.mjs";
 import { writeBoardFiles } from "./local-mirror.mjs";
+import { pickBoard, persistBoard } from "./hh-plan-update-core.mjs";
 
 const today = process.argv[2] ?? new Date().toISOString().slice(0, 10);
 const payload = JSON.parse(process.argv[3] ?? "{}");
@@ -25,17 +26,15 @@ const LATEST = path.join(ROOT, "content/board/latest.json");
 const WEEKS = path.join(ROOT, "content/board/weeks");
 
 async function loadBoard() {
+  let fromStore = null;
+  let fromFile = null;
   try {
-    if (redis) {
-      const data = await redis.get("board:latest");
-      if (data) return data;
-    }
+    if (redis) fromStore = await redis.get("board:latest");
   } catch { /* cap or transport — files still serve */ }
   try {
-    return JSON.parse(await readFile(LATEST, "utf8"));
-  } catch {
-    return null;
-  }
+    fromFile = JSON.parse(await readFile(LATEST, "utf8"));
+  } catch { /* no local file yet */ }
+  return pickBoard(fromStore, fromFile);
 }
 
 async function migrateWeekOnto(board) {
@@ -83,10 +82,13 @@ if (missed.length) {
 }
 board = patchBoardWeek(afterEvents, { weekday, done });
 
-await writeBoardFiles(board, { root: ROOT });
 try {
-  if (redis) await redis.set("board:latest", board);
+  await persistBoard(board, {
+    redis,
+    writeFiles: (next) => writeBoardFiles(next, { root: ROOT }),
+  });
 } catch (e) {
-  console.error("store write failed (board files still updated):", e.message);
+  console.error(e.message);
+  process.exit(1);
 }
 console.log(`updated ${weekday} on the board week — ${roll && !events.length ? "rolled forward, " : ""}${events.length} event(s) set, ${done.length} marked done`);

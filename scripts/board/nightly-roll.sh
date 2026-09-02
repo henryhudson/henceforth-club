@@ -1,10 +1,9 @@
 #!/bin/zsh
-# The 06:00 board roll, with a witness. The roll itself already fails loudly
-# (a refused store write throws and exits non-zero); what it lacked was
-# anyone to hear it — three, then four, silent mornings before a card count
-# moving in a hand-read log gave it away. This wrapper leaves a dated verdict
-# in content/board/.nightly-roll.json for the morning routine to read, and on
-# failure raises a macOS notification so the laptop itself says so.
+# The 06:00 board roll, with a witness. persistBoard writes the store first
+# and only then the local files; a refused store write exits non-zero and
+# leaves the files alone. This wrapper records that exit in
+# content/board/.nightly-roll.json and, on failure, raises a macOS
+# notification so the laptop itself says so.
 #
 # LaunchAgent: ~/Library/LaunchAgents/club.henceforth.board-roll.plist
 set -o pipefail
