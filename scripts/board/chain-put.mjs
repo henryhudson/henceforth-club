@@ -27,6 +27,43 @@ export const FEE_RATE_SATS_PER_KB = 100;
 export const FEE_CEILING_SATS = 30_000;
 export const DRY_RUN_SOURCE_SATS = 100_000;
 const WOC = "https://api.whatsonchain.com/v1/bsv/main";
+// The same interface, from a second operator. A first publish sends dozens of
+// inscriptions in a row and WhatsOnChain answers 429 partway through (seen on
+// the first real run, 2026-09-02, twice); the mirror carries the next one
+// while the first cools off.
+const MIRROR = "https://bananablocks.com/api/v1/bsv/main";
+export const BROADCAST_ENDPOINTS = [WOC, MIRROR];
+// Backoff between attempts, in milliseconds. Six attempts spread over about
+// half a minute outlast a per-minute window without stalling a run.
+export const BROADCAST_BACKOFF_MS = [500, 2_000, 5_000, 10_000, 15_000];
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Broadcast a signed transaction, alternating processors and waiting out a
+ *  rate limit. Returns the transaction id. Any answer that is not a rate
+ *  limit fails immediately: a rejected transaction is not retryable, and
+ *  sending it again would only ask a second processor to reject it too. */
+export async function broadcastRaw(hex, { fetchImpl = fetch, sleep = wait, log = console.log } = {}) {
+  let last = "";
+  for (let attempt = 0; attempt <= BROADCAST_BACKOFF_MS.length; attempt++) {
+    const endpoint = BROADCAST_ENDPOINTS[attempt % BROADCAST_ENDPOINTS.length];
+    const resp = await fetchImpl(`${endpoint}/tx/raw`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ txhex: hex }),
+    });
+    // The indexer answers with the id, possibly JSON-quoted.
+    const body = (await resp.text()).trim().replace(/^"+|"+$/g, "");
+    if (resp.ok && /^[0-9a-fA-F]{64}$/.test(body)) return body.toLowerCase();
+    last = body;
+    const rateLimited = resp.status === 429 || /too many requests/i.test(body);
+    if (!rateLimited || attempt === BROADCAST_BACKOFF_MS.length) break;
+    const pause = BROADCAST_BACKOFF_MS[attempt];
+    log(`broadcast rate-limited by ${new URL(endpoint).host}; waiting ${pause}ms and trying ${new URL(BROADCAST_ENDPOINTS[(attempt + 1) % BROADCAST_ENDPOINTS.length]).host}`);
+    await sleep(pause);
+  }
+  throw new Error(`broadcast failed: ${last}`);
+}
 
 /** The change output a follow-up inscription can spend, or -1. */
 export function changeOutputIndex(tx) {
@@ -72,7 +109,7 @@ async function sourceFor({ address, prevTx, dryRun, fetchImpl }) {
  *  change in process, plus what a caller needs to log and index. */
 export async function inscribeDocument({
   wif, keyHex, surface, date, bytes, previousTxid = "", prevTx = null,
-  feeCeiling = FEE_CEILING_SATS, dryRun = false, fetchImpl = fetch, log = console.log,
+  feeCeiling = FEE_CEILING_SATS, dryRun = false, fetchImpl = fetch, log = console.log, sleep = wait,
 }) {
   const key = PrivateKey.fromWif(wif);
   const address = key.toAddress();
@@ -103,15 +140,7 @@ export async function inscribeDocument({
     return summary;
   }
 
-  const resp = await fetchImpl(`${WOC}/tx/raw`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ txhex: tx.toHex() }),
-  });
-  // The indexer answers with the id, possibly JSON-quoted.
-  const body = (await resp.text()).trim().replace(/^"+|"+$/g, "");
-  if (!resp.ok || !/^[0-9a-fA-F]{64}$/.test(body)) throw new Error(`broadcast failed: ${body}`);
-  summary.txid = body.toLowerCase();
+  summary.txid = await broadcastRaw(tx.toHex(), { fetchImpl, sleep, log });
   log(`inscribed ${surface} ${date} → ${summary.txid} (${bytes.length} bytes, fee ${fee} satoshis)`);
   return summary;
 }
