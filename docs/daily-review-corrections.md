@@ -28,8 +28,12 @@ Both are fixed and the render now refuses a clipped sheet.
 **The first chain publish ran.** Thirteen documents inscribed across two runs (four, then nine) before
 WhatsOnChain answered 429 each time; the publisher refused to call either run a publish and the ledger
 resumed cleanly, which is exactly the behaviour pull request 74's sibling work was for. Pull request 78 then
-gave the broadcast a backoff and a second processor. The live read and archive task six still wait on a full
-publish.
+gave the broadcast a backoff and a second processor. The full publish then ran, and each run found the next
+defect by doing the thing for real: the mirror's `{txid}` reply read as a failure (pull request 79), the reader
+skipped the mempool and reversed its rows (80), WhatsOnChain answered a source read with an HTML page (85),
+and the mirror offered a coin an unconfirmed inscription had already spent, so the network answered
+`txn-mempool-conflict` (86: the first inscription of a run now chains from the ledger's head). Board, thirty-two
+documents and a head are on the chain; the live read passes from head `c714e9cf…`. Archive task six is unblocked.
 
 **Correction (evening), the packer verdict reversed.** The morning sweep dismissed "the packer can
 overflow a page" on the reasoning that the render's page budget would refuse the page. Wrong: the packed
