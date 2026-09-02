@@ -7,32 +7,39 @@
 //   node scripts/this-week/render-draft.mjs 2026-07-15
 //   node scripts/this-week/render-draft.mjs 2026-07-15 --base http://localhost:3000
 //   node scripts/this-week/render-draft.mjs 2026-07-15 --out /tmp/hansard.pdf
+//   node scripts/this-week/render-draft.mjs 2026-07-15 --publish
+//
+// --publish is the publishing step, not the review step: it writes the sheet to
+// public/this-week/<week>.pdf (the address the Hansard iOS app fetches), skips
+// the PNG and the viewer, and refuses a draft — only a published week may be
+// committed alongside its JSON.
 //
 // Mirrors the puppeteer-core + local-Chrome pattern of scripts/board/render-pdf.mjs.
 import puppeteer from 'puppeteer-core'
 import { PDFDocument } from 'pdf-lib'
 import { execSync } from 'node:child_process'
 import { mkdir, writeFile } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 
 function parseArgs(argv) {
-  const out = { week: null, base: 'http://localhost:3000', out: null }
+  const out = { week: null, base: 'http://localhost:3000', out: null, publish: false }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     if (a === '--base') out.base = argv[++i]
     else if (a === '--out') out.out = argv[++i]
+    else if (a === '--publish') out.publish = true
     else if (!out.week) out.week = a
   }
   return out
 }
 
-const { week, base, out } = parseArgs(process.argv.slice(2))
+const { week, base, out, publish } = parseArgs(process.argv.slice(2))
 if (!week || !/^\d{4}-\d{2}-\d{2}$/.test(week)) {
-  console.error('usage: node scripts/this-week/render-draft.mjs <YYYY-MM-DD> [--base URL] [--out PATH]')
+  console.error('usage: node scripts/this-week/render-draft.mjs <YYYY-MM-DD> [--base URL] [--out PATH] [--publish]')
   process.exit(1)
 }
 
@@ -40,6 +47,10 @@ if (!week || !/^\d{4}-\d{2}-\d{2}$/.test(week)) {
 const digestPath = join(HERE, '..', '..', 'content', 'this-week', `${week}.json`)
 if (!existsSync(digestPath)) {
   console.error(`no digest at content/this-week/${week}.json — write the draft first (see scripts/this-week/PROMPT.md)`)
+  process.exit(1)
+}
+if (publish && JSON.parse(readFileSync(digestPath, 'utf8')).status !== 'published') {
+  console.error(`content/this-week/${week}.json is still a draft — flip status to "published" before --publish`)
   process.exit(1)
 }
 
@@ -66,6 +77,7 @@ try {
   // wait for fonts and give the fit loop a beat before capturing.
   await page.evaluate(() => document.fonts.ready)
   await new Promise(r => setTimeout(r, 400))
+  const overflow = await page.evaluate(() => Number(document.querySelector('[data-pack-root]')?.dataset.packOverflow ?? 0))
 
   // Zero margins to match A4Sheet's own `@page { margin: 0 }` — the sheet fits its
   // type to the FULL A4 height, so Chrome's default ~1cm margin (and the 12mm
@@ -73,16 +85,22 @@ try {
   const pdf = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '0', right: '0', bottom: '0', left: '0' } })
   // The shareable image: a hi-res PNG of the sheet itself (the `.a4-print-root`
   // element, so no surrounding page chrome or the on-screen Print button).
-  const sheet = await page.$('.a4-print-root')
+  const sheet = publish ? null : await page.$('.a4-print-root')
   const png = sheet ? await sheet.screenshot({ type: 'png' }) : null
   await page.close()
 
   const pages = (await PDFDocument.load(pdf)).getPageCount()
+  if (overflow > 1) {
+    console.error(`OVERFLOW: the packed columns overflow the sheet by ${overflow}px at the floor type size — the page clips text; tighten the copy before publishing`)
+    process.exitCode = 2
+  }
   if (pages > 1) {
     console.warn(`warning: ${pages} pages — a one-page edition overran; the draft still renders, but the print stylesheet may need tightening`)
   }
 
-  const pdfPath = out ?? join(HERE, 'preview', `${week}.pdf`)
+  const pdfPath = out ?? (publish
+    ? join(HERE, '..', '..', 'public', 'this-week', `${week}.pdf`)
+    : join(HERE, 'preview', `${week}.pdf`))
   const pngPath = pdfPath.replace(/\.pdf$/i, '.png')
   await mkdir(dirname(pdfPath), { recursive: true })
   await writeFile(pdfPath, pdf)
@@ -90,8 +108,11 @@ try {
   // Blocking open so the viewer launches before the process exits; best-effort so
   // a headless environment never fails the render (matches render-pdf.mjs). Open
   // the PNG — the artifact meant for sharing — falling back to the PDF.
-  try { execSync(`open ${JSON.stringify(png ? pngPath : pdfPath)}`) } catch { /* open is best-effort */ }
-  console.log(`wrote ${pdfPath} (${pages} page${pages === 1 ? '' : 's'})` + (png ? ` and ${pngPath} (${(png.length / 1024).toFixed(0)} KB image) — opened the image` : ' — opened for review'))
+  if (!publish) {
+    try { execSync(`open ${JSON.stringify(png ? pngPath : pdfPath)}`) } catch { /* open is best-effort */ }
+  }
+  const tail = publish ? ' — published sheet' : (png ? ` and ${pngPath} (${(png.length / 1024).toFixed(0)} KB image) — opened the image` : ' — opened for review')
+  console.log(`wrote ${pdfPath} (${pages} page${pages === 1 ? '' : 's'})` + tail)
 } finally {
   await browser.close()
 }

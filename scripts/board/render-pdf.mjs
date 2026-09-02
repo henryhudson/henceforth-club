@@ -135,6 +135,11 @@ async function render(browser, kind, date, outPath, prevTx, dryRun) {
   if (new URL(page.url()).pathname.startsWith("/board/login")) {
     throw new Error(`${url} bounced to the login gate — BOARD_COOKIE_SECRET in .env.local no longer matches production`);
   }
+  // Let the fonts land and the fit settle before measuring, then read how far
+  // the packed columns overflow the sheet: the sheet clips that, silently.
+  await page.evaluate(() => document.fonts.ready);
+  await new Promise((r) => setTimeout(r, 400));
+  const overflow = await page.evaluate(() => Number(document.querySelector("[data-pack-root]")?.dataset.packOverflow ?? 0));
   const pdf = await page.pdf({ format: "A4", preferCSSPageSize: true, printBackground: true });
   await page.close();
 
@@ -149,6 +154,10 @@ async function render(browser, kind, date, outPath, prevTx, dryRun) {
   if (pages > BUDGET[kind]) {
     try { execSync(`open ${JSON.stringify(localPath)}`); } catch { /* open is best-effort */ }
     throw new Error(`${kind} ${date}: ${pages} pages exceeds the budget of ${BUDGET[kind]} — tighten the print stylesheet, do not skip (over-budget sheet at ${localPath})`);
+  }
+  if (overflow > 1) {
+    try { execSync(`open ${JSON.stringify(localPath)}`); } catch { /* open is best-effort */ }
+    throw new Error(`${kind} ${date}: the packed columns overflow the sheet by ${overflow}px at the floor type size — the page would clip text; tighten the copy, do not skip (clipped sheet at ${localPath})`);
   }
   // Every render also lands a permanent copy in the editions archive (Henry,
   // 2026-08-20: "ensure we are saving all this in folders for future

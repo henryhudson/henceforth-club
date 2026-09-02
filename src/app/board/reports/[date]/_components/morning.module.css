@@ -155,7 +155,16 @@
 }
 .sq > .sectionTitle:first-child,
 .mod2 > .sectionTitle:first-child,
-.mod3 > .sectionTitle:first-child { margin-top: 0; border-top: none; padding-top: 0; }
+.mod3 > .sectionTitle:first-child,
+.copy > .sectionTitle:first-child { margin-top: 0; border-top: none; padding-top: 0; }
+
+.copy {
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+.copy p { margin: 0; }
+.copy p + p { text-indent: 3mm; }
 
 /* a boxed square */
 .sq {
@@ -190,10 +199,10 @@
   padding: .3mm 0;
 }
 .agateTable td { padding: .28mm 0; vertical-align: top; }
-.agateTable .n { text-align: right; padding-left: 1mm; white-space: nowrap; }
+.agateTable .n { text-align: right; padding-left: 0.6mm; white-space: nowrap; }
 .agateTable .high { font-weight: 700; }
-.sparkCell { width: 12mm; padding: 0 1mm 0 0; vertical-align: middle; }
-.spark { display: block; color: #111; }
+.sparkCell { width: 8mm; padding: 0 0.6mm 0 0; vertical-align: middle; }
+.spark { display: block; color: #111; width: 8mm; height: auto; }
 .ticks {
   letter-spacing: .35mm;
   color: #0e7490;
@@ -212,7 +221,6 @@
 /* ── the footer reference band: thin rules, small-caps run heads, no boxes.
    The page decelerates here — reference matter, not more competing stories. ── */
 .footerBand {
-  margin-top: auto;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0 4mm;

@@ -3,8 +3,8 @@ import { notFound, redirect } from "next/navigation";
 import { socialArchiveToXArchive } from "../../onchain";
 import { recordFromScripts, type FolkloreLink } from "../../linkRecord";
 import { assembleThread } from "../thread";
-import { classifyTx } from "../classify";
-import { fetchTxArchiveWithTime, fetchTxScripts } from "@/lib/whatsonchain";
+import { classifyTx, titleFor } from "../classify";
+import { fetchTxScripts, fetchTxTime } from "@/lib/whatsonchain";
 import { txExplorerUrl } from "@/lib/explorer";
 import { commentTxids } from "@/lib/folkloreBoard";
 import { countPhotos } from "@/lib/xArchiveCache";
@@ -26,9 +26,9 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   const { txid } = await params;
   const scripts = await fetchTxScripts(txid);
-  const record = scripts ? recordFromScripts(scripts) : null;
-  if (record?.kind === "link") return { title: record.title };
-  return { title: `Archived profile — ${txid.slice(0, 12)}…` };
+  // The same classification the body renders from, so the tab never names a
+  // different feature than the page.
+  return { title: scripts ? titleFor(classifyTx(scripts, txid), txid) : shortTxid(txid) };
 }
 
 function sourceLabel(source: string): string {
@@ -52,19 +52,20 @@ export default async function TxPage(
     return (
       <TargetThread
         txid={txid}
-        title={classified.post.text.trim() || shortTxid(txid)}
+        title={titleFor(classified, txid)}
         body={classified.post.text}
         source={sourceLabel(classified.source)}
       />
     );
   }
   if (classified.kind === "opaque") {
-    return <TargetThread txid={txid} title={shortTxid(txid)} body="" source="Bitcoin" />;
+    return <TargetThread txid={txid} title={titleFor(classified, txid)} body="" source="Bitcoin" />;
   }
 
-  const result = await fetchTxArchiveWithTime(txid);
-  if (!result) notFound();
-  const archive = socialArchiveToXArchive(result.archive, txid);
+  // The classifier already parsed the archive from these scripts; only the
+  // confirmation time is still to fetch.
+  const time = await fetchTxTime(txid);
+  const archive = socialArchiveToXArchive(classified.archive, txid);
   // ProfileView dedupes posts before rendering, so the photo count needs to
   // match what's actually shown — otherwise a transaction with duplicate
   // posts (and photos riding along with them) would report a higher photo
@@ -81,8 +82,8 @@ export default async function TxPage(
       txid={txid}
       txCount={1}
       photoCount={photoCount}
-      firstInscribedAt={result.time}
-      txTimes={result.time !== undefined ? { [txid]: result.time } : {}}
+      firstInscribedAt={time}
+      txTimes={time !== undefined ? { [txid]: time } : {}}
       scores={scores}
       foundingByPost={foundingByPost}
       verified={owner && owner.bindingTxid === txid ? { bindingPostId: owner.bindingPostId } : undefined}
@@ -212,6 +213,18 @@ async function TargetThread({
             {thread.map((comment) => (
               <div key={comment.txid} className="px-4 py-4">
                 <p className="whitespace-pre-wrap text-foreground">{comment.text}</p>
+                <p className="mt-1.5 font-mono text-[11px] text-muted">
+                  {comment.by && `by @${comment.by} · `}
+                  <a
+                    href={txExplorerUrl(comment.txid)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="This comment's inscription on a block explorer"
+                    className="transition-colors hover:text-accent hover:underline"
+                  >
+                    {shortTxid(comment.txid)} ↗
+                  </a>
+                </p>
               </div>
             ))}
           </div>

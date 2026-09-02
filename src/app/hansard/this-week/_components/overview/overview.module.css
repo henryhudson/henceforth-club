@@ -9,6 +9,7 @@
 
 .sheet {
   width: 210mm;
+  height: 297mm;
   min-height: 297mm;
   margin: 0 auto;
   background: #fff;
@@ -17,6 +18,7 @@
   font: 7pt/1.143 Georgia, serif;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
   box-sizing: border-box;
@@ -91,7 +93,12 @@
 .mod2 { grid-column: span 2; }
 .mod1 { grid-column: span 1; }
 .modFull { grid-column: span 4; }
-.mod3 .feature p { column-count: 3; }
+.copy {
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+.copy p { margin: 0; }
 
 .legs2 {
   column-count: 2;
@@ -148,7 +155,9 @@
 .side .sectionTitle:first-child,
 .mod2 > .sectionTitle:first-child,
 .modFull > .sectionTitle:first-child,
-.sq > .sectionTitle:first-child { margin-top: 0; border-top: none; padding-top: 0; }
+.sq > .sectionTitle:first-child,
+.copy > .sectionTitle:first-child,
+h3.sectionTitle:first-child { margin-top: 0; border-top: none; padding-top: 0; }
 
 /* a boxed square at the page foot */
 .sq {
@@ -166,8 +175,7 @@
 .sideNote b { font-size: 1.05em; }
 
 /* ── the week in brief ── */
-.brief { column-count: 2; column-gap: 4mm; column-rule: .5pt solid #999; text-align: justify; hyphens: auto; -webkit-hyphens: auto; }
-.modFull .brief { column-count: 3; }
+.brief { text-align: justify; hyphens: auto; -webkit-hyphens: auto; }
 .bitem { break-inside: avoid; font: 1em/1.15 Georgia, serif; color: #111; margin: 0 0 1mm; }
 .bitem .ih { font: 700 .857em/1.15 -apple-system, 'Helvetica Neue', Helvetica, sans-serif; }
 
@@ -258,7 +266,7 @@
   text-transform: uppercase;
 }
 .feature h4 { font: 700 1.57em/1.1 Georgia, serif; margin: .8mm 0 1mm; text-align: left; }
-.feature p { margin: 0; font-size: 1em; line-height: 1.15; column-count: 2; column-gap: 4mm; }
+.feature p { margin: 0; font-size: 1em; line-height: 1.15; }
 
 /* ── a sample of the week's questions ── */
 .qa { display: grid; gap: 0 3mm; align-items: start; }

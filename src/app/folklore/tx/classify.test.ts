@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { validateComment, validateLink } from "../linkRecord";
 import { MAP_PREFIX } from "../mapPost";
-import { classifyTx } from "./classify";
+import { classifyTx, titleFor } from "./classify";
 
 const PAGE = "ab".repeat(32);
 const OTHER = "cd".repeat(32);
@@ -50,3 +50,22 @@ describe("classifyTx", () => {
 });
 
 
+
+describe("titleFor", () => {
+  const short = `${PAGE.slice(0, 6)}…${PAGE.slice(-4)}`;
+
+  it("names a legacy link by its title and a map post by its text", () => {
+    const link = validateLink("https://example.org/a", "A titled link");
+    if (!link) throw new Error("expected record");
+    expect(titleFor({ kind: "legacy-link", record: link }, PAGE)).toBe("A titled link");
+    expect(titleFor({ kind: "map", post: { text: "  hello  " } as never, source: "twetch" }, PAGE)).toBe("hello");
+    expect(titleFor({ kind: "map", post: { text: "   " } as never, source: "twetch" }, PAGE)).toBe(short);
+  });
+
+  it("never calls a post or an opaque transaction an archived profile", () => {
+    expect(titleFor({ kind: "opaque" }, PAGE)).toBe(short);
+    expect(titleFor({ kind: "archive", archive: {} as never }, PAGE)).toBe(`Archived profile — ${short}`);
+    expect(titleFor({ kind: "comment", parent: OTHER }, PAGE)).toContain("comment");
+    expect(titleFor({ kind: "stamp", target: OTHER }, PAGE)).toContain("stamp");
+  });
+});
