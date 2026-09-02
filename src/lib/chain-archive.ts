@@ -143,20 +143,45 @@ async function firstAnswer(path: string, fetchImpl: Fetcher): Promise<Response> 
   throw new Error(failures.join("; "));
 }
 
+type HistoryRow = { tx_hash: string; height?: number };
+
+/** The rows of a history answer. The endpoints disagree on shape: one returns
+ *  a bare array, the other wraps it in `result`. Reading only the array shape
+ *  threw on the object, and the caller's catch turned that into "this address
+ *  has no mempool" — which is how a freshly published head went unseen. */
+export function historyRows(payload: unknown): HistoryRow[] {
+  const rows = Array.isArray(payload)
+    ? payload
+    : (payload as { result?: unknown } | null)?.result;
+  if (!Array.isArray(rows)) return [];
+  return rows.filter((r): r is HistoryRow => typeof (r as HistoryRow)?.tx_hash === "string");
+}
+
+/** Confirmed rows, newest first. Ordered by the height each row carries rather
+ *  than by the order the indexer happened to send: two indexers serve this
+ *  address and they do not agree on it. Rows without a height keep their
+ *  relative order at the front, since an unheighted row is a mempool row. */
+export function newestFirstByHeight(rows: HistoryRow[]): string[] {
+  return rows
+    .map((row, index) => ({ row, index }))
+    .sort((a, b) => (b.row.height ?? Infinity) - (a.row.height ?? Infinity) || a.index - b.index)
+    .map(({ row }) => row.tx_hash);
+}
+
 /** The address's transaction ids, newest first: mempool ahead of confirmed.
  *  A mirror without the unconfirmed endpoint degrades to confirmed-only. */
 async function newestFirstHistory(address: string, fetchImpl: Fetcher): Promise<string[]> {
   const txids: string[] = [];
   try {
     const resp = await firstAnswer(`/address/${address}/unconfirmed/history`, fetchImpl);
-    const rows = (await resp.json()) as { tx_hash: string }[];
-    txids.push(...rows.map((r) => r.tx_hash).reverse());
+    // Mempool rows arrive newest first, and the head of a publish is its last
+    // transaction — so this order is the one that finds it.
+    txids.push(...historyRows(await resp.json()).map((r) => r.tx_hash));
   } catch {
     // No mempool view is not an error — the confirmed walk below still answers.
   }
   const resp = await firstAnswer(`/address/${address}/history`, fetchImpl);
-  const rows = (await resp.json()) as { tx_hash: string }[];
-  txids.push(...rows.map((r) => r.tx_hash).reverse()); // confirmed history arrives oldest-first
+  txids.push(...newestFirstByHeight(historyRows(await resp.json())));
   return [...new Set(txids)];
 }
 
