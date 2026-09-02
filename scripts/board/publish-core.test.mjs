@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   FILE_MISSING,
   FILE_UNREADABLE,
+  CHAIN_REFUSED,
   STORE_REFUSED,
   classifyReadError,
   reasonFor,
@@ -20,6 +21,13 @@ describe("publish core", () => {
     // "no content/board/latest.json to publish" when the store was over quota.
     const reason = reasonFor(STORE_REFUSED, "ERR max requests limit exceeded");
     expect(reason).toContain("the store refused the write");
+    expect(reason).toContain("the local file is present");
+    expect(reason).not.toMatch(/missing/);
+  });
+
+  it("a chain refusal is its own cause, and never blamed on the file either", () => {
+    const reason = reasonFor(CHAIN_REFUSED, "broadcast failed: 258 txn-mempool-conflict");
+    expect(reason).toContain("the chain refused the inscription");
     expect(reason).toContain("the local file is present");
     expect(reason).not.toMatch(/missing/);
   });

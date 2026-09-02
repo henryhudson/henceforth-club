@@ -18,6 +18,7 @@
 export const FILE_MISSING = "file-missing";
 export const FILE_UNREADABLE = "file-unreadable";
 export const STORE_REFUSED = "store-refused";
+export const CHAIN_REFUSED = "chain-refused";
 
 /** A read that failed: absent file, or present but unreadable/unparseable. */
 export function classifyReadError(error) {
@@ -37,6 +38,8 @@ export function reasonFor(kind, message) {
       return `the local file is present but could not be read or parsed (${message})`;
     case STORE_REFUSED:
       return `the store refused the write; the local file is present and was read fine (${message})`;
+    case CHAIN_REFUSED:
+      return `the chain refused the inscription; the local file is present and was read fine (${message})`;
     default:
       return message;
   }

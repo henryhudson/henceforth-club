@@ -16,6 +16,27 @@ import { CHAIN_MARKER } from "./board-pdf";
 
 export const HEAD_SURFACE = "head";
 
+// The archive address is public — it is the index's identity, not a secret;
+// the key that opens what is inscribed there is BOARD_ARCHIVE_KEY. Overridable
+// so a rotated key needs an environment change, not a deploy.
+export const ARCHIVE_ADDRESS_DEFAULT = "14wYnqxnprgqy11gCKSG3Z9KLcUCKWiWfq";
+
+// Surface names, mirrored in scripts/board/chain-publish-core.mjs (the
+// writer); the sync test pins the two together.
+export const SURFACE = {
+  board: "board-latest",
+  done: "board-done",
+  gardening: "board-gardening",
+  report: (date: string): string => `board-report-${date}`,
+  week: (date: string): string => `board-week-${date}`,
+} as const;
+const REPORT_PREFIX = "board-report-";
+const WEEK_PREFIX = "board-week-";
+export const reportDateOf = (surface: string): string | null =>
+  surface.startsWith(REPORT_PREFIX) ? surface.slice(REPORT_PREFIX.length) : null;
+export const weekDateOf = (surface: string): string | null =>
+  surface.startsWith(WEEK_PREFIX) ? surface.slice(WEEK_PREFIX.length) : null;
+
 export const INDEXER_BASES = [
   "https://api.whatsonchain.com/v1/bsv/main",
   "https://bananablocks.com/api/v1/bsv/main",
@@ -198,6 +219,24 @@ export async function readSurface({
 }): Promise<ChainReadResult> {
   const resolved = await resolveHead({ address, keyHex, fetchImpl });
   if (resolved.status !== "ok") return resolved;
+  return readFromHead({ resolved, surface, keyHex, fetchImpl });
+}
+
+export type ResolvedHead = Extract<HeadResolution, { status: "ok" }>;
+
+/** Fetch and open one surface named by an already-resolved head, so a caller
+ *  serving several surfaces resolves the head once and reads from it. */
+export async function readFromHead({
+  resolved,
+  surface,
+  keyHex,
+  fetchImpl = fetch,
+}: {
+  resolved: ResolvedHead;
+  surface: string;
+  keyHex: string;
+  fetchImpl?: Fetcher;
+}): Promise<ChainReadResult> {
   const txid = resolved.head.surfaces[surface];
   if (!txid) return { status: "missing", surface, headTxid: resolved.headTxid };
   let hex: string;

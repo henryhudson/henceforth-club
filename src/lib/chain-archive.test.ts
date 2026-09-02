@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { P2PKH, PrivateKey, Transaction } from "@bsv/sdk";
-import { INDEXER_BASES, parseHeadPayload, readSurface, resolveHead } from "./chain-archive";
+import { INDEXER_BASES, SURFACE, parseHeadPayload, readSurface, resolveHead } from "./chain-archive";
+import { BOARD_SURFACE, DONE_SURFACE, GARDENING_SURFACE, reportSurface, weekSurface } from "../../scripts/board/chain-publish-core.mjs";
 import { inscribeDocument } from "../../scripts/board/chain-put.mjs";
 import { inscribeHead, parseHeadPayload as parseHeadPayloadMjs } from "../../scripts/board/chain-head.mjs";
 
@@ -170,5 +171,15 @@ describe("the two parsers agree", () => {
     const bad = Buffer.from(JSON.stringify({ v: 2, surfaces: {} }));
     expect(() => parseHeadPayload(new Uint8Array(bad))).toThrow();
     expect(() => parseHeadPayloadMjs(bad)).toThrow();
+  });
+});
+
+describe("the reader and the writer name surfaces the same way", () => {
+  it("every surface name the publisher writes is the one the seams read", () => {
+    expect(SURFACE.board).toBe(BOARD_SURFACE);
+    expect(SURFACE.done).toBe(DONE_SURFACE);
+    expect(SURFACE.gardening).toBe(GARDENING_SURFACE);
+    expect(SURFACE.report("2026-09-01")).toBe(reportSurface("2026-09-01"));
+    expect(SURFACE.week("2026-08-30")).toBe(weekSurface("2026-08-30"));
   });
 });

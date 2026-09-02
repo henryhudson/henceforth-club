@@ -20,6 +20,7 @@ export declare function inscribeDocument(args: {
   bytes: Uint8Array;
   previousTxid?: string;
   prevTx?: Transaction | null;
+  feeCeiling?: number;
   dryRun?: boolean;
   fetchImpl?: typeof fetch;
   log?: (line: string) => void;
