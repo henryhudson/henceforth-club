@@ -89,8 +89,12 @@ export default function Overview({ digest, week }: { digest: DigestData; week: s
             )}
           </Square>
         )}
+        {/* The brief carries every set piece of the week, and a sitting week can
+            put more of them on the page than one column will hold. Like the
+            lead, it continues into the next column rather than being cut off
+            at the foot of its own. */}
         {restBrief.length > 0 && (
-          <Square id="brief">
+          <Square id="brief" continues>
             <WeekInBrief items={restBrief} />
           </Square>
         )}
