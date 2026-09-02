@@ -5,6 +5,8 @@ import { gardenDiary, type DiaryEntry } from "@/lib/gardening";
 import { asList, editionNumber } from "@/lib/report-helpers";
 import PlanChecklist from "../PlanChecklist";
 import MorningSheet, { openCards, weekAheadFrom } from "./_components/MorningSheet";
+import VitalsChecklist from "@/components/VitalsChecklist";
+import { vitalsFor } from "@/lib/report-vitals";
 import type { BoardOpen, WeekAheadDay } from "./_components/MorningSheet";
 
 export const dynamic = "force-dynamic";
@@ -36,9 +38,11 @@ export default async function DailyEdition({ params }: { params: Promise<{ date:
   // board; older editions fall back to the weekly newspaper copy.
   let weekAhead: WeekAheadDay[] = [];
   let boardOpen: BoardOpen | null = null;
+  let boardCards: { id?: string; title?: string; col?: string; phase?: string }[] = [];
   try {
     const board = await loadBoard();
     boardOpen = board ? openCards(board, date) : null;
+    boardCards = board?.cards ?? [];
     if (board?.week?.weekPlan?.length) {
       weekAhead = weekAheadFrom(board.week.weekPlan, date);
     }
@@ -75,6 +79,18 @@ export default async function DailyEdition({ params }: { params: Promise<{ date:
           <Link href="/board/week" className="underline">Week</Link>
           <a href={`/board/reports/${date}/pdf`} className="underline">PDF</a>
         </div>
+
+        {/* Above the orders, because these are the ones that do not move to
+            tomorrow: what only Henry can clear, and the standing daily two. */}
+        <section className="mt-4 border-[3px] border-double border-foreground p-3">
+          <h2 className="mb-1 text-center font-serif text-[12px] font-black uppercase tracking-[0.22em] text-foreground">
+            Today, without fail
+          </h2>
+          <VitalsChecklist
+            date={report.date}
+            vitals={vitalsFor({ today: report.vitals ?? [], cards: boardCards })}
+          />
+        </section>
 
         {report.plan && report.plan.items.length > 0 && (
           <section className="mt-4 border-2 border-foreground p-3">
@@ -118,7 +134,7 @@ export default async function DailyEdition({ params }: { params: Promise<{ date:
       {/* The paper itself — one A4 sheet on the newspaper measure. Print
           renders exactly this sheet; the working copy above is web-only. */}
       <div className="bg-[#dedbd4] py-6 print:bg-white print:py-0">
-        <MorningSheet report={report} issue={issue} weekAhead={weekAhead} boardOpen={boardOpen} garden={garden} />
+        <MorningSheet report={report} issue={issue} weekAhead={weekAhead} boardOpen={boardOpen} garden={garden} boardCards={boardCards} />
       </div>
 
       <div className="newspaper mx-auto max-w-4xl px-6 py-8 print:hidden">

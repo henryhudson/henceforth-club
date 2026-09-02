@@ -1,6 +1,7 @@
 import type { Report, Finding, Emergency, Board, PlanDay } from "@/lib/board-data";
 import type { DiaryEntry } from "@/lib/gardening";
 import { isRowHigh, longDate, reachCell, sparkPoints } from "@/lib/report-helpers";
+import { vitalsFor, type VitalCard } from "@/lib/report-vitals";
 import A4Sheet from "@/app/hansard/this-week/_components/overview/A4Sheet";
 import PackLayout, { Square } from "@/app/hansard/this-week/_components/overview/PackLayout";
 import s from "./morning.module.css";
@@ -119,13 +120,17 @@ export default function MorningSheet({
   weekAhead = [],
   boardOpen = null,
   garden = [],
+  boardCards = [],
 }: {
   report: Report;
   issue: number | null;
   weekAhead?: WeekAheadDay[];
   boardOpen?: BoardOpen | null;
   garden?: DiaryEntry[];
+  boardCards?: VitalCard[];
 }) {
+  // The same list the web page ticks, printed with boxes for a pen.
+  const vitals = vitalsFor({ today: report.vitals ?? [], cards: boardCards });
   const article = report.article;
   const sections = article?.sections ?? [];
   const numbersSection = sections.find((sec) => sec.heading.toLowerCase().includes("number"));
@@ -222,6 +227,22 @@ export default function MorningSheet({
                 ))}
               </div>
             ))}
+          </Square>
+          <Square id="vitals" className={`${s.sq} ${s.sqHouse}`}>
+            <div className={s.sectionTitle}>Today, without fail</div>
+            <ul className={s.vitals}>
+              {vitals.map((v) => (
+                <li key={v.id} className={s.vital}>
+                  <span className={s.vitalBox} aria-hidden>
+                    ☐
+                  </span>
+                  <span>
+                    <span className={s.vitalLabel}>{v.label}</span>
+                    {v.note && <span className={s.vitalNote}> {v.note}</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </Square>
           <Square id="verdicts" className={`${s.sq} ${s.agate}`}>
             <div className={s.sectionTitle}>The verdicts, in brief</div>
