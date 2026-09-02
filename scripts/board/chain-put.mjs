@@ -39,6 +39,33 @@ export const BROADCAST_BACKOFF_MS = [500, 2_000, 5_000, 10_000, 15_000];
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** A read from the indexers, alternating between them and waiting out a
+ *  refusal exactly as a broadcast does. Returns the body text. The first
+ *  inscription of a run has no previous transaction to chain from, so it must
+ *  ask an indexer for the address's coins and then for a source transaction;
+ *  on the night of the first real publish WhatsOnChain answered that read with
+ *  an HTML page, and the run ended before a single broadcast. A read is
+ *  idempotent, so every non-answer is worth another attempt until the backoffs
+ *  run out: a rate limit, a server error, a mirror that lacks the endpoint, or
+ *  a challenge page dressed as a 200. */
+export async function fetchIndexer(path, { fetchImpl = fetch, sleep = wait, log = console.log } = {}) {
+  let last = "";
+  for (let attempt = 0; attempt <= BROADCAST_BACKOFF_MS.length; attempt++) {
+    const endpoint = BROADCAST_ENDPOINTS[attempt % BROADCAST_ENDPOINTS.length];
+    const resp = await fetchImpl(`${endpoint}${path}`);
+    const body = await resp.text();
+    const looksLikeAPage = /^\s*<(!doctype html|html)/i.test(body);
+    if (resp.ok && !looksLikeAPage) return body;
+    last = `${resp.status}: ${body.slice(0, 160).replace(/\s+/g, " ")}`;
+    if (attempt === BROADCAST_BACKOFF_MS.length) break;
+    const pause = BROADCAST_BACKOFF_MS[attempt];
+    const next = BROADCAST_ENDPOINTS[(attempt + 1) % BROADCAST_ENDPOINTS.length];
+    log(`indexer read of ${path} refused by ${new URL(endpoint).host}; waiting ${pause}ms and trying ${new URL(next).host}`);
+    await sleep(pause);
+  }
+  throw new Error(`indexer read failed for ${path}: ${last}`);
+}
+
 /** The transaction id in a broadcast's answer, or null if it does not carry
  *  one. WhatsOnChain replies with the bare id, sometimes JSON-quoted; the
  *  BananaBlocks mirror replies with a status object whose `txid` field holds
@@ -97,7 +124,7 @@ export function changeOutputIndex(tx) {
 // transaction in this run (its change is not yet indexed anywhere else), a
 // fake output on a dry run, or the largest spendable output the indexer
 // reports for the key's address.
-async function sourceFor({ address, prevTx, dryRun, fetchImpl }) {
+async function sourceFor({ address, prevTx, dryRun, fetchImpl, sleep = wait, log = console.log }) {
   if (prevTx) {
     const changeIndex = changeOutputIndex(prevTx);
     if (changeIndex < 0) throw new Error("previous transaction in this run has no change output to chain from");
@@ -110,18 +137,25 @@ async function sourceFor({ address, prevTx, dryRun, fetchImpl }) {
   }
   // Mempool-inclusive: the plain /unspent endpoint is confirmed-only and
   // hides freshly broadcast change.
-  const unspentResp = await fetchImpl(`${WOC}/address/${address}/unspent/all`);
-  if (!unspentResp.ok) throw new Error(`fetching unspent outputs for ${address} failed: ${await unspentResp.text()}`);
-  const { result } = await unspentResp.json();
+  let result;
+  try {
+    ({ result } = JSON.parse(await fetchIndexer(`/address/${address}/unspent/all`, { fetchImpl, sleep, log })));
+  } catch (e) {
+    throw new Error(`fetching unspent outputs for ${address} failed: ${e.message}`);
+  }
   const spendable = (Array.isArray(result) ? result : []).filter((u) => !u.isSpentInMempoolTx);
   if (spendable.length === 0) {
     throw new Error(`no spendable outputs for ${address} — the archive key is unfunded, or its change is still propagating`);
   }
   const utxo = spendable.reduce((largest, u) => (u.value > largest.value ? u : largest));
-  const hexResp = await fetchImpl(`${WOC}/tx/${utxo.tx_hash}/hex`);
-  if (!hexResp.ok) throw new Error(`fetching source tx ${utxo.tx_hash} failed: ${await hexResp.text()}`);
+  let hex;
+  try {
+    hex = (await fetchIndexer(`/tx/${utxo.tx_hash}/hex`, { fetchImpl, sleep, log })).trim();
+  } catch (e) {
+    throw new Error(`fetching source tx ${utxo.tx_hash} failed: ${e.message}`);
+  }
   return {
-    sourceTransaction: Transaction.fromHex((await hexResp.text()).trim()),
+    sourceTransaction: Transaction.fromHex(hex),
     sourceOutputIndex: utxo.tx_pos,
     sourceLabel: `utxo ${utxo.tx_hash}:${utxo.tx_pos}`,
   };
@@ -139,7 +173,7 @@ export async function inscribeDocument({
   const sealed = sealPayload(bytes, keyHex);
   const chunks = buildEnvelope({ surface, date, keyId: keyIdentifier(keyHex), previousTxid, sealed });
 
-  const { sourceTransaction, sourceOutputIndex, sourceLabel } = await sourceFor({ address, prevTx, dryRun, fetchImpl });
+  const { sourceTransaction, sourceOutputIndex, sourceLabel } = await sourceFor({ address, prevTx, dryRun, fetchImpl, sleep, log });
   const inputValue = sourceTransaction.outputs[sourceOutputIndex].satoshis ?? 0;
 
   const tx = new Transaction();

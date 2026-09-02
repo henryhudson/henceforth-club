@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { broadcastRaw, txidFromBroadcast, BROADCAST_ENDPOINTS } from "./chain-put.mjs";
+import { broadcastRaw, fetchIndexer, txidFromBroadcast, BROADCAST_ENDPOINTS } from "./chain-put.mjs";
 
 const TXID = "a".repeat(64);
 const ok = () => ({ ok: true, status: 200, text: async () => `"${TXID}"` });
@@ -75,5 +75,45 @@ describe("broadcastRaw over the mirror", () => {
         : { ok: true, status: 200, text: async () => JSON.stringify({ status: 200, txid: id, txStatus: "SEEN_ON_NETWORK" }) };
     };
     expect(await broadcastRaw("00", { fetchImpl, sleep: async () => {}, log: () => {} })).toBe(id);
+  });
+});
+
+describe("fetchIndexer", () => {
+  const quiet = { sleep: async () => {}, log: () => {} };
+
+  it("returns the body of a plain answer at once", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: true, status: 200, text: async () => '{"result":[]}' }));
+    expect(await fetchIndexer("/address/1x/unspent/all", { fetchImpl, ...quiet })).toBe('{"result":[]}');
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("treats a challenge page dressed as a 200 as no answer, and tries the other indexer", async () => {
+    const hosts = [];
+    const fetchImpl = vi.fn(async (url) => {
+      hosts.push(new URL(url).host);
+      return hosts.length === 1
+        ? { ok: true, status: 200, text: async () => "<!DOCTYPE html><html><title>Just a moment...</title></html>" }
+        : { ok: true, status: 200, text: async () => "0100000001abcd" };
+    });
+    expect(await fetchIndexer("/tx/ab/hex", { fetchImpl, ...quiet })).toBe("0100000001abcd");
+    expect(hosts).toEqual([new URL(BROADCAST_ENDPOINTS[0]).host, new URL(BROADCAST_ENDPOINTS[1]).host]);
+  });
+
+  it("keeps trying past a mirror that lacks the endpoint, back to the first indexer", async () => {
+    let n = 0;
+    const fetchImpl = vi.fn(async () => {
+      n += 1;
+      if (n === 1) return { ok: false, status: 429, text: async () => "429 Too Many Requests" };
+      if (n === 2) return { ok: false, status: 404, text: async () => "not found" };
+      return { ok: true, status: 200, text: async () => '{"result":[{"tx_hash":"a","tx_pos":0,"value":1}]}' };
+    });
+    expect(await fetchIndexer("/address/1x/unspent/all", { fetchImpl, ...quiet })).toContain("tx_hash");
+    expect(n).toBe(3);
+  });
+
+  it("gives up after the last backoff, carrying the status and the body", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: false, status: 429, text: async () => "<h1>429 Too Many Requests</h1>" }));
+    await expect(fetchIndexer("/tx/ab/hex", { fetchImpl, ...quiet })).rejects.toThrow(/indexer read failed .*429/s);
+    expect(fetchImpl).toHaveBeenCalledTimes(6);
   });
 });
