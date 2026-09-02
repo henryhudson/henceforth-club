@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { P2PKH, PrivateKey, Transaction } from "@bsv/sdk";
-import { INDEXER_BASES, SURFACE, parseHeadPayload, readSurface, resolveHead } from "./chain-archive";
+import { INDEXER_BASES, SURFACE, historyRows, newestFirstByHeight, parseHeadPayload, readSurface, resolveHead } from "./chain-archive";
 import { BOARD_SURFACE, DONE_SURFACE, GARDENING_SURFACE, editionSurface, reportSurface, weekSurface } from "../../scripts/board/chain-publish-core.mjs";
 import { inscribeDocument } from "../../scripts/board/chain-put.mjs";
 import { inscribeHead, parseHeadPayload as parseHeadPayloadMjs } from "../../scripts/board/chain-head.mjs";
@@ -56,7 +56,12 @@ function networkFor(f: Fixture, opts: { historyNewestFirstTxids?: string[]; unco
   return (async (url: RequestInfo | URL) => {
     const u = String(url);
     if (u.includes("/unconfirmed/history")) {
-      return opts.unconfirmed ? json(opts.unconfirmed.map((tx_hash) => ({ tx_hash }))) : refuse(404);
+      // The real endpoint wraps its rows in `result` and sends them newest
+      // first; the fixture said a bare array, which is why production could
+      // fail while these tests passed.
+      return opts.unconfirmed
+        ? json({ address: ADDRESS, result: opts.unconfirmed.map((tx_hash) => ({ tx_hash })) })
+        : refuse(404);
     }
     if (u.includes("/history")) return json(oldestFirst.map((tx_hash) => ({ tx_hash })));
     const match = u.match(/\/tx\/([0-9a-f]{64})\/hex/);
@@ -96,6 +101,17 @@ describe("resolving the head", () => {
     const network = networkFor(f, { historyNewestFirstTxids: [f.docTxid], unconfirmed: [f.headTxid] });
     const resolved = await resolveHead({ address: ADDRESS, keyHex: SEAL_KEY, fetchImpl: network });
     expect(resolved.status).toBe("ok");
+  });
+
+  it("finds a head at the front of a long mempool, past the walk limit's worth of siblings", async () => {
+    const f = await fixture();
+    // A publish leaves dozens of its own transactions in the mempool; the head
+    // is the last one broadcast and the endpoint lists it first.
+    const siblings = Array.from({ length: 40 }, (_, i) => `${i.toString(16).padStart(2, "0")}`.repeat(32));
+    const network = networkFor(f, { historyNewestFirstTxids: [f.docTxid], unconfirmed: [f.headTxid, ...siblings] });
+    const resolved = await resolveHead({ address: ADDRESS, keyHex: SEAL_KEY, fetchImpl: network });
+    expect(resolved.status).toBe("ok");
+    if (resolved.status === "ok") expect(resolved.headTxid).toBe(f.headTxid);
   });
 
   it("a head that will not open is corrupt, never silently skipped", async () => {
@@ -182,5 +198,34 @@ describe("the reader and the writer name surfaces the same way", () => {
     expect(SURFACE.report("2026-09-01")).toBe(reportSurface("2026-09-01"));
     expect(SURFACE.week("2026-08-30")).toBe(weekSurface("2026-08-30"));
     expect(SURFACE.edition("daily", "2026-09-01")).toBe(editionSurface("daily", "2026-09-01"));
+  });
+});
+
+describe("reading a history answer", () => {
+  it("takes rows from a bare array and from the result wrapper alike", () => {
+    const rows = [{ tx_hash: "a".repeat(64) }, { tx_hash: "b".repeat(64) }];
+    expect(historyRows(rows).map((r) => r.tx_hash)).toEqual(rows.map((r) => r.tx_hash));
+    expect(historyRows({ address: "1x", result: rows }).map((r) => r.tx_hash)).toEqual(rows.map((r) => r.tx_hash));
+  });
+
+  it("is empty, never a throw, for anything else", () => {
+    expect(historyRows(null)).toEqual([]);
+    expect(historyRows({ error: "rate limited" })).toEqual([]);
+    expect(historyRows([{ nope: 1 }])).toEqual([]);
+  });
+
+  it("orders confirmed rows by height, whichever way the indexer sent them", () => {
+    const rows = [
+      { tx_hash: "a".repeat(64), height: 100 },
+      { tx_hash: "b".repeat(64), height: 300 },
+      { tx_hash: "c".repeat(64), height: 200 },
+    ];
+    expect(newestFirstByHeight(rows)).toEqual([rows[1].tx_hash, rows[2].tx_hash, rows[0].tx_hash]);
+    expect(newestFirstByHeight([...rows].reverse())).toEqual([rows[1].tx_hash, rows[2].tx_hash, rows[0].tx_hash]);
+  });
+
+  it("keeps an unheighted row ahead of every confirmed one", () => {
+    const rows = [{ tx_hash: "a".repeat(64), height: 900 }, { tx_hash: "b".repeat(64) }];
+    expect(newestFirstByHeight(rows)[0]).toBe(rows[1].tx_hash);
   });
 });
