@@ -63,6 +63,28 @@ describe("packColumns", () => {
     expect(result.makespan).toBe(100);
   });
 
+  it("cuts a continuing square on whole lines when its line height is known", () => {
+    const items: PackItem[] = [{ id: "lead", height: 150, lead: true, continues: true, lineHeight: 12 }];
+    const result = packColumns(items, 100);
+
+    const parts = fragments(result, "lead");
+    expect(parts).toHaveLength(2);
+    expect(parts[0]).toMatchObject({ column: 0, height: 96, clipTop: 0 });
+    expect(parts[1]).toMatchObject({ column: 1, height: 54, clipTop: 96 });
+  });
+
+  it("skips a column with less than one line of room rather than cutting mid-line", () => {
+    const items: PackItem[] = [
+      { id: "filler", height: 92 },
+      { id: "lead", height: 30, lead: true, continues: true, lineHeight: 12 },
+    ];
+    const result = packColumns(items, 100);
+
+    const parts = fragments(result, "lead");
+    expect(parts[0]?.column).toBe(0);
+    expect(parts.every((p) => p.height % 12 === 0 || p === parts[parts.length - 1])).toBe(true);
+  });
+
   it("does not split a square that has not opted to continue; it overflows the shortest column", () => {
     const items: PackItem[] = [
       { id: "a", height: 90 },

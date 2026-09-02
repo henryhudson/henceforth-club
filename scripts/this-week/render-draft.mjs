@@ -77,6 +77,7 @@ try {
   // wait for fonts and give the fit loop a beat before capturing.
   await page.evaluate(() => document.fonts.ready)
   await new Promise(r => setTimeout(r, 400))
+  const overflow = await page.evaluate(() => Number(document.querySelector('[data-pack-root]')?.dataset.packOverflow ?? 0))
 
   // Zero margins to match A4Sheet's own `@page { margin: 0 }` — the sheet fits its
   // type to the FULL A4 height, so Chrome's default ~1cm margin (and the 12mm
@@ -89,6 +90,10 @@ try {
   await page.close()
 
   const pages = (await PDFDocument.load(pdf)).getPageCount()
+  if (overflow > 1) {
+    console.error(`OVERFLOW: the packed columns overflow the sheet by ${overflow}px at the floor type size — the page clips text; tighten the copy before publishing`)
+    process.exitCode = 2
+  }
   if (pages > 1) {
     console.warn(`warning: ${pages} pages — a one-page edition overran; the draft still renders, but the print stylesheet may need tightening`)
   }

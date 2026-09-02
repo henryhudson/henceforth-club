@@ -59,6 +59,13 @@ function groupByColumn(placements: Placement[], columnCount: number): Placement[
   return cols;
 }
 
+/** The copy's rendered line height in px, or 0 when the browser reports "normal". */
+function lineHeightOf(node: HTMLElement): number {
+  const copy = node.querySelector("p") ?? node.firstElementChild ?? node;
+  const value = parseFloat(getComputedStyle(copy).lineHeight);
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
 function readPack(root: HTMLElement, columnCount: number, slotPx: number): PackResult {
   const empty: PackResult = { placements: [], columnHeights: [0, 0, 0, 0], makespan: 0, splitIds: [] };
   const measure = root.querySelector("[data-pack-measure]");
@@ -73,6 +80,7 @@ function readPack(root: HTMLElement, columnCount: number, slotPx: number): PackR
         height: node.offsetHeight,
         lead: node.hasAttribute("data-pack-lead"),
         continues: node.hasAttribute("data-pack-continues"),
+        lineHeight: lineHeightOf(node),
       },
     ];
   });
@@ -125,6 +133,9 @@ export default function PackLayout({
     const run = () => {
       const result = readPack(root, columnCount, root.clientHeight);
       root.dataset.packMakespan = String(result.makespan);
+      // The sheet clips whatever the columns cannot hold; say how much, so a
+      // render can refuse a clipped page instead of inscribing it.
+      root.dataset.packOverflow = String(Math.max(0, Math.round(result.makespan - root.clientHeight)));
       const key = JSON.stringify(result.placements);
       if (key === packedKey.current) return;
       packedKey.current = key;

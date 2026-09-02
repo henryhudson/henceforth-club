@@ -7,6 +7,10 @@ export type PackItem = {
   lead?: boolean;
   /** Allow leftover copy to continue in the next column. Default false. */
   continues?: boolean;
+  /** The copy's line height, in the same unit as `height`. When set, a
+   *  fragment ends on a whole line, so a split never shows half a line at the
+   *  foot of one column and its other half at the head of the next. */
+  lineHeight?: number;
 };
 
 export type Placement = {
@@ -92,6 +96,7 @@ function placeSplit(
   let col = startColumn;
   let leftover = item.height;
   let clipTop = 0;
+  const line = item.lineHeight && item.lineHeight > 0 ? item.lineHeight : 0;
   while (leftover > 0 && col < columns.length) {
     const extra = columns[col].slots.length > 0 ? gap : 0;
     const room = remaining(columns[col], pageHeight) - extra;
@@ -99,7 +104,14 @@ function placeSplit(
       col += 1;
       continue;
     }
-    const take = Math.min(leftover, room);
+    let take = Math.min(leftover, room);
+    if (line && take < leftover) {
+      take = Math.floor(take / line) * line;
+      if (take <= 0) {
+        col += 1;
+        continue;
+      }
+    }
     pushSlot(columns[col], { index, id: item.id, height: take, clipTop }, gap);
     leftover -= take;
     clipTop += take;
