@@ -36,6 +36,10 @@ it('trimSentences drops an unclosed opener if it cannot balance', () => {
 })
 it('shortenDept and shortenDivTitle strip the boilerplate', () => {
   expect(shortenDept('Department of Health and Social Care')).toBe('Health')
+  expect(shortenDept('Department for Business, Innovation, Science and Trade')).toBe('Business')
+  // No named rule: the boilerplate still goes, so no name arrives at full length.
+  expect(shortenDept('Department for Levelling Up')).toBe('Levelling Up')
+  expect(shortenDept('Ministry of Justice')).toBe('Justice')
   expect(shortenDivTitle('Armed Forces Bill Report Stage — New Clause 4')).toBe('Armed Forces Bill, New Clause 4')
 })
 it('trimSentences never splits at a mid-sentence parenthetical', () => {
