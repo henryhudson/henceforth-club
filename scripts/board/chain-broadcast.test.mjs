@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { broadcastRaw, fetchIndexer, txidFromBroadcast, BROADCAST_ENDPOINTS } from "./chain-put.mjs";
+import { broadcastRaw, fetchIndexer, txidFromBroadcast, BROADCAST_BACKOFF_MS, BROADCAST_ENDPOINTS } from "./chain-put.mjs";
 
 const TXID = "a".repeat(64);
 const ok = () => ({ ok: true, status: 200, text: async () => `"${TXID}"` });
@@ -115,5 +115,90 @@ describe("fetchIndexer", () => {
     const fetchImpl = vi.fn(async () => ({ ok: false, status: 429, text: async () => "<h1>429 Too Many Requests</h1>" }));
     await expect(fetchIndexer("/tx/ab/hex", { fetchImpl, ...quiet })).rejects.toThrow(/indexer read failed .*429/s);
     expect(fetchImpl).toHaveBeenCalledTimes(6);
+  });
+});
+
+// The four defects of the first real publish (2 September 2026) were each found
+// by running it with money. The pacing and the failover below are what a
+// per-minute window and a challenge page taught it; pinned here so the next
+// change to either is caught by the suite and not by a run.
+describe("broadcastRaw pacing", () => {
+  const woc = new URL(BROADCAST_ENDPOINTS[0]).host;
+  const mirror = new URL(BROADCAST_ENDPOINTS[1]).host;
+
+  it("spreads six attempts over BROADCAST_BACKOFF_MS in order, alternating processors on every one", async () => {
+    const hosts = [];
+    const slept = [];
+    const fetchImpl = vi.fn(async (url) => {
+      hosts.push(new URL(url).host);
+      return limited();
+    });
+    await expect(broadcastRaw("00", { fetchImpl, sleep: async (ms) => { slept.push(ms); }, log: () => {} }))
+      .rejects.toThrow(/broadcast failed/);
+    expect(hosts).toEqual([woc, mirror, woc, mirror, woc, mirror]);
+    expect(slept).toEqual(BROADCAST_BACKOFF_MS);
+    // The schedule itself: about half a minute, enough to outlast a per-minute window.
+    expect(BROADCAST_BACKOFF_MS).toEqual([500, 2_000, 5_000, 10_000, 15_000]);
+  });
+
+  it("posts the same signed hex to /tx/raw on each processor", async () => {
+    const requests = [];
+    const fetchImpl = vi.fn(async (url, init) => {
+      requests.push({ url, method: init.method, body: JSON.parse(init.body) });
+      return requests.length === 1 ? limited() : ok();
+    });
+    await broadcastRaw("00abcd", { fetchImpl, sleep: async () => {}, log: () => {} });
+    expect(requests).toEqual([
+      { url: `${BROADCAST_ENDPOINTS[0]}/tx/raw`, method: "POST", body: { txhex: "00abcd" } },
+      { url: `${BROADCAST_ENDPOINTS[1]}/tx/raw`, method: "POST", body: { txhex: "00abcd" } },
+    ]);
+  });
+
+  it("stops at a rejection that follows a rate limit — a second processor would reject it too", async () => {
+    let n = 0;
+    const fetchImpl = vi.fn(async () => (++n === 1 ? limited() : rejected()));
+    const slept = [];
+    await expect(broadcastRaw("00", { fetchImpl, sleep: async (ms) => { slept.push(ms); }, log: () => {} }))
+      .rejects.toThrow(/mandatory-script-verify-flag-failed/);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(slept).toEqual([500]);
+  });
+
+  it("reads a rate limit from the body when the status is not 429", async () => {
+    let n = 0;
+    const fetchImpl = vi.fn(async () => (++n === 1
+      ? { ok: false, status: 503, text: async () => "Too Many Requests" }
+      : ok()));
+    expect(await broadcastRaw("00", { fetchImpl, sleep: async () => {}, log: () => {} })).toBe(TXID);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("fetchIndexer pacing and failover", () => {
+  const woc = new URL(BROADCAST_ENDPOINTS[0]).host;
+  const mirror = new URL(BROADCAST_ENDPOINTS[1]).host;
+
+  it("spreads six reads over BROADCAST_BACKOFF_MS in order, alternating indexers, when every answer is a page", async () => {
+    const urls = [];
+    const slept = [];
+    const fetchImpl = vi.fn(async (url) => {
+      urls.push(url);
+      return { ok: true, status: 200, text: async () => "<html><body>Attention Required! | Cloudflare</body></html>" };
+    });
+    await expect(fetchIndexer("/tx/ab/hex", { fetchImpl, sleep: async (ms) => { slept.push(ms); }, log: () => {} }))
+      .rejects.toThrow(/indexer read failed for \/tx\/ab\/hex: 200: <html>/);
+    expect(urls.map((u) => new URL(u).host)).toEqual([woc, mirror, woc, mirror, woc, mirror]);
+    expect(urls[0]).toBe(`${BROADCAST_ENDPOINTS[0]}/tx/ab/hex`);
+    expect(urls[1]).toBe(`${BROADCAST_ENDPOINTS[1]}/tx/ab/hex`);
+    expect(slept).toEqual(BROADCAST_BACKOFF_MS);
+  });
+
+  it("retries a server error on the other indexer — a read is idempotent", async () => {
+    let n = 0;
+    const fetchImpl = vi.fn(async () => (++n === 1
+      ? { ok: false, status: 500, text: async () => "internal error" }
+      : { ok: true, status: 200, text: async () => "0100000001abcd" }));
+    expect(await fetchIndexer("/tx/ab/hex", { fetchImpl, sleep: async () => {}, log: () => {} })).toBe("0100000001abcd");
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 });
