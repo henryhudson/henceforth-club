@@ -6,6 +6,18 @@ records that sweep's **rejections and dismissals**, newest first, so a later run
 re-flag what a prior run already refuted. Confirmed findings go to the Morning Board, not
 here. Cite `file:line` (or the live probe) so each verdict is independently re-derivable.
 
+## 2026-09-03 — the site sweep: one finding confirmed, one clean bill recorded, one ledger precision
+
+**Live:** `/` 200 in 0.18 to 0.26 s (three samples); `/folklore` 200 in 1.67, 0.49 and 0.62 s (the first sample over the sub-second bar, a cold start); `POST /api/folklore/job` 503 (fails closed); `/board` and `/board/report` redirect to the login. No open pull requests; origin/main `c66371a`.
+
+**Confirmed, carded (`finding-site-this-week-static-2026-09-03`), survived two refuters:** S1, FACT, medium. `/this-week` is served straight from `public/this-week/index.html`, committed once on 1 July (`3e03dd4`) and never touched: six weeks with `.html`, `.pdf` and `.png` links. Nothing on the publishing path writes it (`scripts/this-week/render-draft.mjs:103-108` writes only the PDF; `run-weekly.sh:93-95` commits only the JSON), so the seven sheet-era weeks (8 July to 19 August) are listed nowhere on the site and the `.html` link shape 404s for them, while the real archive at `/hansard/this-week` is complete but links no PDFs.
+
+**Clean bill (S2), recorded so it is not re-derived:** `/api/hansard/digests` lists exactly the thirteen published weeks (`store.ts:35-47` filters on status; `digests/[week]/route.ts:25-27` 404s a draft; `render-draft.mjs:52-55` refuses to publish one) and every one serves its sheet; the two drafts (26 August, 2 September) are absent from both. The 1.10 rule, publish the sheet before the index lists the week, holds.
+
+**Precision on the 2026-08-14 entry:** its line "no `/this-week` route or redirect exists" is true of the app router but not of the site: a static `public/this-week/` directory has served `/this-week` and six `/this-week/<week>.html` pages since 1 July, which is why this sweep found `/this-week` answering 200.
+
+**Rider, not a finding:** `src/app/api/hit/route.ts` still has no refused-increment branch, so a repeat of the August quota cap would store zeros again; the counter itself is alive (32 views yesterday, 107 this week, 1,306 total). The chain publish's four defects of 2 September were each found by running the publish with real money; the site's 1,779-test gate mocks that edge, so a paced live-gated dry run and tests that pin pacing and failover are on today's coverage wave.
+
 ## 2026-09-02 — the site sweep, run by the routine itself: nothing filed, nothing rejected; three notes recorded
 
 Reviewed `origin/main` at `7ccdf5b`. The site finder was refused by the account's session limit, so
