@@ -1,8 +1,9 @@
-// Plain-English copy for every reason POST /api/folklore/link can refuse —
-// pure, total: an unrecognised reason still gets an honest, generic message
-// rather than a blank error (the archive's jobRefusalMessage doctrine, for
-// the submit rail). "not-available" is deliberately absent: the flow treats
-// it as the closed state, not an error under a form.
+// Plain-English copy for every reason POST /api/folklore/link and
+// POST /api/folklore/index can refuse — pure, total: an unrecognised reason
+// still gets an honest, generic message rather than a blank error (the
+// archive's jobRefusalMessage doctrine, for the submit rail).
+// "not-available" is deliberately absent: the flow treats it as the closed
+// state, not an error under a form.
 
 import { COMMENT_MAX, TITLE_MAX } from "../linkRecord";
 
@@ -24,6 +25,16 @@ export function submitRefusalMessage(reason: unknown, retryAfterSeconds?: number
       return "The parent must be the link's 64-character transaction id.";
     case "unknown-parent":
       return "That parent link is not on the board — check the transaction id. Nothing was charged.";
+    case "unknown-tx":
+      return "That transaction can't be read from the chain yet. If you have just broadcast it, give it a moment and index it again — nothing is lost.";
+    case "bad-record":
+      return "That transaction carries no folklore stamp. Paste the id of the stamp you broadcast, not the target's.";
+    case "not-a-target":
+      return "That stamp names a web address rather than a transaction id, so it can't be listed here.";
+    case "floor-short":
+      return "The stamp's payment to the revenue address is under the ten-pence floor at today's rate, so it was not indexed. Broadcast a new stamp with a larger payment and index that one.";
+    case "already-listed":
+      return "That target is already on the board — there is one row per transaction id.";
     case "bad-by":
     case "unsigned-by":
     case "unbound-by":

@@ -34,6 +34,7 @@ describe("SubmitPage — the mechanical gate", () => {
     expect(html).not.toContain("not open yet");
     expect(html).toContain("What are you submitting");
     expect(html).toContain("10p + the inscription fee");
+    expect(html).toContain("Paste a transaction id");
     expect(html).toContain("Title · up to 300 characters");
   });
 
@@ -73,6 +74,6 @@ describe("generateMetadata — rides the same gate", () => {
     vi.stubEnv("FOLKLORE_SUBMIT_ENABLED", "true");
     const metadata = generateMetadata();
     expect(metadata.description).not.toContain("not open yet");
-    expect(metadata.description).toContain("10p plus the inscription fee");
+    expect(metadata.description).toContain("10p stamp");
   });
 });

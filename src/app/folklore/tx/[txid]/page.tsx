@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { socialArchiveToXArchive } from "../../onchain";
 import { recordFromScripts, type FolkloreLink } from "../../linkRecord";
 import { assembleThread } from "../thread";
-import { classifyTx, titleFor } from "../classify";
+import { classifyTx, sourceLabel, titleFor } from "../classify";
 import { fetchTxScripts, fetchTxTime } from "@/lib/whatsonchain";
 import { txExplorerUrl } from "@/lib/explorer";
 import { commentTxids } from "@/lib/folkloreBoard";
@@ -29,13 +29,6 @@ export async function generateMetadata(
   // The same classification the body renders from, so the tab never names a
   // different feature than the page.
   return { title: scripts ? titleFor(classifyTx(scripts, txid), txid) : shortTxid(txid) };
-}
-
-function sourceLabel(source: string): string {
-  if (source === "twetch") return "Twetch";
-  if (source === "treechat") return "Treechat";
-  if (source === "x") return "X";
-  return source;
 }
 
 export default async function TxPage(

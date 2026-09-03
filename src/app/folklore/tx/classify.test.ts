@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { validateComment, validateLink } from "../linkRecord";
 import { MAP_PREFIX } from "../mapPost";
-import { classifyTx, titleFor } from "./classify";
+import { classifyTx, sourceLabel, titleFor } from "./classify";
 
 const PAGE = "ab".repeat(32);
 const OTHER = "cd".repeat(32);
@@ -67,5 +67,15 @@ describe("titleFor", () => {
     expect(titleFor({ kind: "archive", archive: {} as never }, PAGE)).toBe(`Archived profile — ${short}`);
     expect(titleFor({ kind: "comment", parent: OTHER }, PAGE)).toContain("comment");
     expect(titleFor({ kind: "stamp", target: OTHER }, PAGE)).toContain("stamp");
+  });
+});
+
+describe("sourceLabel", () => {
+  it("names the known apps and archive sources, and passes an unknown app string through", () => {
+    expect(sourceLabel("twetch")).toBe("Twetch");
+    expect(sourceLabel("treechat")).toBe("Treechat");
+    expect(sourceLabel("x")).toBe("X");
+    expect(sourceLabel("folklore")).toBe("Folklore");
+    expect(sourceLabel("hodlocker")).toBe("hodlocker");
   });
 });
