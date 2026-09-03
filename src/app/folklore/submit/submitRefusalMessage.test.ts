@@ -15,6 +15,15 @@ describe("submitRefusalMessage", () => {
     expect(submitRefusalMessage("unknown-parent")).toContain("not on the board");
   });
 
+  it("names every index refusal, and says what to do next", () => {
+    expect(submitRefusalMessage("unknown-tx")).toContain("index it again");
+    expect(submitRefusalMessage("bad-record")).toContain("no folklore stamp");
+    expect(submitRefusalMessage("not-a-target")).toContain("web address");
+    expect(submitRefusalMessage("floor-short")).toContain("ten-pence floor");
+    expect(submitRefusalMessage("floor-short")).toContain("larger payment");
+    expect(submitRefusalMessage("already-listed")).toContain("one row per transaction id");
+  });
+
   it("folds every attribution refusal into one honest line", () => {
     for (const reason of ["bad-by", "unsigned-by", "unbound-by", "bad-signature"]) {
       expect(submitRefusalMessage(reason)).toContain("attribution");

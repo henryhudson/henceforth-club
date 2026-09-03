@@ -3,29 +3,41 @@ import { COMMENT_MAX, TITLE_MAX } from "../linkRecord";
 import { draftRequest } from "./submitDraft";
 
 const TXID = "a".repeat(64);
+const TARGET = "ab".repeat(32);
 
-describe("draftRequest — link", () => {
-  it("produces the exact route body, trimmed", () => {
+describe("draftRequest — a target to list", () => {
+  it("produces the validated target and title, trimmed and lowercased", () => {
     const result = draftRequest({
       kind: "link",
-      url: "  https://example.com/story  ",
+      target: `  ${TARGET.toUpperCase()}  `,
       title: "  A story worth keeping  ",
     });
     expect(result).toEqual({
       ok: true,
-      body: { kind: "link", url: "https://example.com/story", title: "A story worth keeping" },
+      body: { kind: "link", target: TARGET, title: "A story worth keeping" },
     });
   });
 
-  it("refuses an empty title before the url is even judged", () => {
-    const result = draftRequest({ kind: "link", url: "not a url", title: "   " });
+  it("takes the id out of a link that contains one — an explorer, Twetch or Treechat page", () => {
+    for (const paste of [
+      `https://whatsonchain.com/tx/${TARGET}`,
+      `https://treechat.com/t/${TARGET}`,
+      `https://www.henceforth.club/folklore/tx/${TARGET}`,
+    ]) {
+      const result = draftRequest({ kind: "link", target: paste, title: "t" });
+      expect(result).toEqual({ ok: true, body: { kind: "link", target: TARGET, title: "t" } });
+    }
+  });
+
+  it("refuses an empty title before the paste is even judged", () => {
+    const result = draftRequest({ kind: "link", target: "not an id", title: "   " });
     expect(result).toEqual({ ok: false, message: "Give the link a title." });
   });
 
   it("refuses a title over the cap and names the overage", () => {
     const result = draftRequest({
       kind: "link",
-      url: "https://example.com",
+      target: TARGET,
       title: "x".repeat(TITLE_MAX + 12),
     });
     expect(result.ok).toBe(false);
@@ -33,22 +45,18 @@ describe("draftRequest — link", () => {
   });
 
   it("accepts a title exactly at the cap", () => {
-    const result = draftRequest({
-      kind: "link",
-      url: "https://example.com",
-      title: "x".repeat(TITLE_MAX),
-    });
+    const result = draftRequest({ kind: "link", target: TARGET, title: "x".repeat(TITLE_MAX) });
     expect(result.ok).toBe(true);
   });
 
-  it("refuses a non-http scheme", () => {
-    const result = draftRequest({ kind: "link", url: "ftp://example.com/file", title: "t" });
-    expect(result).toEqual({ ok: false, message: "The link must be an http or https address." });
-  });
-
-  it("refuses something that is not a url at all", () => {
-    const result = draftRequest({ kind: "link", url: "just words", title: "t" });
-    expect(result.ok).toBe(false);
+  it("refuses a paste with no transaction id in it — a web address is not a target", () => {
+    for (const paste of ["https://example.com/story", "ftp://example.com/file", "just words", "abc"]) {
+      const result = draftRequest({ kind: "link", target: paste, title: "t" });
+      expect(result).toEqual({
+        ok: false,
+        message: "Paste a transaction id — 64 hex characters, or a link that contains one.",
+      });
+    }
   });
 });
 

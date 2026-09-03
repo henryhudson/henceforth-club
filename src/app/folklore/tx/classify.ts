@@ -28,6 +28,16 @@ export function classifyTx(scripts: string[], txid: string): TxClass {
   return { kind: "opaque" };
 }
 
+/** The source chip's label — the same words on the reader and on the submit
+ *  preview, so one app string never reads two ways. */
+export function sourceLabel(source: string): string {
+  if (source === "twetch") return "Twetch";
+  if (source === "treechat") return "Treechat";
+  if (source === "x") return "X";
+  if (source === "folklore") return "Folklore";
+  return source;
+}
+
 /** The page's title, from the same classification the body renders from —
  *  so the tab, the bookmark and the search result never name a different
  *  feature than the page. */

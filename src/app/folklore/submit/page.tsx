@@ -13,7 +13,7 @@ export function generateMetadata(): Metadata {
   return process.env.FOLKLORE_SUBMIT_ENABLED === "true"
     ? {
         title: "Submit to the board",
-        description: `Submit a link or a comment to the folklore board — ${LINK_FLOOR_PENCE}p plus the inscription fee, paid once, inscribed on Bitcoin.`,
+        description: `Paste a transaction id and list it on the folklore board — a ${LINK_FLOOR_PENCE}p stamp you sign yourself, inscribed on Bitcoin. Comments too.`,
       }
     : {
         title: "Submit to the board",
@@ -74,8 +74,9 @@ export default async function SubmitPage({
           {LINK_FLOOR_PENCE}p + the inscription fee
         </h1>
         <p className="mt-2 text-sm text-muted">
-          A link or a comment, written to Bitcoin and ranked by kudos. The {LINK_FLOOR_PENCE}p floor
-          deters spam and stays trivial for you.
+          A transaction id — a Twetch post, a Treechat post, an archive, anything on Bitcoin — or a
+          comment, written to Bitcoin and ranked by kudos. The {LINK_FLOOR_PENCE}p floor deters spam
+          and stays trivial for you.
         </p>
       </header>
 
