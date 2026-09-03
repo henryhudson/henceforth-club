@@ -312,10 +312,12 @@ async function registerInscribed({ listJobsInState, advance, getPayload, registe
         // that fails — or an advance that fails after it — replays next tick,
         // and every writer in folkloreBoard is idempotent, so the replay is
         // harmless. A miss is loud, never silently dropped.
+        // addLinkToBoard answers listed / already-listed / unavailable; only
+        // the last is a miss here — a replay finding its own row is landed.
         const indexed =
           record.kind === "comment"
             ? await folklore.addCommentToIndex(record.parent, job.inscriptionTxid, nowMs)
-            : await folklore.addLinkToBoard(job.inscriptionTxid, record, nowMs);
+            : (await folklore.addLinkToBoard(job.inscriptionTxid, record, nowMs)) !== "unavailable";
         if (!indexed) {
           console.error(`xtext-worker: folklore index write failed for job ${job.jobId} (txid ${job.inscriptionTxid}) — the inscription is on chain and the board is behind; retrying next tick`);
           return;

@@ -67,27 +67,41 @@ export const linkMember = (txid: string): string => `link:${txid}`;
 /** The board member an archived profile ranks under — one card per profile. */
 export const profileMember = (handle: string): string => `profile:${handle.toLowerCase()}`;
 
+/** What a link write did: put the target on the board, found it already
+ * there, or could not reach the store to find out. */
+export type AddLinkResult = "listed" | "already-listed" | "unavailable";
+
 /**
  * Land a freshly-inscribed link on the board: cache its validated record,
  * enter it at score zero, and stamp the log with the insertion time. Every
  * write is `nx`-guarded or idempotent, so a retry after a partial failure
  * never resets a kudos total or re-stamps the log.
+ *
+ * The board write is the one that answers (specification, Decision 3: one
+ * row per target): a second stamp for a listed target reads `already-listed`
+ * while the cache and the log — both `nx` — stay exactly as the first stamp
+ * left them. A replay after a partial failure still lands whatever it
+ * missed, so `already-listed` is a verdict on the target, never a refusal
+ * to repair.
  */
 export async function addLinkToBoard(
   txid: string,
   record: FolkloreRecord,
   nowMs: number,
   redis: Redis | null = getRedis(),
-): Promise<boolean> {
-  if (!redis) return false;
+): Promise<AddLinkResult> {
+  if (!redis) return "unavailable";
   const target = record.kind === "link" && record.txid ? record.txid : txid;
   // nx, like the two zadds beside it: the first successful stamp owns the
   // row, and a second stamp for the same target can never replace the cached
   // title or the kudos earner (specification, Decision 3).
   await redis.set(linkKey(target), record, { nx: true });
-  await redis.zadd(BOARD_KEY, { nx: true }, { score: LINK_SCORE_OFFSET, member: linkMember(target) });
+  const added = await redis.zadd(BOARD_KEY, { nx: true }, {
+    score: LINK_SCORE_OFFSET,
+    member: linkMember(target),
+  });
   await redis.zadd(LOG_KEY, { nx: true }, { score: nowMs, member: target });
-  return true;
+  return (added ?? 0) > 0 ? "listed" : "already-listed";
 }
 
 /**

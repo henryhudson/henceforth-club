@@ -145,6 +145,27 @@ describe("addLinkToBoard", () => {
     expect(await readLinkRecord(TXID_A, redis)).toEqual({ kind: "record", record: LINK });
   });
 
+  it("reports whether THIS call listed the target: the first stamp does, a second is already-listed", async () => {
+    const redis = fakeRedis();
+    const listed = validateLink(TXID_A, "On chain");
+    if (!listed) throw new Error("expected record");
+    expect(await addLinkToBoard("d".repeat(64), listed, 1_000, redis)).toBe("listed");
+    expect(await addLinkToBoard("e".repeat(64), listed, 2_000, redis)).toBe("already-listed");
+    // One row, still the first stamp's — the verdict changed nothing.
+    expect(await boardTop(10, redis)).toEqual([
+      { member: linkMember(TXID_A), score: LINK_SCORE_OFFSET },
+    ]);
+  });
+
+  it("a replay after a partial failure lands the missed board row and says so", async () => {
+    const redis = fakeRedis();
+    // The cache landed, the board write did not: exactly the crash-between-
+    // writes case the nx doctrine exists for.
+    await redis.set(`folklore:link:${TXID_A}`, LINK, { nx: true });
+    expect(await addLinkToBoard(TXID_A, LINK, 1_000, redis)).toBe("listed");
+    expect(await isBoardLink(TXID_A, redis)).toBe(true);
+  });
+
   it("a txid-link ranks under the target, even when the stamp id is passed in", async () => {
     const redis = fakeRedis();
     const stamp = "d".repeat(64);
@@ -369,7 +390,7 @@ describe("comments", () => {
 
 describe("null redis — every function is a safe no-op or empty", () => {
   it("writers report false or null and never throw", async () => {
-    expect(await addLinkToBoard(TXID_A, LINK, 1_000, null)).toBe(false);
+    expect(await addLinkToBoard(TXID_A, LINK, 1_000, null)).toBe("unavailable");
     expect(await addCommentToIndex(TXID_A, TXID_B, 1_000, null)).toBe(false);
     expect(await bumpBoardKudos(linkMember(TXID_A), 5, null)).toBeNull();
     expect(await seedProfileOnBoard("henry", 42, null)).toBe(false);

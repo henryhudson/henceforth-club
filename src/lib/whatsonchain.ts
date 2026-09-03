@@ -1,5 +1,6 @@
 import { socialArchiveFromScripts, type SocialArchive } from "@/app/folklore/onchain";
 import { voutScriptsFromRawTx } from "./rawTx";
+import type { TxOutput } from "./revenueAddress";
 
 const WOC = "https://api.whatsonchain.com/v1/bsv/main";
 // BananaBlocks (GorillaPool's explorer) serves a WhatsOnChain-compatible
@@ -106,6 +107,34 @@ export async function fetchTxScripts(
 
   const res = await fetchWithMirror(`/tx/${txid}/hex`, { next: { revalidate: 3600 } }, fetchFn);
   return res ? voutScriptsFromRawTx(await res.text()) : null;
+}
+
+/**
+ * A transaction's outputs as the JSON endpoint reports them — value in whole
+ * coins and the addresses each locking script pays — for a caller that must
+ * know WHO was paid and HOW MUCH (the folklore index's floor check), which
+ * the raw-hex path above cannot answer without a script decoder. Safe for a
+ * stamp: the truncation that rules the JSON endpoint out for archives bites
+ * only `scriptPubKey.hex`, which this never reads. Null for a malformed
+ * txid, a failed fetch, or a body without outputs — never a partial list.
+ */
+export async function fetchTxOutputs(
+  txid: string,
+  fetchFn: typeof fetch = fetch,
+): Promise<TxOutput[] | null> {
+  if (!/^[0-9a-fA-F]{64}$/.test(txid)) return null;
+
+  const res = await fetchWithMirror(`/tx/hash/${txid}`, { next: { revalidate: 3600 } }, fetchFn);
+  if (!res) return null;
+  const body = (await res.json().catch(() => null)) as { vout?: unknown } | null;
+  if (!body || !Array.isArray(body.vout)) return null;
+  return body.vout.map((entry): TxOutput => {
+    const output = (entry ?? {}) as { value?: unknown; scriptPubKey?: { addresses?: unknown } };
+    const addresses = Array.isArray(output.scriptPubKey?.addresses)
+      ? output.scriptPubKey.addresses.filter((a): a is string => typeof a === "string")
+      : [];
+    return { value: typeof output.value === "number" ? output.value : Number.NaN, addresses };
+  });
 }
 
 /**

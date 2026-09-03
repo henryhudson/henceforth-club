@@ -3,6 +3,7 @@ import {
   fetchTxArchive,
   fetchTxArchiveWithTime,
   fetchTxFeeSats,
+  fetchTxOutputs,
   fetchTxScripts,
   txFeeSatsFromJson,
 } from "@/lib/whatsonchain";
@@ -336,5 +337,57 @@ describe("fetchTxFeeSats", () => {
       String(url).endsWith("/tx/hash/T") ? ok({ vin: [{ txid: "P", vout: 0 }], vout: [{ value: 1 }] }) : notOk()
     ) as unknown as typeof fetch;
     expect(await fetchTxFeeSats("T", prevoutFetchFails)).toBeNull(); // prevout fetch non-ok
+  });
+});
+
+describe("fetchTxOutputs", () => {
+  const REVENUE = "1GsP511T8e4VjxYdAGnMYdDd6sWxWybcMP";
+  const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
+
+  it("returns each output's value in coins and the addresses it pays, in vout order", async () => {
+    const fetchFn = vi.fn(async () =>
+      json({
+        vout: [
+          { value: 0.0093, n: 0, scriptPubKey: { type: "pubkeyhash", addresses: [REVENUE] } },
+          { value: 0, n: 1, scriptPubKey: { type: "nulldata" } },
+        ],
+      }),
+    );
+    expect(await fetchTxOutputs("a".repeat(64), fetchFn)).toEqual([
+      { value: 0.0093, addresses: [REVENUE] },
+      { value: 0, addresses: [] },
+    ]);
+  });
+
+  it("reads an unreadable value as not-a-number, never as zero coins paid", async () => {
+    const fetchFn = vi.fn(async () => json({ vout: [{ value: "0.5", scriptPubKey: { addresses: [REVENUE] } }] }));
+    const outputs = await fetchTxOutputs("a".repeat(64), fetchFn);
+    expect(outputs).toHaveLength(1);
+    expect(Number.isNaN(outputs?.[0].value)).toBe(true);
+  });
+
+  it("is null for a malformed txid without touching the network", async () => {
+    const fetchFn = vi.fn();
+    expect(await fetchTxOutputs("nope", fetchFn)).toBeNull();
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+
+  it("is null when both explorers fail or the body carries no outputs", async () => {
+    const failing = vi.fn(async () => new Response("", { status: 404 }));
+    expect(await fetchTxOutputs("a".repeat(64), failing)).toBeNull();
+    const shapeless = vi.fn(async () => json({ txid: "a".repeat(64) }));
+    expect(await fetchTxOutputs("a".repeat(64), shapeless)).toBeNull();
+  });
+
+  it("falls through to the mirror when the primary refuses", async () => {
+    const fetchFn = vi.fn(async (url: string) =>
+      url.startsWith("https://api.whatsonchain.com")
+        ? new Response("", { status: 403 })
+        : json({ vout: [{ value: 0.01, scriptPubKey: { addresses: [REVENUE] } }] }),
+    );
+    expect(await fetchTxOutputs("a".repeat(64), fetchFn as unknown as typeof fetch)).toEqual([
+      { value: 0.01, addresses: [REVENUE] },
+    ]);
+    expect(fetchFn).toHaveBeenCalledTimes(2);
   });
 });

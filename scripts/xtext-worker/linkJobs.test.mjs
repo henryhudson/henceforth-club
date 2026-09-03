@@ -88,7 +88,7 @@ function makeFolklore(overrides = {}) {
   return {
     recordFromValue,
     encodeRecord,
-    addLinkToBoard: vi.fn(async () => true),
+    addLinkToBoard: vi.fn(async () => "listed"),
     addCommentToIndex: vi.fn(async () => true),
     ...overrides,
   };
@@ -178,7 +178,7 @@ describe("runWorkerTick — link jobs on the existing rails", () => {
       const store = makeStore([fundedJob("retry-job")], { "retry-job": LINK_RECORD });
       const arcBodies = [];
       const fetchFn = stubFetch({ arcBodies });
-      const folklore = makeFolklore({ addLinkToBoard: vi.fn(async () => false) });
+      const folklore = makeFolklore({ addLinkToBoard: vi.fn(async () => "unavailable") });
       const d = deps(store, fetchFn, jobsDir, folklore);
 
       await runWorkerTick(d);
@@ -193,7 +193,7 @@ describe("runWorkerTick — link jobs on the existing rails", () => {
 
       // Next tick the index is back: the write retries (idempotent by
       // construction) and the job completes. No second broadcast.
-      folklore.addLinkToBoard.mockImplementation(async () => true);
+      folklore.addLinkToBoard.mockImplementation(async () => "listed");
       await runWorkerTick(d);
       expect(store.jobs.get("retry-job").state).toBe("done");
       expect(folklore.addLinkToBoard).toHaveBeenCalledTimes(2);
