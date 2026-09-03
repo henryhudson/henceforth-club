@@ -22,20 +22,9 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { parseArgs, publishRefusal, sheetPath } from './render-draft-core.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
-
-function parseArgs(argv) {
-  const out = { week: null, base: 'http://localhost:3000', out: null, publish: false }
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i]
-    if (a === '--base') out.base = argv[++i]
-    else if (a === '--out') out.out = argv[++i]
-    else if (a === '--publish') out.publish = true
-    else if (!out.week) out.week = a
-  }
-  return out
-}
 
 const { week, base, out, publish } = parseArgs(process.argv.slice(2))
 if (!week || !/^\d{4}-\d{2}-\d{2}$/.test(week)) {
@@ -49,8 +38,9 @@ if (!existsSync(digestPath)) {
   console.error(`no digest at content/this-week/${week}.json — write the draft first (see scripts/this-week/PROMPT.md)`)
   process.exit(1)
 }
-if (publish && JSON.parse(readFileSync(digestPath, 'utf8')).status !== 'published') {
-  console.error(`content/this-week/${week}.json is still a draft — flip status to "published" before --publish`)
+const refusal = publishRefusal(week, JSON.parse(readFileSync(digestPath, 'utf8')), publish)
+if (refusal) {
+  console.error(refusal)
   process.exit(1)
 }
 
@@ -100,9 +90,7 @@ try {
     console.warn(`warning: ${pages} pages — a one-page edition overran; the draft still renders, but the print stylesheet may need tightening`)
   }
 
-  const pdfPath = out ?? (publish
-    ? join(HERE, '..', '..', 'public', 'this-week', `${week}.pdf`)
-    : join(HERE, 'preview', `${week}.pdf`))
+  const pdfPath = sheetPath({ week, out, publish }, HERE)
   const pngPath = pdfPath.replace(/\.pdf$/i, '.png')
   await mkdir(dirname(pdfPath), { recursive: true })
   await writeFile(pdfPath, pdf)
