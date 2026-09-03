@@ -17,6 +17,12 @@ const nextConfig: NextConfig = {
       { source: "/x/:path*", destination: "/folklore/:path*", permanent: true },
       { source: "/text", destination: "/folklore", permanent: true },
       { source: "/text/:path*", destination: "/folklore/:path*", permanent: true },
+      // The one-page editions once had a hand-written index under
+      // public/this-week/, frozen on 1 July 2026; the living archive is
+      // /hansard/this-week. Bare path only: the weekly sheets at
+      // /this-week/<week>.pdf are the Hansard app's addresses and stay as
+      // static files.
+      { source: "/this-week", destination: "/hansard/this-week", permanent: true },
     ];
   },
 };
