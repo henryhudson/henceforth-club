@@ -54,14 +54,18 @@ export function changedDocuments(documents, ledger) {
   return documents.filter((d) => ledger.surfaces[d.surface]?.sha256 !== digestOf(d.bytes));
 }
 
-/** The ledger after one surface's inscription landed. */
+/** The ledger after one surface's inscription landed. The tip is the last
+ *  transaction this publisher broadcast, document or head, so the next run
+ *  chains from its change even when the head step that should have followed
+ *  never landed. On 3 September the head pointed at change a later run had
+ *  already spent, and every publish after it was refused for missing inputs. */
 export function withInscription(ledger, { surface, txid, sha256, date }) {
-  return { ...ledger, surfaces: { ...ledger.surfaces, [surface]: { txid, sha256, date } } };
+  return { ...ledger, surfaces: { ...ledger.surfaces, [surface]: { txid, sha256, date } }, tip: { txid, date } };
 }
 
 /** The ledger after a head landed. */
 export function withHead(ledger, { txid, date }) {
-  return { ...ledger, head: { txid, date } };
+  return { ...ledger, head: { txid, date }, tip: { txid, date } };
 }
 
 /** Fold the store's edition index (board:pdftx:<kind>:<date> → txid) into the

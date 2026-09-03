@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { P2PKH, PrivateKey, Transaction } from "@bsv/sdk";
 import { headSourceFor, inscribeHeadFor, publishToChain, readLedger, recordInscription, writeLedger } from "./chain-publish.mjs";
-import { EMPTY_LEDGER, canonicalBytes, withInscription } from "./chain-publish-core.mjs";
+import { EMPTY_LEDGER, canonicalBytes, withHead, withInscription } from "./chain-publish-core.mjs";
 
 const WIF = PrivateKey.fromString("1".repeat(64), 16).toWif();
 const KEY = "2".repeat(64);
@@ -158,5 +158,59 @@ describe("chaining from the head", () => {
     const ledger = { ...EMPTY_LEDGER, head: { txid: tx.id("hex"), date: "2026-09-02" } };
     const fetchImpl = async () => ({ ok: true, status: 200, text: async () => tx.toHex() });
     expect(await headSourceFor({ ledger, wif: WIF, fetchImpl, log: quiet })).toBe(null);
+  });
+});
+
+describe("the ledger's tip", () => {
+  it("moves with every landing, document or head", () => {
+    const afterDoc = withInscription(EMPTY_LEDGER, { surface: "board-latest", txid: "a".repeat(64), sha256: "x", date: "2026-09-03" });
+    expect(afterDoc.tip).toEqual({ txid: "a".repeat(64), date: "2026-09-03" });
+    const afterHead = withHead(afterDoc, { txid: "b".repeat(64), date: "2026-09-03" });
+    expect(afterHead.tip).toEqual({ txid: "b".repeat(64), date: "2026-09-03" });
+    expect(afterHead.head).toEqual({ txid: "b".repeat(64), date: "2026-09-03" });
+  });
+
+  it("is what the next run chains from, ahead of a head left behind it", async () => {
+    const address = PrivateKey.fromWif(WIF).toAddress();
+    const tip = new Transaction();
+    tip.addOutput({ lockingScript: new P2PKH().lock("1BitcoinEaterAddressDontSendf59kuE"), satoshis: 1 });
+    tip.addOutput({ lockingScript: new P2PKH().lock(address), satoshis: 90_000 });
+    const asked = [];
+    const ledger = { ...EMPTY_LEDGER, head: { txid: "ab".repeat(32), date: "2026-09-02" }, tip: { txid: tip.id("hex"), date: "2026-09-03" } };
+    const fetchImpl = async (url) => { asked.push(url); return { ok: true, status: 200, text: async () => tip.toHex() }; };
+    const got = await headSourceFor({ ledger, wif: WIF, fetchImpl, log: quiet });
+    expect(got?.id("hex")).toBe(tip.id("hex"));
+    expect(asked[0]).toContain(`/tx/${tip.id("hex")}/hex`);
+  });
+
+  it("falls back to the indexer once when the network says the tip's change is already spent", async () => {
+    const path = join(dir, "ledger.json");
+    const address = PrivateKey.fromWif(WIF).toAddress();
+    const tip = new Transaction();
+    tip.addOutput({ lockingScript: new P2PKH().lock(address), satoshis: 90_000 });
+    const coin = new Transaction();
+    coin.addOutput({ lockingScript: new P2PKH().lock("1BitcoinEaterAddressDontSendf59kuE"), satoshis: 1 });
+    coin.addOutput({ lockingScript: new P2PKH().lock(address), satoshis: 5_000_000 });
+    await writeLedger(path, { ...EMPTY_LEDGER, head: { txid: tip.id("hex"), date: "2026-09-02" }, tip: { txid: tip.id("hex"), date: "2026-09-02" } });
+    const lines = [];
+    let broadcasts = 0;
+    const fetchImpl = async (url, init) => {
+      if (init?.method === "POST") {
+        broadcasts += 1;
+        if (broadcasts === 1) return { ok: false, status: 500, text: async () => "unexpected response code 500: Missing inputs" };
+        return { ok: true, status: 200, text: async () => JSON.stringify(`${broadcasts}`.padStart(64, "0")) };
+      }
+      if (url.includes(`/tx/${tip.id("hex")}/hex`)) return { ok: true, status: 200, text: async () => tip.toHex() };
+      if (url.includes("/unspent/all")) return { ok: true, status: 200, text: async () => JSON.stringify({ result: [{ tx_hash: coin.id("hex"), tx_pos: 1, value: 5_000_000 }] }) };
+      if (url.includes(`/tx/${coin.id("hex")}/hex`)) return { ok: true, status: 200, text: async () => coin.toHex() };
+      throw new Error("unexpected fetch " + url);
+    };
+    const { steps, ledger } = await publishToChain({
+      documents: [docs()[0]], ledgerPath: path, wif: WIF, keyHex: KEY, date: "2026-09-03", dryRun: false, fetchImpl, log: (m) => lines.push(m),
+    });
+    expect(steps.map((s) => s.failed)).toEqual([false, false]);
+    expect(lines.join(" ")).toMatch(/tip is already spent .* scanning the indexer instead/);
+    expect(broadcasts).toBe(3);
+    expect(ledger.tip?.txid).toBe(ledger.head?.txid);
   });
 });

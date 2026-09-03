@@ -62,7 +62,10 @@ export async function inscribeHeadFor({
  *  line in the log, when there is no head, it cannot be fetched or parsed, or
  *  it has no change to spend: the indexer scan is then the fallback it was. */
 export async function headSourceFor({ ledger, wif, fetchImpl = fetch, log = console.log }) {
-  const txid = ledger?.head?.txid;
+  // The tip is the newest thing this publisher broadcast; the head is only the
+  // newest head, and a run that landed documents but lost its head step leaves
+  // the head behind the tip with its change already spent.
+  const txid = ledger?.tip?.txid ?? ledger?.head?.txid;
   if (!txid) return null;
   try {
     const hex = (await fetchIndexer(`/tx/${txid}/hex`, { fetchImpl, log })).trim();
@@ -94,15 +97,28 @@ export async function publishToChain({
     return { steps, ledger };
   }
 
-  // A dry run prices against a fake source; a real run chains from the head.
+  // A dry run prices against a fake source; a real run chains from the ledger's
+  // tip. If the network says the tip's change is already spent (a broadcast
+  // that landed before its ledger write), the first inscription scans the
+  // indexer instead, once, as it did before the ledger knew a tip.
   let prevTx = dryRun ? null : await headSourceFor({ ledger, wif, fetchImpl, log });
+  let fromLedger = prevTx !== null;
   for (const doc of changed) {
     const previousTxid = ledger.surfaces[doc.surface]?.txid ?? "";
+    const inscribe = (source) => inscribeDocument({
+      wif, keyHex, surface: doc.surface, date, bytes: doc.bytes,
+      previousTxid, prevTx: source, feeCeiling: doc.feeCeiling, dryRun, fetchImpl, log,
+    });
     try {
-      const out = await inscribeDocument({
-        wif, keyHex, surface: doc.surface, date, bytes: doc.bytes,
-        previousTxid, prevTx, feeCeiling: doc.feeCeiling, dryRun, fetchImpl, log,
-      });
+      let out;
+      try {
+        out = await inscribe(prevTx);
+      } catch (e) {
+        if (!(fromLedger && /missing inputs/i.test(e.message))) throw e;
+        log(`the ledger's tip is already spent (${e.message}); scanning the indexer instead`);
+        out = await inscribe(null);
+      }
+      fromLedger = false;
       prevTx = out.tx;
       const txid = out.txid ?? out.tx.id("hex");
       ledger = withInscription(ledger, { surface: doc.surface, txid, sha256: digestOf(doc.bytes), date });
