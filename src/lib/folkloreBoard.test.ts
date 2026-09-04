@@ -117,6 +117,48 @@ function fakeRedis(): Redis {
   } as unknown as Redis;
 }
 
+/**
+ * The same store, with every command held until the test lands it, so two
+ * callers can be interleaved in a chosen order. Each caller gets its own
+ * tagged handle; `land(tag)` runs that caller's oldest pending command
+ * against the store and lets the caller reach its next one.
+ */
+function interleaved(store: Redis) {
+  type Pending = {
+    tag: string;
+    run: () => Promise<unknown>;
+    settle: (value: unknown) => void;
+    fail: (error: unknown) => void;
+  };
+  const pending: Pending[] = [];
+  const commands = store as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>;
+  const handle = (tag: string): Redis =>
+    new Proxy({} as Redis, {
+      get:
+        (_, command: string) =>
+        (...args: unknown[]) =>
+          new Promise<unknown>((settle, fail) => {
+            pending.push({ tag, run: () => commands[command](...args), settle, fail });
+          }),
+    });
+  const land = async (tag: string) => {
+    const index = pending.findIndex((entry) => entry.tag === tag);
+    if (index < 0) throw new Error(`nothing pending for ${tag}`);
+    const [next] = pending.splice(index, 1);
+    try {
+      next.settle(await next.run());
+    } catch (error) {
+      next.fail(error);
+    }
+    // A macrotask, so the caller's continuation has queued its next command.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  };
+  const drain = async () => {
+    while (pending.length > 0) await land(pending[0].tag);
+  };
+  return { handle, land, drain };
+}
+
 describe("board members", () => {
   it("encodes links by txid and profiles by lowercased handle", () => {
     expect(linkMember(TXID_A)).toBe(`link:${TXID_A}`);
@@ -164,6 +206,43 @@ describe("addLinkToBoard", () => {
     await redis.set(`folklore:link:${TXID_A}`, LINK, { nx: true });
     expect(await addLinkToBoard(TXID_A, LINK, 1_000, redis)).toBe("listed");
     expect(await isBoardLink(TXID_A, redis)).toBe(true);
+  });
+
+  it("a replay after a partial failure repairs the absent cache and still answers already-listed", async () => {
+    const redis = fakeRedis();
+    // The row landed, the cache did not: the crash-between-writes case once
+    // the row is taken first. The verdict is on the target, never a refusal
+    // to repair.
+    await redis.zadd("folklore:board", { nx: true }, { score: LINK_SCORE_OFFSET, member: linkMember(TXID_A) });
+    expect(await addLinkToBoard(TXID_A, LINK, 1_000, redis)).toBe("already-listed");
+    expect(await readLinkRecord(TXID_A, redis)).toEqual({ kind: "record", record: LINK });
+    expect((await indexSince(0, redis)).txids).toEqual([TXID_A]);
+  });
+
+  it("two racing stamps: the record cached is the winner's, never the loser's", async () => {
+    // With the record written before the row, this interleaving cached A's
+    // record under B's row: A was told already-listed, B was told listed and
+    // shown "On the board", and the title and the kudos earner were A's.
+    // Whichever call holds the row must be the one whose record is cached.
+    const store = fakeRedis();
+    const gate = interleaved(store);
+    const first = validateLink(TXID_A, "First to the row", "first");
+    const second = validateLink(TXID_A, "Second to the row", "second");
+    if (!first || !second) throw new Error("expected records");
+
+    const a = addLinkToBoard("d".repeat(64), first, 1_000, gate.handle("A"));
+    const b = addLinkToBoard("e".repeat(64), second, 1_000, gate.handle("B"));
+    // A's first write lands, then B's first, then B's second before A's second.
+    for (const tag of ["A", "B", "B", "A"]) await gate.land(tag);
+    await gate.drain();
+
+    const [verdictA, verdictB] = await Promise.all([a, b]);
+    expect([verdictA, verdictB].sort()).toEqual(["already-listed", "listed"]);
+    const winner = verdictA === "listed" ? first : second;
+    expect(await readLinkRecord(TXID_A, store)).toEqual({ kind: "record", record: winner });
+    expect(await boardTop(10, store)).toEqual([
+      { member: linkMember(TXID_A), score: LINK_SCORE_OFFSET },
+    ]);
   });
 
   it("a txid-link ranks under the target, even when the stamp id is passed in", async () => {
