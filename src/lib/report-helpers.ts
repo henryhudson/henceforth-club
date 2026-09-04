@@ -121,18 +121,21 @@ export function reachCell(count: number | null | undefined): string {
 
 /** Polyline points for an agate sparkline. Nulls keep their x slot but are
  *  not plotted. Returns null when fewer than two numbers exist — a single
- *  point is not a series, and a blank row stays blank. */
+ *  point is not a series, and a blank row stays blank. Counts sit on a zero
+ *  floor; a level such as free space is plotted between its own low and
+ *  high (zeroBased false), or a week's movement vanishes into the scale. */
 export function sparkPoints(
   values: (number | null | undefined)[],
   width = 42,
   height = 10,
+  zeroBased = true,
 ): string | null {
   if (values.length === 0) return null;
   const plotted = values
     .map((v, i) => (v == null ? null : { i, v }))
     .filter((p): p is { i: number; v: number } => p != null);
   if (plotted.length < 2) return null;
-  const min = Math.min(0, ...plotted.map((p) => p.v));
+  const min = Math.min(zeroBased ? 0 : Infinity, ...plotted.map((p) => p.v));
   const max = Math.max(...plotted.map((p) => p.v));
   const span = max - min || 1;
   const last = Math.max(values.length - 1, 1);
@@ -180,6 +183,15 @@ export function machineLine(m: MachineReading): string {
 /** The biggest consumers, largest first, as one agate phrase. */
 export function machineHogs(m: MachineReading, max = 3): string {
   return m.consumers.slice(0, max).map((c) => `${c.label} ${c.gib} GiB`).join(", ");
+}
+
+/** Every date from `from` to `to` inclusive, the x axis of a week's series. */
+export function datesBetween(from: string, to: string): string[] {
+  const out: string[] = [];
+  for (let d = new Date(`${from}T00:00:00Z`); d.toISOString().slice(0, 10) <= to && out.length < 366; d.setUTCDate(d.getUTCDate() + 1)) {
+    out.push(d.toISOString().slice(0, 10));
+  }
+  return out;
 }
 
 export function editionIndex(dailyDates: string[], weekDates: string[]): Edition[] {

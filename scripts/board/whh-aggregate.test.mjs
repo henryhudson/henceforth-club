@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   windowDates, parseSurvived, aggregateTotals, perApp, ratios,
   reflagSignature, reflagKey, recurringReflags, earliestDateIn, throughput, buildRetro,
-  weekStripDates, buildWeekStrip, currentWeekDates, weekPlanSkeleton, addDays,
+  weekStripDates, buildWeekStrip, currentWeekDates, weekPlanSkeleton, addDays, machinesWeek,
 } from "./whh-aggregate.mjs";
 
 describe("windowDates", () => {
@@ -175,6 +175,80 @@ describe("throughput + buildRetro", () => {
     expect(retro.wins).toEqual([]);
     expect(retro.misses).toEqual([]);
     expect(retro.nextWeek).toEqual([]);
+    expect(retro.machines).toEqual([]); // no report carried a machines block
+  });
+});
+
+describe("machinesWeek (the machines' space, trended)", () => {
+  // A probe block as the daily reports carry it (scripts/board/machines-probe.mjs).
+  const reading = (host, freeGiB, usedMiB, extra = {}) => ({
+    host, readAt: `${host}-read`,
+    data: { sizeGiB: 460.4, freeGiB, usedPct: 90 },
+    swap: { totalMiB: 5120, usedMiB },
+    memoryGiB: 16, load1: 2.1, uptimeDays: 3,
+    consumers: [{ label: "CoreSimulator", path: "/Users/h/Library/Developer/CoreSimulator", gib: 64.9 }],
+    ...extra,
+  });
+  // The fixture week: the laptop read six of seven mornings (Wednesday had no
+  // block at all), the mini read five (Thursday's ssh timed out; Wednesday
+  // absent with the laptop's). Reports arrive out of date order on purpose.
+  const week = [
+    { date: "2026-08-25", machines: [reading("laptop", 22.4, 3100), reading("mini", 240.1, 2000, { runners: 3 })] },
+    { date: "2026-08-24", machines: [reading("laptop", 23.0, 2900), reading("mini", 241.0, 1900, { runners: 3 })] },
+    { date: "2026-08-27", machines: [reading("laptop", 17.9, 4100), { host: "mini", readAt: "t", error: "ssh: connect timed out" }] },
+    { date: "2026-08-26" }, // the routine did not run the probe
+    { date: "2026-08-28", machines: [reading("laptop", 16.2, 3900), reading("mini", 238.7, 2400, { runners: 3 })] },
+    { date: "2026-08-29", machines: [reading("laptop", 19.8, 3300), reading("mini", 238.0, 2200, { runners: 2 })] },
+    { date: "2026-08-30", machines: [reading("laptop", 15.5, 3582.1, { runtimes: { count: 7, gib: 56.1 } }), reading("mini", 232.6, 2409.1, { runners: 3, xcresults: { count: 4, gib: 0.2 } })] },
+  ];
+
+  it("trends each host in date order, skipping the days without a readable block", () => {
+    const out = machinesWeek(week);
+    expect(out.map((m) => m.host)).toEqual(["laptop", "mini"]);
+    const [laptop, mini] = out;
+    expect(laptop.series.map((p) => p.date)).toEqual(["2026-08-24", "2026-08-25", "2026-08-27", "2026-08-28", "2026-08-29", "2026-08-30"]);
+    expect(laptop.series[0]).toEqual({ date: "2026-08-24", freeGiB: 23.0, swapUsedMiB: 2900 });
+    expect(mini.series.map((p) => p.date)).toEqual(["2026-08-24", "2026-08-25", "2026-08-28", "2026-08-29", "2026-08-30"]);
+    expect(mini.series.some((p) => p.freeGiB === 0)).toBe(false);
+  });
+
+  it("reads the ends, the week's delta, the lowest point and the peak swap", () => {
+    const [laptop, mini] = machinesWeek(week);
+    expect(laptop.first).toEqual({ date: "2026-08-24", freeGiB: 23.0, swapUsedMiB: 2900 });
+    expect(laptop.last).toEqual({ date: "2026-08-30", freeGiB: 15.5, swapUsedMiB: 3582.1 });
+    expect(laptop.deltaGiB).toBe(-7.5);
+    expect(laptop.minFreeGiB).toBe(15.5);
+    expect(laptop.peakSwapMiB).toBe(4100);
+    expect(mini.deltaGiB).toBe(-8.4);
+    expect(mini.minFreeGiB).toBe(232.6);
+    expect(mini.peakSwapMiB).toBe(2409.1);
+  });
+
+  it("carries the newest day's full block and leaves the judgement empty", () => {
+    const [laptop, mini] = machinesWeek(week);
+    expect(laptop.latest.runtimes).toEqual({ count: 7, gib: 56.1 });
+    expect(laptop.latest.readAt).toBe("laptop-read");
+    expect(mini.latest.xcresults).toEqual({ count: 4, gib: 0.2 });
+    expect(mini.latest.runners).toBe(3);
+    expect(laptop.verdict).toBe("");
+    expect(laptop.recommendations).toEqual([]);
+  });
+
+  it("is empty for a week with no blocks, and omits a host that was only ever unreadable", () => {
+    expect(machinesWeek([{ date: "2026-08-24" }, { date: "2026-08-25", machines: [] }])).toEqual([]);
+    const out = machinesWeek([
+      { date: "2026-08-24", machines: [reading("laptop", 20, 3000), { host: "mini", readAt: "t", error: "no route to host" }] },
+    ]);
+    expect(out.map((m) => m.host)).toEqual(["laptop"]);
+    expect(out[0].series).toHaveLength(1);
+    expect(out[0].deltaGiB).toBe(0);
+  });
+
+  it("reads a block without swap as a null point and a null peak, never zero", () => {
+    const { swap: _none, ...noSwap } = reading("laptop", 20, 0);
+    const [laptop] = machinesWeek([{ date: "2026-08-24", machines: [noSwap] }]);
+    expect(laptop.series[0].swapUsedMiB).toBeNull();
+    expect(laptop.peakSwapMiB).toBeNull();
   });
 });
 

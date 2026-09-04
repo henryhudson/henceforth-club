@@ -260,6 +260,23 @@ export type AppState = {
   analytics: { activeUsers?: number; retention?: number; crashRate?: number } | null;
   verdict: string | null;
 };
+/** One day's point in a machine's week: the free space and the swap in use
+ *  that morning. Days the probe did not read are absent, never zero. */
+export type MachinePoint = { date: string; freeGiB: number; swapUsedMiB: number | null };
+/** A reclaim the weekly review recommends and never runs. */
+export type MachineRecommendation = { label: string; command: string; reclaimsGiB?: number };
+export type MachineWeek = {
+  host: MachineHost;
+  series: MachinePoint[];
+  first: MachinePoint;
+  last: MachinePoint;
+  deltaGiB: number;
+  minFreeGiB: number;
+  peakSwapMiB: number | null;
+  latest: MachineReading;
+  verdict: string;
+  recommendations: MachineRecommendation[];
+};
 export type WeekReport = {
   weekOf: string; weekEnd: string; daysCovered: string[];
   retro: {
@@ -269,6 +286,7 @@ export type WeekReport = {
     weekStrip: WeekDay[];
     weekPlan: PlanDay[];
     appState: AppState[];
+    machines?: MachineWeek[];
     stateOfUnion: string;
     wins: (string | NextItem)[]; misses: (string | NextItem)[]; nextWeek: NextItem[];
   };

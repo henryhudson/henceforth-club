@@ -1,4 +1,5 @@
 import type { WeekReport, NextItem } from "@/lib/board-data";
+import { MACHINE_NAMES, datesBetween, machineHogs, sparkPoints } from "@/lib/report-helpers";
 import A4Sheet from "@/app/hansard/this-week/_components/overview/A4Sheet";
 import s from "./week.module.css";
 
@@ -15,6 +16,7 @@ function clip(text: string, max: number): string {
 }
 
 const pct = (v: number | null) => (v === null ? "—" : `${v > 0 ? "+" : ""}${(v * 100).toFixed(0)}%`);
+const signed = (v: number) => `${v > 0 ? "+" : ""}${v}`;
 
 /** Wins and misses arrive as strings or {tag, title, detail}; the sheet sets
  *  them uniformly, capped — the one-page budget fails the render loudly, so
@@ -52,6 +54,16 @@ export default function WeekSheet({ week }: { week: WeekReport }) {
   const reflags = week.retro.recurringReflags.slice(0, 3);
   const appState = week.retro.appState ?? [];
   const totals = Object.entries(week.retro.totals);
+  // The machines: each host's free-space series across the reviewed week,
+  // plotted between its own low and high, with the mornings it was not read
+  // left as gaps.
+  const weekDates = datesBetween(week.weekOf, week.weekEnd);
+  const machines = (week.retro.machines ?? []).map((m) => ({
+    ...m,
+    name: MACHINE_NAMES[m.host] ?? m.host,
+    spark: sparkPoints(weekDates.map((d) => m.series.find((p) => p.date === d)?.freeGiB ?? null), 42, 10, false),
+    hogs: machineHogs(m.latest),
+  }));
 
   return (
     <>
@@ -154,6 +166,37 @@ export default function WeekSheet({ week }: { week: WeekReport }) {
             </div>
           </div>
         </div>
+
+        {/* ── BAND C · the machines: a column a host, the week's free space
+            as a sparkline, the numbers, the hogs, the reclaims, the verdict ── */}
+        {machines.length > 0 && (
+          <div className={s.machines}>
+            <div className={s.sectionTitle}>The machines</div>
+            <div className={s.machinesGrid}>
+              {machines.map((m) => (
+                <div key={m.host} className={s.agate}>
+                  <p>
+                    {m.spark && (
+                      <svg className={s.spark} viewBox="0 0 42 10" width="42" height="10" aria-hidden>
+                        <polyline fill="none" stroke="currentColor" strokeWidth="0.8" points={m.spark} />
+                      </svg>
+                    )}
+                    <b>{m.name}</b> · {m.last.freeGiB} GiB free · {signed(m.deltaGiB)} GiB over the week · lowest {m.minFreeGiB}
+                    {m.peakSwapMiB != null && <> · peak swap {(m.peakSwapMiB / 1024).toFixed(1)} GiB</>}
+                  </p>
+                  {m.hogs && <p>Hogs: {m.hogs}.</p>}
+                  {m.recommendations.map((r, i) => (
+                    <p key={i}>
+                      <b>{r.label}{r.reclaimsGiB != null ? ` (${r.reclaimsGiB} GiB)` : ""}.</b>{" "}
+                      <code className={s.code}>{r.command}</code>
+                    </p>
+                  ))}
+                  {m.verdict && <p><i>{m.verdict}</i></p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* ── FOOTER · the reference band: friction left, the apps' state right ── */}
         {(stuck.length > 0 || reflags.length > 0 || appState.length > 0) && (

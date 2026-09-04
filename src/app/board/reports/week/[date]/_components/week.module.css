@@ -131,6 +131,31 @@
 .agateTable td { padding: .28mm 0; vertical-align: top; }
 .agateTable .n { text-align: right; padding-left: 1mm; white-space: nowrap; }
 
+/* ── the machines: one ruled band, a column a host, the free-space
+   sparkline drawn the way the daily's downloads table draws its own ── */
+.machines {
+  border-top: .5pt solid #111;
+  padding-top: 1.6mm;
+  margin: 0 0 3.2mm;
+}
+.machines > .sectionTitle:first-child { margin-top: 0; border-top: none; padding-top: 0; }
+.machinesGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 4mm;
+}
+.machinesGrid > * { min-width: 0; }
+.machinesGrid > * + * { border-left: .5pt solid #999; padding-left: 4mm; margin-left: -4mm; }
+.spark {
+  display: inline-block;
+  vertical-align: middle;
+  color: #111;
+  width: 8mm;
+  height: auto;
+  margin-right: .8mm;
+}
+.code { font-family: Menlo, 'SF Mono', Consolas, monospace; font-size: .92em; }
+
 /* ── the footer reference band: thin rules, small-caps run heads, no boxes ── */
 .footerBand {
   margin-top: auto;

@@ -202,6 +202,43 @@ export function weekPlanSkeleton(endDate) {
   });
 }
 
+const round1 = (n) => Math.round(n * 10) / 10;
+const HOST_ORDER = ["laptop", "mini"];
+
+/** The week of each machine, from the `machines` blocks the daily reports
+ *  carry (scripts/board/machines-probe.mjs): per host the free-space and swap
+ *  series in date order, its ends, the week's delta, the lowest free point,
+ *  the peak swap, and the newest full block. A day without a block, or one the
+ *  probe could not read, is skipped, never a zero. The verdict and the
+ *  recommendations are left empty for the review's machines reader. */
+export function machinesWeek(reports) {
+  const byHost = new Map();
+  const dated = [...reports].filter((r) => r.date).sort((a, b) => (a.date < b.date ? -1 : 1));
+  for (const r of dated) for (const m of r.machines ?? []) {
+    if (!m?.host || m.error || !m.data) continue;
+    const h = byHost.get(m.host) ?? { host: m.host, series: [], latest: null };
+    h.series.push({ date: r.date, freeGiB: m.data.freeGiB, swapUsedMiB: m.swap?.usedMiB ?? null });
+    h.latest = m;
+    byHost.set(m.host, h);
+  }
+  const rank = (host) => { const i = HOST_ORDER.indexOf(host); return i < 0 ? HOST_ORDER.length : i; };
+  return [...byHost.values()]
+    .sort((a, b) => rank(a.host) - rank(b.host) || (a.host < b.host ? -1 : 1))
+    .map(({ host, series, latest }) => {
+      const first = series[0], last = series.at(-1);
+      const swaps = series.map((p) => p.swapUsedMiB).filter((v) => v != null);
+      return {
+        host, series, first, last,
+        deltaGiB: round1(last.freeGiB - first.freeGiB),
+        minFreeGiB: Math.min(...series.map((p) => p.freeGiB)),
+        peakSwapMiB: swaps.length ? Math.max(...swaps) : null,
+        latest,
+        verdict: "",
+        recommendations: [],
+      };
+    });
+}
+
 /** Assemble the deterministic retrospective. weekStrip/weekPlan/stateOfUnion/wins/misses/nextWeek are filled later. */
 export function buildRetro({ reports, board, windowStart }) {
   const totals = aggregateTotals(reports);
@@ -211,6 +248,7 @@ export function buildRetro({ reports, board, windowStart }) {
     throughput: throughput(board, windowStart),
     recurringReflags: recurringReflags(reports),
     ratios: ratios(totals),
+    machines: machinesWeek(reports),
     weekStrip: [],
     weekPlan: [],
     stateOfUnion: "",
