@@ -185,7 +185,7 @@ async function render(browser, kind, date, outPath, prevTx, dryRun) {
     return null;
   }
   if (!inscribes(kind)) {
-    console.log(`wrote + opened ${localPath} (${pages} page${pages === 1 ? "" : "s"}) — not inscribed: the board sheet stays local unless --inscribe is passed`);
+    console.log(`wrote + opened ${localPath} (${pages} page${pages === 1 ? "" : "s"}); not inscribed: the board sheet stays local unless --inscribe is passed`);
     return null;
   }
   console.log(`wrote + opened ${localPath} (${pages} page${pages === 1 ? "" : "s"}) — inscribing…`);

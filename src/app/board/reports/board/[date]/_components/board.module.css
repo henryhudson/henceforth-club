@@ -9,7 +9,7 @@
 /* The A4 sheet frame itself comes from A4Sheet (overview.module.css);
    this file styles only the board's own furniture and matter. */
 
-/* ── masthead furniture (fixed pt — never scales with the news) ── */
+/* ── masthead furniture (fixed pt, never scaling with the news) ── */
 .folio {
   font: 5.5pt/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
   letter-spacing: .06em;
