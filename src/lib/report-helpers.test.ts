@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { asList, editionIndex, editionNumber, isRowHigh, longDate, reachAppLine, reachCell, shippedByDay, sparkPoints, verdictLine } from "./report-helpers";
+import { asList, editionIndex, editionNumber, isRowHigh, longDate, machineHogs, machineLine, reachAppLine, reachCell, shippedByDay, sparkPoints, verdictLine } from "./report-helpers";
+import type { MachineReading } from "./board-data";
 
 describe("longDate", () => {
   const tz = process.env.TZ;
@@ -208,5 +209,40 @@ describe("shippedByDay", () => {
       week,
     );
     expect(out["2026-07-20"].map((c) => c.id)).toEqual(["a", "b"]);
+  });
+});
+
+describe("the machines' lines", () => {
+  const laptop: MachineReading = {
+    host: "laptop", readAt: "2026-09-04T16:10:35.281Z",
+    data: { sizeGiB: 460.4, freeGiB: 15.5, usedPct: 96.6 },
+    swap: { totalMiB: 5120, usedMiB: 3582.1 },
+    memoryGiB: 16, load1: 1.9, uptimeDays: 4.6,
+    consumers: [
+      { label: "CoreSimulator", path: "/Users/h/Library/Developer/CoreSimulator", gib: 64.9 },
+      { label: "DerivedData", path: "/Users/h/Library/Developer/Xcode/DerivedData", gib: 8.9 },
+      { label: "Caches", path: "/Users/h/Library/Caches", gib: 3.6 },
+      { label: "Archives", path: "/Users/h/Library/Developer/Xcode/Archives", gib: 0.7 },
+    ],
+    runtimes: { count: 7, gib: 56.1 },
+  };
+  const mini: MachineReading = {
+    host: "mini", readAt: "2026-09-04T16:10:35.291Z",
+    data: { sizeGiB: 460.4, freeGiB: 232.6, usedPct: 49.5 },
+    swap: { totalMiB: 4096, usedMiB: 2409.1 },
+    memoryGiB: 8, load1: 1.3, uptimeDays: 1, runners: 3,
+    consumers: [{ label: "actions-runner", path: "/Users/h/actions-runner/_work", gib: 0.7 }],
+    xcresults: { count: 4, gib: 0.2 },
+  };
+  it("machineLine reads the volume, the swap in GiB, the load and the uptime", () => {
+    expect(machineLine(laptop)).toBe("15.5 of 460.4 GiB free (96.6% used) · swap 3.5 of 5.0 GiB · load 1.9 · up 4.6 days");
+  });
+  it("machineLine adds the mini's runner count and reads one day singular", () => {
+    expect(machineLine(mini)).toBe("232.6 of 460.4 GiB free (49.5% used) · swap 2.4 of 4.0 GiB · load 1.3 · up 1 day · 3 runners");
+  });
+  it("machineHogs names the top consumers, capped", () => {
+    expect(machineHogs(laptop)).toBe("CoreSimulator 64.9 GiB, DerivedData 8.9 GiB, Caches 3.6 GiB");
+    expect(machineHogs(laptop, 4)).toMatch(/Archives 0\.7 GiB$/);
+    expect(machineHogs({ ...mini, consumers: [] })).toBe("");
   });
 });

@@ -1,3 +1,5 @@
+import type { MachineReading } from "./board-data";
+
 export type Edition = { type: "daily" | "weekly"; date: string; href: string };
 
 /** English ordinal for a day of the month — 1st, 2nd, 3rd, 4th … 11th, 21st.
@@ -155,6 +157,29 @@ export function isRowHigh(
   const nums = values.filter((n): n is number => n != null);
   if (nums.length === 0) return false;
   return v === Math.max(...nums);
+}
+
+export const MACHINE_NAMES: Record<string, string> = { laptop: "Laptop", mini: "Mac mini" };
+
+/** A machine's one agate line: the free space of the volume, the used share,
+ *  the swap in use of its total, the load, the uptime, and the mini's runner
+ *  count. Swap is carried in MiB and read in GiB, the unit the rest of the
+ *  line speaks. */
+export function machineLine(m: MachineReading): string {
+  const gib = (mib: number) => (mib / 1024).toFixed(1);
+  const parts = [
+    `${m.data.freeGiB} of ${m.data.sizeGiB} GiB free (${m.data.usedPct}% used)`,
+    `swap ${gib(m.swap.usedMiB)} of ${gib(m.swap.totalMiB)} GiB`,
+    `load ${m.load1}`,
+    `up ${m.uptimeDays} day${m.uptimeDays === 1 ? "" : "s"}`,
+  ];
+  if (m.runners != null) parts.push(`${m.runners} runner${m.runners === 1 ? "" : "s"}`);
+  return parts.join(" · ");
+}
+
+/** The biggest consumers, largest first, as one agate phrase. */
+export function machineHogs(m: MachineReading, max = 3): string {
+  return m.consumers.slice(0, max).map((c) => `${c.label} ${c.gib} GiB`).join(", ");
 }
 
 export function editionIndex(dailyDates: string[], weekDates: string[]): Edition[] {

@@ -73,6 +73,33 @@ export type AppStore = {
   rule: string;
   apps: AppStoreRow[];
 };
+// The machines: one block per Mac from scripts/board/machines-probe.mjs,
+// pasted into the report by the morning routine. Numbers carry one decimal.
+export type MachineHost = "laptop" | "mini";
+export type MachineConsumer = { label: string; path: string; gib: number };
+export type MachineReading = {
+  host: MachineHost;
+  readAt: string;
+  data: { sizeGiB: number; freeGiB: number; usedPct: number };
+  swap: { totalMiB: number; usedMiB: number };
+  memoryGiB: number;
+  load1: number;
+  uptimeDays: number;
+  /** Runner listeners, the mini only. */
+  runners?: number;
+  /** Largest first. */
+  consumers: MachineConsumer[];
+  /** Simulator runtime disk images, the laptop only. */
+  runtimes?: { count: number; gib: number };
+  /** The .xcresult bundles under the runner work trees, the mini only. */
+  xcresults?: { count: number; gib: number };
+};
+/** A machine the probe could not read that morning; the daily still prints. */
+export type MachineError = { host: MachineHost; readAt: string; error: string };
+export type Machine = MachineReading | MachineError;
+export function isMachineReading(m: Machine): m is MachineReading {
+  return !("error" in m);
+}
 export type Report = {
   date: string;
   generatedAt: string;
@@ -87,6 +114,7 @@ export type Report = {
   article?: Article;
   reach?: Reach;
   decisions?: Decision[];
+  machines?: Machine[];
 };
 
 const DIR = path.join(process.cwd(), "content/board/reports");
