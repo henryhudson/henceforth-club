@@ -6,6 +6,18 @@ records that sweep's **rejections and dismissals**, newest first, so a later run
 re-flag what a prior run already refuted. Confirmed findings go to the Morning Board, not
 here. Cite `file:line` (or the live probe) so each verdict is independently re-derivable.
 
+## 2026-09-04 — the site sweep over pull requests 88 to 91: four findings confirmed, one rejected, the cold start explained
+
+**Live:** `/` 200 in 0.17 to 0.38 s; `/folklore` 200 in 1.76, 0.59 and 0.45 s; `POST /api/folklore/job` 503 and `POST /api/folklore/index` 503 (both money gates fail closed while the flag is dark); `GET /api/folklore/preview?txid=00` 400; `/board` and `/board/report` redirect to the login; `/this-week` 308 to `/hansard/this-week`; the app's index still lists thirteen weeks. No open pull requests; origin/main `c4b864b`. Review generated here from a fresh context (`~/Desktop/daily-reviews/2026-09-04-site.md`).
+
+**Confirmed S1 (FACT, medium), carded `finding-site-folklore-dynamic-2026-09-04`:** the folklore page is rendered on every request. `page.tsx:29` declares `revalidate = 3600`, but the Upstash client (`@upstash/redis` `nodejs.mjs:228`, no override in `src/lib/redis.ts:16`) and the rate reads (`src/lib/xPrice.ts:50, :90`) pass `cache: 'no-store'`, and Next marks the scope dynamic on any such fetch (`patch-fetch.js:804-837`); three live samples answered MISS with no-store while the home page answered HIT. **Correction to the 2 and 3 September entries:** the first sample over the sub-second bar was not a cache expiry; it is this. Fix: `export const dynamic = "force-static"` beside the revalidate.
+
+**Confirmed S2 (JUDGMENT, medium), S4 (FACT, low), S5 (JUDGMENT, low), carded `finding-folklore-index-money-order-2026-09-04`:** on the cheap rail the preview carries no listing state (`preview.ts:10-24`) and the flow prepares the stamp with no board read (`SubmitFlow.tsx:166-176`), so a visitor pays the floor for a target already listed and is refused 409 after the money (`index/route.ts:111`); `addLinkToBoard` (`folkloreBoard.ts:98-104`) is three separate nx writes, so two racing stamps can leave the loser's record as the cached title and kudos earner while the winner holds the row; the preview and index routes proxy chain reads with no per-address throttle while the link route beside them claims a slot (`link/route.ts:216-222`).
+
+**Rejected S3 (JUDGMENT):** "the floor check has no tolerance between the signer's rate and the index's rate". Every code fact holds (`index/route.ts:118-123` refuses on strict `revenueSats < premiumSats` at its own live rate; `linkQuote.ts:39` is `ceil(10,000,000 / gbpPerBsv)`; one satoshi per 0.00009 pounds of rate), but the strict index-time live-rate floor is the specification's documented choice: the 26 August spec's Quote paragraph says the revenue output must meet the floor at index time at the live rate and a shortfall is refused with floor-short to bump and retry. Reporting a limitation the author documented in writing is not a finding (this ledger's standing principle). A tolerance is a product decision for the spec.
+
+**Rider, not a finding:** `api/hit/route.ts` answers 500 when an increment throws, but nothing stores a marker for the day and `api/stats/route.ts:38` renders an absent day as 0; the view-counter card is closed with the seven August zeros accepted as the scar.
+
 ## 2026-09-03 — the site sweep: one finding confirmed, one clean bill recorded, one ledger precision
 
 **Live:** `/` 200 in 0.18 to 0.26 s (three samples); `/folklore` 200 in 1.67, 0.49 and 0.62 s (the first sample over the sub-second bar, a cold start); `POST /api/folklore/job` 503 (fails closed); `/board` and `/board/report` redirect to the login. No open pull requests; origin/main `c66371a`.
