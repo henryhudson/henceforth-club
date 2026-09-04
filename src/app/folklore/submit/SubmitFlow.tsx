@@ -250,7 +250,13 @@ export default function SubmitFlow({
         if (body?.reason === "already-listed" && typeof body.target === "string") {
           setListedAt(body.target);
         }
-        setError(submitRefusalMessage(body?.reason));
+        const retryAfterHeader = res.headers.get("retry-after");
+        setError(
+          submitRefusalMessage(
+            body?.reason,
+            retryAfterHeader === null ? undefined : Number(retryAfterHeader),
+          ),
+        );
         return;
       }
       setIndexed({ target: String(body.target), stampTxid: String(body.stampTxid) });

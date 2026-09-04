@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { encodeRecord, recordFromScripts, TXID_RE } from "@/app/folklore/linkRecord";
 import { addLinkToBoard, indexSince, isBoardLink } from "@/lib/folkloreBoard";
 import { quoteLink } from "@/lib/folkloreJob/linkQuote";
+import { claimReadSlot, clientAddress } from "@/lib/folkloreJob/submitThrottle";
 import { REVENUE_ADDRESS, revenueSatsTo } from "@/lib/revenueAddress";
 import { fetchTxOutputs, fetchTxScripts } from "@/lib/whatsonchain";
 import { gbpPerBsv } from "@/lib/xPrice";
@@ -54,8 +55,10 @@ function refusal(reason: string, status: number, detail: Record<string, unknown>
  * settlement (specification §4), so an unbound claim lists but is never paid.
  *
  * Refusals, each named in the body: not-available (503, the flag is dark) ·
- * too-large (413) · bad-input (400) · unknown-tx (400: the stamp cannot be
- * read from the chain yet — index it again once it has propagated) ·
+ * too-large (413) · bad-input (400) · too-many-submissions (429, with
+ * retry-after: the read allowance this route shares with the preview) ·
+ * unknown-tx (400: the stamp cannot be read from the chain yet — index it
+ * again once it has propagated) ·
  * bad-record (400: no folklore link in the stamp) · not-a-target (400: a
  * legacy https-only record) · already-listed (409, with the target) ·
  * price-unavailable (503: no live rate, so no honest floor) · floor-short
@@ -97,6 +100,18 @@ export async function POST(req: Request) {
     return refusal("bad-input", 400);
   }
   const stamp = stampTxid.toLowerCase();
+
+  // The read allowance, claimed after every check on the envelope and before
+  // the chain is asked: two chain reads and a rate read ride each call on the
+  // site's anonymous quota, so a refused request costs no upstream call and
+  // bad input costs no slot.
+  const slot = await claimReadSlot(clientAddress(req), Date.now());
+  if (slot.kind === "throttled") {
+    return NextResponse.json(
+      { ok: false, reason: "too-many-submissions" },
+      { status: 429, headers: { "retry-after": String(slot.retryAfterSeconds) } },
+    );
+  }
 
   const scripts = await fetchTxScripts(stamp);
   if (!scripts) return refusal("unknown-tx", 400);

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { encodeRecord, validateComment, validateLink } from "@/app/folklore/linkRecord";
 import { quoteLink } from "@/lib/folkloreJob/linkQuote";
+import { READS_PER_ADDRESS } from "@/lib/folkloreJob/submitThrottle";
 import { REVENUE_ADDRESS } from "@/lib/revenueAddress";
 
 const mockIndexSince = vi.fn();
@@ -25,6 +26,21 @@ vi.mock("@/lib/whatsonchain", () => ({
 vi.mock("@/lib/xPrice", () => ({
   gbpPerBsv: (...args: unknown[]) => mockGbpPerBsv(...args),
 }));
+// The read allowance is NOT mocked — the real throttle runs against an
+// in-memory counter, the link route's own arrangement, so the property is
+// asserted at the route rather than against a stub of itself.
+const throttleCounters = new Map<string, number>();
+vi.mock("@/lib/redis", () => ({
+  getRedis: () => ({
+    incr: async (key: string) => {
+      const next = (throttleCounters.get(key) ?? 0) + 1;
+      throttleCounters.set(key, next);
+      return next;
+    },
+    expire: async () => 1,
+    get: async (key: string) => throttleCounters.get(key) ?? null,
+  }),
+}));
 
 import { GET, POST, dynamic } from "./route";
 
@@ -35,6 +51,7 @@ const request = (query = "") =>
   new Request(`http://x/api/folklore/index${query}`);
 
 beforeEach(() => {
+  throttleCounters.clear();
   mockIndexSince.mockReset();
   mockIndexSince.mockResolvedValue({ txids: [TXID_A, TXID_B], now: 1_753_000_000_000 });
 });
@@ -279,5 +296,36 @@ describe("POST /api/folklore/index", () => {
     const res = await POST(post({ stampTxid: STAMP }));
     expect(res.status).toBe(503);
     expect((await res.json()).reason).toBe("store-unavailable");
+  });
+
+  describe("the read allowance", () => {
+    const from = (address: string, body: unknown = { stampTxid: STAMP }) =>
+      post(body, { "x-forwarded-for": address });
+
+    it("refuses past the allowance before the chain is asked, and says when to come back", async () => {
+      // Two chain reads and a rate read per call, all on the site's anonymous
+      // quota: the same flood the preview's allowance stops, at the second
+      // door it could come through.
+      for (let i = 0; i < READS_PER_ADDRESS; i += 1) {
+        expect((await POST(from("10.0.0.1"))).status).toBe(200);
+      }
+      mockFetchTxScripts.mockClear();
+
+      const res = await POST(from("10.0.0.1"));
+      expect(res.status).toBe(429);
+      expect(await res.json()).toEqual({ ok: false, reason: "too-many-submissions" });
+      expect(Number(res.headers.get("retry-after"))).toBeGreaterThan(0);
+      expect(mockFetchTxScripts).not.toHaveBeenCalled();
+      expect(mockAddLinkToBoard).toHaveBeenCalledTimes(READS_PER_ADDRESS);
+
+      expect((await POST(from("198.51.100.9"))).status).toBe(200);
+    });
+
+    it("spends no allowance on bad input", async () => {
+      for (let i = 0; i < READS_PER_ADDRESS + 5; i += 1) {
+        expect((await POST(from("10.0.0.3", { stampTxid: "abc" }))).status).toBe(400);
+      }
+      expect((await POST(from("10.0.0.3"))).status).toBe(200);
+    });
   });
 });
