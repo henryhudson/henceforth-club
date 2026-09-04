@@ -7,6 +7,7 @@ describe("board-pdf naming", () => {
   it("builds download filenames", () => {
     expect(downloadFilename("daily", "2026-07-02")).toBe("henceforth-daily-2026-07-02.pdf");
     expect(downloadFilename("week", "2026-06-29")).toBe("henceforth-week-2026-06-29.pdf");
+    expect(downloadFilename("board", "2026-09-04")).toBe("henceforth-board-2026-09-04.pdf");
   });
 });
 

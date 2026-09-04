@@ -1,4 +1,4 @@
-export type EditionKind = "daily" | "week";
+export type EditionKind = "daily" | "week" | "board";
 
 /** The legacy edition envelope's marker: marker · kind · date · encrypted payload. */
 export const INSCRIPTION_MARKER = "HHRPT1";
