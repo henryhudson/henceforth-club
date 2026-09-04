@@ -467,6 +467,22 @@ body:has(.morning-board[data-theme="dark"]) {
   background: var(--mb-panel);
 }
 
+/* the column's print link: every card of it on a page, newest first */
+.morning-board .mb-col-head .print,
+.morning-board .mb-archive > summary .print {
+  margin-left: auto;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mb-muted-2);
+  text-decoration: none;
+}
+.morning-board .mb-col-head .print:hover,
+.morning-board .mb-archive > summary .print:hover {
+  color: var(--mb-text);
+  text-decoration: underline;
+}
+
 .morning-board .mb-cards {
   display: grid;
   gap: 8px;

@@ -58,6 +58,10 @@
 .dateline b { color: #0e7490; }
 
 .sectionTitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1em;
   font: 700 .857em/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
   letter-spacing: .15em;
   text-transform: uppercase;
@@ -73,6 +77,17 @@
    inside a clipping wrapper, and a head that grew a rule only there would
    make the placed copy taller than the measured one and cut a line. */
 .sectionTitle:first-child { margin-top: 0; border-top: none; padding-top: 0; }
+/* the square's link to its column page: at the head's right, in the
+   family's teal, at the head's own size and without its weight or its
+   capitals */
+.fullList {
+  flex: 0 0 auto;
+  font-weight: 400;
+  letter-spacing: .05em;
+  text-transform: none;
+  color: #0e7490;
+  text-decoration: none;
+}
 
 .copy { text-align: left; hyphens: none; }
 .copy p { margin: 0; }
