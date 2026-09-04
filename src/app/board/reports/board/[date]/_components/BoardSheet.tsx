@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useLayoutEffect, useRef, useState } from "react";
 import { trim, type BoardSheetModel, type CardLine } from "@/lib/board-sheet";
+import type { ColumnId } from "@/lib/board-columns";
 import { longDate } from "@/lib/report-helpers";
 import A4Sheet from "@/app/hansard/this-week/_components/overview/A4Sheet";
 import PackLayout, { Square } from "@/app/hansard/this-week/_components/overview/PackLayout";
@@ -26,6 +27,16 @@ function Cards({ lines, empty }: { lines: CardLine[]; empty: string }) {
         </p>
       ))}
     </>
+  );
+}
+
+/** The square's full list: every card of its column, newest first, on the
+ *  column page, over as many pages as it takes. */
+function FullList({ column, date }: { column: ColumnId; date: string }) {
+  return (
+    <Link href={`/board/reports/columns/${date}/${column}`} className={s.fullList}>
+      full list
+    </Link>
   );
 }
 
@@ -81,19 +92,31 @@ export default function BoardSheet({ model: full }: { model: BoardSheetModel }) 
 
         <PackLayout>
           <Square id="waiting" lead className={`${s.sq} ${s.sqHouse} ${s.copy}`}>
-            <div className={s.sectionTitle}>Waiting on you</div>
+            <div className={s.sectionTitle}>
+              Waiting on you
+              <FullList column="review" date={model.date} />
+            </div>
             <Cards lines={model.waiting} empty="Nothing waits on you." />
           </Square>
           <Square id="inhand" className={`${s.sq} ${s.copy}`}>
-            <div className={s.sectionTitle}>In hand</div>
+            <div className={s.sectionTitle}>
+              In hand
+              <FullList column="inprogress" date={model.date} />
+            </div>
             <Cards lines={model.inHand} empty="Nothing in hand." />
           </Square>
           <Square id="pulls" className={`${s.sq} ${s.copy}`}>
-            <div className={s.sectionTitle}>This week&apos;s pulls</div>
+            <div className={s.sectionTitle}>
+              This week&apos;s pulls
+              <FullList column="todo" date={model.date} />
+            </div>
             <Cards lines={model.pulls} empty="No pulls waiting." />
           </Square>
           <Square id="ledgers" className={`${s.sq} ${s.agate}`}>
-            <div className={s.sectionTitle}>The ship ledgers</div>
+            <div className={s.sectionTitle}>
+              The ship ledgers
+              <FullList column="todo" date={model.date} />
+            </div>
             {ledger.source === "storefront" ? (
               <table className={s.agateTable}>
                 <thead>
@@ -147,7 +170,10 @@ export default function BoardSheet({ model: full }: { model: BoardSheetModel }) 
             ))}
           </Square>
           <Square id="rhythms" className={s.agate}>
-            <div className={s.sectionTitle}>Standing rhythms</div>
+            <div className={s.sectionTitle}>
+              Standing rhythms
+              <FullList column="backlog" date={model.date} />
+            </div>
             {model.rhythms.length === 0 && <p className={s.nothing}>No standing rhythms.</p>}
             {model.rhythms.map((c) => (
               <p key={c.id}>
@@ -158,7 +184,10 @@ export default function BoardSheet({ model: full }: { model: BoardSheetModel }) 
           </Square>
           {model.doneThisWeek.length > 0 && (
             <Square id="done" continues className={s.agate}>
-              <div className={s.sectionTitle}>Done this week</div>
+              <div className={s.sectionTitle}>
+                Done this week
+                <FullList column="done" date={model.date} />
+              </div>
               {model.doneThisWeek.map((title, i) => (
                 <p key={i}>{title}</p>
               ))}

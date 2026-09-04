@@ -13,6 +13,12 @@
 //       opened locally, never inscribed, because the board's own record already
 //       goes on the chain each morning)
 //   ... board 2026-09-04 --inscribe   (the same sheet, put on the chain as an edition)
+//   ... columns 2026-09-04   (the column pages of The Board: every card of each
+//       of the five columns, review, inprogress, todo, backlog and done, one PDF
+//       each, board-columns-<date>-<column>.pdf, written and opened locally, on as
+//       many pages as the column takes up to a budget of eight; never inscribed,
+//       and --inscribe is refused for this kind)
+//   ... columns 2026-09-04 done   (one column only; --out then names its file)
 //
 // RENDER_PDF_BASE overrides the site origin (default https://www.henceforth.club).
 // For pre-merge verification, point it at a local production server, e.g.
@@ -42,9 +48,12 @@ const SITE_HOST = new URL(SITE).hostname;
 // A second page means the sheet's fit loop failed — tighten the sheet, never
 // raise the number; the render must fail loudly. (History: the daily ran two
 // pages 2026-08-04 to 2026-08-19, when the report was set at book size.)
-// The board sheet, one page since it was first printed on 2026-09-04.
-const BUDGET = { daily: 1, week: 1, board: 1 };
+// The board sheet, one page since it was first printed on 2026-09-04. The
+// column pages run to as many pages as the column takes and never drop a
+// card; eight is the loud stop for a column that has outgrown a print run.
+const BUDGET = { daily: 1, week: 1, board: 1, columns: 8 };
 const KINDS = Object.keys(BUDGET);
+const COLUMN_NAMES = ["review", "inprogress", "todo", "backlog", "done"];
 // The transaction itself — sealing, the envelope, the fee, the guard that no
 // transaction is ever broadcast whose only output is data, signing and the
 // broadcast — lives in chain-put.mjs, shared with every surface that goes on
@@ -122,8 +131,9 @@ async function inscribe(kind, date, pdf, prevTx, dryRun) {
   return head.tx; // the next job chains off the head's change
 }
 
-async function render(browser, kind, date, outPath, prevTx, dryRun) {
-  const path = kind === "daily" ? date : `${kind}/${date}`;
+async function render(browser, kind, date, outPath, prevTx, dryRun, column) {
+  const path = kind === "daily" ? date : column ? `${kind}/${date}/${column}` : `${kind}/${date}`;
+  const label = column ? `${kind} ${date} ${column}` : `${kind} ${date}`;
   const url = `${SITE}/board/reports/${path}`;
   const page = await browser.newPage();
   await page.setCookie({
@@ -153,17 +163,17 @@ async function render(browser, kind, date, outPath, prevTx, dryRun) {
   // the failed sheet must exist on disk to be opened and diagnosed. Only the
   // free local write moves ahead of the throw — the archive and the inscription
   // stay strictly behind it (money must stay behind the check).
-  const localPath = outPath ?? join(tmpdir(), `board-${kind}-${date}.pdf`);
+  const localPath = outPath ?? join(tmpdir(), `board-${kind}-${date}${column ? `-${column}` : ""}.pdf`);
   await writeFile(localPath, pdf);
 
   const pages = (await PDFDocument.load(pdf)).getPageCount();
   if (pages > BUDGET[kind]) {
     try { execSync(`open ${JSON.stringify(localPath)}`); } catch { /* open is best-effort */ }
-    throw new Error(`${kind} ${date}: ${pages} pages exceeds the budget of ${BUDGET[kind]} — tighten the print stylesheet, do not skip (over-budget sheet at ${localPath})`);
+    throw new Error(`${label}: ${pages} pages exceeds the budget of ${BUDGET[kind]} — tighten the print stylesheet, do not skip (over-budget sheet at ${localPath})`);
   }
   if (overflow > 1) {
     try { execSync(`open ${JSON.stringify(localPath)}`); } catch { /* open is best-effort */ }
-    throw new Error(`${kind} ${date}: the packed columns overflow the sheet by ${overflow}px at the floor type size — the page would clip text; tighten the copy, do not skip (clipped sheet at ${localPath})`);
+    throw new Error(`${label}: the packed columns overflow the sheet by ${overflow}px at the floor type size — the page would clip text; tighten the copy, do not skip (clipped sheet at ${localPath})`);
   }
   // Every render also lands a permanent copy in the editions archive (Henry,
   // 2026-08-20: "ensure we are saving all this in folders for future
@@ -172,7 +182,7 @@ async function render(browser, kind, date, outPath, prevTx, dryRun) {
   try {
     const archiveDir = join(homedir(), "Henceforth", "editions", kind);
     await mkdir(archiveDir, { recursive: true });
-    await writeFile(join(archiveDir, `${date}.pdf`), pdf);
+    await writeFile(join(archiveDir, `${date}${column ? `-${column}` : ""}.pdf`), pdf);
   } catch (e) {
     console.warn(`editions archive copy failed (render unaffected): ${e.message}`);
   }
@@ -185,7 +195,8 @@ async function render(browser, kind, date, outPath, prevTx, dryRun) {
     return null;
   }
   if (!inscribes(kind)) {
-    console.log(`wrote + opened ${localPath} (${pages} page${pages === 1 ? "" : "s"}); not inscribed: the board sheet stays local unless --inscribe is passed`);
+    const why = kind === "columns" ? "the column pages are never inscribed" : "the board sheet stays local unless --inscribe is passed";
+    console.log(`wrote + opened ${localPath} (${pages} page${pages === 1 ? "" : "s"}); not inscribed: ${why}`);
     return null;
   }
   console.log(`wrote + opened ${localPath} (${pages} page${pages === 1 ? "" : "s"}) — inscribing…`);
@@ -206,17 +217,46 @@ if (inscribeBoard) args.splice(inscribeIdx, 1);
 // (Henry, 2026-09-04: its JSON is already inscribed each morning); --inscribe
 // turns that on for the board kind alone, and a bare board render writes and
 // opens the local copy, records nothing on the chain and touches no ledger.
-const inscribes = (kind) => kind !== "board" || inscribeBoard;
+// The column pages are never inscribed: they are the board's full lists, and
+// the board's own record already goes on the chain.
+const inscribes = (kind) => (kind === "columns" ? false : kind !== "board" || inscribeBoard);
 
 const usage = () => {
-  console.error("usage: render-pdf.mjs (daily|week|board) YYYY-MM-DD [(daily|week|board) YYYY-MM-DD ...] [--out path | --dry-run] [--inscribe] | --all");
+  console.error("usage: render-pdf.mjs (daily|week|board) YYYY-MM-DD [(daily|week|board) YYYY-MM-DD ...] [columns YYYY-MM-DD [review|inprogress|todo|backlog|done]] [--out path | --dry-run] [--inscribe] | --all");
   process.exit(1);
 };
 
+// The jobs as kind and date pairs, where the columns kind may name one column
+// after its date and otherwise stands for all five.
+function parseJobs(args) {
+  const jobs = [];
+  for (let i = 0; i < args.length; ) {
+    const [kind, date] = [args[i], args[i + 1]];
+    if (!KINDS.includes(kind) || !/^\d{4}-\d{2}-\d{2}$/.test(date ?? "")) usage();
+    i += 2;
+    if (kind !== "columns") jobs.push([kind, date]);
+    else if (COLUMN_NAMES.includes(args[i])) jobs.push([kind, date, args[i++]]);
+    else for (const column of COLUMN_NAMES) jobs.push([kind, date, column]);
+  }
+  if (jobs.length === 0) usage();
+  return jobs;
+}
+
 if (!process.env.BOARD_COOKIE_SECRET) { console.error("BOARD_COOKIE_SECRET missing — run with --env-file=.env.local"); process.exit(1); }
+// The explicit jobs are read here, ahead of the env checks that depend on
+// them; --all reads its dates from the store further down.
+const explicit = args[0] === "--all" ? null : parseJobs(args);
+if (explicit && inscribeBoard && explicit.some(([kind]) => kind === "columns")) {
+  console.error("the column pages are never inscribed; drop --inscribe, or run the columns kind on its own");
+  process.exit(1);
+}
+if (explicit && outPath && explicit.filter(([kind]) => kind === "columns").length > 1) {
+  console.error("--out names one file; name the column (review, inprogress, todo, backlog or done) to write one column to it");
+  process.exit(1);
+}
 // Which kinds this run would put on the chain, read before the jobs are built
 // so the env checks stay ahead of any store read or spend.
-const chainKinds = (args[0] === "--all" ? ["daily", "week"] : args.filter((_, i) => i % 2 === 0)).filter(inscribes);
+const chainKinds = (explicit ? explicit.map(([kind]) => kind) : ["daily", "week"]).filter(inscribes);
 const inscribeMode = !outPath && !dryRun && chainKinds.length > 0;
 if (!outPath && chainKinds.length > 0 && (!process.env.BOARD_ARCHIVE_WIF || !process.env.BOARD_ARCHIVE_KEY)) {
   console.error("BOARD_ARCHIVE_WIF and BOARD_ARCHIVE_KEY are both required to inscribe — or pass --out for a local render");
@@ -238,12 +278,7 @@ if (args[0] === "--all") {
   for (const d of ((await getRedisClient().smembers("board:report:dates")) ?? []).sort()) jobs.push(["daily", d]);
   for (const w of ((await getRedisClient().smembers("board:weeks")) ?? []).sort()) jobs.push(["week", w]);
 } else {
-  if (args.length === 0 || args.length % 2 !== 0) usage();
-  for (let i = 0; i < args.length; i += 2) {
-    const [kind, date] = [args[i], args[i + 1]];
-    if (!KINDS.includes(kind) || !/^\d{4}-\d{2}-\d{2}$/.test(date ?? "")) usage();
-    jobs.push([kind, date]);
-  }
+  jobs.push(...explicit);
 }
 
 const browser = await puppeteer.launch({ channel: "chrome", headless: true });
@@ -251,9 +286,9 @@ let failed = 0;
 let prevTx = null;
 try {
   for (let i = 0; i < jobs.length; i++) {
-    const [kind, date] = jobs[i];
+    const [kind, date, column] = jobs[i];
     try {
-      const tx = await render(browser, kind, date, outPath, prevTx, dryRun);
+      const tx = await render(browser, kind, date, outPath, prevTx, dryRun, column);
       if (tx) prevTx = tx;
     } catch (e) {
       failed++;

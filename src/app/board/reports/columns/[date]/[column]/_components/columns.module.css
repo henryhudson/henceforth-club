@@ -1,0 +1,125 @@
+/* ── The Board's column pages on the newspaper measure (2026-09-04; the
+   full list behind each square of the sheet). Georgia 7pt on 8pt, agate
+   at 5.5pt, hairline rules, two columns of type that flow over as many
+   pages as the column takes. No fit loop: nothing is trimmed and nothing
+   is clipped, so the type is pinned in pt rather than scaled. The masthead
+   furniture is the sheet's. The board wears the board family's teal #0e7490. */
+
+/* the page on the web: an A4 width on the grey ground; in print the page
+   margins do this work and the frame falls away */
+.sheet {
+  width: 210mm;
+  margin: 0 auto;
+  background: #fff;
+  color: #111;
+  padding: 9mm 12mm 8mm;
+  font: 7pt/1.143 Georgia, serif;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.18);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+@media print {
+  .sheet { width: auto; margin: 0; padding: 0; box-shadow: none; }
+}
+
+/* ── masthead furniture (fixed pt, never scaling with the news) ── */
+.folio {
+  font: 5.5pt/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #111;
+  display: flex;
+  justify-content: space-between;
+  gap: 4mm;
+  border-top: .5pt solid #111;
+  border-bottom: .5pt solid #111;
+  padding: 1.1mm 0;
+}
+.folio span { white-space: nowrap; }
+.folio a { color: inherit; text-decoration: none; }
+
+.nameplate {
+  font-family: 'UnifrakturMaguntia', Georgia, serif;
+  text-align: center;
+  font-size: 34pt;
+  line-height: 1;
+  font-weight: 400;
+  margin: 1.8mm 0 1.2mm;
+}
+
+/* the column's name, where the sheet carries its subtitle */
+.standfirst {
+  font: 5.5pt/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  text-align: center;
+  border-top: .5pt solid #111;
+  border-bottom: 1.5pt solid #111;
+  padding: 1.1mm 0;
+  margin-bottom: 1.6mm;
+}
+
+/* the dateline strip: the column's own count of itself */
+.dateline {
+  font: 5.5pt/1.2 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: #222;
+  border-bottom: .5pt solid #111;
+  padding: 0 0 1.2mm;
+  margin-bottom: 2mm;
+}
+.dateline b { color: #0e7490; }
+
+/* the done pile says which window it shows and links to the other */
+.window {
+  font: italic 1em/1.143 Georgia, serif;
+  text-align: center;
+  color: #222;
+  margin: 0 0 2mm;
+}
+.window a { color: #0e7490; text-decoration: none; }
+
+/* ── the list: two columns of type, flowing across pages ── */
+.list {
+  column-count: 2;
+  column-gap: 5mm;
+  column-rule: .5pt solid #111;
+  text-align: left;
+  hyphens: none;
+}
+
+/* a card: the title in bold body type, the phase and the chip line in
+   agate beneath, then the note's first sentence in body type */
+.card {
+  break-inside: avoid;
+  margin: 0 0 1.6mm;
+  padding: 0 0 1.4mm;
+  border-bottom: .3pt solid #888;
+}
+.cardTitle { font: 700 1em/1.143 Georgia, serif; margin: 0; }
+.cardPhase {
+  font: .786em/1.2 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  color: #222;
+  margin: .3mm 0 0;
+}
+.chips {
+  font: .786em/1.2 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #0e7490;
+  margin: .4mm 0 0;
+}
+.note { margin: .5mm 0 0; text-indent: 0; }
+.nothing { font: italic 1em/1.143 Georgia, serif; color: #444; margin: 0; column-span: all; }
+
+/* ── colophon strip ── */
+.credit {
+  margin-top: 2.2mm;
+  padding-top: 1.2mm;
+  border-top: .5pt solid #111;
+  font: italic 5.5pt/1.25 Georgia, serif;
+  color: #333;
+  text-align: center;
+}

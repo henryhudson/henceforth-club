@@ -433,6 +433,13 @@ export default function BoardClient({
                 <div className="mb-col-head">
                   <span className="name">{col.name}</span>
                   <span className="n">{list.length}</span>
+                  <Link
+                    href={`/board/reports/columns/${sheetDate}/${col.id}`}
+                    className="print"
+                    title="Every card of this column, newest first, on a printable page"
+                  >
+                    print
+                  </Link>
                 </div>
                 <div className="mb-cards">
                   {list.map((c) => (
@@ -457,6 +464,14 @@ export default function BoardClient({
             {doneCards.length - doneArchive.length > 0
               ? ` · ${doneCards.length - doneArchive.length} in this week`
               : ""}
+            {" · "}
+            <Link
+              href={`/board/reports/columns/${sheetDate}/done`}
+              className="print"
+              title="The done pile, newest first, on a printable page: the last thirty days, or all of it"
+            >
+              print
+            </Link>
           </summary>
           <div className="mb-cards">
             {doneArchive.map((c) => (
