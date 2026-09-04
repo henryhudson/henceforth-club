@@ -72,17 +72,23 @@ export const profileMember = (handle: string): string => `profile:${handle.toLow
 export type AddLinkResult = "listed" | "already-listed" | "unavailable";
 
 /**
- * Land a freshly-inscribed link on the board: cache its validated record,
- * enter it at score zero, and stamp the log with the insertion time. Every
- * write is `nx`-guarded or idempotent, so a retry after a partial failure
- * never resets a kudos total or re-stamps the log.
+ * Land a freshly-inscribed link on the board: enter it at score zero, cache
+ * its validated record, and stamp the log with the insertion time. The board
+ * and log writes are `nx`-guarded and the record write is decided by the
+ * board's, so a retry after a partial failure never resets a kudos total,
+ * re-stamps the log, or replaces a record.
  *
  * The board write is the one that answers (specification, Decision 3: one
- * row per target): a second stamp for a listed target reads `already-listed`
- * while the cache and the log — both `nx` — stay exactly as the first stamp
- * left them. A replay after a partial failure still lands whatever it
- * missed, so `already-listed` is a verdict on the target, never a refusal
- * to repair.
+ * row per target), and it comes FIRST, so its verdict decides the record.
+ * Three separate `nx` writes with the record ahead of the row let two
+ * stamps racing for one target leave the loser's record cached under the
+ * winner's row — the loser's title shown, the loser's `by` credited by the
+ * arena — while the loser was refused. Now the stamp that takes the row
+ * writes its record plainly, overwriting whatever a racing loser cached in
+ * between; a stamp that finds the row taken writes `nx` only, which repairs
+ * an absent cache after a partial failure and can never replace a record
+ * that is there. `already-listed` stays a verdict on the target, never a
+ * refusal to repair.
  */
 export async function addLinkToBoard(
   txid: string,
@@ -92,16 +98,15 @@ export async function addLinkToBoard(
 ): Promise<AddLinkResult> {
   if (!redis) return "unavailable";
   const target = record.kind === "link" && record.txid ? record.txid : txid;
-  // nx, like the two zadds beside it: the first successful stamp owns the
-  // row, and a second stamp for the same target can never replace the cached
-  // title or the kudos earner (specification, Decision 3).
-  await redis.set(linkKey(target), record, { nx: true });
   const added = await redis.zadd(BOARD_KEY, { nx: true }, {
     score: LINK_SCORE_OFFSET,
     member: linkMember(target),
   });
+  const listed = (added ?? 0) > 0;
+  if (listed) await redis.set(linkKey(target), record);
+  else await redis.set(linkKey(target), record, { nx: true });
   await redis.zadd(LOG_KEY, { nx: true }, { score: nowMs, member: target });
-  return (added ?? 0) > 0 ? "listed" : "already-listed";
+  return listed ? "listed" : "already-listed";
 }
 
 /**

@@ -166,6 +166,15 @@ export default function SubmitFlow({
     // A target needs no request: the stamp is the visitor's to sign. The
     // record shown is the exact bytes the index will read back off the chain.
     if (checked.body.kind === "link") {
+      // The refusal before the money: a listed target is turned away here,
+      // from the preview's board read, not by the index after the stamp's
+      // ten pence is on chain. The index keeps its 409 for the race and for
+      // a form whose preview is stale.
+      const refused = listedRefusal(previewState, checked.body.target);
+      if (refused) {
+        setError(refused);
+        return;
+      }
       const record = validateLink(checked.body.target, checked.body.title);
       if (!record) {
         setError("That listing cannot be submitted.");
@@ -241,7 +250,13 @@ export default function SubmitFlow({
         if (body?.reason === "already-listed" && typeof body.target === "string") {
           setListedAt(body.target);
         }
-        setError(submitRefusalMessage(body?.reason));
+        const retryAfterHeader = res.headers.get("retry-after");
+        setError(
+          submitRefusalMessage(
+            body?.reason,
+            retryAfterHeader === null ? undefined : Number(retryAfterHeader),
+          ),
+        );
         return;
       }
       setIndexed({ target: String(body.target), stampTxid: String(body.stampTxid) });
@@ -556,11 +571,23 @@ export default function SubmitFlow({
   );
 }
 
+/** The message that refuses to prepare a stamp, or null when nothing seen so
+ * far forbids one. Only a preview of this very target that the board already
+ * lists refuses: a preview still loading, unreachable, or of an earlier paste
+ * proves nothing, and the index's own 409 still stands behind the form for
+ * exactly those. Pure. */
+export function listedRefusal(state: PreviewState, target: string): string | null {
+  return state.kind === "ready" && state.preview.listed && state.preview.txid === target
+    ? submitRefusalMessage("already-listed")
+    : null;
+}
+
 /** What the pasted id is, from the preview read: a chip and a default title
  * for a post or an archive; an honest "on Bitcoin" for an id nothing here
- * can render (still listable); and, for a comment or a stamp, the one id
+ * can render (still listable); the existing thread, in place of a stamp, for
+ * an id the board already lists; and, for a comment or a stamp, the one id
  * that carries the thread, offered in the paste's place. */
-function PreviewCard({
+export function PreviewCard({
   state,
   onListInstead,
 }: {
@@ -588,6 +615,23 @@ function PreviewCard({
     );
   }
   const { preview } = state;
+  if (preview.listed) {
+    return (
+      <div className="rounded-2xl border border-card-border bg-card-bg p-5 text-sm">
+        <p className="text-foreground">
+          {shortTxid(preview.txid)} is already on the board
+          {preview.title ? <> as &ldquo;{preview.title}&rdquo;</> : null}. There is one row per
+          transaction id, so there is no stamp to sign.
+        </p>
+        <Link
+          href={`/folklore/tx/${preview.txid}`}
+          className="mt-3 inline-block font-mono text-xs text-accent hover:underline"
+        >
+          Open the existing thread →
+        </Link>
+      </div>
+    );
+  }
   if (preview.listInstead) {
     const instead = preview.listInstead;
     return (

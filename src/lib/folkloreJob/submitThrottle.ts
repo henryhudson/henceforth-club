@@ -31,10 +31,38 @@ export const SUBMIT_QUOTES_PER_ADDRESS = 2;
 /** The window, matched to how long an unpaid job holds its slot. */
 export const SUBMIT_WINDOW_MINUTES = QUOTE_EXPIRY_MINUTES;
 
-const WINDOW_MS = SUBMIT_WINDOW_MINUTES * 60_000;
+/**
+ * The read-side allowance: how many chain reads one bucket may ask of the
+ * preview and index routes across any two adjacent minutes. Those routes
+ * proxy unauthenticated reads to the indexers on the site's anonymous quota,
+ * and a miss is never cached, so a flood of random ids from one address
+ * would turn honest stamps into unknown-tx and, once the rate endpoint on
+ * the same host answered 429, price-unavailable. Tens, not a handful: a
+ * visitor previews each id they paste and indexes one stamp, and must never
+ * meet it.
+ */
+export const READS_PER_ADDRESS = 30;
 
-const throttleKey = (address: string, window: number) =>
-  `folklore:submit:${address}:${window}`;
+export const READ_WINDOW_MINUTES = 1;
+
+/** One allowance: the key family it counts under, how many it permits
+ * across two adjacent windows, and the window. */
+type Allowance = { family: string; perWindows: number; windowMs: number };
+
+const SUBMIT_ALLOWANCE: Allowance = {
+  family: "submit",
+  perWindows: SUBMIT_QUOTES_PER_ADDRESS,
+  windowMs: SUBMIT_WINDOW_MINUTES * 60_000,
+};
+
+const READ_ALLOWANCE: Allowance = {
+  family: "read",
+  perWindows: READS_PER_ADDRESS,
+  windowMs: READ_WINDOW_MINUTES * 60_000,
+};
+
+const throttleKey = (family: string, address: string, window: number) =>
+  `folklore:${family}:${address}:${window}`;
 
 export type SubmitSlot =
   | { kind: "allowed" }
@@ -92,8 +120,27 @@ export function clientAddress(req: Request): string {
   return ipv6Prefix(raw) ?? raw;
 }
 
+/** Claim one of this bucket's submit slots — the link route's allowance. */
+export async function claimSubmitSlot(
+  address: string,
+  nowMs: number,
+  redis: Redis | null = getRedis(),
+): Promise<SubmitSlot> {
+  return claimSlot(SUBMIT_ALLOWANCE, address, nowMs, redis);
+}
+
+/** Claim one of this bucket's read slots — the preview and index routes'
+ * allowance, one family for both since they spend the same upstream quota. */
+export async function claimReadSlot(
+  address: string,
+  nowMs: number,
+  redis: Redis | null = getRedis(),
+): Promise<SubmitSlot> {
+  return claimSlot(READ_ALLOWANCE, address, nowMs, redis);
+}
+
 /**
- * Claim one of this bucket's slots.
+ * Claim one of this bucket's slots under an allowance.
  *
  * The increment happens before the comparison, so a refused attempt still
  * counts — hammering the route keeps the window pinned rather than resetting
@@ -104,38 +151,39 @@ export function clientAddress(req: Request): string {
  * the end of one window and its whole allowance again at the start of the
  * next, holding twice the allowance concurrently for as long as an unpaid job
  * keeps its slot. Summing the pair bounds any two adjacent windows — and any
- * instant, since the counters expire — at exactly SUBMIT_QUOTES_PER_ADDRESS.
- * The counter therefore has to outlive its own window, hence the two-window
- * expiry.
+ * instant, since the counters expire — at exactly the allowance. The counter
+ * therefore has to outlive its own window, hence the two-window expiry.
  *
  * Null-Redis safe, and open by design in that case: without a store there is
  * no pipeline to protect — createJob itself refuses store-unavailable a few
  * lines later — so the throttle must not be the thing that reports the
  * outage.
  */
-export async function claimSubmitSlot(
+async function claimSlot(
+  allowance: Allowance,
   address: string,
   nowMs: number,
-  redis: Redis | null = getRedis(),
+  redis: Redis | null,
 ): Promise<SubmitSlot> {
   if (!redis) return { kind: "allowed" };
 
-  const window = Math.floor(nowMs / WINDOW_MS);
-  const key = throttleKey(address, window);
+  const { family, perWindows, windowMs } = allowance;
+  const window = Math.floor(nowMs / windowMs);
+  const key = throttleKey(family, address, window);
   const used = await redis.incr(key);
   // Only the first increment sets the expiry: re-setting it on every request
   // would let a steady stream hold the key alive indefinitely.
-  if (used === 1) await redis.expire(key, Math.ceil((2 * WINDOW_MS) / 1000));
-  const carried = (await redis.get<number>(throttleKey(address, window - 1))) ?? 0;
-  if (used + carried <= SUBMIT_QUOTES_PER_ADDRESS) return { kind: "allowed" };
+  if (used === 1) await redis.expire(key, Math.ceil((2 * windowMs) / 1000));
+  const carried = (await redis.get<number>(throttleKey(family, address, window - 1))) ?? 0;
+  if (used + carried <= perWindows) return { kind: "allowed" };
 
   // When the allowance really returns, not when the window happens to tick.
   // This window's count is next window's carry, so a bucket that has already
   // spent the whole allowance is still refused at the next boundary; saying
   // otherwise would send a well-behaved client back to be refused again.
-  const windowsToWait = 1 + used <= SUBMIT_QUOTES_PER_ADDRESS ? 1 : 2;
+  const windowsToWait = 1 + used <= perWindows ? 1 : 2;
   return {
     kind: "throttled",
-    retryAfterSeconds: Math.ceil(((window + windowsToWait) * WINDOW_MS - nowMs) / 1000),
+    retryAfterSeconds: Math.ceil(((window + windowsToWait) * windowMs - nowMs) / 1000),
   };
 }

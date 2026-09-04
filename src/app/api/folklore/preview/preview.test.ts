@@ -33,59 +33,78 @@ describe("defaultTitle", () => {
 
 describe("previewFor", () => {
   it("chips a Magic Attribute Protocol post by its app and titles it by its first line", () => {
-    expect(previewFor({ kind: "map", post: post("hello\nworld"), source: "twetch" }, TXID)).toEqual({
+    expect(
+      previewFor({ kind: "map", post: post("hello\nworld"), source: "twetch" }, TXID, false),
+    ).toEqual({
       txid: TXID,
       kind: "map",
       source: "twetch",
       title: "hello",
+      listed: false,
     });
   });
 
   it("leaves the title absent, never empty, when a post has no text", () => {
-    const preview = previewFor({ kind: "map", post: post("   "), source: "treechat" }, TXID);
-    expect(preview).toEqual({ txid: TXID, kind: "map", source: "treechat" });
+    const preview = previewFor({ kind: "map", post: post("   "), source: "treechat" }, TXID, false);
+    expect(preview).toEqual({ txid: TXID, kind: "map", source: "treechat", listed: false });
     expect("title" in preview).toBe(false);
   });
 
   it("chips an archive by its source and titles it by its first post", () => {
-    expect(previewFor({ kind: "archive", archive: archive([{ text: "first" }, { text: "second" }]) }, TXID)).toEqual({
+    expect(
+      previewFor({ kind: "archive", archive: archive([{ text: "first" }, { text: "second" }]) }, TXID, false),
+    ).toEqual({
       txid: TXID,
       kind: "archive",
       source: "x",
       title: "first",
+      listed: false,
     });
-    expect(previewFor({ kind: "archive", archive: archive([]) }, TXID)).toEqual({
+    expect(previewFor({ kind: "archive", archive: archive([]) }, TXID, false)).toEqual({
       txid: TXID,
       kind: "archive",
       source: "x",
+      listed: false,
     });
   });
 
   it("titles a legacy link by its own title", () => {
     const record = validateLink("https://example.com/a", "A titled link");
     if (!record) throw new Error("expected record");
-    expect(previewFor({ kind: "legacy-link", record }, TXID)).toEqual({
+    expect(previewFor({ kind: "legacy-link", record }, TXID, false)).toEqual({
       txid: TXID,
       kind: "legacy-link",
       source: "folklore",
       title: "A titled link",
+      listed: false,
     });
   });
 
   it("points a comment at its parent and a stamp at its target — the id to list instead", () => {
-    expect(previewFor({ kind: "comment", parent: OTHER }, TXID)).toEqual({
+    expect(previewFor({ kind: "comment", parent: OTHER }, TXID, false)).toEqual({
       txid: TXID,
       kind: "comment",
       listInstead: OTHER,
+      listed: false,
     });
-    expect(previewFor({ kind: "stamp", target: OTHER }, TXID)).toEqual({
+    expect(previewFor({ kind: "stamp", target: OTHER }, TXID, false)).toEqual({
       txid: TXID,
       kind: "stamp",
       listInstead: OTHER,
+      listed: false,
     });
   });
 
   it("keeps an opaque transaction listable, with nothing to chip or title", () => {
-    expect(previewFor({ kind: "opaque" }, TXID)).toEqual({ txid: TXID, kind: "opaque" });
+    expect(previewFor({ kind: "opaque" }, TXID, false)).toEqual({
+      txid: TXID,
+      kind: "opaque",
+      listed: false,
+    });
+  });
+
+  it("carries the board's verdict untouched, whatever the id turns out to be", () => {
+    expect(previewFor({ kind: "opaque" }, TXID, true).listed).toBe(true);
+    expect(previewFor({ kind: "stamp", target: OTHER }, TXID, true).listed).toBe(true);
   });
 });

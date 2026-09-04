@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { Redis } from "@upstash/redis";
 import {
+  READS_PER_ADDRESS,
+  READ_WINDOW_MINUTES,
   SUBMIT_QUOTES_PER_ADDRESS,
   SUBMIT_WINDOW_MINUTES,
+  claimReadSlot,
   claimSubmitSlot,
   clientAddress,
   ipv6Prefix,
@@ -143,6 +146,49 @@ describe("the allowance bounds what one address can hold", () => {
 
   it("is open without a store — the throttle never reports someone else's outage", async () => {
     expect(await claimSubmitSlot("10.0.0.1", 1_000_000, null)).toEqual({ kind: "allowed" });
+  });
+});
+
+describe("the read allowance — the preview and index routes' chain reads", () => {
+  const READ_WINDOW_MS = READ_WINDOW_MINUTES * 60_000;
+
+  it("allows READS_PER_ADDRESS reads across two adjacent windows, then refuses with a retry time", async () => {
+    const clock = { now: 1_000_000 };
+    const redis = fakeRedis(clock);
+    for (let i = 0; i < READS_PER_ADDRESS; i += 1) {
+      expect(await claimReadSlot("10.0.0.1", clock.now, redis)).toEqual({ kind: "allowed" });
+    }
+    const refused = await claimReadSlot("10.0.0.1", clock.now, redis);
+    if (refused.kind !== "throttled") throw new Error("expected a throttled slot");
+    expect(refused.retryAfterSeconds).toBeGreaterThan(0);
+    expect(refused.retryAfterSeconds).toBeLessThanOrEqual((2 * READ_WINDOW_MS) / 1000);
+
+    clock.now += 2 * READ_WINDOW_MS;
+    expect(await claimReadSlot("10.0.0.1", clock.now, redis)).toEqual({ kind: "allowed" });
+  });
+
+  it("is tens a minute, not a handful: a visitor's previews and one index never meet it", () => {
+    expect(READ_WINDOW_MINUTES).toBe(1);
+    expect(READS_PER_ADDRESS).toBeGreaterThanOrEqual(20);
+    expect(READS_PER_ADDRESS).toBeLessThan(100);
+  });
+
+  it("keeps its own buckets — a read never spends a submit slot, nor a submit a read", async () => {
+    const clock = { now: 1_000_000 };
+    const redis = fakeRedis(clock);
+    for (let i = 0; i <= READS_PER_ADDRESS; i += 1) await claimReadSlot("10.0.0.1", clock.now, redis);
+    expect((await claimReadSlot("10.0.0.1", clock.now, redis)).kind).toBe("throttled");
+    expect(await claimSubmitSlot("10.0.0.1", clock.now, redis)).toEqual({ kind: "allowed" });
+
+    for (let i = 0; i <= SUBMIT_QUOTES_PER_ADDRESS; i += 1) {
+      await claimSubmitSlot("10.0.0.2", clock.now, redis);
+    }
+    expect((await claimSubmitSlot("10.0.0.2", clock.now, redis)).kind).toBe("throttled");
+    expect(await claimReadSlot("10.0.0.2", clock.now, redis)).toEqual({ kind: "allowed" });
+  });
+
+  it("is open without a store, like the submit allowance", async () => {
+    expect(await claimReadSlot("10.0.0.1", 1_000_000, null)).toEqual({ kind: "allowed" });
   });
 });
 

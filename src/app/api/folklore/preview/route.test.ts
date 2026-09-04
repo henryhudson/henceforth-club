@@ -1,11 +1,31 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { validateLink } from "@/app/folklore/linkRecord";
 import { MAP_PREFIX } from "@/app/folklore/mapPost";
+import { READS_PER_ADDRESS } from "@/lib/folkloreJob/submitThrottle";
 
 const mockFetchTxScripts = vi.fn();
+const mockIsBoardLink = vi.fn();
 
 vi.mock("@/lib/whatsonchain", () => ({
   fetchTxScripts: (...args: unknown[]) => mockFetchTxScripts(...args),
+}));
+vi.mock("@/lib/folkloreBoard", () => ({
+  isBoardLink: (...args: unknown[]) => mockIsBoardLink(...args),
+}));
+// The read allowance is NOT mocked — the real throttle runs against an
+// in-memory counter, the link route's own arrangement, so the property is
+// asserted at the route rather than against a stub of itself.
+const throttleCounters = new Map<string, number>();
+vi.mock("@/lib/redis", () => ({
+  getRedis: () => ({
+    incr: async (key: string) => {
+      const next = (throttleCounters.get(key) ?? 0) + 1;
+      throttleCounters.set(key, next);
+      return next;
+    },
+    expire: async () => 1,
+    get: async (key: string) => throttleCounters.get(key) ?? null,
+  }),
 }));
 
 import { GET } from "./route";
@@ -29,7 +49,10 @@ function jsonScript(obj: unknown): string {
 const request = (query: string) => new Request(`http://x/api/folklore/preview${query}`);
 
 beforeEach(() => {
+  throttleCounters.clear();
   mockFetchTxScripts.mockReset();
+  mockIsBoardLink.mockReset();
+  mockIsBoardLink.mockResolvedValue(false);
 });
 
 describe("GET /api/folklore/preview", () => {
@@ -61,6 +84,7 @@ describe("GET /api/folklore/preview", () => {
       kind: "map",
       source: "twetch",
       title: "A cello note",
+      listed: false,
     });
   });
 
@@ -70,6 +94,7 @@ describe("GET /api/folklore/preview", () => {
       ok: true,
       txid: TXID,
       kind: "opaque",
+      listed: false,
     });
   });
 
@@ -80,7 +105,19 @@ describe("GET /api/folklore/preview", () => {
       txid: TXID,
       kind: "stamp",
       listInstead: OTHER,
+      listed: false,
     });
+  });
+
+  it("says when the board already lists the id, from one board read of that id", async () => {
+    // The refusal before the money: a visitor who pastes a listed target must
+    // learn it here, not from the index's 409 after the ten pence is on chain.
+    mockFetchTxScripts.mockResolvedValue([script(["not-a-protocol"])]);
+    mockIsBoardLink.mockResolvedValue(true);
+    const body = await (await GET(request(`?txid=${TXID}`))).json();
+    expect(body).toEqual({ ok: true, txid: TXID, kind: "opaque", listed: true });
+    expect(mockIsBoardLink).toHaveBeenCalledTimes(1);
+    expect(mockIsBoardLink).toHaveBeenCalledWith(TXID);
   });
 
   it("lowercases the id before reading it", async () => {
@@ -88,5 +125,40 @@ describe("GET /api/folklore/preview", () => {
     const body = await (await GET(request(`?txid=${TXID.toUpperCase()}`))).json();
     expect(mockFetchTxScripts).toHaveBeenCalledWith(TXID);
     expect(body.txid).toBe(TXID);
+  });
+});
+
+describe("GET /api/folklore/preview — the read allowance", () => {
+  const from = (address: string, txid = TXID) =>
+    new Request(`http://x/api/folklore/preview?txid=${txid}`, {
+      headers: { "x-forwarded-for": address },
+    });
+
+  it("refuses a read past the allowance before the chain is asked, and says when to come back", async () => {
+    // Every distinct unknown id costs the site two upstream calls on its
+    // anonymous quota (a miss is never cached), so a flood of random ids from
+    // one address turns honest stamps into unknown-tx. The allowance stops
+    // it at the door; the next visitor is untouched.
+    mockFetchTxScripts.mockResolvedValue([script(["not-a-protocol"])]);
+    for (let i = 0; i < READS_PER_ADDRESS; i += 1) {
+      expect((await GET(from("10.0.0.1"))).status).toBe(200);
+    }
+    mockFetchTxScripts.mockClear();
+
+    const res = await GET(from("10.0.0.1"));
+    expect(res.status).toBe(429);
+    expect(await res.json()).toEqual({ ok: false, reason: "too-many-submissions" });
+    expect(Number(res.headers.get("retry-after"))).toBeGreaterThan(0);
+    expect(mockFetchTxScripts).not.toHaveBeenCalled();
+
+    expect((await GET(from("198.51.100.9"))).status).toBe(200);
+  });
+
+  it("spends no allowance on a malformed id", async () => {
+    for (let i = 0; i < READS_PER_ADDRESS + 5; i += 1) {
+      expect((await GET(from("10.0.0.3", "abc"))).status).toBe(400);
+    }
+    mockFetchTxScripts.mockResolvedValue([script(["not-a-protocol"])]);
+    expect((await GET(from("10.0.0.3"))).status).toBe(200);
   });
 });
