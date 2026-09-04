@@ -56,7 +56,7 @@ export type BoardSheetModel = {
  *  prints them. They live in the todo column and never count as pulls. */
 export const LEDGER_CARDS = ["cadence-appstore", "henceforth-release-4-45", "hansard-release-v1", "deck-update"] as const;
 
-const APP_NAMES: Record<string, string> = {
+export const APP_NAMES: Record<string, string> = {
   deck: "Deck of Cards",
   henceforth: "Henceforth",
   hansard: "The Hansard",
@@ -78,6 +78,14 @@ export function firstSentence(text: string, max = 110): string {
   const end = /[.!?](?=\s|$)/.exec(text);
   const cut = (end ? text.slice(0, end.index + 1) : text).trim();
   return cut.length > max ? `${cut.slice(0, max - 1).trimEnd()}…` : cut;
+}
+
+/** A real calendar date, not merely the shape of one: the done windows
+ *  count days from it. */
+export function isIsoDate(s: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const t = Date.parse(`${s}T00:00:00Z`);
+  return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 10) === s;
 }
 
 const DAY_MS = 86_400_000;
@@ -106,7 +114,8 @@ function weekRows(plan: PlanDay[] | null | undefined): WeekRow[] {
   }));
 }
 
-function stampOf(board: SheetBoard): string | null {
+/** "2026-09-04 10:09": when the board was published, as it stamps itself. */
+export function stampOf(board: Pick<SheetBoard, "generated" | "generatedAt">): string | null {
   const m = board.generated?.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/);
   if (m) return `${m[1]} ${m[2]}`;
   const at = board.generatedAt?.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);

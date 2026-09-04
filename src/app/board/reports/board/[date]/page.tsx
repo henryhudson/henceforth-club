@@ -1,18 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadBoard, loadReport } from "@/lib/board-data";
-import { boardSheetModel } from "@/lib/board-sheet";
+import { boardSheetModel, isIsoDate } from "@/lib/board-sheet";
 import BoardSheet from "./_components/BoardSheet";
 
 export const dynamic = "force-dynamic";
-
-/** A real calendar date, not merely the shape of one: the done window counts
- *  days from it. */
-function isIsoDate(s: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
-  const t = Date.parse(`${s}T00:00:00Z`);
-  return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 10) === s;
-}
 
 export default async function BoardSheetPage({ params }: { params: Promise<{ date: string }> }) {
   const { date } = await params;
