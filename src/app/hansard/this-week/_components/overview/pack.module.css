@@ -46,9 +46,13 @@
   gap: 2.2mm;
 }
 
+/* The rule sits inside the pulled margin, so its width comes out of the pad:
+   otherwise a ruled column is half a point narrower than the measuring copy,
+   a line at the edge wraps differently, and a continued square hides its
+   last line behind a fragment cut for the wider measure. */
 .col + .col {
   border-left: 0.5pt solid #999;
-  padding-left: 4mm;
+  padding-left: calc(4mm - 0.5pt);
   margin-left: -4mm;
 }
 

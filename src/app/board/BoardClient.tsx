@@ -110,12 +110,15 @@ export default function BoardClient({
   freshness,
   initialCards,
   week,
+  sheetDate,
 }: {
   generated: string;
   /** How old the served board is, computed on the server. */
   freshness?: Freshness;
   initialCards: Card[];
   week: WeekSlice | null;
+  /** Today in London, from the server: the day's printed sheet is dated by it. */
+  sheetDate: string;
 }) {
   const [cards, setCards] = useState<Card[]>(initialCards);
   const [filter, setFilter] = useState("all");
@@ -286,6 +289,9 @@ export default function BoardClient({
               </Link>
               <Link href="/board/reports" className="mb-chip-btn">
                 reports
+              </Link>
+              <Link href={`/board/reports/board/${sheetDate}`} className="mb-chip-btn">
+                print sheet
               </Link>
               <Link href="/board/docs" className="mb-chip-btn">
                 plans

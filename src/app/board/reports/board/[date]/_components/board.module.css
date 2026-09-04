@@ -1,0 +1,182 @@
+/* ── The Board on the newspaper measure (2026-09-04; the daily's grammar
+   applied to the working set of the kanban). Georgia 7pt on 8pt, agate
+   listings at 5.5pt, hairline rules, boxed and ruled squares packed into
+   four columns, then a decelerating foot. Content sizes are in em so the
+   A4Sheet fit loop scales the hierarchy as one voice; only the masthead
+   furniture (folio, nameplate, subtitle) is pinned in pt. The board wears
+   the board family's teal #0e7490. */
+
+/* The A4 sheet frame itself comes from A4Sheet (overview.module.css);
+   this file styles only the board's own furniture and matter. */
+
+/* ── masthead furniture (fixed pt, never scaling with the news) ── */
+.folio {
+  font: 5.5pt/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #111;
+  display: flex;
+  justify-content: space-between;
+  gap: 4mm;
+  border-top: .5pt solid #111;
+  border-bottom: .5pt solid #111;
+  padding: 1.1mm 0;
+}
+.folio span { white-space: nowrap; }
+.folio a { color: inherit; text-decoration: none; }
+
+.nameplate {
+  font-family: 'UnifrakturMaguntia', Georgia, serif;
+  text-align: center;
+  font-size: 34pt;
+  line-height: 1;
+  font-weight: 400;
+  margin: 1.8mm 0 1.2mm;
+}
+
+.subtitle {
+  font: 5.5pt/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  text-align: center;
+  border-top: .5pt solid #111;
+  border-bottom: 1.5pt solid #111;
+  padding: 1.1mm 0;
+  margin-bottom: 1.6mm;
+}
+
+/* the dateline strip under the subtitle: the board's own count of itself */
+.dateline {
+  font: .786em/1.2 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: #222;
+  border-bottom: .5pt solid #111;
+  padding: 0 0 1.2mm;
+  margin-bottom: 2mm;
+}
+.dateline b { color: #0e7490; }
+
+.sectionTitle {
+  font: 700 .857em/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: #111;
+  border-top: 1.5pt solid #111;
+  padding-top: 1mm;
+  margin: 2.2mm 0 1mm;
+  break-after: avoid;
+  text-indent: 0;
+}
+/* Every square opens on its head, so the first head never wears the rule.
+   Matched on the head itself, not its parent: a continued square is placed
+   inside a clipping wrapper, and a head that grew a rule only there would
+   make the placed copy taller than the measured one and cut a line. */
+.sectionTitle:first-child { margin-top: 0; border-top: none; padding-top: 0; }
+
+.copy { text-align: left; hyphens: none; }
+.copy p { margin: 0; }
+
+/* a boxed square */
+.sq {
+  border: .5pt solid #111;
+  padding: 2.2mm 2.4mm;
+  height: 100%;
+  box-sizing: border-box;
+}
+.sqHouse { border-width: 1.5pt; }
+
+/* ── a card line: the title in bold body type, the phase beneath in agate ── */
+.card { margin: 0 0 1.4mm; text-indent: 0; break-inside: avoid; }
+.card:last-child { margin-bottom: 0; }
+.cardTitle { display: block; font-weight: 700; line-height: 1.143; }
+.cardPhase {
+  display: block;
+  font: .786em/1.2 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  color: #222;
+  margin-top: .3mm;
+}
+.proposal {
+  display: block;
+  font: .786em/1.2 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  color: #222;
+  margin-top: .3mm;
+}
+.proposal .tag { font-weight: 700; color: #0e7490; letter-spacing: .1em; text-transform: uppercase; }
+.nothing { font: italic 1em/1.143 Georgia, serif; color: #444; margin: 0; }
+
+/* ── the week: a day a line, a box a task ── */
+.day { margin: 0 0 1mm; text-indent: 0; break-inside: avoid; }
+.dayLabel {
+  display: block;
+  font: 700 .786em/1.2 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.tasks { list-style: none; margin: 0; padding: 0; }
+.task {
+  display: flex;
+  gap: 1.2mm;
+  align-items: baseline;
+  font: .786em/1.2 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  margin: .2mm 0 0;
+}
+.taskBox { flex: 0 0 auto; font-size: 1.15em; line-height: 1; color: #0e7490; }
+.taskDone { color: #555; }
+
+/* ── agate matter ── */
+.agate {
+  font: .786em/1.2 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+  hyphens: none;
+}
+.agate p { text-indent: 0; margin: 0 0 .8mm; text-align: left; }
+.agateTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin: .6mm 0 1mm;
+  break-inside: avoid;
+  font: .786em/1.2 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+.agateTable th {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  text-align: left;
+  border-bottom: .5pt solid #111;
+  padding: .3mm 0;
+}
+.agateTable td { padding: .28mm 0; vertical-align: top; }
+.agateTable .n { text-align: right; padding-left: 0.6mm; white-space: nowrap; }
+.stem {
+  display: inline-block;
+  height: .7mm;
+  background: #111;
+  vertical-align: middle;
+  margin: 0 .5mm .2mm;
+}
+
+/* ── the production strip: one row of agate housekeeping ── */
+.production {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .8mm 3mm;
+  border-top: .5pt solid #111;
+  padding-top: 1.2mm;
+  margin: 2mm 0 .6mm;
+  font: 5.5pt/1.45 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  color: #222;
+}
+.production > span { min-width: 0; }
+
+/* ── colophon strip ── */
+.credit {
+  margin-top: 2.2mm;
+  padding-top: 1.2mm;
+  border-top: .5pt solid #111;
+  font: italic 5.5pt/1.25 Georgia, serif;
+  color: #333;
+  text-align: center;
+}

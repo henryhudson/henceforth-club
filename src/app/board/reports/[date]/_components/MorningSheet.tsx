@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Report, Finding, Emergency, Board, PlanDay } from "@/lib/board-data";
 import type { DiaryEntry } from "@/lib/gardening";
 import { isRowHigh, longDate, reachCell, sparkPoints } from "@/lib/report-helpers";
@@ -187,7 +188,9 @@ export default function MorningSheet({
         <div className={s.folio}>
           <span>{issue != null ? `No. ${issue} · ` : ""}{longDate(report.date)}</span>
           <span>Deck of Cards · Henceforth · The Hansard · henceforth.club</span>
-          <span>Inscribed daily upon Bitcoin SV</span>
+          <span>
+            Inscribed daily upon Bitcoin SV · <Link href={`/board/reports/board/${report.date}`}>The Board</Link>
+          </span>
         </div>
         <div className={s.nameplate}>The Morning Edition</div>
         <div className={s.subtitle}>The state of the four, and what would most improve each today</div>
