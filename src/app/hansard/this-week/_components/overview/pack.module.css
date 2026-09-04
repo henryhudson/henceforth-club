@@ -27,6 +27,13 @@
 .measure * {
   visibility: hidden !important;
 }
+/* A placed square is a flex item, which keeps its copy's trailing margin
+   inside itself; a plain block let the same margin collapse out of the
+   measuring wrapper, so the measure came up short by that margin. Give the
+   wrapper a formatting context of its own and both copies hold it. */
+.measure > * {
+  display: flow-root;
+}
 
 .cols {
   display: grid;
@@ -46,14 +53,26 @@
   gap: 2.2mm;
 }
 
-/* The rule sits inside the pulled margin, so its width comes out of the pad:
-   otherwise a ruled column is half a point narrower than the measuring copy,
-   a line at the edge wraps differently, and a continued square hides its
-   last line behind a fragment cut for the wider measure. */
+/* The rule is painted, not laid out. A border takes a whole device pixel of
+   width however thin it is drawn, so as a half-point border it left a ruled
+   column a third of a pixel narrower than the measuring copy: a line that
+   filled the measure wrapped one line more in the column, and a continued
+   square hid its last line behind a fragment cut for the measured height.
+   A positioned pseudo-element takes no width, so the pull into the gap and
+   the pad cancel exactly and every column is the measuring copy's width. */
 .col + .col {
-  border-left: 0.5pt solid #999;
-  padding-left: calc(4mm - 0.5pt);
+  position: relative;
+  padding-left: 4mm;
   margin-left: -4mm;
+}
+.col + .col::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 0.5pt;
+  background: #999;
 }
 
 .item {
