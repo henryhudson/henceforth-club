@@ -26,6 +26,11 @@ import LinkCard from "./_components/LinkCard";
 import Proof from "./_components/Proof";
 import { WITNESS_HANDLE } from "./witness";
 
+/** The store client and the rate reads fetch with `cache: "no-store"`,
+ * which on its own switches the route to per-request rendering and
+ * silently voids the hourly revalidate below. Forcing static keeps the
+ * hourly regeneration; the reads still run uncached on each one. */
+export const dynamic = "force-static";
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
