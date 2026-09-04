@@ -9,6 +9,10 @@
 //   ... daily 2026-07-02 --out /tmp/daily.pdf   (local file, no inscription)
 //   ... daily 2026-07-02 week 2026-06-29 --dry-run   (build+fee+sign against a
 //       fake 10,000-satoshi source, same pinned 100 sat/kb fee as live, never broadcast)
+//   ... board 2026-09-04   (The Board, the working set of the kanban: written and
+//       opened locally, never inscribed, because the board's own record already
+//       goes on the chain each morning)
+//   ... board 2026-09-04 --inscribe   (the same sheet, put on the chain as an edition)
 //
 // RENDER_PDF_BASE overrides the site origin (default https://www.henceforth.club).
 // For pre-merge verification, point it at a local production server, e.g.
@@ -38,7 +42,9 @@ const SITE_HOST = new URL(SITE).hostname;
 // A second page means the sheet's fit loop failed — tighten the sheet, never
 // raise the number; the render must fail loudly. (History: the daily ran two
 // pages 2026-08-04 to 2026-08-19, when the report was set at book size.)
-const BUDGET = { daily: 1, week: 1 };
+// The board sheet, one page since it was first printed on 2026-09-04.
+const BUDGET = { daily: 1, week: 1, board: 1 };
+const KINDS = Object.keys(BUDGET);
 // The transaction itself — sealing, the envelope, the fee, the guard that no
 // transaction is ever broadcast whose only output is data, signing and the
 // broadcast — lives in chain-put.mjs, shared with every surface that goes on
@@ -117,7 +123,7 @@ async function inscribe(kind, date, pdf, prevTx, dryRun) {
 }
 
 async function render(browser, kind, date, outPath, prevTx, dryRun) {
-  const path = kind === "week" ? `week/${date}` : date;
+  const path = kind === "daily" ? date : `${kind}/${date}`;
   const url = `${SITE}/board/reports/${path}`;
   const page = await browser.newPage();
   await page.setCookie({
@@ -178,6 +184,10 @@ async function render(browser, kind, date, outPath, prevTx, dryRun) {
     console.log(`wrote ${outPath} (${pages} page${pages === 1 ? "" : "s"}, ${pdf.length} bytes) — opened; inscription skipped`);
     return null;
   }
+  if (!inscribes(kind)) {
+    console.log(`wrote + opened ${localPath} (${pages} page${pages === 1 ? "" : "s"}) — not inscribed: the board sheet stays local unless --inscribe is passed`);
+    return null;
+  }
   console.log(`wrote + opened ${localPath} (${pages} page${pages === 1 ? "" : "s"}) — inscribing…`);
   return inscribe(kind, date, pdf, prevTx, dryRun);
 }
@@ -189,15 +199,26 @@ if (outIdx >= 0) args.splice(outIdx, 2);
 const dryIdx = args.indexOf("--dry-run");
 const dryRun = dryIdx >= 0;
 if (dryRun) args.splice(dryIdx, 1);
+const inscribeIdx = args.indexOf("--inscribe");
+const inscribeBoard = inscribeIdx >= 0;
+if (inscribeBoard) args.splice(inscribeIdx, 1);
+// The daily and the week go on the chain by default. The board sheet does not
+// (Henry, 2026-09-04: its JSON is already inscribed each morning); --inscribe
+// turns that on for the board kind alone, and a bare board render writes and
+// opens the local copy, records nothing on the chain and touches no ledger.
+const inscribes = (kind) => kind !== "board" || inscribeBoard;
 
 const usage = () => {
-  console.error("usage: render-pdf.mjs (daily|week) YYYY-MM-DD [(daily|week) YYYY-MM-DD ...] [--out path | --dry-run] | --all");
+  console.error("usage: render-pdf.mjs (daily|week|board) YYYY-MM-DD [(daily|week|board) YYYY-MM-DD ...] [--out path | --dry-run] [--inscribe] | --all");
   process.exit(1);
 };
 
 if (!process.env.BOARD_COOKIE_SECRET) { console.error("BOARD_COOKIE_SECRET missing — run with --env-file=.env.local"); process.exit(1); }
-const inscribeMode = !outPath && !dryRun;
-if (!outPath && (!process.env.BOARD_ARCHIVE_WIF || !process.env.BOARD_ARCHIVE_KEY)) {
+// Which kinds this run would put on the chain, read before the jobs are built
+// so the env checks stay ahead of any store read or spend.
+const chainKinds = (args[0] === "--all" ? ["daily", "week"] : args.filter((_, i) => i % 2 === 0)).filter(inscribes);
+const inscribeMode = !outPath && !dryRun && chainKinds.length > 0;
+if (!outPath && chainKinds.length > 0 && (!process.env.BOARD_ARCHIVE_WIF || !process.env.BOARD_ARCHIVE_KEY)) {
   console.error("BOARD_ARCHIVE_WIF and BOARD_ARCHIVE_KEY are both required to inscribe — or pass --out for a local render");
   process.exit(1);
 }
@@ -220,7 +241,7 @@ if (args[0] === "--all") {
   if (args.length === 0 || args.length % 2 !== 0) usage();
   for (let i = 0; i < args.length; i += 2) {
     const [kind, date] = [args[i], args[i + 1]];
-    if (!["daily", "week"].includes(kind) || !/^\d{4}-\d{2}-\d{2}$/.test(date ?? "")) usage();
+    if (!KINDS.includes(kind) || !/^\d{4}-\d{2}-\d{2}$/.test(date ?? "")) usage();
     jobs.push([kind, date]);
   }
 }
