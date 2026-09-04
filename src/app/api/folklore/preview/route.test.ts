@@ -3,9 +3,13 @@ import { validateLink } from "@/app/folklore/linkRecord";
 import { MAP_PREFIX } from "@/app/folklore/mapPost";
 
 const mockFetchTxScripts = vi.fn();
+const mockIsBoardLink = vi.fn();
 
 vi.mock("@/lib/whatsonchain", () => ({
   fetchTxScripts: (...args: unknown[]) => mockFetchTxScripts(...args),
+}));
+vi.mock("@/lib/folkloreBoard", () => ({
+  isBoardLink: (...args: unknown[]) => mockIsBoardLink(...args),
 }));
 
 import { GET } from "./route";
@@ -30,6 +34,8 @@ const request = (query: string) => new Request(`http://x/api/folklore/preview${q
 
 beforeEach(() => {
   mockFetchTxScripts.mockReset();
+  mockIsBoardLink.mockReset();
+  mockIsBoardLink.mockResolvedValue(false);
 });
 
 describe("GET /api/folklore/preview", () => {
@@ -61,6 +67,7 @@ describe("GET /api/folklore/preview", () => {
       kind: "map",
       source: "twetch",
       title: "A cello note",
+      listed: false,
     });
   });
 
@@ -70,6 +77,7 @@ describe("GET /api/folklore/preview", () => {
       ok: true,
       txid: TXID,
       kind: "opaque",
+      listed: false,
     });
   });
 
@@ -80,7 +88,19 @@ describe("GET /api/folklore/preview", () => {
       txid: TXID,
       kind: "stamp",
       listInstead: OTHER,
+      listed: false,
     });
+  });
+
+  it("says when the board already lists the id, from one board read of that id", async () => {
+    // The refusal before the money: a visitor who pastes a listed target must
+    // learn it here, not from the index's 409 after the ten pence is on chain.
+    mockFetchTxScripts.mockResolvedValue([script(["not-a-protocol"])]);
+    mockIsBoardLink.mockResolvedValue(true);
+    const body = await (await GET(request(`?txid=${TXID}`))).json();
+    expect(body).toEqual({ ok: true, txid: TXID, kind: "opaque", listed: true });
+    expect(mockIsBoardLink).toHaveBeenCalledTimes(1);
+    expect(mockIsBoardLink).toHaveBeenCalledWith(TXID);
   });
 
   it("lowercases the id before reading it", async () => {
