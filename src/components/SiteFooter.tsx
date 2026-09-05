@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 export default function SiteFooter() {
   const pathname = usePathname();
 
-  if (pathname?.startsWith("/provenance") || pathname?.startsWith("/folklore")) return null;
+  if (pathname?.startsWith("/folklore")) return null;
 
   return (
     <footer className="border-t border-card-border/30">

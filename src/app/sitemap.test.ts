@@ -3,7 +3,7 @@ import sitemap from "./sitemap";
 import { listPublishedDigests } from "@/lib/this-week/store";
 
 describe("sitemap", () => {
-  it("excludes the unlisted /provenance route", () => {
+  it("carries no /provenance entry: the route was removed and stays gone", () => {
     const entries = sitemap();
     const hasProvenance = entries.some((e) =>
       e.url.replace(/\/$/, "").endsWith("/provenance"),

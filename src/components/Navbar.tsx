@@ -37,8 +37,8 @@ export default function Navbar() {
     };
   }, [open]);
 
-  // Immersive surfaces — no club chrome. Provenance and Folklore own the frame.
-  if (pathname?.startsWith("/provenance") || pathname?.startsWith("/folklore")) return null;
+  // Immersive surface — no club chrome. Folklore owns the frame.
+  if (pathname?.startsWith("/folklore")) return null;
 
   // The shelf: every app, each with a tick in its own accent. Learn, Docs,
   // and Articles are Henceforth content — they live in its section nav

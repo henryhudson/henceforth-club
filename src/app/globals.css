@@ -603,33 +603,6 @@ figure[data-rehype-pretty-code-figure] [data-line] {
   }
 }
 
-/* ---- /provenance scoped theme (light; brand: purple soil + green sprout) ---- */
-.provenance {
-  --background: #ffffff;
-  --foreground: #32373c;
-  --muted: #6f6b78;
-  --card-bg: #ffffff;
-  --card-border: #ece9f0;
-  --card-border-hover: #d9d3e4;
-  --accent: #7cce2a;
-  --accent-glow: rgba(124, 206, 42, 0.18);
-  --accent-green: #7cce2a;
-  --accent-green-glow: rgba(124, 206, 42, 0.18);
-  --brand-purple: #330a49;
-  --font-serif: var(--font-lora), Georgia, serif;
-  --font-sans: var(--font-dm-sans), system-ui, sans-serif;
-}
-body:has(.provenance) {
-  background: #ffffff;
-}
-body:has(.provenance)::before {
-  display: none;
-}
-.provenance ::selection {
-  background: rgba(124, 206, 42, 0.3);
-  color: #330a49;
-}
-
 /* ── The daily edition, set as a newspaper ───────────────────
    The house style is monospace everywhere, and :root deliberately maps
    --font-serif onto Space Mono so `font-serif` cannot accidentally break it.
