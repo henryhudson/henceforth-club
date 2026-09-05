@@ -6,6 +6,14 @@ records that sweep's **rejections and dismissals**, newest first, so a later run
 re-flag what a prior run already refuted. Confirmed findings go to the Morning Board, not
 here. Cite `file:line` (or the live probe) so each verdict is independently re-derivable.
 
+## 2026-09-05 — the site sweep over pull requests 92 to 98: clean, the money path first
+
+**Live:** `/` 200 in 0.17 to 0.26 s; `/folklore` 200 in 0.17 to 0.19 s on all three samples with `x-vercel-cache: HIT` (the cold start of the last three mornings is gone, pull request 92); `POST /api/folklore/job` 503; `/board` and `/board/report` redirect to the login; `/provenance` 404. No open pull requests; origin/main `53d602e`. Review generated here from a fresh context (`~/Desktop/daily-reviews/2026-09-05-site.md`).
+
+**Clean bill over sixty-six files, a falsification attempted per check, recorded so tomorrow does not re-derive it.** Money path (93): the preview carries `listed` in every arm after one `isBoardLink` read (`preview/route.ts:38-43`); the form refuses only a ready preview of this very target that is listed (`SubmitFlow.tsx:169-177, :579-583`); the index keeps its 409 both before any payment read (`index/route.ts:126`) and on the row's nx verdict (`:140-142`), pinned at `index/route.test.ts:238` and `:248`; case cannot split the keys (the route, `extractTargetTxid` and `validateLink` all lowercase); `addLinkToBoard` (`folkloreBoard.ts:93-110`) takes the row first with zadd nx, the winner sets plainly, the loser sets nx, the log last, the three replay shapes pinned (`folkloreBoard.test.ts:202, :211, :222-245`); the read allowance is keyed by address with a one-minute window and answers 429 with retry-after after input validation. The probe (97) runs a fixed remote script over ssh with no interpolated input, yields the error shape on a failed read, and writes nothing. The print system (94 to 96): the board and column pages sit under the login middleware (a made-up column name 307s to the login too); the packer width fix agrees between measure and place. The removal (98): nothing references the deleted page or assets. Gate on the checkout: 1,974 passed, 4 skipped.
+
+**Note:** `/hh` no longer names Provenance Partners anywhere; the step number 5 is kept empty so the list stays stable.
+
 ## 2026-09-04 — the site sweep over pull requests 88 to 91: four findings confirmed, one rejected, the cold start explained
 
 **Live:** `/` 200 in 0.17 to 0.38 s; `/folklore` 200 in 1.76, 0.59 and 0.45 s; `POST /api/folklore/job` 503 and `POST /api/folklore/index` 503 (both money gates fail closed while the flag is dark); `GET /api/folklore/preview?txid=00` 400; `/board` and `/board/report` redirect to the login; `/this-week` 308 to `/hansard/this-week`; the app's index still lists thirteen weeks. No open pull requests; origin/main `c4b864b`. Review generated here from a fresh context (`~/Desktop/daily-reviews/2026-09-04-site.md`).
