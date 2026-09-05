@@ -29,6 +29,23 @@ describe("assemble", () => {
     expect(w.retro.weekPlan.at(-1).date).toBe("2026-07-18");
   });
 
+  it("trends the machines from the reports' blocks into retro.machines", () => {
+    const block = (host, freeGiB) => ({
+      host, readAt: "t", data: { sizeGiB: 460.4, freeGiB, usedPct: 95 }, swap: { totalMiB: 5120, usedMiB: 3000 },
+      memoryGiB: 16, load1: 2, uptimeDays: 1, consumers: [],
+    });
+    const reports = [
+      { date: "2026-06-28", summary: {}, apps: [], machines: [block("laptop", 20.0)] },
+      { date: "2026-06-29", summary: {}, apps: [], machines: [block("laptop", 18.5)] },
+    ];
+    const w = assemble({ endDate: "2026-06-29", days: 7, reports, board: { cards: [] }, sales: null, generatedAt: "x" });
+    expect(w.retro.machines).toHaveLength(1);
+    expect(w.retro.machines[0].host).toBe("laptop");
+    expect(w.retro.machines[0].series.map((p) => p.freeGiB)).toEqual([20.0, 18.5]);
+    expect(w.retro.machines[0].deltaGiB).toBe(-1.5);
+    expect(w.retro.machines[0].latest.data.freeGiB).toBe(18.5);
+  });
+
   it("passes a provided sales object through unchanged", () => {
     const w = assemble({ endDate: "2026-06-29", days: 7, reports: [], board: { cards: [] }, sales: { window: { thisWeek: "2026-06-29", lastWeek: "2026-06-22" }, perApp: [], drivers: [] }, generatedAt: "x" });
     expect(w.sales.window.lastWeek).toBe("2026-06-22");

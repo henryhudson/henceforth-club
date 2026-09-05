@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { listDates, listWeeks, loadBoard, loadGardening, loadReport, loadWeek } from "@/lib/board-data";
+import { isMachineReading, listDates, listWeeks, loadBoard, loadGardening, loadReport, loadWeek } from "@/lib/board-data";
 import { gardenDiary, type DiaryEntry } from "@/lib/gardening";
-import { asList, editionNumber } from "@/lib/report-helpers";
+import { MACHINE_NAMES, asList, editionNumber, machineHogs, machineLine } from "@/lib/report-helpers";
 import PlanChecklist from "../PlanChecklist";
 import MorningSheet, { openCards, weekAheadFrom } from "./_components/MorningSheet";
 import VitalsChecklist from "@/components/VitalsChecklist";
@@ -144,6 +144,33 @@ export default async function DailyEdition({ params }: { params: Promise<{ date:
             <span className="font-bold text-foreground/80">Open decisions.</span>{" "}
             {asList(report.plan.decisions)}
           </p>
+        )}
+
+        {/* The machines, as the morning probe read them: the sheet prints the
+            headline line and three hogs; here every consumer and count fits. */}
+        {report.machines && report.machines.length > 0 && (
+          <section className="mt-6">
+            <h2 className="mb-2 border-b-2 border-foreground/70 pb-0.5 font-serif text-[11px] font-bold uppercase tracking-[0.18em] text-foreground">
+              The machines
+            </h2>
+            <ul className="flex flex-col divide-y divide-card-border font-serif text-[13px]">
+              {report.machines.map((m) => (
+                <li key={m.host} className="py-2 text-muted first:pt-0 last:pb-0">
+                  <span className="font-bold text-foreground">{MACHINE_NAMES[m.host] ?? m.host}</span>{" "}
+                  {isMachineReading(m) ? (
+                    <>
+                      {machineLine(m)}
+                      {m.consumers.length > 0 && <> · hogs: {machineHogs(m, m.consumers.length)}</>}
+                      {m.runtimes && <> · {m.runtimes.count} simulator runtimes holding {m.runtimes.gib} GiB</>}
+                      {m.xcresults && <> · {m.xcresults.count} test result bundles holding {m.xcresults.gib} GiB</>}
+                    </>
+                  ) : (
+                    <>not read: {m.error}</>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
 
         <details className="mt-10">

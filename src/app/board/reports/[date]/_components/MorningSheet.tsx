@@ -1,7 +1,7 @@
 import Link from "next/link";
-import type { Report, Finding, Emergency, Board, PlanDay } from "@/lib/board-data";
+import { isMachineReading, type Report, type Finding, type Emergency, type Board, type PlanDay } from "@/lib/board-data";
 import type { DiaryEntry } from "@/lib/gardening";
-import { isRowHigh, longDate, reachCell, sparkPoints } from "@/lib/report-helpers";
+import { MACHINE_NAMES, isRowHigh, longDate, machineHogs, machineLine, reachCell, sparkPoints } from "@/lib/report-helpers";
 import { vitalsFor, type VitalCard } from "@/lib/report-vitals";
 import A4Sheet from "@/app/hansard/this-week/_components/overview/A4Sheet";
 import PackLayout, { Square } from "@/app/hansard/this-week/_components/overview/PackLayout";
@@ -170,6 +170,12 @@ export default function MorningSheet({
   const deckSubs = storeApps.find((a) => a.app === "deck")?.subscriptions;
 
   const notToday = asItems(report.plan?.notToday);
+  // The machines: one line each from the morning probe, then the space hogs.
+  const machines = report.machines ?? [];
+  const machineHogLines = machines
+    .filter(isMachineReading)
+    .map((m) => ({ host: m.host, hogs: machineHogs(m) }))
+    .filter((m) => m.hogs);
   const emergencyCount = report.emergencies?.length ?? 0;
   const stopPressClass =
     emergencyCount === 1 ? `${s.stoppress} ${s.stoppressOne}` : emergencyCount === 2 ? `${s.stoppress} ${s.stoppressTwo}` : s.stoppress;
@@ -373,6 +379,21 @@ export default function MorningSheet({
               <div className={s.sectionTitle}>Not today, by choice</div>
               {notToday.map((line, i) => (
                 <p key={i}>{line}</p>
+              ))}
+            </Square>
+          )}
+          {machines.length > 0 && (
+            <Square id="machines" className={`${s.sq} ${s.agate}`}>
+              <div className={s.sectionTitle}>The machines</div>
+              {machines.map((m) => (
+                <p key={m.host}>
+                  <b>{MACHINE_NAMES[m.host] ?? m.host}</b> · {isMachineReading(m) ? machineLine(m) : `not read: ${m.error}`}
+                </p>
+              ))}
+              {machineHogLines.map((m) => (
+                <p key={`${m.host}-hogs`}>
+                  {MACHINE_NAMES[m.host] ?? m.host} hogs: {m.hogs}.
+                </p>
               ))}
             </Square>
           )}
