@@ -50,7 +50,6 @@ const APP_HUE: Record<string, string> = {
   hansard: "var(--mb-hansard)",
   site: "var(--mb-site)",
   "*": "var(--mb-any)",
-  provenance: "var(--mb-any)",
 };
 
 const STORE = "henceforth-board-web-v1";

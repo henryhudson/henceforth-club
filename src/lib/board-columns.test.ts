@@ -37,7 +37,7 @@ const board: ColumnBoard = {
     { id: "t-august", col: "todo", apps: ["deck"], title: "Deck convert", phase: "PULL: Tuesday 8 September", movedAt: "2026-08-26T15:27:00+01:00", desc: "2026-07-25 sweep · Re-verified on origin/main. Both halves hold." },
     { id: "t-undated-first", col: "todo", apps: ["*"], title: "A rhythm with no stamp", phase: "STANDING: weekly" },
     { id: "t-september", col: "todo", apps: ["site", "henceforth"], title: "Folklore B1", phase: "PULL: B1 in hand", movedAt: "2026-09-01T20:53:57+01:00", desc: "2026-07-14 22:05 → DONE: the render gate holds. More follows." },
-    { id: "t-undated-second", col: "todo", apps: ["provenance"], title: "Another with no stamp", desc: "CONFIRMED CRAFT (behaviour-neutral). The `summarise` fold groups on the raw message. Next sentence." },
+    { id: "t-undated-second", col: "todo", apps: ["unknown"], title: "Another with no stamp", desc: "CONFIRMED CRAFT (behaviour-neutral). The `summarise` fold groups on the raw message. Next sentence." },
     { id: "t-today", col: "todo", apps: ["*"], title: "App Store cadence", phase: "STANDING: both payloads staged", movedAt: "2026-09-04T10:09:22+01:00", desc: "**2026-09-04 10:09 · BOTH WEDNESDAY PAYLOADS ARE STAGED.** Hansard 1.11 and Henceforth 4.55 are complete." },
     { id: "b-one", col: "backlog", apps: ["site"], title: "A parked card", phase: "PARKED: fold in on the next touch", movedAt: "2026-08-30T14:24:25+01:00", desc: "No stamp at all on this one. And a second sentence." },
     { id: "d-today", col: "done", apps: ["site"], title: "Done this afternoon", phase: "DONE · pull request 94", movedAt: "2026-09-04T13:12:37+01:00", doneAt: "2026-09-04T13:12:37+01:00", desc: "**2026-09-04 13:12 · SHIPPED (club pull request 94).** A new edition kind." },
@@ -151,7 +151,7 @@ describe("a card on the page", () => {
     const todo = columnPageModel(board, "todo", DATE)!.cards;
     expect(todo.find((c) => c.id === "t-today")?.apps).toEqual(["All four"]);
     expect(todo.find((c) => c.id === "t-september")?.apps).toEqual(["henceforth.club", "Henceforth"]);
-    expect(todo.find((c) => c.id === "t-undated-second")?.apps).toEqual(["provenance"]);
+    expect(todo.find((c) => c.id === "t-undated-second")?.apps).toEqual(["unknown"]);
   });
 
   it("has no date and an empty phase and note when the card carries none", () => {
