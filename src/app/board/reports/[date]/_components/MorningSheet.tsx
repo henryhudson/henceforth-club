@@ -220,8 +220,10 @@ export default function MorningSheet({
         <p className={s.byline}>From the morning review · the four desks</p>
         {/* Squares pack into four columns: one column of type each, continuing
             only when a square cannot sit whole. Furniture above and the
-            calendar foot stay full-width. */}
-        <PackLayout>
+            calendar foot stay full-width. Squares are open modules — white
+            space for edges, a wider gap standing in for the old drawn frames;
+            only the pen checklist keeps a physical box. */}
+        <PackLayout gapMm={3.4}>
           <Square id="lead" lead continues className={s.copy}>
             {leadSections.map((sec, si) => (
               <div key={sec.heading}>
@@ -237,7 +239,7 @@ export default function MorningSheet({
               </div>
             ))}
           </Square>
-          <Square id="vitals" className={`${s.sq} ${s.sqHouse}`}>
+          <Square id="vitals" className={s.sqHouse}>
             <div className={s.sectionTitle}>Today, without fail</div>
             <ul className={s.vitals}>
               {vitals.map((v) => (
@@ -253,7 +255,7 @@ export default function MorningSheet({
               ))}
             </ul>
           </Square>
-          <Square id="verdicts" className={`${s.sq} ${s.agate}`}>
+          <Square id="verdicts" className={s.agate}>
             <div className={s.sectionTitle}>The verdicts, in brief</div>
             {(report.summary.confirmed || report.summary.rejected || report.summary.alreadyResolved) ? (
               <p className={s.ticks} aria-hidden>
@@ -346,7 +348,7 @@ export default function MorningSheet({
               {report.reach?.dataThrough && <> Store data through {report.reach.dataThrough}.</>}
             </p>
           </Square>
-          <Square id="ship" className={`${s.sq} ${s.agate}`}>
+          <Square id="ship" className={s.agate}>
             <div className={s.sectionTitle}>The ship list</div>
             {report.appStore?.apps.map((a) => (
               <p key={a.app}>
@@ -366,7 +368,7 @@ export default function MorningSheet({
             ))}
             {report.appStore && <p>{report.appStore.rule}</p>}
           </Square>
-          <Square id="decisions" className={`${s.sq} ${s.sqHouse} ${s.agate}`}>
+          <Square id="decisions" className={s.agate}>
             <div className={s.sectionTitle}>Decisions before the house</div>
             {(report.decisions ?? []).map((d) => (
               <p key={d.card}>
@@ -375,7 +377,7 @@ export default function MorningSheet({
             ))}
           </Square>
           {notToday.length > 0 && (
-            <Square id="notToday" className={`${s.sq} ${s.agate}`}>
+            <Square id="notToday" className={s.agate}>
               <div className={s.sectionTitle}>Not today, by choice</div>
               {notToday.map((line, i) => (
                 <p key={i}>{line}</p>
@@ -383,7 +385,7 @@ export default function MorningSheet({
             </Square>
           )}
           {machines.length > 0 && (
-            <Square id="machines" className={`${s.sq} ${s.agate}`}>
+            <Square id="machines" className={s.agate}>
               <div className={s.sectionTitle}>The machines</div>
               {machines.map((m) => (
                 <p key={m.host}>

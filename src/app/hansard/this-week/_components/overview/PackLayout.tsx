@@ -82,7 +82,7 @@ function lineCutsOf(node: HTMLElement): number[] {
   return [...bottoms].sort((a, b) => a - b);
 }
 
-function readPack(root: HTMLElement, columnCount: number, slotPx: number): PackResult {
+function readPack(root: HTMLElement, columnCount: number, slotPx: number, gapMm: number): PackResult {
   const empty: PackResult = { placements: [], columnHeights: [0, 0, 0, 0], makespan: 0, splitIds: [] };
   const measure = root.querySelector("[data-pack-measure]");
   if (!(measure instanceof HTMLElement)) return empty;
@@ -102,7 +102,7 @@ function readPack(root: HTMLElement, columnCount: number, slotPx: number): PackR
     ];
   });
   if (slotPx <= 0) return empty;
-  const gap = 2.2 * (96 / 25.4);
+  const gap = gapMm * (96 / 25.4);
   return packColumns(items, slotPx, columnCount, gap);
 }
 
@@ -130,9 +130,14 @@ function Fragment({
 export default function PackLayout({
   children,
   columnCount = 4,
+  gapMm = 2.2,
 }: {
   children: ReactNode;
   columnCount?: number;
+  /** Vertical space between squares in a column. One number feeds both the
+   *  pack computation and the placed columns, so measure and place cannot
+   *  disagree about it. */
+  gapMm?: number;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const packedKey = useRef("");
@@ -148,7 +153,7 @@ export default function PackLayout({
     const root = rootRef.current;
     if (!root) return;
     const run = () => {
-      const result = readPack(root, columnCount, root.clientHeight);
+      const result = readPack(root, columnCount, root.clientHeight, gapMm);
       root.dataset.packMakespan = String(result.makespan);
       // The sheet clips whatever the columns cannot hold; say how much, so a
       // render can refuse a clipped page instead of inscribing it.
@@ -161,7 +166,7 @@ export default function PackLayout({
     run();
     root.addEventListener("newspaper-fit", run);
     return () => root.removeEventListener("newspaper-fit", run);
-  }, [children, columnCount]);
+  }, [children, columnCount, gapMm]);
 
   return (
     <div className={s.pack} data-pack-root ref={rootRef}>
@@ -179,7 +184,7 @@ export default function PackLayout({
       </div>
       <div className={s.cols}>
         {columns.map((col, i) => (
-          <div key={i} className={s.col}>
+          <div key={i} className={s.col} style={{ gap: gapMm + "mm" }}>
             {col.map((p) => {
               const sq = byId.get(p.id);
               if (!sq) return null;

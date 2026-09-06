@@ -50,7 +50,8 @@
   flex-direction: column;
   justify-content: flex-start;
   align-items: stretch;
-  gap: 2.2mm;
+  /* gap comes from PackLayout's gapMm prop as an inline style — the same
+     number the pack computation uses, so measure and place agree. */
 }
 
 /* The rule is painted, not laid out. A border takes a whole device pixel of
@@ -65,14 +66,17 @@
   padding-left: 4mm;
   margin-left: -4mm;
 }
+/* Painted, so a sheet may restyle it without touching layout: the Morning
+   Edition sets these variables to its house line (1.5pt solid black); the
+   defaults keep the Hansard digest and board sheet on the hairline. */
 .col + .col::before {
   content: "";
   position: absolute;
   top: 0;
   bottom: 0;
   left: 0;
-  width: 0.5pt;
-  background: #999;
+  width: var(--pack-rule-w, 0.5pt);
+  background: var(--pack-rule-c, #999);
 }
 
 .item {
