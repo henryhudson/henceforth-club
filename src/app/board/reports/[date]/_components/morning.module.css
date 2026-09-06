@@ -1,14 +1,16 @@
 /* ── The Morning Edition on the newspaper measure (design spec 2026-08-19,
    Henry's sign-off: "this is the format from now on") ──
-   Georgia 7pt on 8pt in justified legs, agate listings at 5.5pt, hairline
-   rules, a modular page. Squares are OPEN modules — their edges are white
-   space, not drawn frames (Henry, 2026-09-06) — with one physical box kept
-   as a rare emphasis, then a decelerating foot — the calendar and
-   board-status reference band and one production strip. Content
-   sizes are in em so the A4Sheet fit loop scales the whole hierarchy as one
-   voice; only the masthead furniture (folio, nameplate, subtitle) is pinned
-   in pt, the way a real nameplate never changes size with the news. The
-   daily's accent is the teal #0e7490 where The Hansard wears purple. */
+   Georgia 7pt on 8pt in justified legs, agate listings at 5.5pt, a modular
+   page. Squares are OPEN modules — their edges are white space, not drawn
+   frames — with one physical box kept as a rare emphasis, and every rule on
+   the sheet is the same line, 1.5pt solid black (both Henry, 2026-09-06:
+   open the boxes; "we use lines alot — standardise them, go with the
+   thickest"). Then a decelerating foot — the calendar and board-status
+   reference band and one production strip. Content sizes are in em so the
+   A4Sheet fit loop scales the whole hierarchy as one voice; only the
+   masthead furniture (folio, nameplate, subtitle) is pinned in pt, the way
+   a real nameplate never changes size with the news. The daily's accent is
+   the teal #0e7490 where The Hansard wears purple. */
 
 .sheet {
   width: 210mm;
@@ -23,6 +25,9 @@
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
   box-sizing: border-box;
+  /* The packer's painted column rules follow the house line. */
+  --pack-rule-w: 1.5pt;
+  --pack-rule-c: #111;
 }
 
 /* ── masthead furniture (fixed pt — never scales with the news) ── */
@@ -34,8 +39,8 @@
   display: flex;
   justify-content: space-between;
   gap: 4mm;
-  border-top: .5pt solid #111;
-  border-bottom: .5pt solid #111;
+  border-top: 1.5pt solid #111;
+  border-bottom: 1.5pt solid #111;
   padding: 1.1mm 0;
 }
 .folio span { white-space: nowrap; }
@@ -54,7 +59,7 @@
   letter-spacing: .14em;
   text-transform: uppercase;
   text-align: center;
-  border-top: .5pt solid #111;
+  border-top: 1.5pt solid #111;
   border-bottom: 1.5pt solid #111;
   padding: 1.1mm 0;
   margin-bottom: 1.6mm;
@@ -65,13 +70,13 @@
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 0 3mm;
-  border-bottom: .5pt solid #111;
+  border-bottom: 1.5pt solid #111;
   padding: 0 0 1.4mm;
   margin-bottom: 1.8mm;
 }
 .stoppressOne { grid-template-columns: 1fr; }
 .stoppressTwo { grid-template-columns: 1fr 1fr; }
-.stoppress > * + * { border-left: .5pt solid #999; padding-left: 3mm; min-width: 0; }
+.stoppress > * + * { border-left: 1.5pt solid #111; padding-left: 3mm; min-width: 0; }
 .stoppressOne > * + * { border-left: none; padding-left: 0; }
 .spItem { font: .786em/1.2 -apple-system, 'Helvetica Neue', Helvetica, sans-serif; color: #222; }
 .spItem .tag { font-weight: 700; color: #0e7490; letter-spacing: .1em; text-transform: uppercase; }
@@ -89,41 +94,6 @@
   margin: 0 auto 3mm;
 }
 
-/* ── modular bands ── */
-.band {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0 4mm;
-  border-top: 1.5pt solid #111;
-  padding-top: 1.6mm;
-  margin: 0 0 3.2mm;
-}
-.band > * + * { border-left: .5pt solid #999; padding-left: 4mm; margin-left: -4mm; min-width: 0; }
-.band > * { min-width: 0; }
-.bandLight { border-top-width: .5pt; }
-
-.mod3 { grid-column: span 3; }
-.mod2 { grid-column: span 2; }
-.mod1 { grid-column: span 1; }
-
-.legs3 {
-  column-count: 3;
-  column-gap: 4mm;
-  column-rule: .5pt solid #999;
-  text-align: justify;
-  hyphens: auto;
-  -webkit-hyphens: auto;
-}
-.legs2 {
-  column-count: 2;
-  column-gap: 4mm;
-  column-rule: .5pt solid #999;
-  text-align: justify;
-  hyphens: auto;
-  -webkit-hyphens: auto;
-}
-.legs3 p, .legs2 p { margin: 0; }
-.legs3 p + p, .legs2 p + p { text-indent: 3mm; }
 .noIndent { text-indent: 0 !important; }
 
 .byline {
@@ -156,8 +126,6 @@
 }
 .sqHouse > .sectionTitle:first-child,
 .agate > .sectionTitle:first-child,
-.mod2 > .sectionTitle:first-child,
-.mod3 > .sectionTitle:first-child,
 .copy > .sectionTitle:first-child { margin-top: 0; border-top: none; padding-top: 0; }
 
 .copy {
@@ -212,7 +180,7 @@
   text-transform: uppercase;
   letter-spacing: .06em;
   text-align: left;
-  border-bottom: .5pt solid #111;
+  border-bottom: 1.5pt solid #111;
   padding: .3mm 0;
 }
 .agateTable td { padding: .28mm 0; vertical-align: top; }
@@ -234,7 +202,7 @@
   margin: 0 .5mm .2mm;
 }
 
-/* ── the footer reference band: thin rules, small-caps run heads, no boxes.
+/* ── the footer reference band: house rules, small-caps run heads, no boxes.
    The page decelerates here — reference matter, not more competing stories. ── */
 .footerBand {
   display: grid;
@@ -245,7 +213,7 @@
   margin-bottom: 2mm;
 }
 .footerBand > * { min-width: 0; }
-.footerBand > * + * { border-left: .5pt solid #999; padding-left: 4mm; margin-left: -4mm; }
+.footerBand > * + * { border-left: 1.5pt solid #111; padding-left: 4mm; margin-left: -4mm; }
 .footerFull { grid-column: 1 / -1; }
 
 .runHead {
@@ -269,7 +237,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: .8mm 3mm;
-  border-top: .5pt solid #111;
+  border-top: 1.5pt solid #111;
   padding-top: 1.2mm;
   margin-bottom: .6mm;
   font: 5.5pt/1.45 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
@@ -281,7 +249,7 @@
 .credit {
   margin-top: 2.2mm;
   padding-top: 1.2mm;
-  border-top: .5pt solid #111;
+  border-top: 1.5pt solid #111;
   font: italic 5.5pt/1.25 Georgia, serif;
   color: #333;
   text-align: center;
