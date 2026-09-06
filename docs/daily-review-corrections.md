@@ -6,6 +6,14 @@ records that sweep's **rejections and dismissals**, newest first, so a later run
 re-flag what a prior run already refuted. Confirmed findings go to the Morning Board, not
 here. Cite `file:line` (or the live probe) so each verdict is independently re-derivable.
 
+## 2026-09-06 — the Sunday sweep: no source in range, every gate holds, the test gate at baseline
+
+**Range:** `53d602e..c5eee07` on main: the ledger commit only (eight lines). HEAD pinned at `c5eee07`. A finder in a fresh context confirmed it from the compare endpoint and wrote `~/Desktop/daily-reviews/2026-09-06-site.md`; no findings. The finder notes that `docs/daily-review-protocol.md` does not exist in this checkout, so the brief's rules stood in for it.
+
+**Live (www host; the apex 307s to it):** `/` 200 in 0.09 to 0.12 s and `/folklore` 200 in 0.09 to 0.10 s with `x-vercel-cache: HIT` on all three samples; `POST /api/folklore/job` 503 and `POST /api/folklore/index` 503 (fail closed); `GET /api/folklore/preview?txid=00` 400; `/board`, `/board/report`, `/board/reports/board/2026-09-06` and `/board/reports/columns/2026-09-06/review` all 307 to the login; `/provenance` 404; `/hansard/this-week` 200. First-sample cold starts of 0.9 s on the job route and 0.7 s on `/board` (judgment: function cold starts; every later sample under 0.2 s), not findings. No open pull requests. **Gate on the checkout:** 190 files passed, 1 skipped; 1,974 tests passed, 4 skipped; 6.5 s; the baseline exactly.
+
+**Board and week:** both digests (`content/this-week/2026-08-26.json`, `2026-09-02.json`) remain `status: draft`, committed. The week planner refused the Sunday roll because the board's week is still the week of 30 August; the weekly review lays out the week of 6 September. The site's counter read 25 views on Saturday, 188 for the week, 1,387 in all.
+
 ## 2026-09-05 — the site sweep over pull requests 92 to 98: clean, the money path first
 
 **Live:** `/` 200 in 0.17 to 0.26 s; `/folklore` 200 in 0.17 to 0.19 s on all three samples with `x-vercel-cache: HIT` (the cold start of the last three mornings is gone, pull request 92); `POST /api/folklore/job` 503; `/board` and `/board/report` redirect to the login; `/provenance` 404. No open pull requests; origin/main `53d602e`. Review generated here from a fresh context (`~/Desktop/daily-reviews/2026-09-05-site.md`).
