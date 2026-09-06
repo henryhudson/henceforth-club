@@ -2,6 +2,8 @@
 
 > **Writing style — Henry's standing preference.** No acronyms or initialisms in prose: spell things out in plain English — "pull request" not "PR", "continuous integration" not "CI", "App Store review" not an abbreviation. Terse never means abbreviated. Applies to every written output — chat replies, commit messages, pull-request descriptions, and documentation. Code identifiers, file paths, and established proper nouns are exempt.
 
+> **Written information — the newspaper format (Henry, 2026-09-06).** Every report, brief, spec and plan written for this project is set as a self-contained newspaper HTML in the house type — Georgia seven point on eight, agate matter at five and a half, modular columns under a blackletter nameplate, the type of The Morning Edition and The Weekly Edition — never the older parchment or light-theme HTML. Copy the inline style from the most recent newspaper-set plan or spec under `docs/superpowers/` (23 August 2026 onwards) or from a rendered edition; each document carries its own nameplate (The Morning Edition is the daily paper alone). Plans keep their tick-box checklists. Fit the information to the page; the format holds a lot when it is set properly.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
