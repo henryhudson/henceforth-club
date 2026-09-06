@@ -50,7 +50,8 @@
   flex-direction: column;
   justify-content: flex-start;
   align-items: stretch;
-  gap: 2.2mm;
+  /* gap comes from PackLayout's gapMm prop as an inline style — the same
+     number the pack computation uses, so measure and place agree. */
 }
 
 /* The rule is painted, not laid out. A border takes a whole device pixel of

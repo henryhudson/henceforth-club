@@ -1,9 +1,10 @@
 /* ── The Morning Edition on the newspaper measure (design spec 2026-08-19,
    Henry's sign-off: "this is the format from now on") ──
    Georgia 7pt on 8pt in justified legs, agate listings at 5.5pt, hairline
-   rules, a modular page: the three-leg lead module with a boxed sidebar,
-   bands of ruled and boxed squares, then a decelerating foot — the calendar
-   and board-status reference band and one production strip. Content
+   rules, a modular page. Squares are OPEN modules — their edges are white
+   space, not drawn frames (Henry, 2026-09-06) — with one physical box kept
+   as a rare emphasis, then a decelerating foot — the calendar and
+   board-status reference band and one production strip. Content
    sizes are in em so the A4Sheet fit loop scales the whole hierarchy as one
    voice; only the masthead furniture (folio, nameplate, subtitle) is pinned
    in pt, the way a real nameplate never changes size with the news. The
@@ -153,7 +154,8 @@
   break-after: avoid;
   text-indent: 0;
 }
-.sq > .sectionTitle:first-child,
+.sqHouse > .sectionTitle:first-child,
+.agate > .sectionTitle:first-child,
 .mod2 > .sectionTitle:first-child,
 .mod3 > .sectionTitle:first-child,
 .copy > .sectionTitle:first-child { margin-top: 0; border-top: none; padding-top: 0; }
@@ -166,13 +168,28 @@
 .copy p { margin: 0; }
 .copy p + p { text-indent: 3mm; }
 
-/* a boxed square */
-.sq {
-  border: .5pt solid #111;
+/* The one drawn box on the sheet (Henry, 2026-09-06: squares are open
+   modules with white space for edges; a physical box is a rare emphasis).
+   Reserved for the pen checklist — the thing to circle over breakfast. */
+.sqHouse {
+  border: 1.5pt solid #111;
   padding: 2.2mm 2.4mm;
-  height: 100%;
   box-sizing: border-box;
 }
+
+/* ── today, without fail: the pen checklist inside the box ── */
+.vitals { list-style: none; margin: 0; padding: 0; }
+.vital {
+  display: flex;
+  gap: 1.2mm;
+  align-items: baseline;
+  break-inside: avoid;
+  font: .857em/1.25 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  margin: 0 0 .9mm;
+}
+.vitalBox { color: #0e7490; flex: none; }
+.vitalLabel { font-weight: 700; }
+.vitalNote { color: #444; }
 
 /* ── agate matter ── */
 .agate {
@@ -209,7 +226,6 @@
   margin: 0 0 .6mm;
   font-size: 1.05em;
 }
-.sqHouse { border-width: 1.5pt; }
 .stem {
   display: inline-block;
   height: .7mm;
