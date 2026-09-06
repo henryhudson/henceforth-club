@@ -776,6 +776,56 @@ export const episodes: Episode[] = [
     ],
     video: { mp4: "/learn/signatures/episode.mp4" },
   },
+  {
+    number: 15,
+    slug: "the-chain",
+    title: "The Chain",
+    dek: "A payment goes into a block, every block sits on the one before, and confirmations are depth. Ask the chain about the 2010 pizza payment, live, and watch the line hold and resume.",
+    published: true,
+    durationSec: 112,
+    music: { season: "Handel", piece: "Water Music · Alla hornpipe (United States Marine Band, public domain)" },
+    concepts: [
+      "A payment goes into a block, and every block sits on the one before it.",
+      "An awaitable word holds the line on a real network call and resumes with the answer on the stack, the way key waited on a finger in season one.",
+      "A block has a name of its own, a hash, and the next block carries that name inside it: that is the chain.",
+      "Confirmations are depth: every new block lands on top, and depth is what makes a payment stay.",
+    ],
+    // Curated to commands that run on a fresh install. The lesson's contact
+    // word pizza and its narration words (chain-intro, the-pizza, chain-close)
+    // are excluded; a new app has not defined them, so the code-along spells
+    // the transaction id out once. Both reads are free chain queries; nothing
+    // here needs a wallet.
+    codeAlong: [
+      's" a1075db55d416d3ca199f55b6084e2115b9345e16c5cf302fc80e9d5fbf5d48d" tx-confirmations .',
+      "57043 wocgetblockbyheight",
+    ],
+    transcript: [
+      "i sent a payment. where did it go?",
+      "episode fifteen. the chain.",
+      "a payment goes into a block.",
+      "and every block sits on the one before.",
+      "the most famous payment ever made. two pizzas.",
+      "may 2010. two pizzas. ten thousand coins.",
+      "every payment has a name. sixty four characters:",
+      "a1075db55d416d3ca199f55b6084e2115b9345e16c5cf302fc80e9d5fbf5d48d",
+      "the terminal has learned it. the word is pizza.",
+      "sixty four characters. we never type them. pizza is enough.",
+      "so where is it now? let's ask the chain. live.",
+      "the line held. it waited for the network. then it carried on.",
+      "remember key? that line waited for a finger. this one waited for the chain.",
+      "nine hundred thousand blocks sit on top of the pizza.",
+      "the pizza lives in block fifty seven thousand and forty three. look.",
+      "two payments in that block. the pizza, and the miner's reward.",
+      "the block has a name too. and the next block carries it inside.",
+      "name inside name inside name. that is the chain.",
+      "every new block lands on top.",
+      "the pizza sinks one block deeper.",
+      "confirmations are depth.",
+      "and depth is what makes it stay.",
+      "henceforth.",
+    ],
+    video: { mp4: "/learn/the-chain/episode.mp4" },
+  },
 ];
 
 const byNumber = [...episodes].sort((a, b) => a.number - b.number);
