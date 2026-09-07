@@ -75,7 +75,10 @@ export default function BoardSheet({ model: full }: { model: BoardSheetModel }) 
         precedence="default"
         href="https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap"
       />
-      <A4Sheet key={model.trimmed ? "trimmed" : "full"}>
+      {/* The board stylesheet's class rides on the frame so the house line
+          it declares reaches every rule below, the packer's painted column
+          rules included. */}
+      <A4Sheet key={model.trimmed ? "trimmed" : "full"} className={s.sheet}>
         <div className={s.folio}>
           <span>{longDate(model.date)}</span>
           <span>Deck of Cards · Henceforth · The Hansard · henceforth.club</span>
@@ -91,7 +94,7 @@ export default function BoardSheet({ model: full }: { model: BoardSheetModel }) 
         </div>
 
         <PackLayout>
-          <Square id="waiting" lead className={`${s.sq} ${s.sqHouse} ${s.copy}`}>
+          <Square id="waiting" lead className={`${s.sq} ${s.copy}`}>
             <div className={s.sectionTitle}>
               Waiting on you
               <FullList column="review" date={model.date} />

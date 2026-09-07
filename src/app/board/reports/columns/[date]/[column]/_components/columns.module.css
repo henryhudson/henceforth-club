@@ -1,13 +1,18 @@
 /* ── The Board's column pages on the newspaper measure (2026-09-04; the
    full list behind each square of the sheet). Georgia 7pt on 8pt, agate
-   at 5.5pt, hairline rules, two columns of type that flow over as many
-   pages as the column takes. No fit loop: nothing is trimmed and nothing
-   is clipped, so the type is pinned in pt rather than scaled. The masthead
-   furniture is the sheet's. The board wears the board family's teal #0e7490. */
+   at 5.5pt, two columns of type that flow over as many pages as the column
+   takes, and every rule the house line, 1.5pt solid black, one thickness
+   (Henry, 2026-09-06 and again 2026-09-07). No fit loop: nothing is
+   trimmed and nothing is clipped, so the type is pinned in pt rather than
+   scaled. The masthead furniture is the sheet's. The board wears the board
+   family's teal #0e7490. The house line is declared on the sheet as --rule;
+   inside The Board's book the list sits under the book's own --rule, the
+   same line. */
 
 /* the page on the web: an A4 width on the grey ground; in print the page
    margins do this work and the frame falls away */
 .sheet {
+  --rule: 1.5pt solid #111;
   width: 210mm;
   margin: 0 auto;
   background: #fff;
@@ -31,8 +36,8 @@
   display: flex;
   justify-content: space-between;
   gap: 4mm;
-  border-top: .5pt solid #111;
-  border-bottom: .5pt solid #111;
+  border-top: var(--rule);
+  border-bottom: var(--rule);
   padding: 1.1mm 0;
 }
 .folio span { white-space: nowrap; }
@@ -53,8 +58,8 @@
   letter-spacing: .14em;
   text-transform: uppercase;
   text-align: center;
-  border-top: .5pt solid #111;
-  border-bottom: 1.5pt solid #111;
+  border-top: var(--rule);
+  border-bottom: var(--rule);
   padding: 1.1mm 0;
   margin-bottom: 1.6mm;
 }
@@ -65,7 +70,7 @@
   font-variant-numeric: tabular-nums;
   text-align: center;
   color: #222;
-  border-bottom: .5pt solid #111;
+  border-bottom: var(--rule);
   padding: 0 0 1.2mm;
   margin-bottom: 2mm;
 }
@@ -84,7 +89,7 @@
 .list {
   column-count: 2;
   column-gap: 5mm;
-  column-rule: .5pt solid #111;
+  column-rule: var(--rule);
   text-align: left;
   hyphens: none;
 }
@@ -95,7 +100,7 @@
   break-inside: avoid;
   margin: 0 0 1.6mm;
   padding: 0 0 1.4mm;
-  border-bottom: .3pt solid #888;
+  border-bottom: var(--rule);
 }
 .cardTitle { font: 700 1em/1.143 Georgia, serif; margin: 0; }
 .cardPhase {
@@ -118,7 +123,7 @@
 .credit {
   margin-top: 2.2mm;
   padding-top: 1.2mm;
-  border-top: .5pt solid #111;
+  border-top: var(--rule);
   font: italic 5.5pt/1.25 Georgia, serif;
   color: #333;
   text-align: center;

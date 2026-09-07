@@ -1,13 +1,23 @@
 /* ── The Board on the newspaper measure (2026-09-04; the daily's grammar
    applied to the working set of the kanban). Georgia 7pt on 8pt, agate
-   listings at 5.5pt, hairline rules, boxed and ruled squares packed into
-   four columns, then a decelerating foot. Content sizes are in em so the
-   A4Sheet fit loop scales the hierarchy as one voice; only the masthead
-   furniture (folio, nameplate, subtitle) is pinned in pt. The board wears
-   the board family's teal #0e7490. */
+   listings at 5.5pt, boxed and ruled squares packed into four columns,
+   then a decelerating foot, and every rule the house line, 1.5pt solid
+   black, one thickness (Henry, 2026-09-06 and again 2026-09-07). Content
+   sizes are in em so the A4Sheet fit loop scales the hierarchy as one
+   voice; only the masthead furniture (folio, nameplate, subtitle) is
+   pinned in pt. The board wears the board family's teal #0e7490. */
 
 /* The A4 sheet frame itself comes from A4Sheet (overview.module.css);
-   this file styles only the board's own furniture and matter. */
+   this file styles only the board's own furniture and matter. The one
+   thing it sets on the sheet is worn alongside the frame's class
+   (BoardSheet passes it through A4Sheet's className): the house line, as
+   --rule for every border below and as the packer's two variables so its
+   painted column rules follow it too. */
+.sheet {
+  --rule: 1.5pt solid #111;
+  --pack-rule-w: 1.5pt;
+  --pack-rule-c: #111;
+}
 
 /* ── masthead furniture (fixed pt, never scaling with the news) ── */
 .folio {
@@ -18,8 +28,8 @@
   display: flex;
   justify-content: space-between;
   gap: 4mm;
-  border-top: .5pt solid #111;
-  border-bottom: .5pt solid #111;
+  border-top: var(--rule);
+  border-bottom: var(--rule);
   padding: 1.1mm 0;
 }
 .folio span { white-space: nowrap; }
@@ -39,8 +49,8 @@
   letter-spacing: .14em;
   text-transform: uppercase;
   text-align: center;
-  border-top: .5pt solid #111;
-  border-bottom: 1.5pt solid #111;
+  border-top: var(--rule);
+  border-bottom: var(--rule);
   padding: 1.1mm 0;
   margin-bottom: 1.6mm;
 }
@@ -51,7 +61,7 @@
   font-variant-numeric: tabular-nums;
   text-align: center;
   color: #222;
-  border-bottom: .5pt solid #111;
+  border-bottom: var(--rule);
   padding: 0 0 1.2mm;
   margin-bottom: 2mm;
 }
@@ -66,7 +76,7 @@
   letter-spacing: .15em;
   text-transform: uppercase;
   color: #111;
-  border-top: 1.5pt solid #111;
+  border-top: var(--rule);
   padding-top: 1mm;
   margin: 2.2mm 0 1mm;
   break-after: avoid;
@@ -92,14 +102,13 @@
 .copy { text-align: left; hyphens: none; }
 .copy p { margin: 0; }
 
-/* a boxed square */
+/* a boxed square, framed with the house line */
 .sq {
-  border: .5pt solid #111;
+  border: var(--rule);
   padding: 2.2mm 2.4mm;
   height: 100%;
   box-sizing: border-box;
 }
-.sqHouse { border-width: 1.5pt; }
 
 /* ── a card line: the title in bold body type, the phase beneath in agate ── */
 .card { margin: 0 0 1.4mm; text-indent: 0; break-inside: avoid; }
@@ -168,7 +177,7 @@
   text-transform: uppercase;
   letter-spacing: .06em;
   text-align: left;
-  border-bottom: .5pt solid #111;
+  border-bottom: var(--rule);
   padding: .3mm 0;
 }
 .agateTable td { padding: .28mm 0; vertical-align: top; }
@@ -186,7 +195,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: .8mm 3mm;
-  border-top: .5pt solid #111;
+  border-top: var(--rule);
   padding-top: 1.2mm;
   margin: 2mm 0 .6mm;
   font: 5.5pt/1.45 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
@@ -198,7 +207,7 @@
 .credit {
   margin-top: 2.2mm;
   padding-top: 1.2mm;
-  border-top: .5pt solid #111;
+  border-top: var(--rule);
   font: italic 5.5pt/1.25 Georgia, serif;
   color: #333;
   text-align: center;

@@ -78,10 +78,9 @@ const boxes = (weeks: ReturnType<typeof monthGrid>) => weeks.flat();
 describe("the book's pages", () => {
   const book = boardBookModel(board, report, DATE);
 
-  it("runs to do, in progress, the day, the month, the year, in that order, each named for its running foot", () => {
+  it("runs to do, the day, the month, the year, in that order, each named for its running foot, and no page for what is in progress", () => {
     expect(book.pages.map((p) => [p.id, p.kind, p.title])).toEqual([
       ["todo", "cards", "To do"],
-      ["inprogress", "cards", "In progress"],
       ["day", "day", "The day"],
       ["month", "month", "The month"],
       ["year", "year", "The year"],
@@ -102,16 +101,30 @@ describe("the book's pages", () => {
     expect(todo.empty).toBe("Nothing to do.");
   });
 
-  it("says nothing is in hand when the in progress column is empty", () => {
-    const inHand = book.pages[1];
-    if (inHand.kind !== "cards") throw new Error("the second page is the cards in progress");
-    expect(inHand.list.cards).toEqual([]);
-    expect(inHand.list.total).toBe(0);
-    expect(inHand.empty).toBe("Nothing in hand.");
+  it("carries the cards in hand at the top of the to do page, newest first, and none when the in progress column is empty", () => {
+    const todo = book.pages[0];
+    if (todo.kind !== "cards") throw new Error("the first page is the cards to do");
+    expect(todo.inHand).toEqual([]);
+
+    const busy: BookBoard = {
+      ...board,
+      cards: [
+        ...board.cards,
+        { id: "h-older", col: "inprogress", apps: ["henceforth"], title: "Episode sixteen", phase: "CUT: Thursday", movedAt: "2026-09-05T09:00:00+01:00" },
+        { id: "h-newer", col: "inprogress", apps: ["hansard"], title: "The 1.10 press", movedAt: "2026-09-07T08:30:00+01:00", desc: "2026-09-07 · Script staged. More." },
+      ],
+    };
+    const page = boardBookModel(busy, report, DATE).pages[0];
+    if (page.kind !== "cards") throw new Error("the first page is the cards to do");
+    expect(page.inHand).toEqual(columnPage(busy, "inprogress", DATE).cards);
+    expect(page.inHand.map((c) => c.id)).toEqual(["h-newer", "h-older"]);
+    expect(page.inHand[0].note).toBe("Script staged.");
+    expect(page.list.cards.map((c) => c.id)).toEqual(["t-newer", "cadence-appstore", "t-older", "parked"]);
+    expect(boardBookModel(busy, report, DATE).pages.map((p) => p.id)).toEqual(["todo", "day", "month", "year"]);
   });
 
   it("carries the day, the month and the year as grids with the plans' words, and the not-laid-out line for the plans the board lacks", () => {
-    const [, , d, m, y] = book.pages;
+    const [, d, m, y] = book.pages;
     if (d.kind !== "day" || m.kind !== "month" || y.kind !== "year") throw new Error("the last three pages are the grids");
     expect(d.day.heading).toBe("Monday 7 September 2026");
     expect(m.month.heading).toBe("September 2026");
@@ -122,7 +135,7 @@ describe("the book's pages", () => {
     expect(y.year.laidOut).toBe(true);
 
     const bare = boardBookModel({ ...board, week: undefined, month: undefined, year: null }, null, DATE);
-    const [, , bd, bm, by] = bare.pages;
+    const [, bd, bm, by] = bare.pages;
     if (bd.kind !== "day" || bm.kind !== "month" || by.kind !== "year") throw new Error("the last three pages are the grids");
     expect(bd.day.tasks).toEqual([]);
     expect(bd.day.hours).toHaveLength(24);

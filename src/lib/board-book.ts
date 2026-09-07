@@ -1,6 +1,8 @@
-/** The Board as a book: the sheet's front page, then five pages that each
- *  start a page of print. To do and In progress carry every card of their
- *  column, newest first, the way the column pages do. The day, the month
+/** The Board as a book: the sheet's front page, then four pages that each
+ *  start a page of print. To do carries every card in hand at its top and
+ *  then every card to do, each group newest first, the way the column pages
+ *  do (Henry, 2026-09-07: no page of its own for what is in progress; the
+ *  to do page handles it). The day, the month
  *  and the year are grids of boxes for the pen: twenty-four hours, the
  *  month's days seven to a week, and twelve months; the plans the board
  *  carries as `week`, `month` and `year` are printed inside the boxes they
@@ -11,7 +13,7 @@
  *  room; nothing after it is ever trimmed, and the card pages flow over as
  *  many pages of print as they need.
  */
-import { columnPage, type ColumnCardInput, type ColumnPageModel } from "./board-columns";
+import { columnPage, type ColumnCard, type ColumnCardInput, type ColumnPageModel } from "./board-columns";
 import {
   boardSheetModel,
   isIsoDate,
@@ -53,8 +55,10 @@ export type DayPageModel = { date: string; heading: string; tasks: Tick[]; hours
 export type MonthPageModel = { heading: string; note: string | null; laidOut: boolean; weeks: GridDay[][]; others: PlanLine[] };
 export type YearPageModel = { heading: string; note: string | null; laidOut: boolean; months: GridMonth[]; others: PlanLine[] };
 
+/** The cards page: `inHand` is the in progress column, printed at the top
+ *  under its own label and left out when empty; `list` is the to do column. */
 export type BookPage =
-  | { id: "todo" | "inprogress"; kind: "cards"; title: string; empty: string; list: ColumnPageModel }
+  | { id: "todo"; kind: "cards"; title: string; empty: string; inHand: ColumnCard[]; list: ColumnPageModel }
   | { id: "day"; kind: "day"; title: string; day: DayPageModel }
   | { id: "month"; kind: "month"; title: string; empty: string; month: MonthPageModel }
   | { id: "year"; kind: "year"; title: string; empty: string; year: YearPageModel };
@@ -212,8 +216,14 @@ export function boardBookModel(board: BookBoard, report: SheetReport, date: stri
   return {
     front: boardSheetModel(board, report, date),
     pages: [
-      { id: "todo", kind: "cards", title: "To do", empty: "Nothing to do.", list: columnPage(board, "todo", date) },
-      { id: "inprogress", kind: "cards", title: "In progress", empty: "Nothing in hand.", list: columnPage(board, "inprogress", date) },
+      {
+        id: "todo",
+        kind: "cards",
+        title: "To do",
+        empty: "Nothing to do.",
+        inHand: columnPage(board, "inprogress", date).cards,
+        list: columnPage(board, "todo", date),
+      },
       { id: "day", kind: "day", title: "The day", day: dayPageModel(board.week, date) },
       { id: "month", kind: "month", title: "The month", empty: "Not laid out yet.", month: monthPageModel(board.month, date) },
       { id: "year", kind: "year", title: "The year", empty: "Not laid out yet.", year: yearPageModel(board.year, date) },

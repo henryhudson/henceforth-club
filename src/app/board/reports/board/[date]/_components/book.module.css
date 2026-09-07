@@ -1,10 +1,15 @@
-/* ── The Board's book (2026-09-07): the front sheet, then five pages, each
+/* ── The Board's book (2026-09-07): the front sheet, then four pages, each
    on the newspaper measure and each starting a page of print. The cards
    are set by the column page's own renderer (columns.module.css); this
    file styles the book's frame, its running head, the page titles, and
    the grids of boxes the day, the month and the year are drawn as. No fit
    loop on these pages: nothing is trimmed and nothing is clipped, so the
-   type is pinned in pt. The board wears the board family's teal #0e7490. */
+   type is pinned in pt. The board wears the board family's teal #0e7490.
+   Every rule the book draws is the house line, 1.5pt solid black, one
+   thickness (Henry, 2026-09-06 and again 2026-09-07: "use the same
+   thickness lines"): declared once here as --rule and worn by every border
+   and column rule below, the cards' included. */
+.book { --rule: 1.5pt solid #111; }
 
 /* The front sheet's own print rule hides everything on the page but itself
    and lifts it out of the flow to the page's top. Inside the book the pages
@@ -64,8 +69,8 @@
   display: flex;
   justify-content: space-between;
   gap: 4mm;
-  border-top: .5pt solid #111;
-  border-bottom: .5pt solid #111;
+  border-top: var(--rule);
+  border-bottom: var(--rule);
   padding: 1.1mm 0;
 }
 .folio span { white-space: nowrap; }
@@ -84,8 +89,8 @@
   letter-spacing: .14em;
   text-transform: uppercase;
   text-align: center;
-  border-top: .5pt solid #111;
-  border-bottom: 1.5pt solid #111;
+  border-top: var(--rule);
+  border-bottom: var(--rule);
   padding: 1.1mm 0;
   margin-bottom: 2mm;
 }
@@ -120,41 +125,42 @@
 .lineDone { color: #555; }
 
 /* the band above a grid: the week's plan for the day, or the lines that
-   fall on no box; two columns of type under a small-capitals label */
+   fall on no box; two columns of type under a small-capitals label. The
+   label alone also heads the cards in hand at the top of the To do page. */
 .band { margin: 0 0 2mm; }
 .bandLabel {
   font: 700 .857em/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
   letter-spacing: .15em;
   text-transform: uppercase;
   color: #111;
-  border-top: 1.5pt solid #111;
+  border-top: var(--rule);
   padding-top: 1mm;
   margin: 0 0 1.2mm;
 }
 .bandLines {
   column-count: 2;
   column-gap: 5mm;
-  column-rule: .5pt solid #111;
+  column-rule: var(--rule);
 }
 
-/* ── the grid of boxes, drawn with the house rule of 1.5pt: the grid's own
-   top and left edges, each box's right and bottom, so every line is one
-   line. The grid fills what the heading leaves; a row is an equal share
-   unless a box has more to say. ── */
+/* ── the grid of boxes, drawn with the house line: the grid's own top and
+   left edges, each box's right and bottom, so every shared edge is drawn
+   once and every line is one line. The grid fills what the heading leaves;
+   a row is an equal share unless a box has more to say. ── */
 .grid {
   flex: 1 1 auto;
   min-height: 0;
   display: grid;
-  border-top: 1.5pt solid #111;
-  border-left: 1.5pt solid #111;
+  border-top: var(--rule);
+  border-left: var(--rule);
 }
 .hours { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(6, 1fr); }
 .days { grid-template-columns: repeat(7, 1fr); }
 .months { grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(4, 1fr); }
 
 .box {
-  border-right: 1.5pt solid #111;
-  border-bottom: 1.5pt solid #111;
+  border-right: var(--rule);
+  border-bottom: var(--rule);
   padding: .8mm 1.2mm 1mm;
   min-width: 0;
   text-align: left;
@@ -193,7 +199,7 @@
 .credit {
   margin-top: 2.2mm;
   padding-top: 1.2mm;
-  border-top: .5pt solid #111;
+  border-top: var(--rule);
   font: italic 5.5pt/1.25 Georgia, serif;
   color: #333;
   text-align: center;
