@@ -2,11 +2,13 @@
  *  start a page of print. To do carries every card in hand at its top and
  *  then every card to do, each group newest first, the way the column pages
  *  do (Henry, 2026-09-07: no page of its own for what is in progress; the
- *  to do page handles it). The day, the month
- *  and the year are grids of boxes for the pen: twenty-four hours, the
- *  month's days seven to a week, and twelve months; the plans the board
- *  carries as `week`, `month` and `year` are printed inside the boxes they
- *  fall on, and the boxes print empty when the board carries no plan.
+ *  to do page handles it). The day is one time line from midnight to
+ *  midnight down the length of its page, with paper to write on beside it
+ *  (Henry, 2026-09-07 again). The month and the year are grids of boxes for
+ *  the pen: the month's days seven to a week, and twelve months. The plans
+ *  the board carries as `week`, `month` and `year` are printed on the day's
+ *  page as a band and inside the boxes of the other two, and the boxes
+ *  print empty when the board carries no plan.
  *
  *  Pure. The page loads the board and the day's report; nothing here reads
  *  a clock, a store or the page. The front page keeps its own rule for
@@ -47,7 +49,13 @@ export type Tick = { label: string; done: boolean };
 export type GridDay = { date: string; day: number; inMonth: boolean; items: PlanLine[] };
 export type GridMonth = { month: string; label: string; items: PlanLine[] };
 
-export type DayPageModel = { date: string; heading: string; tasks: Tick[]; hours: string[] };
+/** A mark on the day's time line: `at` is the minute of the day it falls on,
+ *  nought at midnight and 1440 at the next, which is where the line puts it;
+ *  `label` is the hour in agate, or null at a half hour, which is marked but
+ *  never named. */
+export type TimeMark = { at: number; label: string | null };
+
+export type DayPageModel = { date: string; heading: string; tasks: Tick[]; marks: TimeMark[] };
 /** `others` are the plan's lines that fall on no box: a month-wide item or
  *  words on the month, words or a month beyond the twelve on the year.
  *  `laidOut` is false when the board carries no such plan; the boxes print
@@ -133,9 +141,15 @@ function monthKey(item: PlanItem): string | null {
   return opening(item.when.trim())?.month ?? null;
 }
 
-/** The twenty-four hours of a day, "00" to "23". */
-export function hourGrid(): string[] {
-  return Array.from({ length: 24 }, (_, h) => String(h).padStart(2, "0"));
+/** The day as one line from midnight to midnight: a mark every half hour,
+ *  forty-nine in all, the twenty-five on the hour named "00" to "24" and the
+ *  twenty-four between them left unnamed. Every step is the same thirty
+ *  minutes, so the line spaces its hours evenly wherever it is drawn. */
+export function dayTimeline(): TimeMark[] {
+  return Array.from({ length: 49 }, (_, i) => ({
+    at: i * 30,
+    label: i % 2 === 0 ? String(i / 2).padStart(2, "0") : null,
+  }));
 }
 
 /** The month as a calendar of weeks, Monday to Sunday, from the Monday on or
@@ -180,7 +194,7 @@ export function dayPageModel(week: SheetBoard["week"], date: string): DayPageMod
     date,
     heading: `${p.weekday} ${p.day} ${p.month} ${p.year}`,
     tasks: weekRows(week?.weekPlan).find((row) => row.date === date)?.tasks ?? [],
-    hours: hourGrid(),
+    marks: dayTimeline(),
   };
 }
 
