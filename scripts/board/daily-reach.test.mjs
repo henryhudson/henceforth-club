@@ -48,6 +48,18 @@ describe("coverageThrough", () => {
   it("is null with no instances at all", () => {
     expect(coverageThrough([])).toBe(null);
   });
+
+  it("reads past the newest row when the newest instance restates only older dates: that day was processed and held nothing", () => {
+    // Observed live 2026-09-07 on the Subscription Event report: the instance
+    // processed on the 6th carried one row the funnel rule skips, the one on
+    // the 3rd restated the 31st; read by rows alone, coverage fell to the 29th.
+    expect(
+      coverageThrough([
+        { processingDate: "2026-09-06", byDate: {} },
+        { processingDate: "2026-09-03", byDate: { "2026-08-31": 1 } },
+      ]),
+    ).toBe("2026-09-05");
+  });
 });
 
 describe("yesterdayCount", () => {
@@ -142,5 +154,28 @@ describe("buildReach", () => {
     expect(reach.perApp[0].week).toEqual({ "2026-07-20": 7, "2026-07-25": 3, "2026-07-26": 6 });
     // The floor is through minus six days inclusive, so 07-20 survives and 03-14 does not.
     expect(reach.perApp[0].yesterday).toEqual({ date: "2026-07-26", count: 6 });
+  });
+});
+
+describe("buildReach and the funnel", () => {
+  const rating = { average: 5, count: 4 };
+  const funnel = {
+    through: "2026-07-24",
+    week: { impressions: 120, pageViews: 10, conversion: 0.2, sources: { search: 2, browse: 0, referrer: 0, webReferrer: 0, other: 0 } },
+    yesterday: null,
+  };
+
+  it("carries an app's funnel through unchanged, next to its downloads", () => {
+    const reach = buildReach("2026-07-26", [
+      { app: "deck", instances: [{ processingDate: "2026-07-25", byDate: { "2026-07-24": 2 } }], rating, funnel },
+    ]);
+    expect(reach.perApp[0].funnel).toEqual(funnel);
+  });
+
+  it("leaves the funnel out when the app has none, so the sheet prints em dashes", () => {
+    const reach = buildReach("2026-07-26", [
+      { app: "hansard", instances: [{ processingDate: "2026-07-25", byDate: { "2026-07-24": 1 } }], rating, funnel: null },
+    ]);
+    expect(reach.perApp[0]).not.toHaveProperty("funnel");
   });
 });

@@ -119,6 +119,19 @@ export function reachCell(count: number | null | undefined): string {
   return count == null ? "—" : String(count);
 }
 
+/** Agate cell for a funnel count: thousands grouped the English way, so
+ *  6562 impressions read as 6,562. An app without a funnel (missing or null)
+ *  is an em dash, never a zero. */
+export function funnelCell(count: number | null | undefined): string {
+  return count == null ? "—" : count.toLocaleString("en-GB");
+}
+
+/** Agate cell for a conversion: downloads per page view as a percentage to
+ *  one decimal. No rate (no page viewed, or no funnel) is an em dash. */
+export function rateCell(rate: number | null | undefined): string {
+  return rate == null ? "—" : `${(rate * 100).toFixed(1)}%`;
+}
+
 /** Polyline points for an agate sparkline. Nulls keep their x slot but are
  *  not plotted. Returns null when fewer than two numbers exist — a single
  *  point is not a series, and a blank row stays blank. Counts sit on a zero
