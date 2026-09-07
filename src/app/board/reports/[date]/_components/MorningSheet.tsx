@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { isMachineReading, type Report, type Finding, type Emergency, type Board, type PlanDay } from "@/lib/board-data";
 import type { DiaryEntry } from "@/lib/gardening";
-import { MACHINE_NAMES, isRowHigh, longDate, machineHogs, machineLine, reachCell, sparkPoints } from "@/lib/report-helpers";
+import { MACHINE_NAMES, funnelCell, isRowHigh, longDate, machineHogs, machineLine, rateCell, reachCell, sparkPoints } from "@/lib/report-helpers";
 import { vitalsFor, type VitalCard } from "@/lib/report-vitals";
 import A4Sheet from "@/app/hansard/this-week/_components/overview/A4Sheet";
 import PackLayout, { Square } from "@/app/hansard/this-week/_components/overview/PackLayout";
@@ -168,6 +168,14 @@ export default function MorningSheet({
     .join(" · ");
   const site = report.reach?.site;
   const deckSubs = storeApps.find((a) => a.app === "deck")?.subscriptions;
+  // The funnel above the downloads, the week to each app's own coverage; the
+  // newest coverage is named once under the table.
+  const funnelThrough =
+    storeApps
+      .map((a) => a.funnel?.through)
+      .filter((d): d is string => d != null)
+      .sort()
+      .slice(-1)[0] ?? null;
 
   const notToday = asItems(report.plan?.notToday);
   // The machines: one line each from the morning probe, then the space hogs.
@@ -333,11 +341,40 @@ export default function MorningSheet({
                 </tbody>
               </table>
             )}
+            {funnelThrough && (
+              <table className={s.agateTable}>
+                <thead>
+                  <tr>
+                    {/* Four heads on one agate line of a 40mm column: the long
+                        words wrap and squeeze the names into two lines each. */}
+                    <th>Funnel</th>
+                    <th className={s.n}>Impressions</th>
+                    <th className={s.n}>Views</th>
+                    <th className={s.n}>Rate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {storeApps.map((a) => (
+                    <tr key={a.app}>
+                      <td>{APP_NAMES[a.app] ?? a.app}</td>
+                      <td className={s.n}>{funnelCell(a.funnel?.week.impressions)}</td>
+                      <td className={s.n}>{funnelCell(a.funnel?.week.pageViews)}</td>
+                      <td className={s.n}>{rateCell(a.funnel?.week.conversion)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
             <p className={`${s.agate} ${s.noIndent}`}>
               {ratingLine && <>Ratings: {ratingLine}. </>}
-              {deckSubs && (
+              {deckSubs?.paying != null && (
                 <>
                   Deck subscriptions: {deckSubs.paying} paying ({deckSubs.monthly} monthly, {deckSubs.yearly} yearly), {deckSubs.trial} in trial.{" "}
+                </>
+              )}
+              {deckSubs?.events && (
+                <>
+                  Deck trials, {deckSubs.events.days} days to {deckSubs.events.through}: {deckSubs.events.trialsStarted} started · {deckSubs.events.conversions} converted · {deckSubs.events.lapsed} paying lapsed.{" "}
                 </>
               )}
               {site && (
@@ -346,6 +383,7 @@ export default function MorningSheet({
                 </>
               )}
               {report.reach?.dataThrough && <> Store data through {report.reach.dataThrough}.</>}
+              {funnelThrough && funnelThrough !== report.reach?.dataThrough && <> Funnel through {funnelThrough}.</>}
             </p>
           </Square>
           <Square id="ship" className={s.agate}>

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { asList, datesBetween, editionIndex, editionNumber, isRowHigh, longDate, machineHogs, machineLine, reachAppLine, reachCell, shippedByDay, sparkPoints, verdictLine } from "./report-helpers";
+import { asList, datesBetween, editionIndex, editionNumber, funnelCell, isRowHigh, longDate, machineHogs, machineLine, rateCell, reachAppLine, reachCell, shippedByDay, sparkPoints, verdictLine } from "./report-helpers";
 import type { MachineReading } from "./board-data";
 
 describe("longDate", () => {
@@ -261,5 +261,30 @@ describe("shippedByDay", () => {
       week,
     );
     expect(out["2026-07-20"].map((c) => c.id)).toEqual(["a", "b"]);
+  });
+});
+
+describe("funnelCell", () => {
+  it("prints an em dash for an app without a funnel, never a zero", () => {
+    expect(funnelCell(null)).toBe("—");
+    expect(funnelCell(undefined)).toBe("—");
+  });
+
+  it("groups thousands the English way and keeps a real zero", () => {
+    expect(funnelCell(6562)).toBe("6,562");
+    expect(funnelCell(0)).toBe("0");
+  });
+});
+
+describe("rateCell", () => {
+  it("prints an em dash when there is no rate", () => {
+    expect(rateCell(null)).toBe("—");
+    expect(rateCell(undefined)).toBe("—");
+  });
+
+  it("prints downloads per page view as a percentage to one decimal", () => {
+    expect(rateCell(0.375)).toBe("37.5%");
+    expect(rateCell(0.0455)).toBe("4.5%");
+    expect(rateCell(1.5)).toBe("150.0%");
   });
 });

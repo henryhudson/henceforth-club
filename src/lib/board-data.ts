@@ -42,12 +42,40 @@ export type Plan = {
 export type ArticleSection = { heading: string; body: string };
 export type Article = { headline: string; lede: string; sections: ArticleSection[] };
 export type ReachYesterday = { date: string | null; count: number | null };
+/** One period of the funnel above the downloads: impressions and page views
+ *  from the Discovery and Engagement report, conversion as downloads per page
+ *  view (null when no page was viewed), downloads by the source that brought
+ *  them. */
+export type FunnelPeriod = {
+  impressions: number;
+  pageViews: number;
+  conversion: number | null;
+  sources: { search: number; browse: number; referrer: number; webReferrer: number; other: number };
+};
+/** The week to `through` and yesterday; yesterday null when Apple has not
+ *  processed it, never zeros. */
+export type Funnel = { through: string; week: FunnelPeriod; yesterday: FunnelPeriod | null };
+/** Deck's subscription movement over the last `days` processed days of the
+ *  Subscription Event report: free trials started, trials converted to paid,
+ *  paying subscribers lapsed. */
+export type SubscriptionEvents = { through: string; days: number; trialsStarted: number; conversions: number; lapsed: number };
 export type ReachApp = {
   app: string;
   yesterday: ReachYesterday;
   week?: Record<string, number>;
   rating?: { average: number | null; count: number };
-  subscriptions?: { date: string; paying: number; trial: number; monthly: number; yearly: number };
+  funnel?: Funnel;
+  /** The standing base (from the daily sales report) and the movement (from
+   *  the Subscription Event report) lag independently; either half may be
+   *  absent on a morning the other answered. */
+  subscriptions?: {
+    date?: string;
+    paying?: number;
+    trial?: number;
+    monthly?: number;
+    yearly?: number;
+    events?: SubscriptionEvents;
+  };
 };
 export type Reach = {
   dataThrough?: string | null;
