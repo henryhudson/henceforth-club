@@ -5,10 +5,11 @@
 // The week rides along. On 2 September the mirror was rebuilt from the
 // canonical file without it, then published, so every board edit wiped the
 // store's week planner within a minute and the day's done marks never stuck.
+// The month and the year (The Board's book, 7 September) ride the same way.
 
-/** The mirror record for board-data.js text: { generated, generatedAt, cards, week? }.
- *  Throws when the text does not yield a board, which is what a mid-edit
- *  file looks like. */
+/** The mirror record for board-data.js text: { generated, generatedAt, cards,
+ *  week?, month?, year? }. Throws when the text does not yield a board, which
+ *  is what a mid-edit file looks like. */
 export function latestFromBoardData(src, generatedAt) {
   const shim = {};
   new Function("window", src)(shim);
@@ -21,5 +22,7 @@ export function latestFromBoardData(src, generatedAt) {
     generatedAt,
     cards: board.cards,
     ...(board.week ? { week: board.week } : {}),
+    ...(board.month ? { month: board.month } : {}),
+    ...(board.year ? { year: board.year } : {}),
   };
 }

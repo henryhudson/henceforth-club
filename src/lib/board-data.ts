@@ -12,6 +12,7 @@ import {
 } from "./chain-archive";
 import type { PlanItem } from "@/app/board/reports/PlanChecklist";
 import type { Card } from "@/app/board/BoardClient";
+import type { BoardPlan } from "./board-book";
 
 export type Finding = {
   refId: string;
@@ -335,7 +336,18 @@ export type BoardWeek = {
   stateOfUnion?: string;
   weekPlan: PlanDay[];
 };
-export type Board = { generated: string; generatedAt?: string; cards: Card[]; log?: string; week?: BoardWeek };
+/** The month and the year the board lays out, as The Board's book prints
+ *  them; both optional, both written on the Deck board file by hand or by
+ *  the routine and carried here by the autosync. */
+export type Board = {
+  generated: string;
+  generatedAt?: string;
+  cards: Card[];
+  log?: string;
+  week?: BoardWeek;
+  month?: BoardPlan;
+  year?: BoardPlan;
+};
 
 // The gardening schedule, published from Henry's laptop by publish.mjs —
 // Upstash-only (the source file lives outside the repo, so there is no local

@@ -1,0 +1,133 @@
+/* ── The Board's book (2026-09-07): the front sheet, then four pages, each
+   on the newspaper measure and each starting a page of print. The cards
+   are set by the column page's own renderer (columns.module.css); this
+   file styles the book's frame, its running head, the page titles and the
+   plan lists. No fit loop on these pages: nothing is trimmed and nothing
+   is clipped, so the type is pinned in pt. The board wears the board
+   family's teal #0e7490. */
+
+/* The front sheet's own print rule hides everything on the page but itself
+   and lifts it out of the flow to the page's top. Inside the book the pages
+   print too, and the front stays in the flow so the pages follow it, each
+   on a page of its own (BoardBook sets the book's page margins and its
+   running foot, and keeps the front's own page as the first). */
+@media print {
+  .book,
+  .book * { visibility: visible; }
+  .book :global(.a4-print-root) { position: static; }
+}
+
+/* a page on the web: an A4 width on the grey ground under the front sheet;
+   in print the page margins do this work and the frame falls away. The
+   printed width is the page area, 210mm less the two side margins of 12mm
+   that BoardBook's page rule sets, and is set here rather than left to the
+   flow: the flow is as wide as the first page's area, which is the front's
+   full 210mm, so a page left to it runs off the right edge. */
+.page {
+  width: 210mm;
+  margin: 6mm auto 0;
+  background: #fff;
+  color: #111;
+  padding: 9mm 12mm 8mm;
+  font: 7pt/1.143 Georgia, serif;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.18);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+@media print {
+  .page { width: 186mm; margin: 0; padding: 0; box-shadow: none; break-before: page; }
+}
+
+/* ── the running head: the folio's strip, the nameplate's words in the
+   middle where the front wears the blackletter ── */
+.folio {
+  font: 5.5pt/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #111;
+  display: flex;
+  justify-content: space-between;
+  gap: 4mm;
+  border-top: .5pt solid #111;
+  border-bottom: .5pt solid #111;
+  padding: 1.1mm 0;
+}
+.folio span { white-space: nowrap; }
+
+/* the page's title, in the headline's Georgia */
+.title {
+  font: 700 2.6em/1.03 Georgia, serif;
+  letter-spacing: -.015em;
+  text-align: center;
+  margin: 2.4mm 0 1.6mm;
+}
+
+/* the line under the title: the column's count, or the plan's own title */
+.standfirst {
+  font: 5.5pt/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  text-align: center;
+  border-top: .5pt solid #111;
+  border-bottom: 1.5pt solid #111;
+  padding: 1.1mm 0;
+  margin-bottom: 2mm;
+}
+
+/* a plan's note, in the author's words */
+.note {
+  font: italic 1em/1.143 Georgia, serif;
+  text-align: center;
+  color: #222;
+  max-width: 140mm;
+  margin: 0 auto 2.4mm;
+}
+.nothing { font: italic 1em/1.143 Georgia, serif; color: #444; margin: 0; }
+
+/* ── a plan: two columns of type, a group a week or a month, a box a line ── */
+.plan {
+  column-count: 2;
+  column-gap: 5mm;
+  column-rule: .5pt solid #111;
+  text-align: left;
+  hyphens: none;
+}
+.group { break-inside: avoid; margin: 0 0 2.4mm; }
+.groupLabel {
+  font: 700 .857em/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: #111;
+  border-top: 1.5pt solid #111;
+  padding-top: 1mm;
+  margin: 0 0 1.2mm;
+}
+.lines { list-style: none; margin: 0; padding: 0; }
+.line {
+  display: flex;
+  gap: 1.4mm;
+  align-items: baseline;
+  margin: 0 0 1mm;
+  break-inside: avoid;
+}
+.box { flex: 0 0 auto; font-size: 1.15em; line-height: 1; color: #0e7490; }
+.when {
+  flex: 0 0 auto;
+  min-width: 18mm;
+  font: 700 .786em/1.2 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #222;
+}
+.lineDone { color: #555; }
+
+/* ── colophon strip, at the book's foot ── */
+.credit {
+  margin-top: 2.2mm;
+  padding-top: 1.2mm;
+  border-top: .5pt solid #111;
+  font: italic 5.5pt/1.25 Georgia, serif;
+  color: #333;
+  text-align: center;
+}

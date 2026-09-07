@@ -9,9 +9,10 @@
 //   ... daily 2026-07-02 --out /tmp/daily.pdf   (local file, no inscription)
 //   ... daily 2026-07-02 week 2026-06-29 --dry-run   (build+fee+sign against a
 //       fake 10,000-satoshi source, same pinned 100 sat/kb fee as live, never broadcast)
-//   ... board 2026-09-04   (The Board, the working set of the kanban: written and
-//       opened locally, never inscribed, because the board's own record already
-//       goes on the chain each morning)
+//   ... board 2026-09-04   (The Board, the working set of the kanban on its front
+//       and then to do, in progress, the month and the year on pages of their
+//       own, up to a budget of eight: written and opened locally, never inscribed,
+//       because the board's own record already goes on the chain each morning)
 //   ... board 2026-09-04 --inscribe   (the same sheet, put on the chain as an edition)
 //   ... columns 2026-09-04   (the column pages of The Board: every card of each
 //       of the five columns, review, inprogress, todo, backlog and done, one PDF
@@ -48,10 +49,13 @@ const SITE_HOST = new URL(SITE).hostname;
 // A second page means the sheet's fit loop failed — tighten the sheet, never
 // raise the number; the render must fail loudly. (History: the daily ran two
 // pages 2026-08-04 to 2026-08-19, when the report was set at book size.)
-// The board sheet, one page since it was first printed on 2026-09-04. The
-// column pages run to as many pages as the column takes and never drop a
-// card; eight is the loud stop for a column that has outgrown a print run.
-const BUDGET = { daily: 1, week: 1, board: 1, columns: 8 };
+// The board is a book since 2026-09-07: the front sheet, one page as it was
+// first printed on 2026-09-04, then to do, in progress, the month and the
+// year, each starting a page and flowing on; the front alone is fitted and
+// trimmed, the rest is never trimmed. The column pages run to as many pages
+// as the column takes and never drop a card. Eight is the loud stop for a
+// book or a column that has outgrown a print run.
+const BUDGET = { daily: 1, week: 1, board: 8, columns: 8 };
 const KINDS = Object.keys(BUDGET);
 const COLUMN_NAMES = ["review", "inprogress", "todo", "backlog", "done"];
 // The transaction itself — sealing, the envelope, the fee, the guard that no
