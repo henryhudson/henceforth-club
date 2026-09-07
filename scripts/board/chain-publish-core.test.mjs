@@ -46,6 +46,14 @@ describe("splitting the board", () => {
     expect(done).toEqual({ cards: [{ id: "b", col: "done" }] });
   });
 
+  it("the month and the year ride the live document with the week, never the done ledger", () => {
+    const month = { title: "September 2026", items: [{ when: "2026-09-09", label: "Ship day" }] };
+    const year = { title: "The year", items: [{ when: "2026-10", label: "October" }] };
+    const { latest, done } = splitBoard({ generated: "now", cards: [{ id: "b", col: "done" }], month, year });
+    expect(latest).toEqual({ generated: "now", cards: [], month, year });
+    expect(done).toEqual({ cards: [{ id: "b", col: "done" }] });
+  });
+
   it("the done ledger's bytes do not move when only a live card changes", () => {
     const before = { generated: "1", cards: [{ id: "a", col: "todo", rev: 1 }, { id: "b", col: "done" }] };
     const after = { generated: "2", cards: [{ id: "a", col: "todo", rev: 2 }, { id: "b", col: "done" }] };

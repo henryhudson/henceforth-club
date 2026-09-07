@@ -1,7 +1,35 @@
 import Link from "next/link";
-import type { ColumnPageModel } from "@/lib/board-columns";
+import type { ColumnCard, ColumnPageModel } from "@/lib/board-columns";
 import { longDate } from "@/lib/report-helpers";
 import s from "./columns.module.css";
+
+/** The cards of one column as printed, newest first, in two columns of type
+ *  that flow over as many pages as they need: each its title, its phase, a
+ *  chip line of apps and date, and the first sentence of its latest note.
+ *  The Board's book sets its To do and In progress pages with this too. */
+export function ColumnCards({ cards, empty }: { cards: ColumnCard[]; empty: string }) {
+  return (
+    <div className={s.list}>
+      {cards.length === 0 && <p className={s.nothing}>{empty}</p>}
+      {cards.map((c) => (
+        <article key={c.id} className={s.card}>
+          <h2 className={s.cardTitle}>{c.title}</h2>
+          {c.phase && <p className={s.cardPhase}>{c.phase}</p>}
+          <p className={s.chips}>
+            {c.apps.join(" · ")}
+            {c.when && (
+              <>
+                {c.apps.length > 0 ? " · " : ""}
+                {c.when}
+              </>
+            )}
+          </p>
+          {c.note && <p className={s.note}>{c.note}</p>}
+        </article>
+      ))}
+    </div>
+  );
+}
 
 /** One column of the board as a printed list: the nameplate, the column's
  *  name as its standfirst, the dateline, then every card newest first in two
@@ -69,25 +97,7 @@ export default function ColumnSheet({ model }: { model: ColumnPageModel }) {
           </p>
         )}
 
-        <div className={s.list}>
-          {cards.length === 0 && <p className={s.nothing}>Nothing in this column.</p>}
-          {cards.map((c) => (
-            <article key={c.id} className={s.card}>
-              <h2 className={s.cardTitle}>{c.title}</h2>
-              {c.phase && <p className={s.cardPhase}>{c.phase}</p>}
-              <p className={s.chips}>
-                {c.apps.join(" · ")}
-                {c.when && (
-                  <>
-                    {c.apps.length > 0 ? " · " : ""}
-                    {c.when}
-                  </>
-                )}
-              </p>
-              {c.note && <p className={s.note}>{c.note}</p>}
-            </article>
-          ))}
-        </div>
+        <ColumnCards cards={cards} empty="Nothing in this column." />
 
         <p className={s.credit}>
           Set in Georgia, seven point upon eight; agate matter at five and a half point. Drawn from the board as

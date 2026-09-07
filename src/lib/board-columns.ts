@@ -121,9 +121,18 @@ export function columnPageModel(
   board: ColumnBoard,
   column: string,
   date: string,
-  { all = false }: { all?: boolean } = {},
+  options: { all?: boolean } = {},
 ): ColumnPageModel | null {
-  if (!isColumnId(column)) return null;
+  return isColumnId(column) ? columnPage(board, column, date, options) : null;
+}
+
+/** The page of a column already known to be one of the five. */
+export function columnPage(
+  board: ColumnBoard,
+  column: ColumnId,
+  date: string,
+  { all = false }: { all?: boolean } = {},
+): ColumnPageModel {
   const whole = board.cards.filter((c) => c.col === column).map((c) => dated(c, column));
   const window: ColumnWindow | null = column !== "done" ? null : all ? { all } : { all, since: minusDays(date, DONE_WINDOW_DAYS - 1) };
   const inWindow = (d: Dated): boolean =>

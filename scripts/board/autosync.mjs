@@ -34,7 +34,7 @@ function log(msg) {
 }
 
 // board-data.js is `window.MORNING_BOARD = {...}` (+ a non-rendered `log`).
-// Lift {generated, cards, week} from it — exactly what the site and
+// Lift {generated, cards, week, month, year} from it — exactly what the site and
 // publish.mjs consume. generatedAt is the machine-readable sibling of the
 // prose `generated` line: the site ages the board on this, never on the
 // sentence, which is rendered verbatim and carries no timezone. Stamped when
