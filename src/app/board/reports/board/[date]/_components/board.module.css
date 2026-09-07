@@ -119,6 +119,14 @@
 }
 .proposal .tag { font-weight: 700; color: #0e7490; letter-spacing: .1em; text-transform: uppercase; }
 .nothing { font: italic 1em/1.143 Georgia, serif; color: #444; margin: 0; }
+/* the pulls square's one agate line for the parked cards, which print on
+   the To do pages and never as pulls */
+.parked {
+  font: .786em/1.2 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  color: #222;
+  margin: 1.2mm 0 0;
+  text-indent: 0;
+}
 
 /* ── the week: a day a line, a box a task ── */
 .day { margin: 0 0 1mm; text-indent: 0; break-inside: avoid; }

@@ -1,19 +1,22 @@
-/** The Board as a book: the sheet's front page, then four pages that each
+/** The Board as a book: the sheet's front page, then five pages that each
  *  start a page of print. To do and In progress carry every card of their
- *  column, newest first, the way the column pages do; The month and The
- *  year are the plans the board carries as `month` and `year`, grouped by
- *  week and by month.
+ *  column, newest first, the way the column pages do. The day, the month
+ *  and the year are grids of boxes for the pen: twenty-four hours, the
+ *  month's days seven to a week, and twelve months; the plans the board
+ *  carries as `week`, `month` and `year` are printed inside the boxes they
+ *  fall on, and the boxes print empty when the board carries no plan.
  *
  *  Pure. The page loads the board and the day's report; nothing here reads
  *  a clock, a store or the page. The front page keeps its own rule for
- *  room; nothing after it is ever trimmed, and each page flows over as
- *  many pages of print as it needs.
+ *  room; nothing after it is ever trimmed, and the card pages flow over as
+ *  many pages of print as they need.
  */
 import { columnPage, type ColumnCardInput, type ColumnPageModel } from "./board-columns";
 import {
   boardSheetModel,
   isIsoDate,
   minusDays,
+  weekRows,
   type BoardSheetModel,
   type SheetBoard,
   type SheetCard,
@@ -34,17 +37,29 @@ export type BookBoard = {
   year?: BoardPlan | null;
 };
 
-export type PlanLine = { when: string; label: string; done: boolean };
-export type PlanGroup = { label: string; lines: PlanLine[] };
-export type PlanPageModel = { title: string; note: string | null; groups: PlanGroup[] };
+/** A plan's line as a box prints it: the when only where it says more than
+ *  the box does (a span on a day, a date on a month, words anywhere). */
+export type PlanLine = { when: string | null; label: string; done: boolean };
+export type Tick = { label: string; done: boolean };
+
+export type GridDay = { date: string; day: number; inMonth: boolean; items: PlanLine[] };
+export type GridMonth = { month: string; label: string; items: PlanLine[] };
+
+export type DayPageModel = { date: string; heading: string; tasks: Tick[]; hours: string[] };
+/** `others` are the plan's lines that fall on no box: a month-wide item or
+ *  words on the month, words or a month beyond the twelve on the year.
+ *  `laidOut` is false when the board carries no such plan; the boxes print
+ *  empty either way. */
+export type MonthPageModel = { heading: string; note: string | null; laidOut: boolean; weeks: GridDay[][]; others: PlanLine[] };
+export type YearPageModel = { heading: string; note: string | null; laidOut: boolean; months: GridMonth[]; others: PlanLine[] };
 
 export type BookPage =
   | { id: "todo" | "inprogress"; kind: "cards"; title: string; empty: string; list: ColumnPageModel }
-  | { id: "month" | "year"; kind: "plan"; title: string; empty: string; plan: PlanPageModel | null };
+  | { id: "day"; kind: "day"; title: string; day: DayPageModel }
+  | { id: "month"; kind: "month"; title: string; empty: string; month: MonthPageModel }
+  | { id: "year"; kind: "year"; title: string; empty: string; year: YearPageModel };
 
 export type BoardBookModel = { front: BoardSheetModel; pages: BookPage[] };
-
-export type Grouping = "week" | "month";
 
 const MONTH = /^\d{4}-(?:0[1-9]|1[0-2])$/;
 
@@ -52,7 +67,7 @@ const MONTH = /^\d{4}-(?:0[1-9]|1[0-2])$/;
 function parts(iso: string): Record<string, string> {
   const day = new Date(`${MONTH.test(iso) ? `${iso}-01` : iso}T00:00:00Z`);
   const format = new Intl.DateTimeFormat("en-GB", {
-    weekday: "short",
+    weekday: "long",
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -64,16 +79,19 @@ function parts(iso: string): Record<string, string> {
 /** "Wed 9 September". */
 function shortDate(iso: string): string {
   const p = parts(iso);
-  return `${p.weekday} ${p.day} ${p.month}`;
+  return `${p.weekday.slice(0, 3)} ${p.day} ${p.month}`;
 }
 
-/** "6 to 12 September", or "27 September to 3 October" across a month end. */
-function weekLabel(sunday: string): string {
-  const start = parts(sunday);
-  const end = parts(minusDays(sunday, -6));
-  return start.month === end.month
-    ? `${start.day} to ${end.day} ${end.month}`
-    : `${start.day} ${start.month} to ${end.day} ${end.month}`;
+/** "September 2026". */
+function monthLabel(month: string): string {
+  const p = parts(month);
+  return `${p.month} ${p.year}`;
+}
+
+/** The month `n` months on from `month`, as "2027-01". */
+function plusMonths(month: string, n: number): string {
+  const d = new Date(`${month}-01T00:00:00Z`);
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, 1)).toISOString().slice(0, 7);
 }
 
 /** The real date or month a `when` opens with, or null for words. A span
@@ -86,11 +104,6 @@ function opening(when: string): { month: string; day: string | null } | null {
   return { month, day: day ?? null };
 }
 
-/** The Sunday the board's week begins on. */
-function weekStart(iso: string): string {
-  return minusDays(iso, new Date(`${iso}T00:00:00Z`).getUTCDay());
-}
-
 /** The `when` as the page prints it: a date as "Wed 9 September", a month
  *  as "October", and any other words as written, with the dates in them
  *  spelt the same way. */
@@ -100,29 +113,99 @@ export function whenLabel(when: string): string {
     .replace(/\d{4}-\d{2}(?:-\d{2})?/g, (iso) => (isIsoDate(iso) ? shortDate(iso) : MONTH.test(iso) ? parts(iso).month : iso));
 }
 
-/** The plan grouped for its page: by the week (Sunday to Saturday) of each
- *  dated item on the month, by the month on the year. A month-wide item
- *  heads its month either way; items in words make a group of their own,
- *  after the dated ones, in the order they were written. Within a group the
- *  lines run by date. Null when the board carries no such plan. */
-export function planPageModel(plan: BoardPlan | null | undefined, by: Grouping): PlanPageModel | null {
-  if (!plan) return null;
-  const keyed = plan.items.map((item) => {
-    const when = item.when.trim();
-    const o = opening(when);
-    const key = o === null ? when : o.day && by === "week" ? weekStart(`${o.month}-${o.day}`) : o.month;
-    return { item, dated: o !== null, key, order: o === null ? "" : o.day ? `${o.month}-${o.day}` : o.month };
+/** The item as a box keyed `key` prints it: its when only when it says more
+ *  than the box already does. */
+function lineIn(item: PlanItem, key: string | null): PlanLine {
+  const when = item.when.trim();
+  return { when: when === key ? null : whenLabel(when), label: item.label, done: item.done === true };
+}
+
+/** The date an item falls on, or the month, or null for words. */
+function dateKey(item: PlanItem): string | null {
+  const o = opening(item.when.trim());
+  return o && o.day ? `${o.month}-${o.day}` : null;
+}
+function monthKey(item: PlanItem): string | null {
+  return opening(item.when.trim())?.month ?? null;
+}
+
+/** The twenty-four hours of a day, "00" to "23". */
+export function hourGrid(): string[] {
+  return Array.from({ length: 24 }, (_, h) => String(h).padStart(2, "0"));
+}
+
+/** The month as a calendar of weeks, Monday to Sunday, from the Monday on or
+ *  before the first to the Sunday on or after the last; the days of the
+ *  months either side are there for the shape and marked not in the month.
+ *  Each day carries the items that open on it, in the order written. */
+export function monthGrid(items: PlanItem[], yearMonth: string): GridDay[][] {
+  const first = `${yearMonth}-01`;
+  const start = minusDays(first, (new Date(`${first}T00:00:00Z`).getUTCDay() + 6) % 7);
+  const last = minusDays(`${plusMonths(yearMonth, 1)}-01`, 1);
+  const days: GridDay[] = [];
+  for (let date = start; days.length % 7 !== 0 || date <= last; date = minusDays(date, -1)) {
+    days.push({
+      date,
+      day: Number(date.slice(8, 10)),
+      inMonth: date.startsWith(yearMonth),
+      items: items.filter((item) => dateKey(item) === date).map((item) => lineIn(item, date)),
+    });
+  }
+  return Array.from({ length: days.length / 7 }, (_, w) => days.slice(w * 7, w * 7 + 7));
+}
+
+/** Twelve months from `firstMonth`, each carrying the items that open in it,
+ *  dated or month-wide, in the order written. */
+export function yearGrid(items: PlanItem[], firstMonth: string): GridMonth[] {
+  return Array.from({ length: 12 }, (_, n) => {
+    const month = plusMonths(firstMonth, n);
+    return { month, label: monthLabel(month), items: items.filter((item) => monthKey(item) === month).map((item) => lineIn(item, month)) };
   });
-  const groups = [...new Map(keyed.map((k) => [k.key, k])).values()]
-    .sort((a, b) => (a.dated && b.dated ? a.key.localeCompare(b.key) : Number(b.dated) - Number(a.dated)))
-    .map(({ key, dated }) => ({
-      label: !dated ? key : MONTH.test(key) ? `${parts(key).month} ${parts(key).year}` : weekLabel(key),
-      lines: keyed
-        .filter((k) => k.key === key)
-        .sort((a, b) => a.order.localeCompare(b.order))
-        .map(({ item }) => ({ when: whenLabel(item.when), label: item.label, done: item.done === true })),
-    }));
-  return { title: plan.title, note: plan.note?.trim() || null, groups };
+}
+
+/** The month the plan opens on: its first item's, or the date's when the
+ *  plan is absent or opens with words. */
+function firstMonthOf(plan: BoardPlan | null | undefined, date: string): string {
+  const first = plan?.items[0];
+  return (first && monthKey(first)) ?? date.slice(0, 7);
+}
+
+export function dayPageModel(week: SheetBoard["week"], date: string): DayPageModel {
+  const p = parts(date);
+  return {
+    date,
+    heading: `${p.weekday} ${p.day} ${p.month} ${p.year}`,
+    tasks: weekRows(week?.weekPlan).find((row) => row.date === date)?.tasks ?? [],
+    hours: hourGrid(),
+  };
+}
+
+export function monthPageModel(plan: BoardPlan | null | undefined, date: string): MonthPageModel {
+  const month = firstMonthOf(plan, date);
+  const items = plan?.items ?? [];
+  const weeks = monthGrid(items, month);
+  const onGrid = new Set(weeks.flat().map((d) => d.date));
+  return {
+    heading: monthLabel(month),
+    note: plan?.note?.trim() || null,
+    laidOut: !!plan,
+    weeks,
+    others: items.filter((item) => !onGrid.has(dateKey(item) ?? "")).map((item) => lineIn(item, null)),
+  };
+}
+
+export function yearPageModel(plan: BoardPlan | null | undefined, date: string): YearPageModel {
+  const first = firstMonthOf(plan, date);
+  const items = plan?.items ?? [];
+  const months = yearGrid(items, first);
+  const onGrid = new Set(months.map((m) => m.month));
+  return {
+    heading: `${monthLabel(first)} to ${monthLabel(plusMonths(first, 11))}`,
+    note: plan?.note?.trim() || null,
+    laidOut: !!plan,
+    months,
+    others: items.filter((item) => !onGrid.has(monthKey(item) ?? "")).map((item) => lineIn(item, null)),
+  };
 }
 
 export function boardBookModel(board: BookBoard, report: SheetReport, date: string): BoardBookModel {
@@ -131,8 +214,9 @@ export function boardBookModel(board: BookBoard, report: SheetReport, date: stri
     pages: [
       { id: "todo", kind: "cards", title: "To do", empty: "Nothing to do.", list: columnPage(board, "todo", date) },
       { id: "inprogress", kind: "cards", title: "In progress", empty: "Nothing in hand.", list: columnPage(board, "inprogress", date) },
-      { id: "month", kind: "plan", title: "The month", empty: "Not laid out yet.", plan: planPageModel(board.month, "week") },
-      { id: "year", kind: "plan", title: "The year", empty: "Not laid out yet.", plan: planPageModel(board.year, "month") },
+      { id: "day", kind: "day", title: "The day", day: dayPageModel(board.week, date) },
+      { id: "month", kind: "month", title: "The month", empty: "Not laid out yet.", month: monthPageModel(board.month, date) },
+      { id: "year", kind: "year", title: "The year", empty: "Not laid out yet.", year: yearPageModel(board.year, date) },
     ],
   };
 }
