@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
+import { boardLooksCollapsed, collapseCounts } from "./autosync-core.mjs";
 import {
+  BOARD_COLLAPSED,
   FILE_MISSING,
   FILE_UNREADABLE,
   CHAIN_REFUSED,
@@ -30,6 +32,23 @@ describe("publish core", () => {
     expect(reason).toContain("the chain refused the inscription");
     expect(reason).toContain("the local file is present");
     expect(reason).not.toMatch(/missing/);
+  });
+
+  it("a collapsed board is refused against the store's last good one, and the run is not a publish", () => {
+    // Seen live on 2026-09-07: a stray test wrote a one-card fixture over the
+    // canonical file, the mirror carried it to the store within seconds and
+    // the publisher put a one-card board on the chain.
+    const cards = (n) => Array.from({ length: n }, (_, i) => ({ id: `c${i + 1}` }));
+    const fixture = { generated: "2026-09-07 08:08 · Monday", cards: cards(1) };
+    const stored = { generated: "2026-09-07 13:30 · Monday: The Counting House delivered", cards: cards(424) };
+    expect(boardLooksCollapsed(fixture, stored)).toBe(true);
+    const reason = reasonFor(BOARD_COLLAPSED, collapseCounts(fixture, stored));
+    expect(reason).toContain("the store's last good board stands");
+    expect(reason).toContain("1 card dated 2026-09-07 08:08 against the last good 424 cards dated 2026-09-07 13:30");
+    expect(reason).not.toMatch(/missing/);
+    const out = summarise([{ name: "board:latest", failed: true, reason }, { name: "board:report:2026-09-07", failed: false }]);
+    expect(out.exitCode).toBe(1);
+    expect(out.lines.join("\n")).toContain(reason);
   });
 
   it("a genuinely missing file still says so", () => {
