@@ -63,6 +63,14 @@ describe("The Board as a book", () => {
     expect(page.indexOf("a4-print-root")).toBeLessThan(page.indexOf("@page :first"));
   });
 
+  it("counts the parked to-do cards on the front's pulls square in one agate line, and prints no line when none are parked", () => {
+    expect(page).not.toContain("parked, on the To do pages");
+    const parked = html({ ...board, cards: [...board.cards, { id: "p1", col: "todo", title: "A parked card", phase: "PARKED: until October" }] });
+    expect(parked).toContain("and 1 parked, on the To do pages");
+    expect(parked.indexOf("This week")).toBeLessThan(parked.indexOf("and 1 parked, on the To do pages"));
+    expect(parked.indexOf("and 1 parked, on the To do pages")).toBeLessThan(parked.indexOf("The ship ledgers"));
+  });
+
   it("sets the cards to do with the column page's renderer, and says nothing is in hand", () => {
     expect(page).toContain("Two Dependabot alerts on the screenshot tool");
     expect(page).toContain("The Hansard · moved 7 September 2026");

@@ -111,6 +111,7 @@ export default function BoardSheet({ model: full }: { model: BoardSheetModel }) 
               <FullList column="todo" date={model.date} />
             </div>
             <Cards lines={model.pulls} empty="No pulls waiting." />
+            {model.parked > 0 && <p className={s.parked}>and {model.parked} parked, on the To do pages</p>}
           </Square>
           <Square id="ledgers" className={`${s.sq} ${s.agate}`}>
             <div className={s.sectionTitle}>

@@ -44,6 +44,9 @@ export type BoardSheetModel = {
   waiting: CardLine[];
   inHand: CardLine[];
   pulls: CardLine[];
+  /** The to-do cards parked on the board: counted here, printed on the To
+   *  do pages, never pulls. */
+  parked: number;
   ledger: Ledger;
   week: WeekRow[];
   rhythms: CardLine[];
@@ -71,6 +74,20 @@ const STANDING = /^\s*STANDING\b\s*[:·]?\s*/;
 export function standingRest(phase: string | undefined): string | null {
   if (!phase || !STANDING.test(phase)) return null;
   return phase.replace(STANDING, "").trim();
+}
+
+/** A parked phase opens with the word, in either spelling, the way a
+ *  standing one does; a phase that waits on Henry opens "YOU:". Neither is
+ *  a pull: a parked card prints on the To do pages and is counted on the
+ *  sheet, and a card waiting on Henry joins the waiting square. */
+const PARKED = /^\s*PARKED\b/;
+const YOU = /^\s*YOU\b\s*[:·]/;
+
+function isParked(phase: string | undefined): boolean {
+  return !!phase && PARKED.test(phase);
+}
+function waitsOnYou(phase: string | undefined): boolean {
+  return !!phase && YOU.test(phase);
 }
 
 /** The first sentence, or the whole when it has no full stop, capped. */
@@ -138,7 +155,9 @@ export function boardSheetModel(board: SheetBoard, report: SheetReport, date: st
 
   const ledgerIds = new Set<string>(LEDGER_CARDS);
   const todo = inCol("todo");
-  const pulls = todo.filter((c) => standingRest(c.phase) === null).map((c) => line(c));
+  const pulls = todo
+    .filter((c) => standingRest(c.phase) === null && !isParked(c.phase) && !waitsOnYou(c.phase))
+    .map((c) => line(c));
   // A standing card that is not one of the four ship cards is a rhythm
   // whichever of the two waiting columns it sits in.
   const rhythms = [...inCol("backlog"), ...todo]
@@ -190,9 +209,10 @@ export function boardSheetModel(board: SheetBoard, report: SheetReport, date: st
       backlog: inCol("backlog").length,
       done: inCol("done").length,
     },
-    waiting: inCol("review").map(withDecision),
+    waiting: [...inCol("review"), ...todo.filter((c) => waitsOnYou(c.phase))].map(withDecision),
     inHand: inCol("inprogress").map((c) => line(c)),
     pulls,
+    parked: todo.filter((c) => isParked(c.phase)).length,
     ledger,
     week: weekRows(board.week?.weekPlan),
     rhythms,

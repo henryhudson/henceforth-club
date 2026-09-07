@@ -25,6 +25,9 @@ const board: SheetBoard = {
     { id: "hansard-release-v1", col: "todo", title: "Hansard weekly release", phase: "STANDING: 1.10 in review, 1.11 complete" },
     { id: "deck-update", col: "todo", title: "Deck weekly release", phase: "STANDING: 1.31 live, nothing staged" },
     { id: "ops-parked", col: "todo", title: "A rhythm parked in todo", phase: "STANDING · weekly, from the todo column" },
+    { id: "parked-colon", col: "todo", title: "A parked card", phase: "PARKED: revisit on the next touch" },
+    { id: "parked-dot", col: "todo", title: "Another parked card", phase: "PARKED · after stamps land" },
+    { id: "you-todo", col: "todo", title: "Plot the whole of number 15", phase: "YOU: four tape measurements" },
     { id: "sci-fri", col: "backlog", title: "Sci Fri", phase: "STANDING · every Friday · film 4 cut" },
     { id: "thinking", col: "backlog", title: "Thinking Henceforth", phase: "STANDING: episode 14 live" },
     { id: "someday", col: "backlog", title: "A plain backlog card", phase: "PULL: later" },
@@ -51,6 +54,7 @@ const board: SheetBoard = {
 const report: SheetReport = {
   decisions: [
     { card: "confirmation-statement", proposal: "today", why: "Done, or re-booked to a named day." },
+    { card: "you-todo", proposal: "Saturday", why: "The tape, in daylight." },
     { card: "not-on-the-board", proposal: "today", why: "Ignored." },
   ],
   appStore: {
@@ -67,7 +71,7 @@ describe("the column partitions", () => {
   const model = boardSheetModel(board, report, DATE);
 
   it("puts review in waiting, in progress in hand, and the plain todo cards in the pulls", () => {
-    expect(model.waiting.map((c) => c.id)).toEqual(["confirmation-statement", "digest-flip"]);
+    expect(model.waiting.map((c) => c.id)).toEqual(["confirmation-statement", "digest-flip", "you-todo"]);
     expect(model.inHand.map((c) => c.id)).toEqual(["folklore-b1"]);
     expect(model.pulls.map((c) => c.id)).toEqual(["deck-invite"]);
   });
@@ -80,7 +84,7 @@ describe("the column partitions", () => {
   });
 
   it("counts every column and stamps the board's own time", () => {
-    expect(model.counts).toEqual({ total: 18, review: 2, inprogress: 1, todo: 6, backlog: 3, done: 6 });
+    expect(model.counts).toEqual({ total: 21, review: 2, inprogress: 1, todo: 9, backlog: 3, done: 6 });
     expect(model.stamp).toBe("2026-09-04 10:09");
     expect(model.date).toBe(DATE);
     expect(model.trimmed).toBe(false);
@@ -116,6 +120,51 @@ describe("the standing prefix split", () => {
     expect(standingRest("STANDINGS are not standing")).toBe(null);
     expect(standingRest("PULL: build it")).toBe(null);
     expect(standingRest(undefined)).toBe(null);
+  });
+});
+
+describe("the parked and the waiting-on-you prefixes", () => {
+  const model = boardSheetModel(board, report, DATE);
+
+  it("keeps a parked to-do card out of the pulls, in either spelling, and counts it for the sheet", () => {
+    const ids = [...model.pulls, ...model.rhythms].map((c) => c.id);
+    expect(ids).not.toContain("parked-colon");
+    expect(ids).not.toContain("parked-dot");
+    expect(model.parked).toBe(2);
+  });
+
+  it("keeps a to-do card waiting on Henry out of the pulls and puts it with the waiting, after the review cards, its proposal joined", () => {
+    expect(model.pulls.map((c) => c.id)).not.toContain("you-todo");
+    expect(model.waiting[2]).toEqual({
+      id: "you-todo",
+      title: "Plot the whole of number 15",
+      phase: "YOU: four tape measurements",
+      decision: { proposal: "Saturday", why: "The tape, in daylight." },
+    });
+  });
+
+  it("keeps a plain PULL: card a pull, and counts no parked cards when there are none", () => {
+    expect(model.pulls.map((c) => c.id)).toEqual(["deck-invite"]);
+    const plain = boardSheetModel({ cards: board.cards.filter((c) => c.col !== "todo" || c.id === "deck-invite") }, null, DATE);
+    expect(plain.pulls.map((c) => c.id)).toEqual(["deck-invite"]);
+    expect(plain.parked).toBe(0);
+  });
+
+  it("reads the words and nothing that merely resembles them", () => {
+    const lookalikes = boardSheetModel(
+      {
+        cards: [
+          { id: "p", col: "todo", title: "Parkedness", phase: "PARKEDNESS is not parked" },
+          { id: "y", col: "todo", title: "Your call", phase: "YOUR call, not a line for you" },
+          { id: "w", col: "todo", title: "Words", phase: "the phase says parked and YOU: in passing" },
+        ],
+      },
+      null,
+      DATE,
+    );
+    expect(lookalikes.pulls.map((c) => c.id)).toEqual(["p", "y", "w"]);
+    expect(lookalikes.waiting).toEqual([]);
+    expect(lookalikes.parked).toBe(0);
   });
 });
 
