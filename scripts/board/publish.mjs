@@ -30,7 +30,8 @@ import { readFile, readdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import path from "node:path";
 import { parseGardeningSchedule } from "./gardening-core.mjs";
-import { STORE_REFUSED, classifyReadError, reasonFor, summarise } from "./publish-core.mjs";
+import { boardLooksCollapsed, collapseCounts } from "./autosync-core.mjs";
+import { BOARD_COLLAPSED, STORE_REFUSED, classifyReadError, reasonFor, summarise } from "./publish-core.mjs";
 import { publishToChain } from "./chain-publish.mjs";
 import { BOARD_SURFACE, DONE_SURFACE, GARDENING_SURFACE, canonicalBytes, reportSurface, splitBoard, weekSurface } from "./chain-publish-core.mjs";
 
@@ -64,7 +65,10 @@ const failed = (name, kind, message) => steps.push({ name, failed: true, reason:
 
 // Board. Reading the file and writing the store are separate failures with
 // separate causes, so they are caught separately — conflating them is what
-// produced four days of silence.
+// produced four days of silence. The store's own board is read first: a local
+// file that has collapsed against it (7 September: a one-card fixture reached
+// the store and the chain within seconds of being written) is refused, neither
+// the store nor the chain takes it, and the run exits non-zero.
 let board = null;
 try {
   board = JSON.parse(await readFile(path.join(root, "content/board/latest.json"), "utf8"));
@@ -73,12 +77,17 @@ try {
 }
 if (board) {
   const { latest, done } = splitBoard(board);
-  documents.push({ surface: BOARD_SURFACE, bytes: canonicalBytes(latest) });
-  documents.push({ surface: DONE_SURFACE, bytes: canonicalBytes(done), feeCeiling: DONE_FEE_CEILING_SATS });
   try {
-    await redis.set("board:latest", board);
-    ok("board:latest");
-    console.log(`published board:latest (${board.cards?.length ?? 0} cards)`);
+    const lastGood = await redis.get("board:latest");
+    if (boardLooksCollapsed(board, lastGood)) {
+      failed("board:latest", BOARD_COLLAPSED, collapseCounts(board, lastGood));
+    } else {
+      documents.push({ surface: BOARD_SURFACE, bytes: canonicalBytes(latest) });
+      documents.push({ surface: DONE_SURFACE, bytes: canonicalBytes(done), feeCeiling: DONE_FEE_CEILING_SATS });
+      await redis.set("board:latest", board);
+      ok("board:latest");
+      console.log(`published board:latest (${board.cards?.length ?? 0} cards)`);
+    }
   } catch (e) {
     failed("board:latest", STORE_REFUSED, e.message);
   }

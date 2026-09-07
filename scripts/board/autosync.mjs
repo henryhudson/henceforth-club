@@ -3,7 +3,8 @@
 // on any change it regenerates content/board/latest.json and runs publish.mjs.
 //
 // Debounced (coalesces mid-edit bursts) and VALIDATED (a broken/half-written
-// board-data.js is skipped, never published). Designed to run forever under a
+// board-data.js is skipped, never published, and so is one that has collapsed
+// against the mirror as it stands). Designed to run forever under a
 // launchd LaunchAgent (club.henceforth.board-autosync) so the website updates
 // "at all times" without anyone running publish by hand.
 //
@@ -39,8 +40,11 @@ function log(msg) {
 // prose `generated` line: the site ages the board on this, never on the
 // sentence, which is rendered verbatim and carries no timezone. Stamped when
 // the mirror is regenerated, which is when the canonical board last changed.
+// The mirror as it stands is read first: a board that has collapsed against it
+// is refused (autosync-core.mjs) and the file is not touched.
 async function regenLatest() {
-  const latest = latestFromBoardData(await readFile(BOARD_DATA, "utf8"), new Date().toISOString());
+  const lastGood = await readFile(LATEST, "utf8").then(JSON.parse).catch(() => null);
+  const latest = latestFromBoardData(await readFile(BOARD_DATA, "utf8"), new Date().toISOString(), lastGood);
   await writeFile(LATEST, JSON.stringify(latest, null, 2) + "\n");
   return latest.cards.length;
 }

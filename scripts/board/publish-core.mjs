@@ -19,6 +19,10 @@ export const FILE_MISSING = "file-missing";
 export const FILE_UNREADABLE = "file-unreadable";
 export const STORE_REFUSED = "store-refused";
 export const CHAIN_REFUSED = "chain-refused";
+// A board with fewer than half the store's cards or a dateline behind it
+// (autosync-core.mjs, boardLooksCollapsed). The store and the chain keep the
+// last good board; the local file is the one that is wrong.
+export const BOARD_COLLAPSED = "board-collapsed";
 
 /** A read that failed: absent file, or present but unreadable/unparseable. */
 export function classifyReadError(error) {
@@ -40,6 +44,8 @@ export function reasonFor(kind, message) {
       return `the store refused the write; the local file is present and was read fine (${message})`;
     case CHAIN_REFUSED:
       return `the chain refused the inscription; the local file is present and was read fine (${message})`;
+    case BOARD_COLLAPSED:
+      return `the board has collapsed and was refused; the store's last good board stands (${message})`;
     default:
       return message;
   }
