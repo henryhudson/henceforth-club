@@ -39,18 +39,33 @@ function Band({ label, lines, empty }: { label: string; lines: Line[]; empty?: s
   );
 }
 
-/** The day: the week's plan for the date above, then twenty-four boxes, an
- *  hour each, four across and six down, empty for the pen. */
-function DayGrid({ day }: { day: DayPageModel }) {
+/** The day: the week's plan for the date above, then one time line running
+ *  the length of the page, midnight at its head and midnight at its foot,
+ *  with a named tick at every hour and a shorter one at every half hour, and
+ *  open paper for the pen beside it. Each mark is placed by the minute it
+ *  falls on, as a share of the day, so the hours come out evenly spaced
+ *  however tall the field is. */
+function DayTimeline({ day }: { day: DayPageModel }) {
   return (
     <>
       <Band label="From the week's plan" lines={day.tasks} empty="Nothing on the week's plan for the day." />
-      <div className={`${s.grid} ${s.hours}`}>
-        {day.hours.map((h) => (
-          <div key={h} className={s.box}>
-            <span className={s.boxLabel}>{h}</span>
+      <div className={s.day}>
+        <div className={s.timeline}>
+          <div className={s.track}>
+            <div className={s.timeLine} aria-hidden />
+            {day.marks.map((mark) => (
+              <div
+                key={mark.at}
+                className={mark.label ? s.mark : `${s.mark} ${s.markHalf}`}
+                style={{ top: `${((mark.at / 1440) * 100).toFixed(4)}%` }}
+              >
+                <span className={s.markLabel}>{mark.label}</span>
+                <span className={s.markTick} aria-hidden />
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
+        <div className={s.notes}>Notes</div>
       </div>
     </>
   );
@@ -149,9 +164,10 @@ function note(page: BookPage): string | null {
 /** The Board as a book: the front sheet as it stands, then To do, the cards
  *  in hand at its top under their own label and the cards to do after,
  *  starting a page of print and flowing over as many pages as it needs, then
- *  the day, the month and the year, a page of boxes each, with a running foot
- *  that counts the book's pages. On the web the pages follow the front down
- *  the grey ground, each reachable by its own anchor. */
+ *  the day as a time line with paper beside it, and the month and the year, a
+ *  page of boxes each, with a running foot that counts the book's pages. On
+ *  the web the pages follow the front down the grey ground, each reachable by
+ *  its own anchor. */
 export default function BoardBook({ model, date }: { model: BoardBookModel; date: string }) {
   return (
     <div className={s.book}>
@@ -200,14 +216,15 @@ export default function BoardBook({ model, date }: { model: BoardBookModel; date
               </>
             )}
             {page.kind === "cards" && <ColumnCards cards={page.list.cards} empty={page.empty} />}
-            {page.kind === "day" && <DayGrid day={page.day} />}
+            {page.kind === "day" && <DayTimeline day={page.day} />}
             {page.kind === "month" && <MonthGrid month={page.month} />}
             {page.kind === "year" && <YearGrid year={page.year} />}
             {i === model.pages.length - 1 && (
               <p className={s.credit}>
                 Set in Georgia, seven point upon eight; agate matter at five and a half point. Drawn from the board as
                 published and printed on demand: the working set on the front, then every card to do and in hand on as
-                many pages as they take, then the day, the month and the year as boxes for the pen.
+                many pages as they take, then the day as one line from midnight to midnight with paper to write on
+                beside it, and the month and the year as boxes for the pen.
               </p>
             )}
           </section>

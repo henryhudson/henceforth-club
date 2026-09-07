@@ -122,15 +122,28 @@ describe("The Board as a book", () => {
     expect([...busy.matchAll(/<section id="([a-z]+)"/g)].map((m) => m[1])).toEqual(["todo", "day", "month", "year"]);
   });
 
-  it("prints the day as the week's plan for the date, ticked, above twenty-four empty hour boxes", () => {
+  it("prints the day as the week's plan for the date, ticked, above one line from midnight to midnight with paper to write on", () => {
     expect(page).toContain("From the week&#x27;s plan");
     expect(page).toContain("☑</span><span>Cut episode fifteen, the chain.");
     expect(page).toContain("☐</span><span>Press the 1.10 release.");
     expect(page).toContain("2 items · 1 done");
     const day = section(page, "day", "month");
-    expect([...day.matchAll(/<span class="[^"]+">(\d\d)<\/span><\/div>/g)].map((m) => m[1])).toEqual(
-      Array.from({ length: 24 }, (_, h) => String(h).padStart(2, "0")),
+    // twenty-five hours named 00 to 24, and no box grid anywhere on the page
+    expect([...day.matchAll(new RegExp(`<span class="${s.markLabel}">(\\d\\d)</span>`, "g"))].map((m) => m[1])).toEqual(
+      Array.from({ length: 25 }, (_, h) => String(h).padStart(2, "0")),
     );
+    expect(day).not.toContain(`class="${s.grid}`);
+    expect(day).toContain(`<div class="${s.notes}">Notes</div>`);
+    // forty-nine marks, the first at the head and the last at the foot, every
+    // step the same, so an hour is an even share of the field's height
+    const tops = [...day.matchAll(/style="top:([0-9.]+)%"/g)].map((m) => Number(m[1]));
+    expect(tops).toHaveLength(49);
+    expect(tops[0]).toBe(0);
+    expect(tops[48]).toBe(100);
+    expect(new Set(tops.slice(1).map((top, i) => (top - tops[i]).toFixed(3))).size).toBe(1);
+    // the half hours are marked and never named
+    expect(day.match(new RegExp(s.markHalf, "g"))).toHaveLength(24);
+    expect(day).toContain(`<span class="${s.markLabel}"></span>`);
     expect(day).not.toContain("☐</span><span>Cut");
   });
 

@@ -46,9 +46,10 @@
 }
 
 /* a page of boxes is one page of print exactly, a column of heading, band
-   and grid, the grid taking every millimetre the heading leaves: an A4 on
-   the web, and in print the page area (297mm less the margins of 12mm and
-   14mm) with three millimetres in hand so rounding never turns a blank page */
+   and field, the field (the day's time line, or a grid of boxes) taking
+   every millimetre the heading leaves: an A4 on the web, and in print the
+   page area (297mm less the margins of 12mm and 14mm) with three
+   millimetres in hand so rounding never turns a blank page */
 .boxes {
   display: flex;
   flex-direction: column;
@@ -154,7 +155,6 @@
   border-top: var(--rule);
   border-left: var(--rule);
 }
-.hours { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(6, 1fr); }
 .days { grid-template-columns: repeat(7, 1fr); }
 .months { grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(4, 1fr); }
 
@@ -183,6 +183,60 @@
 .boxLines .line { gap: .8mm; margin: 0 0 .5mm; }
 .boxLines .tick { font-size: 1.1em; }
 .boxLines .when { font-size: .9em; }
+
+/* ── the day: one time line from midnight to midnight running the length of
+   the page, and open paper beside it (Henry, 2026-09-07: "instead of boxes
+   for the daily 24h have a time line from 0 to 24 going the length of the
+   page and add notes to that"). The field takes every millimetre the
+   heading leaves, so an hour stands as tall as the paper allows. ── */
+.day {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 22mm 1fr;
+  grid-template-rows: 1fr;
+  column-gap: 4mm;
+}
+
+/* the line's column. The track is inset by half an hour's label so the 00 at
+   the head and the 24 at the foot sit whole on the paper; the line itself is
+   the house rule, drawn once from the track's top to its foot. */
+.timeline { position: relative; }
+.track { position: absolute; top: 1.4mm; right: 0; bottom: 1.4mm; left: 0; }
+.timeLine { position: absolute; top: 0; bottom: 0; left: 12mm; border-left: var(--rule); }
+
+/* a mark, placed by its share of the day and centred on it, so the hours are
+   evenly spaced by construction: the hour in agate in the gutter, then the
+   tick crossing the line — a short one on the hour, half as long on the half
+   hour, which is marked and never named. */
+.mark {
+  position: absolute;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+}
+.markLabel {
+  flex: 0 0 10mm;
+  text-align: right;
+  margin-right: 2mm;
+  font: 700 5.5pt/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .06em;
+}
+.markTick { flex: 0 0 5mm; border-top: var(--rule); }
+.markHalf .markTick { flex-basis: 2.5mm; }
+
+/* the notes: the word at its head and then open paper for the pen, running
+   the line's own height, ruled into nothing — the time line is the only line
+   on the field */
+.notes {
+  font: 700 .857em/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: #111;
+}
 
 /* the week's days over the month's columns */
 .weekdays {

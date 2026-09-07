@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   boardBookModel,
   dayPageModel,
-  hourGrid,
+  dayTimeline,
   monthGrid,
   monthPageModel,
   whenLabel,
@@ -138,7 +138,7 @@ describe("the book's pages", () => {
     const [, bd, bm, by] = bare.pages;
     if (bd.kind !== "day" || bm.kind !== "month" || by.kind !== "year") throw new Error("the last three pages are the grids");
     expect(bd.day.tasks).toEqual([]);
-    expect(bd.day.hours).toHaveLength(24);
+    expect(bd.day.marks).toEqual(dayTimeline());
     expect(bm.empty).toBe("Not laid out yet.");
     expect(bm.month.laidOut).toBe(false);
     expect(bm.month.note).toBeNull();
@@ -154,13 +154,28 @@ describe("the book's pages", () => {
   });
 });
 
-describe("the day: twenty-four hours and the week's plan for the date", () => {
-  it("counts the hours 00 to 23 in four columns of six", () => {
-    expect(hourGrid()).toHaveLength(24);
-    expect(hourGrid()[0]).toBe("00");
-    expect(hourGrid()[9]).toBe("09");
-    expect(hourGrid()[23]).toBe("23");
-    expect(new Set(hourGrid()).size).toBe(24);
+describe("the day: one line from midnight to midnight, and the week's plan for the date", () => {
+  const marks = dayTimeline();
+  const hours = marks.filter((m) => m.label !== null);
+  const halves = marks.filter((m) => m.label === null);
+
+  it("names twenty-five marks 00 to 24, midnight at the head and midnight at the foot", () => {
+    expect(hours).toHaveLength(25);
+    expect(hours.map((m) => m.label)).toEqual(Array.from({ length: 25 }, (_, h) => String(h).padStart(2, "0")));
+    expect(hours.map((m) => m.at)).toEqual(Array.from({ length: 25 }, (_, h) => h * 60));
+    expect(marks[0]).toEqual({ at: 0, label: "00" });
+    expect(marks[marks.length - 1]).toEqual({ at: 1440, label: "24" });
+  });
+
+  it("puts one unnamed mark at the half hour between each pair of hours, and nowhere else", () => {
+    expect(halves).toHaveLength(24);
+    expect(halves.map((m) => m.at)).toEqual(Array.from({ length: 24 }, (_, h) => h * 60 + 30));
+    expect(marks).toHaveLength(49);
+    expect(marks.map((m) => m.label === null)).toEqual(Array.from({ length: 49 }, (_, i) => i % 2 === 1));
+  });
+
+  it("steps the same thirty minutes every time, so the hours are evenly spaced", () => {
+    expect(new Set(marks.slice(1).map((m, i) => m.at - marks[i].at))).toEqual(new Set([30]));
   });
 
   it("picks the week's row for the date, ticks its done tasks, and reads a task written as a bare string", () => {
@@ -172,13 +187,13 @@ describe("the day: twenty-four hours and the week's plan for the date", () => {
       { label: "Press the 1.10 release.", done: false },
       { label: "Post the film.", done: false },
     ]);
-    expect(day.hours).toEqual(hourGrid());
+    expect(day.marks).toEqual(dayTimeline());
   });
 
-  it("has no tasks for a date the week does not plan, and none without a week, and the hours either way", () => {
+  it("has no tasks for a date the week does not plan, and none without a week, and the line either way", () => {
     expect(dayPageModel(board.week, "2026-09-09").tasks).toEqual([]);
     expect(dayPageModel(undefined, DATE).tasks).toEqual([]);
-    expect(dayPageModel(null, DATE).hours).toHaveLength(24);
+    expect(dayPageModel(null, DATE).marks).toEqual(dayTimeline());
   });
 });
 
