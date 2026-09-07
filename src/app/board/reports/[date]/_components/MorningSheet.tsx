@@ -190,7 +190,7 @@ export default function MorningSheet({
         precedence="default"
         href="https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap"
       />
-      <A4Sheet>
+      <A4Sheet className={s.sheet}>
         <div className={s.folio}>
           <span>{issue != null ? `No. ${issue} · ` : ""}{longDate(report.date)}</span>
           <span>Deck of Cards · Henceforth · The Hansard · henceforth.club</span>

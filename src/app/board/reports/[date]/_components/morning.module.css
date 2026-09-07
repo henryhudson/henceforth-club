@@ -12,20 +12,12 @@
    a real nameplate never changes size with the news. The daily's accent is
    the teal #0e7490 where The Hansard wears purple. */
 
+/* The A4 sheet frame itself comes from A4Sheet (overview.module.css); this
+   file styles only the daily's own furniture and matter. The one thing it
+   sets on the sheet is worn alongside the frame's class (MorningSheet passes
+   it through A4Sheet's className) so the two variables reach the packer's
+   columns below: its painted column rules then follow the house line. */
 .sheet {
-  width: 210mm;
-  min-height: 297mm;
-  margin: 0 auto;
-  background: #fff;
-  color: #111;
-  padding: 9mm 12mm 8mm;
-  font: 7pt/1.143 Georgia, serif;
-  display: flex;
-  flex-direction: column;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
-  box-sizing: border-box;
-  /* The packer's painted column rules follow the house line. */
   --pack-rule-w: 1.5pt;
   --pack-rule-c: #111;
 }
@@ -253,9 +245,4 @@
   font: italic 5.5pt/1.25 Georgia, serif;
   color: #333;
   text-align: center;
-}
-
-.ground { background: #dedbd4; padding: 6mm 0; }
-@media print {
-  .ground { background: #fff; padding: 0; }
 }
