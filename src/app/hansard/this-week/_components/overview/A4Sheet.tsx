@@ -9,7 +9,10 @@ function refitPack(el: HTMLElement) {
   el.querySelector('[data-pack-root]')?.dispatchEvent(new Event('newspaper-fit'))
 }
 
-export default function A4Sheet({ children }: { children: React.ReactNode }) {
+// className is worn alongside the frame's own class: a sheet passes its
+// stylesheet's class to reach the tree below with what only it sets, such as
+// the Morning Edition's rule variables for the packer.
+export default function A4Sheet({ children, className }: { children: React.ReactNode; className?: string }) {
   const ref = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
     const el = ref.current
@@ -72,7 +75,7 @@ export default function A4Sheet({ children }: { children: React.ReactNode }) {
         }
       `}</style>
       <button className={s.printBtn} onClick={() => window.print()}>Print</button>
-      <div className={`${s.sheet} a4-print-root`} ref={ref}>{children}</div>
+      <div className={[s.sheet, 'a4-print-root', className].filter(Boolean).join(' ')} ref={ref}>{children}</div>
     </>
   )
 }
