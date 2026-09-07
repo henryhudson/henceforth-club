@@ -1,10 +1,10 @@
-/* ── The Board's book (2026-09-07): the front sheet, then four pages, each
+/* ── The Board's book (2026-09-07): the front sheet, then five pages, each
    on the newspaper measure and each starting a page of print. The cards
    are set by the column page's own renderer (columns.module.css); this
-   file styles the book's frame, its running head, the page titles and the
-   plan lists. No fit loop on these pages: nothing is trimmed and nothing
-   is clipped, so the type is pinned in pt. The board wears the board
-   family's teal #0e7490. */
+   file styles the book's frame, its running head, the page titles, and
+   the grids of boxes the day, the month and the year are drawn as. No fit
+   loop on these pages: nothing is trimmed and nothing is clipped, so the
+   type is pinned in pt. The board wears the board family's teal #0e7490. */
 
 /* The front sheet's own print rule hides everything on the page but itself
    and lifts it out of the flow to the page's top. Inside the book the pages
@@ -18,11 +18,13 @@
 }
 
 /* a page on the web: an A4 width on the grey ground under the front sheet;
-   in print the page margins do this work and the frame falls away. The
-   printed width is the page area, 210mm less the two side margins of 12mm
-   that BoardBook's page rule sets, and is set here rather than left to the
-   flow: the flow is as wide as the first page's area, which is the front's
-   full 210mm, so a page left to it runs off the right edge. */
+   in print the frame falls away. Every printed page is the full 210mm wide,
+   the front's own width, and carries its 12mm sides as padding: Chrome lays
+   the book out at the first page's width and shrinks any narrower page to
+   fit, so side margins on the page rule (which the book had until
+   2026-09-07) printed the pages at 186/210, the type at six point and the
+   grids short of the foot. BoardBook's page rule keeps only the top and
+   bottom margins, the bottom for the running foot. */
 .page {
   width: 210mm;
   margin: 6mm auto 0;
@@ -35,7 +37,21 @@
   print-color-adjust: exact;
 }
 @media print {
-  .page { width: 186mm; margin: 0; padding: 0; box-shadow: none; break-before: page; }
+  .page { width: 210mm; margin: 0; padding: 0 12mm; box-sizing: border-box; box-shadow: none; break-before: page; }
+}
+
+/* a page of boxes is one page of print exactly, a column of heading, band
+   and grid, the grid taking every millimetre the heading leaves: an A4 on
+   the web, and in print the page area (297mm less the margins of 12mm and
+   14mm) with three millimetres in hand so rounding never turns a blank page */
+.boxes {
+  display: flex;
+  flex-direction: column;
+  height: 297mm;
+  box-sizing: border-box;
+}
+@media print {
+  .boxes { height: 268mm; }
 }
 
 /* ── the running head: the folio's strip, the nameplate's words in the
@@ -62,7 +78,7 @@
   margin: 2.4mm 0 1.6mm;
 }
 
-/* the line under the title: the column's count, or the plan's own title */
+/* the line under the title: the column's count, or the grid's */
 .standfirst {
   font: 5.5pt/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
   letter-spacing: .14em;
@@ -74,7 +90,7 @@
   margin-bottom: 2mm;
 }
 
-/* a plan's note, in the author's words */
+/* a plan's note, in the author's words, or the not-laid-out line */
 .note {
   font: italic 1em/1.143 Georgia, serif;
   text-align: center;
@@ -84,16 +100,29 @@
 }
 .nothing { font: italic 1em/1.143 Georgia, serif; color: #444; margin: 0; }
 
-/* ── a plan: two columns of type, a group a week or a month, a box a line ── */
-.plan {
-  column-count: 2;
-  column-gap: 5mm;
-  column-rule: .5pt solid #111;
-  text-align: left;
-  hyphens: none;
+/* ── lines with a tick box each: the band above a grid, or a box's matter ── */
+.lines { list-style: none; margin: 0; padding: 0; }
+.line {
+  display: flex;
+  gap: 1.4mm;
+  align-items: baseline;
+  margin: 0 0 .8mm;
+  break-inside: avoid;
 }
-.group { break-inside: avoid; margin: 0 0 2.4mm; }
-.groupLabel {
+.tick { flex: 0 0 auto; font-size: 1.15em; line-height: 1; color: #0e7490; }
+.when {
+  font: 700 .786em/1.2 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #222;
+}
+.lineDone { color: #555; }
+
+/* the band above a grid: the week's plan for the day, or the lines that
+   fall on no box; two columns of type under a small-capitals label */
+.band { margin: 0 0 2mm; }
+.bandLabel {
   font: 700 .857em/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
   letter-spacing: .15em;
   text-transform: uppercase;
@@ -102,25 +131,63 @@
   padding-top: 1mm;
   margin: 0 0 1.2mm;
 }
-.lines { list-style: none; margin: 0; padding: 0; }
-.line {
-  display: flex;
-  gap: 1.4mm;
-  align-items: baseline;
-  margin: 0 0 1mm;
-  break-inside: avoid;
+.bandLines {
+  column-count: 2;
+  column-gap: 5mm;
+  column-rule: .5pt solid #111;
 }
-.box { flex: 0 0 auto; font-size: 1.15em; line-height: 1; color: #0e7490; }
-.when {
-  flex: 0 0 auto;
-  min-width: 18mm;
-  font: 700 .786em/1.2 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+
+/* ── the grid of boxes, drawn with the house rule of 1.5pt: the grid's own
+   top and left edges, each box's right and bottom, so every line is one
+   line. The grid fills what the heading leaves; a row is an equal share
+   unless a box has more to say. ── */
+.grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  border-top: 1.5pt solid #111;
+  border-left: 1.5pt solid #111;
+}
+.hours { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(6, 1fr); }
+.days { grid-template-columns: repeat(7, 1fr); }
+.months { grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(4, 1fr); }
+
+.box {
+  border-right: 1.5pt solid #111;
+  border-bottom: 1.5pt solid #111;
+  padding: .8mm 1.2mm 1mm;
+  min-width: 0;
+  text-align: left;
+}
+/* a day of the month either side, there for the shape */
+.boxOut { color: #999; background: #f2f1ec; }
+
+/* the hour, the day's number or the month's name, in agate at the top left */
+.boxLabel {
+  display: block;
+  font: 700 5.5pt/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
   font-variant-numeric: tabular-nums;
   letter-spacing: .06em;
   text-transform: uppercase;
-  color: #222;
+  margin: 0 0 .8mm;
 }
-.lineDone { color: #555; }
+
+/* the matter inside a box, in the small type, room left for the pen */
+.boxLines { font: 5.5pt/1.2 Georgia, serif; }
+.boxLines .line { gap: .8mm; margin: 0 0 .5mm; }
+.boxLines .tick { font-size: 1.1em; }
+.boxLines .when { font-size: .9em; }
+
+/* the week's days over the month's columns */
+.weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  font: 700 5.5pt/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  text-align: center;
+  padding: 0 0 .8mm;
+}
 
 /* ── colophon strip, at the book's foot ── */
 .credit {

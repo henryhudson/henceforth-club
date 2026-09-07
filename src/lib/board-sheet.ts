@@ -104,7 +104,7 @@ function line(card: SheetCard, phase = card.phase ?? ""): CardLine {
   return { id: card.id, title: card.title, phase };
 }
 
-function weekRows(plan: PlanDay[] | null | undefined): WeekRow[] {
+export function weekRows(plan: PlanDay[] | null | undefined): WeekRow[] {
   return (plan ?? []).map((day) => ({
     date: day.date,
     label: `${day.weekday.slice(0, 3)} ${parseInt(day.date.slice(8, 10), 10)}`,
