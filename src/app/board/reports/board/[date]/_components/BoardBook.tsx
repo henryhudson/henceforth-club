@@ -125,12 +125,13 @@ function linesOf(page: BookPage): Line[] {
   }
 }
 
-/** The line under a page's title: the board's own count of a column, or of
- *  the lines a grid carries and how many are done. */
+/** The line under a page's title: the board's own count of the cards, in
+ *  hand and to do together, or of the lines a grid carries and how many are
+ *  done. */
 function standfirst(page: BookPage, stamp: string | null): string {
   const stood = `As the board stood${stamp ? ` at ${stamp}` : ""}`;
   if (page.kind === "cards") {
-    const n = page.list.cards.length;
+    const n = page.inHand.length + page.list.cards.length;
     return `${stood} · ${n} ${n === 1 ? "card" : "cards"} · newest first`;
   }
   const lines = linesOf(page);
@@ -145,11 +146,12 @@ function note(page: BookPage): string | null {
   return null;
 }
 
-/** The Board as a book: the front sheet as it stands, then To do and In
- *  progress, each starting a page of print and flowing over as many pages as
- *  it needs, then the day, the month and the year, a page of boxes each, with
- *  a running foot that counts the book's pages. On the web the pages follow
- *  the front down the grey ground, each reachable by its own anchor. */
+/** The Board as a book: the front sheet as it stands, then To do, the cards
+ *  in hand at its top under their own label and the cards to do after,
+ *  starting a page of print and flowing over as many pages as it needs, then
+ *  the day, the month and the year, a page of boxes each, with a running foot
+ *  that counts the book's pages. On the web the pages follow the front down
+ *  the grey ground, each reachable by its own anchor. */
 export default function BoardBook({ model, date }: { model: BoardBookModel; date: string }) {
   return (
     <div className={s.book}>
@@ -191,6 +193,12 @@ export default function BoardBook({ model, date }: { model: BoardBookModel; date
             <h1 className={s.title}>{heading(page)}</h1>
             <div className={s.standfirst}>{standfirst(page, model.front.stamp)}</div>
             {words && <p className={s.note}>{words}</p>}
+            {page.kind === "cards" && page.inHand.length > 0 && (
+              <>
+                <div className={s.bandLabel}>In hand</div>
+                <ColumnCards cards={page.inHand} empty="Nothing in hand." />
+              </>
+            )}
             {page.kind === "cards" && <ColumnCards cards={page.list.cards} empty={page.empty} />}
             {page.kind === "day" && <DayGrid day={page.day} />}
             {page.kind === "month" && <MonthGrid month={page.month} />}

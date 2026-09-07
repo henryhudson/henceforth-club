@@ -6,7 +6,8 @@ import s from "./columns.module.css";
 /** The cards of one column as printed, newest first, in two columns of type
  *  that flow over as many pages as they need: each its title, its phase, a
  *  chip line of apps and date, and the first sentence of its latest note.
- *  The Board's book sets its To do and In progress pages with this too. */
+ *  The Board's book sets its To do page with this too, the cards in hand
+ *  and then the cards to do. */
 export function ColumnCards({ cards, empty }: { cards: ColumnCard[]; empty: string }) {
   return (
     <div className={s.list}>

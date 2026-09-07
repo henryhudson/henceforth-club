@@ -1,7 +1,12 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { boardBookModel, type BookBoard } from "@/lib/board-book";
 import BoardBook from "./BoardBook";
+import b from "./board.module.css";
+import s from "./book.module.css";
 
 const DATE = "2026-09-07";
 
@@ -46,14 +51,21 @@ const section = (page: string, id: string, next: string) => page.slice(page.inde
 describe("The Board as a book", () => {
   const page = html(board);
 
-  it("sets the front, then five pages in order, each anchored and headed by its name, the date, the month or the year's span", () => {
-    expect([...page.matchAll(/<section id="([a-z]+)"/g)].map((m) => m[1])).toEqual(["todo", "inprogress", "day", "month", "year"]);
+  it("sets the front, then four pages in order, each anchored and headed by its name, the date, the month or the year's span, and no page for what is in progress", () => {
+    expect([...page.matchAll(/<section id="([a-z]+)"/g)].map((m) => m[1])).toEqual(["todo", "day", "month", "year"]);
     const h1 = page.match(/<h1 class="([^"]+)"/)?.[1];
-    for (const title of ["To do", "In progress", "Monday 7 September 2026", "September 2026", "September 2026 to August 2027"]) {
+    for (const title of ["To do", "Monday 7 September 2026", "September 2026", "September 2026 to August 2027"]) {
       expect(page).toContain(`<h1 class="${h1}">${title}</h1>`);
     }
-    for (const foot of ["The day", "The month", "The year"]) expect(page).toContain(`<b>The Board</b> · ${foot}`);
+    expect(page).not.toContain(">In progress</h1>");
+    for (const foot of ["To do", "The day", "The month", "The year"]) expect(page).toContain(`<b>The Board</b> · ${foot}`);
+    expect(page).not.toContain("<b>The Board</b> · In progress");
     expect(page.indexOf("The working set of the four")).toBeLessThan(page.indexOf("<section"));
+  });
+
+  it("wears the board stylesheet's class on the front, so the packer's column rules and the sheet's own borders read the house line from it", () => {
+    const front = page.match(/<div class="([^"]*\ba4-print-root\b[^"]*)"/);
+    expect(front?.[1].split(" ")).toContain(b.sheet);
   });
 
   it("gives the book's pages their top and bottom margins, the sides at nought so no page is narrower than the front, a running foot counting the pages, and the front its own first page", () => {
@@ -71,13 +83,43 @@ describe("The Board as a book", () => {
     expect(parked.indexOf("and 1 parked, on the To do pages")).toBeLessThan(parked.indexOf("The ship ledgers"));
   });
 
-  it("sets the cards to do with the column page's renderer, and says nothing is in hand", () => {
-    expect(page).toContain("Two Dependabot alerts on the screenshot tool");
-    expect(page).toContain("The Hansard · moved 7 September 2026");
-    expect(page).toContain("Tooling, not the app.");
-    expect(page).toContain("As the board stood at 2026-09-07 09:55 · 1 card · newest first");
-    expect(page).toContain("Nothing in hand.");
-    expect(page).toContain("0 cards · newest first");
+  it("sets the cards to do with the column page's renderer, and with nothing in progress prints neither the in-hand label nor a line saying so", () => {
+    const todo = section(page, "todo", "day");
+    expect(todo).toContain("Two Dependabot alerts on the screenshot tool");
+    expect(todo).toContain("The Hansard · moved 7 September 2026");
+    expect(todo).toContain("Tooling, not the app.");
+    expect(todo).toContain("As the board stood at 2026-09-07 09:55 · 1 card · newest first");
+    expect(todo).not.toContain("In hand");
+    expect(todo).not.toContain("Nothing in hand.");
+    expect(todo.match(/<article class="/g)).toHaveLength(1);
+  });
+
+  it("carries the cards in hand at the top of the To do page under their label, set as the to-do cards are, newest first, and counts both in the standfirst", () => {
+    const busy = html({
+      ...board,
+      cards: [
+        ...board.cards,
+        { id: "h1", col: "inprogress", apps: ["henceforth"], title: "Episode sixteen, the chain", phase: "CUT: Thursday", movedAt: "2026-09-06T09:00:00+01:00", desc: "2026-09-06 · The script is staged. More." },
+        { id: "h2", col: "inprogress", apps: ["deck"], title: "Deck convert", movedAt: "2026-09-07T08:30:00+01:00" },
+      ],
+    });
+    const todo = section(busy, "todo", "day");
+    expect(todo).toContain(`<div class="${s.bandLabel}">In hand</div>`);
+    const label = todo.indexOf("In hand");
+    const newer = todo.indexOf("Deck convert");
+    const older = todo.indexOf("Episode sixteen, the chain");
+    const toDo = todo.indexOf("Two Dependabot alerts on the screenshot tool");
+    expect(label).toBeGreaterThan(0);
+    expect(newer).toBeGreaterThan(label);
+    expect(older).toBeGreaterThan(newer);
+    expect(toDo).toBeGreaterThan(older);
+    expect(todo).toContain("Henceforth · moved 6 September 2026");
+    expect(todo).toContain("The script is staged.");
+    expect(todo).toContain("As the board stood at 2026-09-07 09:55 · 3 cards · newest first");
+    expect(todo.match(/<article class="/g)).toHaveLength(3);
+    expect(todo).not.toContain("Nothing in hand.");
+    expect(todo).not.toContain("Nothing to do.");
+    expect([...busy.matchAll(/<section id="([a-z]+)"/g)].map((m) => m[1])).toEqual(["todo", "day", "month", "year"]);
   });
 
   it("prints the day as the week's plan for the date, ticked, above twenty-four empty hour boxes", () => {
@@ -137,5 +179,32 @@ describe("The Board as a book", () => {
     expect(bare).not.toContain("Also on the plan");
     expect(bare).not.toContain("Ship day");
     expect(bare.match(/0 items · 0 done/g)).toHaveLength(3);
+  });
+});
+
+/** The stylesheets The Board draws with: the front sheet's, the book's, and
+ *  the column pages', whose cards the To do page sets. */
+const here = dirname(fileURLToPath(import.meta.url));
+const sheets = [
+  ["board.module.css", join(here, "board.module.css")],
+  ["book.module.css", join(here, "book.module.css")],
+  ["columns.module.css", join(here, "../../../columns/[date]/[column]/_components/columns.module.css")],
+];
+
+describe("The Board's lines", () => {
+  it.each(sheets)("%s declares the house line once, 1.5pt solid black, and draws every rule with it", (_, file) => {
+    const declarations = readFileSync(file, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(declarations.match(/\d*\.?\d+(?:pt|px) solid[^;]*/g)).toEqual(["1.5pt solid #111"]);
+    expect(declarations).toContain("--rule: 1.5pt solid #111;");
+    expect(declarations).not.toMatch(/border-width/);
+    const rules = declarations.match(/(?:border(?:-top|-right|-bottom|-left)?|column-rule)\s*:\s*[^;]+;/g) ?? [];
+    expect(rules.length).toBeGreaterThan(0);
+    for (const rule of rules) expect(rule).toMatch(/:\s*(?:var\(--rule\)|none);$/);
+  });
+
+  it("gives the packer's painted column rules on the front the same line", () => {
+    const front = readFileSync(join(here, "board.module.css"), "utf8");
+    expect(front).toContain("--pack-rule-w: 1.5pt;");
+    expect(front).toContain("--pack-rule-c: #111;");
   });
 });
