@@ -9,7 +9,8 @@
 /* The front sheet's own print rule hides everything on the page but itself
    and lifts it out of the flow to the page's top. Inside the book the pages
    print too, and the front stays in the flow so the pages follow it, each
-   on a page of its own (BoardBook names the pages and sets their feet). */
+   on a page of its own (BoardBook sets the book's page margins and its
+   running foot, and keeps the front's own page as the first). */
 @media print {
   .book,
   .book * { visibility: visible; }
@@ -17,7 +18,11 @@
 }
 
 /* a page on the web: an A4 width on the grey ground under the front sheet;
-   in print the page margins do this work and the frame falls away */
+   in print the page margins do this work and the frame falls away. The
+   printed width is the page area, 210mm less the two side margins of 12mm
+   that BoardBook's page rule sets, and is set here rather than left to the
+   flow: the flow is as wide as the first page's area, which is the front's
+   full 210mm, so a page left to it runs off the right edge. */
 .page {
   width: 210mm;
   margin: 6mm auto 0;
@@ -30,7 +35,7 @@
   print-color-adjust: exact;
 }
 @media print {
-  .page { width: auto; margin: 0; padding: 0; box-shadow: none; break-before: page; }
+  .page { width: 186mm; margin: 0; padding: 0; box-shadow: none; break-before: page; }
 }
 
 /* ── the running head: the folio's strip, the nameplate's words in the

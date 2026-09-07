@@ -39,39 +39,39 @@ function standfirst(page: BookPage): string | null {
 }
 
 /** The Board as a book: the front sheet as it stands, then To do, In
- *  progress, The month and The year, each starting a page of print under its
- *  own name so the running foot can say which page of the book it is, and
- *  each flowing over as many pages as it needs. On the web the pages follow
- *  the front down the grey ground. */
+ *  progress, The month and The year, each starting a page of print and
+ *  flowing over as many pages as it needs, with a running foot that counts
+ *  the book's pages. On the web the pages follow the front down the grey
+ *  ground, each reachable by its own anchor. */
 export default function BoardBook({ model, date }: { model: BoardBookModel; date: string }) {
-  const foot = (title: string) =>
-    `"The Board · ${title} · ${longDate(date)} · page " counter(page) " of " counter(pages)`;
   return (
     <div className={s.book}>
-      {/* A named page per section: its margins, and its running foot from
-          the page's own margin box. The front keeps the sheet's own page. */}
-      <style>{model.pages
-        .map(
-          (p) => `
-        @page ${p.id} {
+      <BoardSheet model={model.front} />
+      {/* The book's pages of print: their margins and the running foot in the
+          page's own margin box, counted by the browser at print time. The
+          front is the first page and keeps the sheet's own margin of nought;
+          this rule follows the sheet's so it wins the cascade for the rest. */}
+      <style>{`
+        @page {
           size: A4;
           margin: 12mm 12mm 14mm;
           @bottom-center {
-            content: ${foot(p.title)};
+            content: "The Board · ${longDate(date)} · page " counter(page) " of " counter(pages);
             font: 5.5pt/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
             letter-spacing: .06em;
             text-transform: uppercase;
             color: #111;
           }
         }
-        [data-book-page="${p.id}"] { page: ${p.id}; }`,
-        )
-        .join("")}</style>
-      <BoardSheet model={model.front} />
+        @page :first {
+          margin: 0;
+          @bottom-center { content: none; }
+        }
+      `}</style>
       {model.pages.map((page, i) => {
         const line = standfirst(page);
         return (
-          <section key={page.id} className={s.page} data-book-page={page.id}>
+          <section key={page.id} id={page.id} className={s.page}>
             <div className={s.folio}>
               <span>{longDate(date)}</span>
               <span>
