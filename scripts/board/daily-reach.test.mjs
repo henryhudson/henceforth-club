@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildReach, coverageThrough, mergeByDate, readCounter, siteWeek, yesterdayCount } from "./daily-reach.mjs";
+import { buildReach, coverageThrough, mergeByDate, readCounter, siteWeek, trailingWeek, yesterdayCount } from "./daily-reach.mjs";
 
 describe("siteWeek", () => {
   it("sums a week whose every day was read", () => {
@@ -78,6 +78,45 @@ describe("yesterdayCount", () => {
   });
 });
 
+describe("trailingWeek", () => {
+  it("gives every date of the window a value, so a processed zero is a 0 and not an absence", () => {
+    expect(trailingWeek({ "2026-09-04": 3 }, "2026-09-05")).toEqual({
+      "2026-08-30": 0,
+      "2026-08-31": 0,
+      "2026-09-01": 0,
+      "2026-09-02": 0,
+      "2026-09-03": 0,
+      "2026-09-04": 3,
+      "2026-09-05": 0,
+    });
+  });
+
+  it("leaves every date beyond coverage absent, which is what the sheet prints as an em dash", () => {
+    const week = trailingWeek({ "2026-09-04": 3 }, "2026-09-04");
+    expect(Object.keys(week)).toEqual([
+      "2026-08-29",
+      "2026-08-30",
+      "2026-08-31",
+      "2026-09-01",
+      "2026-09-02",
+      "2026-09-03",
+      "2026-09-04",
+    ]);
+    expect(week["2026-09-05"]).toBeUndefined();
+  });
+
+  it("keeps the window a ceiling: a restated history is still seven days", () => {
+    const week = trailingWeek({ "2026-01-05": 2, "2026-03-14": 4, "2026-07-20": 7, "2026-07-26": 6 }, "2026-07-26");
+    expect(Object.keys(week)).toHaveLength(7);
+    expect(week["2026-07-20"]).toBe(7);
+    expect(week["2026-03-14"]).toBeUndefined();
+  });
+
+  it("gives no week at all when nothing was processed", () => {
+    expect(trailingWeek({ "2026-07-20": 7 }, null)).toEqual({});
+  });
+});
+
 describe("readCounter", () => {
   it("reads a failed response as null, never zero — an authorisation failure is not a count", () => {
     expect(readCounter(false, null)).toBe(null);
@@ -118,7 +157,15 @@ describe("buildReach", () => {
         {
           app: "deck",
           yesterday: { date: "2026-07-25", count: null },
-          week: { "2026-07-24": 2 },
+          week: {
+            "2026-07-18": 0,
+            "2026-07-19": 0,
+            "2026-07-20": 0,
+            "2026-07-21": 0,
+            "2026-07-22": 0,
+            "2026-07-23": 0,
+            "2026-07-24": 2,
+          },
           rating: { average: null, count: 0 },
         },
       ],
@@ -138,6 +185,41 @@ describe("buildReach", () => {
     const reach = buildReach("2026-07-26", [{ app: "deck", instances: [], rating }]);
     expect(reach.dataThrough).toBe(null);
     expect(reach.perApp[0].yesterday).toEqual({ date: null, count: null });
+    expect(reach.perApp[0].week).toEqual({});
+  });
+
+  it("gives a week Apple processed with no downloads seven zeros, not seven absences", () => {
+    // The live defect, from content/board/reports/2026-09-07.json: Henceforth's
+    // yesterday read 0 inside coverage while its week read {}, so the sheet
+    // printed six em dashes over six days Apple had settled as zeros, and the
+    // row lost its sparkline. The two cells came from the same instances and
+    // disagreed, because only yesterday knew coverage from absence.
+    const reach = buildReach("2026-09-06", [
+      { app: "henceforth", instances: [{ processingDate: "2026-09-06", byDate: {} }], rating },
+    ]);
+    expect(reach.perApp[0].yesterday).toEqual({ date: "2026-09-05", count: 0 });
+    expect(reach.perApp[0].week).toEqual({
+      "2026-08-30": 0,
+      "2026-08-31": 0,
+      "2026-09-01": 0,
+      "2026-09-02": 0,
+      "2026-09-03": 0,
+      "2026-09-04": 0,
+      "2026-09-05": 0,
+    });
+    // Seven numbers is what the sheet needs to draw a sparkline at all; six
+    // absences gave it fewer than the two points a series takes.
+    expect(Object.values(reach.perApp[0].week).every((n) => typeof n === "number")).toBe(true);
+  });
+
+  it("does not read a day beyond coverage as a zero, so an unprocessed day stays an em dash", () => {
+    const reach = buildReach("2026-09-06", [
+      { app: "hansard", instances: [{ processingDate: "2026-09-05", byDate: { "2026-09-04": 1 } }], rating },
+    ]);
+    expect(reach.perApp[0].yesterday).toEqual({ date: "2026-09-05", count: null });
+    expect(reach.perApp[0].week["2026-09-05"]).toBeUndefined();
+    expect(reach.perApp[0].week["2026-09-04"]).toBe(1);
+    expect(reach.perApp[0].week["2026-09-03"]).toBe(0);
   });
 
   it("omits the site block when there is none", () => {
@@ -151,7 +233,15 @@ describe("buildReach", () => {
     const reach = buildReach("2026-07-27", [
       { app: "deck", instances: [{ processingDate: "2026-07-27", byDate }], rating },
     ]);
-    expect(reach.perApp[0].week).toEqual({ "2026-07-20": 7, "2026-07-25": 3, "2026-07-26": 6 });
+    expect(reach.perApp[0].week).toEqual({
+      "2026-07-20": 7,
+      "2026-07-21": 0,
+      "2026-07-22": 0,
+      "2026-07-23": 0,
+      "2026-07-24": 0,
+      "2026-07-25": 3,
+      "2026-07-26": 6,
+    });
     // The floor is through minus six days inclusive, so 07-20 survives and 03-14 does not.
     expect(reach.perApp[0].yesterday).toEqual({ date: "2026-07-26", count: 6 });
   });

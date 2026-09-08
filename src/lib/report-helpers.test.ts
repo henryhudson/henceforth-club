@@ -140,6 +140,18 @@ describe("sparkPoints", () => {
     expect(ys[5]).toBeLessThan(ys[3]);
     expect(Math.min(...ys)).toBeCloseTo(0.5, 5);
   });
+  it("draws a week of processed zeros as a flat line, where a week of absences drew nothing", () => {
+    // The rendering half of the reach defect: Henceforth's row on 7 September
+    // reached this function as six undefined cells and lost its sparkline. A
+    // week Apple settled as zeros is a series, and a flat one is the truth.
+    const absent = [undefined, undefined, undefined, undefined, undefined, undefined];
+    expect(sparkPoints(absent)).toBeNull();
+    const zeros = sparkPoints([0, 0, 0, 0, 0, 0]);
+    expect(zeros).not.toBeNull();
+    const ys = zeros!.split(" ").map((p) => Number(p.split(",")[1]));
+    expect(ys).toHaveLength(6);
+    expect(new Set(ys).size).toBe(1);
+  });
   it("plots a level between its own low and high when told the floor is not zero", () => {
     // Free space moving 23.0 to 15.5 GiB: on a zero floor the line is nearly
     // flat; between its own ends it spans the whole view.
