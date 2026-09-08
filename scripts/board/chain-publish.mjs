@@ -13,7 +13,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { PrivateKey, Transaction } from "@bsv/sdk";
 import { changeOutputIndex, fetchIndexer, inscribeDocument } from "./chain-put.mjs";
 import { inscribeHead } from "./chain-head.mjs";
-import { CHAIN_REFUSED, reasonFor } from "./publish-core.mjs";
+import { CHAIN_REFUSED } from "./publish-core.mjs";
 import { EMPTY_LEDGER, changedDocuments, digestOf, headSurfaces, withHead, withInscription } from "./chain-publish-core.mjs";
 
 export async function readLedger(path) {
@@ -125,7 +125,7 @@ export async function publishToChain({
       if (!dryRun) await writeLedger(ledgerPath, ledger);
       steps.push({ name: `chain:${doc.surface}`, failed: false });
     } catch (e) {
-      steps.push({ name: `chain:${doc.surface}`, failed: true, reason: reasonFor(CHAIN_REFUSED, e.message) });
+      steps.push({ name: `chain:${doc.surface}`, failed: true, kind: CHAIN_REFUSED, message: e.message });
       return { steps, ledger }; // the head must not name what did not land
     }
   }
@@ -141,8 +141,8 @@ export async function publishToChain({
     steps.push({ name: "chain:head", failed: false });
   } catch (e) {
     steps.push({
-      name: "chain:head", failed: true,
-      reason: reasonFor(CHAIN_REFUSED, `${changed.length} document(s) landed without a head naming them — ${e.message}`),
+      name: "chain:head", failed: true, kind: CHAIN_REFUSED,
+      message: `${changed.length} document(s) landed without a head naming them — ${e.message}`,
     });
   }
   return { steps, ledger };

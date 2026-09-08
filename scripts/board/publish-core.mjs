@@ -36,26 +36,35 @@ export function classifyReadError(error) {
 }
 
 /**
- * The sentence printed for a failed step. The store-refused wording states
- * plainly that the local file is fine, because getting that backwards is the
- * exact mistake this module was written to prevent.
+ * The sentence printed for a cause. The store-refused wording states plainly
+ * that the local file is fine, because getting that backwards is the exact
+ * mistake this module was written to prevent.
+ *
+ * The failure's own message is deliberately NOT folded in here. A cause is
+ * what a reader needs stated once however many steps it took down, and a
+ * message varies with the step: the Upstash client's auto-pipelining path
+ * throws `Command failed: ${error}` with no command echo, but its direct
+ * request path echoes `command was: [...]`, which names the key. Interpolating
+ * the message made every step's sentence unique on that path, so rule 3 above
+ * (say the cause once and count the steps) held only by luck of which path the
+ * client happened to take. The message rides the detail line instead.
  */
-export function reasonFor(kind, message) {
+export function reasonFor(kind) {
   switch (kind) {
     case FILE_MISSING:
-      return `the local file is missing (${message})`;
+      return "the local file is missing";
     case FILE_UNREADABLE:
-      return `the local file is present but could not be read or parsed (${message})`;
+      return "the local file is present but could not be read or parsed";
     case STORE_REFUSED:
-      return `the store refused the write; the local file is present and was read fine (${message})`;
+      return "the store refused the write; the local file is present and was read fine";
     case STORE_UNREADABLE:
-      return `the store could not be read, so the collapse guard could not run and the board was held; nothing was written (${message})`;
+      return "the store could not be read, so the collapse guard could not run and the board was held; nothing was written";
     case CHAIN_REFUSED:
-      return `the chain refused the inscription; the local file is present and was read fine (${message})`;
+      return "the chain refused the inscription; the local file is present and was read fine";
     case BOARD_COLLAPSED:
-      return `the board has collapsed and was refused; the store's last good board stands (${message})`;
+      return "the board has collapsed and was refused; the store's last good board stands";
     default:
-      return message;
+      return "the cause was not classified";
   }
 }
 
@@ -63,9 +72,12 @@ const NAMED = 3;
 
 /**
  * Reduce the run's steps to what to print and what to exit with.
- * `steps` is [{ name, failed, reason }]. Failures sharing a reason are grouped:
- * the reason once, then the count and the first few names, so nothing is hidden
- * and nothing is repeated seventy times.
+ * `steps` is [{ name, failed, kind, message }]. Failures are grouped by CAUSE,
+ * not by the sentence a cause and a message happen to compose: the cause once,
+ * then the count and the first few names, then the message. Grouping on the
+ * composed sentence made one cause read as many the moment the messages
+ * differed, which is the same wall of near-identical lines rule 3 above was
+ * written against, and a wall is read exactly as carefully as silence is.
  */
 export function summarise(steps) {
   const failed = steps.filter((s) => s.failed);
@@ -73,22 +85,27 @@ export function summarise(steps) {
     return { exitCode: 0, lines: ["done"] };
   }
 
-  const byReason = new Map();
+  const byKind = new Map();
   for (const s of failed) {
-    const group = byReason.get(s.reason) ?? [];
-    group.push(s.name);
-    byReason.set(s.reason, group);
+    const group = byKind.get(s.kind) ?? { names: [], messages: [] };
+    group.names.push(s.name);
+    if (!group.messages.includes(s.message)) group.messages.push(s.message);
+    byKind.set(s.kind, group);
   }
 
   const lines = [`publish FAILED — ${failed.length} of ${steps.length} step(s) did not reach the store:`];
-  for (const [reason, names] of byReason) {
-    lines.push(`  · ${reason}`);
+  for (const [kind, { names, messages }] of byKind) {
+    lines.push(`  · ${reasonFor(kind)}`);
     const shown = names.slice(0, NAMED).join(", ");
     lines.push(
       names.length > NAMED
         ? `    ${names.length} steps: ${shown} … and ${names.length - NAMED} more`
         : `    ${names.length === 1 ? "step" : `${names.length} steps`}: ${shown}`,
     );
+    // One message stands for the cause; when the steps worded it differently
+    // the count of the rest says so rather than hiding them.
+    const others = messages.length - 1;
+    lines.push(`    ${messages[0]}${others > 0 ? ` (and ${others} other wording${others === 1 ? "" : "s"})` : ""}`);
   }
   lines.push("The local files are unchanged. Do not treat this run as a publish.");
   return { exitCode: 1, lines };

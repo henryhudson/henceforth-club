@@ -31,7 +31,7 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { parseGardeningSchedule } from "./gardening-core.mjs";
 import { boardLooksCollapsed, collapseCounts } from "./autosync-core.mjs";
-import { BOARD_COLLAPSED, STORE_REFUSED, STORE_UNREADABLE, classifyReadError, reasonFor, summarise } from "./publish-core.mjs";
+import { BOARD_COLLAPSED, STORE_REFUSED, STORE_UNREADABLE, classifyReadError, summarise } from "./publish-core.mjs";
 import { publishToChain } from "./chain-publish.mjs";
 import { BOARD_SURFACE, DONE_SURFACE, GARDENING_SURFACE, canonicalBytes, reportSurface, splitBoard, weekSurface } from "./chain-publish-core.mjs";
 
@@ -61,7 +61,7 @@ const documents = [];
 /** Every step this run attempted, so the summary can be honest about all of them. */
 const steps = [];
 const ok = (name) => steps.push({ name, failed: false });
-const failed = (name, kind, message) => steps.push({ name, failed: true, reason: reasonFor(kind, message) });
+const failed = (name, kind, message) => steps.push({ name, failed: true, kind, message });
 
 // Board. Reading the file and writing the store are separate failures with
 // separate causes, so they are caught separately — conflating them is what
