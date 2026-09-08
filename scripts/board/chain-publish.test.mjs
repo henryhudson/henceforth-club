@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { P2PKH, PrivateKey, Transaction } from "@bsv/sdk";
 import { headSourceFor, inscribeHeadFor, publishToChain, readLedger, recordInscription, writeLedger } from "./chain-publish.mjs";
 import { EMPTY_LEDGER, canonicalBytes, withHead, withInscription } from "./chain-publish-core.mjs";
+import { CHAIN_REFUSED, reasonFor } from "./publish-core.mjs";
 
 const WIF = PrivateKey.fromString("1".repeat(64), 16).toWif();
 const KEY = "2".repeat(64);
@@ -117,7 +118,9 @@ describe("publishing to the chain", () => {
     expect(steps).toHaveLength(1);
     expect(steps[0].name).toBe("chain:board-latest");
     expect(steps[0].failed).toBe(true);
-    expect(steps[0].reason).toContain("the chain refused the inscription");
+    expect(steps[0].kind).toBe(CHAIN_REFUSED);
+    expect(reasonFor(steps[0].kind)).toContain("the chain refused the inscription");
+    expect(steps[0].message).toBeTruthy();
     expect(steps.some((s) => s.name === "chain:head")).toBe(false);
     expect(ledger).toEqual(EMPTY_LEDGER);
   });

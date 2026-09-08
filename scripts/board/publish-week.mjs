@@ -8,7 +8,7 @@
 import { Redis } from "@upstash/redis";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
-import { STORE_REFUSED, classifyReadError, reasonFor, summarise } from "./publish-core.mjs";
+import { STORE_REFUSED, classifyReadError, summarise } from "./publish-core.mjs";
 
 const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -19,7 +19,7 @@ const dir = path.join(process.cwd(), "content/board/weeks");
 
 const steps = [];
 const ok = (name) => steps.push({ name, failed: false });
-const failed = (name, kind, message) => steps.push({ name, failed: true, reason: reasonFor(kind, message) });
+const failed = (name, kind, message) => steps.push({ name, failed: true, kind, message });
 
 let files = [];
 try {

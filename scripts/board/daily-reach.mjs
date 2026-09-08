@@ -75,15 +75,33 @@ export function readCounter(ok, body) {
   return Number(body.result) || 0;
 }
 
-/** Pure: keep only the trailing seven days ending at `through`. The shape's
- *  name is `week` and the report page renders it as one — but an Apple report
- *  instance can restate FULL history in a single delivery (observed live
- *  2026-08-11: one instance carried every date since January, ballooning the
- *  map to ~220 entries), so the window is enforced here rather than trusted. */
-export function onlyTrailingWeek(days, through) {
-  if (!through) return days;
-  const floor = daysAgo(through, 6);
-  return Object.fromEntries(Object.entries(days).filter(([date]) => date >= floor && date <= through));
+/** Pure: the trailing seven days ending at `through`, DENSE. Every date of the
+ *  window is present, and a date the merged map holds no key for reads as the
+ *  zero it is: the map gains a key only for a date whose rows the classifier
+ *  answered (tallyByDate in daily-reach-core.mjs), so a day Apple processed
+ *  with no downloads has no key at all, exactly like a day Apple has not
+ *  processed. Density is what keeps those two apart on the sheet, because the
+ *  report page reads a missing date the same way it reads a null (reachCell in
+ *  report-helpers.ts prints an em dash for both): inside the window a real zero
+ *  now prints as 0, and only a date beyond coverage is absent. It is the same
+ *  distinction yesterdayCount already draws for the single yesterday cell.
+ *
+ *  The window is a ceiling too, which is why this function existed at all: an
+ *  Apple report instance can restate FULL history in a single delivery
+ *  (observed live 2026-08-11, when one instance carried every date since
+ *  January and ballooned the map to some 220 entries), so nothing outside the
+ *  window survives, and no coverage at all yields no week.
+ *
+ *  Note the asymmetry the coverage rule leaves: `through` is proved processed,
+ *  the floor six days back is assumed so. The downloads report is read eight
+ *  instances deep at two to three days each, so a week is covered with margin;
+ *  a brand new app whose report holds only a day or two would read its earlier
+ *  days as zeros rather than as unknowns. */
+export function trailingWeek(days, through) {
+  if (!through) return {};
+  return Object.fromEntries(
+    Array.from({ length: 7 }, (_, i) => daysAgo(through, 6 - i)).map((date) => [date, days[date] ?? 0]),
+  );
 }
 
 /** Pure: assemble the report page's `Reach` shape (src/lib/board-data.ts) —
@@ -93,7 +111,7 @@ export function buildReach(today, apps, site) {
   const entries = apps.map(({ app, instances, rating, funnel }) => {
     const merged = mergeByDate(instances);
     const through = coverageThrough(instances);
-    const week = onlyTrailingWeek(merged, through);
+    const week = trailingWeek(merged, through);
     const yesterday = through ? yesterdayCount(merged, through, today) : { date: null, count: null };
     return { through, entry: { app, yesterday, week, rating, ...(funnel ? { funnel } : {}) } };
   });

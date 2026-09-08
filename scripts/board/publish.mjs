@@ -31,7 +31,7 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { parseGardeningSchedule } from "./gardening-core.mjs";
 import { boardLooksCollapsed, collapseCounts } from "./autosync-core.mjs";
-import { BOARD_COLLAPSED, STORE_REFUSED, classifyReadError, reasonFor, summarise } from "./publish-core.mjs";
+import { BOARD_COLLAPSED, STORE_REFUSED, STORE_UNREADABLE, classifyReadError, summarise } from "./publish-core.mjs";
 import { publishToChain } from "./chain-publish.mjs";
 import { BOARD_SURFACE, DONE_SURFACE, GARDENING_SURFACE, canonicalBytes, reportSurface, splitBoard, weekSurface } from "./chain-publish-core.mjs";
 
@@ -61,7 +61,7 @@ const documents = [];
 /** Every step this run attempted, so the summary can be honest about all of them. */
 const steps = [];
 const ok = (name) => steps.push({ name, failed: false });
-const failed = (name, kind, message) => steps.push({ name, failed: true, reason: reasonFor(kind, message) });
+const failed = (name, kind, message) => steps.push({ name, failed: true, kind, message });
 
 // Board. Reading the file and writing the store are separate failures with
 // separate causes, so they are caught separately — conflating them is what
@@ -75,21 +75,33 @@ try {
 } catch (e) {
   failed("board:latest", classifyReadError(e), e.message);
 }
+// The guard's READ is its own step with its own cause. It used to sit inside
+// the try whose catch says the store refused the write, so a store that would
+// not answer a read was reported as having refused a write this run never
+// reached, and the board went unpublished under a sentence about an operation
+// that never happened. Read as a value, then decide: a read that failed holds
+// the board and says so, a collapsed board is refused against the last good
+// one, and only a sound board is written.
 if (board) {
   const { latest, done } = splitBoard(board);
-  try {
-    const lastGood = await redis.get("board:latest");
-    if (boardLooksCollapsed(board, lastGood)) {
-      failed("board:latest", BOARD_COLLAPSED, collapseCounts(board, lastGood));
-    } else {
-      documents.push({ surface: BOARD_SURFACE, bytes: canonicalBytes(latest) });
-      documents.push({ surface: DONE_SURFACE, bytes: canonicalBytes(done), feeCeiling: DONE_FEE_CEILING_SATS });
+  const lastGood = await redis.get("board:latest").then(
+    (value) => ({ read: true, value }),
+    (error) => ({ read: false, error }),
+  );
+  if (!lastGood.read) {
+    failed("board:latest", STORE_UNREADABLE, lastGood.error?.message ?? String(lastGood.error));
+  } else if (boardLooksCollapsed(board, lastGood.value)) {
+    failed("board:latest", BOARD_COLLAPSED, collapseCounts(board, lastGood.value));
+  } else {
+    documents.push({ surface: BOARD_SURFACE, bytes: canonicalBytes(latest) });
+    documents.push({ surface: DONE_SURFACE, bytes: canonicalBytes(done), feeCeiling: DONE_FEE_CEILING_SATS });
+    try {
       await redis.set("board:latest", board);
       ok("board:latest");
       console.log(`published board:latest (${board.cards?.length ?? 0} cards)`);
+    } catch (e) {
+      failed("board:latest", STORE_REFUSED, e.message);
     }
-  } catch (e) {
-    failed("board:latest", STORE_REFUSED, e.message);
   }
 }
 
