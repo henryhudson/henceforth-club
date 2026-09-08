@@ -18,6 +18,12 @@
 export const FILE_MISSING = "file-missing";
 export const FILE_UNREADABLE = "file-unreadable";
 export const STORE_REFUSED = "store-refused";
+// The store refusing a READ is not the store refusing a write. The board step
+// reads the last good board before it writes anything (the collapse guard), and
+// a read that throws leaves the run holding with nothing attempted. Calling
+// that a refused write names an operation the run never reached, which rule 1
+// above forbids as plainly as the missing-file mislabel it was written for.
+export const STORE_UNREADABLE = "store-unreadable";
 export const CHAIN_REFUSED = "chain-refused";
 // A board with fewer than half the store's cards or a dateline behind it
 // (autosync-core.mjs, boardLooksCollapsed). The store and the chain keep the
@@ -42,6 +48,8 @@ export function reasonFor(kind, message) {
       return `the local file is present but could not be read or parsed (${message})`;
     case STORE_REFUSED:
       return `the store refused the write; the local file is present and was read fine (${message})`;
+    case STORE_UNREADABLE:
+      return `the store could not be read, so the collapse guard could not run and the board was held; nothing was written (${message})`;
     case CHAIN_REFUSED:
       return `the chain refused the inscription; the local file is present and was read fine (${message})`;
     case BOARD_COLLAPSED:

@@ -6,6 +6,7 @@ import {
   FILE_UNREADABLE,
   CHAIN_REFUSED,
   STORE_REFUSED,
+  STORE_UNREADABLE,
   classifyReadError,
   reasonFor,
   summarise,
@@ -25,6 +26,22 @@ describe("publish core", () => {
     expect(reason).toContain("the store refused the write");
     expect(reason).toContain("the local file is present");
     expect(reason).not.toMatch(/missing/);
+  });
+
+  it("a refused read is not a refused write: the run held, and claims no operation it never reached", () => {
+    // The board step reads the store's last good board before it writes
+    // anything (the collapse guard). That read used to share the write's catch,
+    // so a store that would not answer a read printed "the store refused the
+    // write" about a write this run never attempted.
+    const reason = reasonFor(STORE_UNREADABLE, "Command failed: Error: max requests limit exceeded");
+    expect(reason).toContain("the store could not be read");
+    expect(reason).toContain("the board was held");
+    expect(reason).toContain("nothing was written");
+    expect(reason).not.toMatch(/refused the write/);
+    expect(reason).not.toMatch(/missing/);
+    const out = summarise([{ name: "board:latest", failed: true, reason }]);
+    expect(out.exitCode).toBe(1);
+    expect(out.lines.join("\n")).toContain("the store could not be read");
   });
 
   it("a chain refusal is its own cause, and never blamed on the file either", () => {
