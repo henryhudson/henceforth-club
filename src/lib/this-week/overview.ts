@@ -20,6 +20,11 @@ export function shortenDivTitle(t: string): string {
     .replace(/National Security \(State Threats\) Bill(?: Committee)?/, 'National Security Bill')
     .replace(/Armed Forces Bill Report Stage — /, 'Armed Forces Bill, ')
     .replace(/Opposition Day — /, 'Opposition Day, ')
+    // The record also writes stages with colons rather than an em dash; fold
+    // them the same way, or the long bill names overflow the divisions clamp.
+    .replace(/: Report Stage: /, ', ')
+    .replace(/: (Third|Second|First) Reading/, ', $1 Reading')
+    .replace(/: Committee Stage: /, ', ')
     .replace(/ — /g, ', ')
 }
 

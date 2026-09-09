@@ -42,6 +42,21 @@ it('shortenDept and shortenDivTitle strip the boilerplate', () => {
   expect(shortenDept('Ministry of Justice')).toBe('Justice')
   expect(shortenDivTitle('Armed Forces Bill Report Stage — New Clause 4')).toBe('Armed Forces Bill, New Clause 4')
 })
+// The Hansard record writes the same shape with colons, not an em dash, and the
+// long ones overflowed the three-line clamp in the divisions block: measured
+// 2026-09-09, "Representation of the People Bill: Report Stage: New Clause 65"
+// rendered 39px of text into a 29px box. The colon form now folds like the
+// dash form already did.
+it('shortenDivTitle folds the colon form of a stage title', () => {
+  expect(shortenDivTitle('Representation of the People Bill: Report Stage: New Clause 65'))
+    .toBe('Representation of the People Bill, New Clause 65')
+  expect(shortenDivTitle('Health Bill: Report Stage: New Clause 145'))
+    .toBe('Health Bill, New Clause 145')
+  expect(shortenDivTitle('Representation of the People Bill: Third Reading'))
+    .toBe('Representation of the People Bill, Third Reading')
+  // A title with no stage in it is left exactly as it is.
+  expect(shortenDivTitle('Motion to sit in private')).toBe('Motion to sit in private')
+})
 it('trimSentences never splits at a mid-sentence parenthetical', () => {
   expect(trimSentences('The vote passed (narrowly) on Wednesday. MPs debated for hours.', 1))
     .toBe('The vote passed (narrowly) on Wednesday.')
