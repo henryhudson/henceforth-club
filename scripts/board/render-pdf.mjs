@@ -122,6 +122,11 @@ async function inscribe(kind, date, pdf, prevTx, dryRun) {
     date,
     also: { [surface]: out.txid ?? out.tx.id("hex") },
     prevTx: out.tx,
+    // The head spends the edition's change, so it goes to the processor that
+    // took the edition. On 6 September the edition failed over to the mirror
+    // and the head went to WhatsOnChain, which had not seen it: "500: Missing
+    // inputs", and the render reported FAILED for an edition already on chain.
+    preferEndpoint: out.endpoint,
     dryRun,
   });
   if (dryRun) return head.tx;

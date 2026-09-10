@@ -89,14 +89,37 @@ export function txidFromBroadcast(body) {
   return null;
 }
 
+/** Pure: the processors to try, in order, with `prefer` first when it is one of
+ *  them.
+ *
+ *  A chained transaction must be offered first to the processor that took its
+ *  parent. The parent sits in that node's mempool and has not necessarily
+ *  reached the other yet, and a node asked to accept a child whose parent it
+ *  has not seen refuses it: "500: Missing inputs" on 6 September, and
+ *  "500: 258: txn-mempool-conflict" twice on 9 September, each clearing on a
+ *  retry a minute later once the parent had propagated. Without a preference
+ *  every broadcast restarts at the first endpoint, so a parent that failed over
+ *  to the mirror always sent its child to the node least likely to know it.
+ *
+ *  This is prevention, not recovery. A refusal is still fatal on the spot and
+ *  a run that cannot land an inscription still stops before the head. */
+export function endpointOrder(prefer, endpoints = BROADCAST_ENDPOINTS) {
+  return prefer && endpoints.includes(prefer)
+    ? [prefer, ...endpoints.filter((e) => e !== prefer)]
+    : [...endpoints];
+}
+
 /** Broadcast a signed transaction, alternating processors and waiting out a
- *  rate limit. Returns the transaction id. Any answer that is not a rate
- *  limit fails immediately: a rejected transaction is not retryable, and
- *  sending it again would only ask a second processor to reject it too. */
-export async function broadcastRaw(hex, { fetchImpl = fetch, sleep = wait, log = console.log } = {}) {
+ *  rate limit. Returns `{ txid, endpoint }` — the endpoint being the processor
+ *  that accepted it, so the next transaction in a chain can be offered to the
+ *  same one first through `preferEndpoint`. Any answer that is not a rate limit
+ *  fails immediately: a rejected transaction is not retryable, and sending it
+ *  again would only ask a second processor to reject it too. */
+export async function broadcastRaw(hex, { fetchImpl = fetch, sleep = wait, log = console.log, preferEndpoint = null } = {}) {
+  const order = endpointOrder(preferEndpoint);
   let last = "";
   for (let attempt = 0; attempt <= BROADCAST_BACKOFF_MS.length; attempt++) {
-    const endpoint = BROADCAST_ENDPOINTS[attempt % BROADCAST_ENDPOINTS.length];
+    const endpoint = order[attempt % order.length];
     const resp = await fetchImpl(`${endpoint}/tx/raw`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -104,12 +127,12 @@ export async function broadcastRaw(hex, { fetchImpl = fetch, sleep = wait, log =
     });
     const body = await resp.text();
     const txid = txidFromBroadcast(body);
-    if (txid) return txid;
+    if (txid) return { txid, endpoint };
     last = body.trim().replace(/^"+|"+$/g, "");
     const rateLimited = resp.status === 429 || /too many requests/i.test(body);
     if (!rateLimited || attempt === BROADCAST_BACKOFF_MS.length) break;
     const pause = BROADCAST_BACKOFF_MS[attempt];
-    log(`broadcast rate-limited by ${new URL(endpoint).host}; waiting ${pause}ms and trying ${new URL(BROADCAST_ENDPOINTS[(attempt + 1) % BROADCAST_ENDPOINTS.length]).host}`);
+    log(`broadcast rate-limited by ${new URL(endpoint).host}; waiting ${pause}ms and trying ${new URL(order[(attempt + 1) % order.length]).host}`);
     await sleep(pause);
   }
   throw new Error(`broadcast failed: ${last}`);
@@ -173,10 +196,15 @@ async function sourceFor({ address, prevTx, dryRun, fetchImpl, sleep = wait, log
 
 /** Seal, envelope, build, fee, guard, sign, and (unless dryRun) broadcast.
  *  Returns the transaction so the next inscription in a run can spend its
- *  change in process, plus what a caller needs to log and index. */
+ *  change in process, plus what a caller needs to log and index — including
+ *  `endpoint`, the processor that took this one. The next inscription of the
+ *  chain passes that back as `preferEndpoint`, so parent and child are offered
+ *  to the same node and the child is never sent to one that has not seen its
+ *  parent. Null on a dry run, which broadcasts nothing. */
 export async function inscribeDocument({
   wif, keyHex, surface, date, bytes, previousTxid = "", prevTx = null,
   feeCeiling = FEE_CEILING_SATS, dryRun = false, fetchImpl = fetch, log = console.log, sleep = wait,
+  preferEndpoint = null,
 }) {
   const key = PrivateKey.fromWif(wif);
   const address = key.toAddress();
@@ -201,13 +229,15 @@ export async function inscribeDocument({
   }
   await tx.sign();
 
-  const summary = { tx, fee, change: change.satoshis, payloadBytes: sealed.length, sourceLabel, txid: null };
+  const summary = { tx, fee, change: change.satoshis, payloadBytes: sealed.length, sourceLabel, txid: null, endpoint: null };
   if (dryRun) {
     log(`dry-run ${surface} ${date}: fee ${fee} satoshis, change ${change.satoshis} satoshis (input ${inputValue} satoshis, ${sealed.length}-byte payload, source: ${sourceLabel}) — not broadcast`);
     return summary;
   }
 
-  summary.txid = await broadcastRaw(tx.toHex(), { fetchImpl, sleep, log });
+  const broadcast = await broadcastRaw(tx.toHex(), { fetchImpl, sleep, log, preferEndpoint });
+  summary.txid = broadcast.txid;
+  summary.endpoint = broadcast.endpoint;
   log(`inscribed ${surface} ${date} → ${summary.txid} (${bytes.length} bytes, fee ${fee} satoshis)`);
   return summary;
 }

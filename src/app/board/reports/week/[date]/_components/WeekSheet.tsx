@@ -16,6 +16,8 @@ function clip(text: string, max: number): string {
 }
 
 const pct = (v: number | null) => (v === null ? "—" : `${v > 0 ? "+" : ""}${(v * 100).toFixed(0)}%`);
+/** A week Apple has not processed is an em dash, not a nought. */
+const count = (v: number | null | undefined) => (v == null ? "—" : String(v));
 const signed = (v: number) => `${v > 0 ? "+" : ""}${v}`;
 
 /** Wins and misses arrive as strings or {tag, title, detail}; the sheet sets
@@ -119,7 +121,7 @@ export default function WeekSheet({ week }: { week: WeekReport }) {
                     {week.sales.perApp.map((a) => (
                       <tr key={a.app}>
                         <td>{APP_NAMES[a.app] ?? a.name}</td>
-                        <td className={s.n}>{a.units.thisWeek}</td>
+                        <td className={s.n}>{count(a.units.thisWeek)}</td>
                         <td className={s.n}>{pct(a.units.deltaPct)}</td>
                       </tr>
                     ))}
@@ -131,6 +133,7 @@ export default function WeekSheet({ week }: { week: WeekReport }) {
                   <b>{value}</b> {key}
                 </p>
               ))}
+              {week.sales.dataThrough && <p>Downloads through {week.sales.dataThrough}, as far as Apple has processed.</p>}
               {week.sales.note && <p>{week.sales.note}</p>}
             </div>
           </div>
@@ -225,7 +228,7 @@ export default function WeekSheet({ week }: { week: WeekReport }) {
                   {appState.map((a) => (
                     <p key={a.app}>
                       <b>{APP_NAMES[a.app] ?? a.name}</b>
-                      {a.downloads && <> · {a.downloads.thisWeek} downloads ({pct(a.downloads.deltaPct)})</>}
+                      {a.downloads && <> · {count(a.downloads.thisWeek)} downloads ({pct(a.downloads.deltaPct)})</>}
                       {a.rating.average != null && <> · {a.rating.average.toFixed(1)} on {a.rating.count}</>}
                       {a.verdict && <> · {clip(a.verdict, 150)}</>}
                     </p>

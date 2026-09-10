@@ -10,6 +10,9 @@ export interface InscriptionSummary {
   payloadBytes: number;
   sourceLabel: string;
   txid: string | null;
+  /** The processor that accepted this transaction; null on a dry run. The next
+   *  inscription of the chain passes it back as `preferEndpoint`. */
+  endpoint: string | null;
 }
 
 export declare function inscribeDocument(args: {
@@ -24,6 +27,7 @@ export declare function inscribeDocument(args: {
   dryRun?: boolean;
   fetchImpl?: typeof fetch;
   log?: (line: string) => void;
+  preferEndpoint?: string | null;
 }): Promise<InscriptionSummary>;
 
 export declare function changeOutputIndex(tx: unknown, address?: string | null): number;
@@ -33,10 +37,16 @@ export declare const DRY_RUN_SOURCE_SATS: number;
 
 export declare const BROADCAST_ENDPOINTS: string[];
 export declare const BROADCAST_BACKOFF_MS: number[];
+export declare function endpointOrder(prefer: string | null | undefined, endpoints?: string[]): string[];
 export declare function broadcastRaw(
   hex: string,
-  opts?: { fetchImpl?: typeof fetch; sleep?: (ms: number) => Promise<void>; log?: (message: string) => void },
-): Promise<string>;
+  opts?: {
+    fetchImpl?: typeof fetch;
+    sleep?: (ms: number) => Promise<void>;
+    log?: (message: string) => void;
+    preferEndpoint?: string | null;
+  },
+): Promise<{ txid: string; endpoint: string }>;
 export declare function txidFromBroadcast(body: string): string | null;
 export declare function fetchIndexer(
   path: string,

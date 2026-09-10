@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { usePrefersReducedMotion } from "@/lib/usePrefersReducedMotion";
 
 /**
  * The forest behind the wordmark — layered spruce silhouettes under cloud and
@@ -150,11 +151,15 @@ const REVEAL_SCROLL_PX = 420;
 
 export default function FolkloreForest() {
   const ref = useRef<HTMLDivElement>(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    // A dependency of this effect, so a reader who asks for less motion while
+    // the page is open gets the settled forest at once and the scroll listener
+    // is detached, rather than both waiting on a remount.
+    if (prefersReducedMotion) {
       el.style.setProperty("--reveal", "0.75");
       return;
     }
@@ -175,7 +180,7 @@ export default function FolkloreForest() {
       window.removeEventListener("scroll", onScroll);
       if (frame) cancelAnimationFrame(frame);
     };
-  }, []);
+  }, [prefersReducedMotion]);
 
   return (
     <div

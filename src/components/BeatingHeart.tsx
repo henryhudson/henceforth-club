@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { usePrefersReducedMotion } from "@/lib/usePrefersReducedMotion";
 
 /**
  * Beating heart canvas animation.
@@ -13,6 +14,7 @@ export default function BeatingHeart({
   className?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -28,11 +30,10 @@ export default function BeatingHeart({
     let lastH = 0;
     let lastDpr = 0;
 
-    // Respect prefers-reduced-motion — paint one static heart and
-    // skip the pulse loop for users who've asked for less motion.
-    const prefersReducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // Respect prefers-reduced-motion — paint one static heart and skip the
+    // pulse loop for users who've asked for less motion. The preference is a
+    // dependency of this effect, so turning it on mid-page stops the beat now
+    // rather than at the next remount.
 
     function easeOut(t: number): number {
       return 1 - Math.pow(1 - t, 3);
@@ -157,7 +158,7 @@ export default function BeatingHeart({
     }
     animId = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(animId);
-  }, []);
+  }, [prefersReducedMotion]);
 
   return (
     <canvas

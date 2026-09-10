@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { broadcastRaw, fetchIndexer, txidFromBroadcast, BROADCAST_BACKOFF_MS, BROADCAST_ENDPOINTS } from "./chain-put.mjs";
+import { broadcastRaw, endpointOrder, fetchIndexer, txidFromBroadcast, BROADCAST_BACKOFF_MS, BROADCAST_ENDPOINTS } from "./chain-put.mjs";
 
 const TXID = "a".repeat(64);
 const ok = () => ({ ok: true, status: 200, text: async () => `"${TXID}"` });
@@ -9,7 +9,7 @@ const rejected = () => ({ ok: false, status: 400, text: async () => "16: mandato
 describe("broadcastRaw", () => {
   it("returns the transaction id, lower-cased and unquoted", async () => {
     const fetchImpl = vi.fn(async () => ({ ok: true, status: 200, text: async () => `"${TXID.toUpperCase()}"` }));
-    expect(await broadcastRaw("00", { fetchImpl, log: () => {} })).toBe(TXID);
+    expect((await broadcastRaw("00", { fetchImpl, log: () => {} })).txid).toBe(TXID);
     expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
@@ -20,7 +20,7 @@ describe("broadcastRaw", () => {
       return hosts.length === 1 ? limited() : ok();
     });
     const slept = [];
-    const txid = await broadcastRaw("00", { fetchImpl, sleep: async (ms) => { slept.push(ms); }, log: () => {} });
+    const { txid } = await broadcastRaw("00", { fetchImpl, sleep: async (ms) => { slept.push(ms); }, log: () => {} });
     expect(txid).toBe(TXID);
     expect(hosts).toEqual([new URL(BROADCAST_ENDPOINTS[0]).host, new URL(BROADCAST_ENDPOINTS[1]).host]);
     expect(slept).toEqual([500]);
@@ -74,7 +74,7 @@ describe("broadcastRaw over the mirror", () => {
         ? { ok: false, status: 429, text: async () => "429 Too Many Requests" }
         : { ok: true, status: 200, text: async () => JSON.stringify({ status: 200, txid: id, txStatus: "SEEN_ON_NETWORK" }) };
     };
-    expect(await broadcastRaw("00", { fetchImpl, sleep: async () => {}, log: () => {} })).toBe(id);
+    expect((await broadcastRaw("00", { fetchImpl, sleep: async () => {}, log: () => {} })).txid).toBe(id);
   });
 });
 
@@ -169,8 +169,71 @@ describe("broadcastRaw pacing", () => {
     const fetchImpl = vi.fn(async () => (++n === 1
       ? { ok: false, status: 503, text: async () => "Too Many Requests" }
       : ok()));
-    expect(await broadcastRaw("00", { fetchImpl, sleep: async () => {}, log: () => {} })).toBe(TXID);
+    expect((await broadcastRaw("00", { fetchImpl, sleep: async () => {}, log: () => {} })).txid).toBe(TXID);
     expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+});
+
+// A chain stays on one processor. Once a parent has failed over to the mirror,
+// its child must not be offered to a node that has not seen it — the shape
+// behind "500: Missing inputs" on 6 September and "500: 258:
+// txn-mempool-conflict" twice on 9 September.
+describe("endpointOrder", () => {
+  const [woc, mirror] = BROADCAST_ENDPOINTS;
+
+  it("puts the preferred processor first and keeps the other as failover", () => {
+    expect(endpointOrder(mirror)).toEqual([mirror, woc]);
+  });
+
+  it("leaves the order alone with no preference, or one it does not know", () => {
+    expect(endpointOrder(null)).toEqual(BROADCAST_ENDPOINTS);
+    expect(endpointOrder("https://example.invalid")).toEqual(BROADCAST_ENDPOINTS);
+  });
+
+  it("does not mutate the module's endpoint list", () => {
+    endpointOrder(mirror).push("https://example.invalid");
+    expect(BROADCAST_ENDPOINTS).toHaveLength(2);
+  });
+});
+
+describe("broadcastRaw stickiness after a failover", () => {
+  const woc = new URL(BROADCAST_ENDPOINTS[0]).host;
+  const mirror = new URL(BROADCAST_ENDPOINTS[1]).host;
+
+  it("names the processor that accepted the transaction", async () => {
+    let n = 0;
+    const fetchImpl = vi.fn(async () => (++n === 1 ? limited() : ok()));
+    const out = await broadcastRaw("00", { fetchImpl, sleep: async () => {}, log: () => {} });
+    expect(out.endpoint).toBe(BROADCAST_ENDPOINTS[1]);
+  });
+
+  it("sends the child to the parent's processor first, not back to the first endpoint", async () => {
+    const hosts = [];
+    const fetchImpl = vi.fn(async (url) => { hosts.push(new URL(url).host); return ok(); });
+    await broadcastRaw("00", { fetchImpl, sleep: async () => {}, log: () => {}, preferEndpoint: BROADCAST_ENDPOINTS[1] });
+    expect(hosts).toEqual([mirror]); // before the fix this was always WhatsOnChain
+  });
+
+  it("still fails over to the other processor when the preferred one is rate-limited", async () => {
+    const hosts = [];
+    const fetchImpl = vi.fn(async (url) => {
+      hosts.push(new URL(url).host);
+      return hosts.length === 1 ? limited() : ok();
+    });
+    const out = await broadcastRaw("00", { fetchImpl, sleep: async () => {}, log: () => {}, preferEndpoint: BROADCAST_ENDPOINTS[1] });
+    expect(hosts).toEqual([mirror, woc]);
+    expect(out.endpoint).toBe(BROADCAST_ENDPOINTS[0]);
+  });
+
+  it("does not soften the refusal: a conflict is still fatal on the first answer", async () => {
+    // The guard that stopped the 9 September publish before its head. Stickiness
+    // is prevention; it must not turn a refusal into a retry that half-publishes.
+    const fetchImpl = vi.fn(async () => ({
+      ok: false, status: 500, text: async () => "unexpected response code 500: 258: txn-mempool-conflict",
+    }));
+    await expect(broadcastRaw("00", { fetchImpl, sleep: async () => {}, log: () => {}, preferEndpoint: BROADCAST_ENDPOINTS[1] }))
+      .rejects.toThrow(/txn-mempool-conflict/);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 });
 

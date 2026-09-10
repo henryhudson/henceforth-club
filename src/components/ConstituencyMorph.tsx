@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { usePrefersReducedMotion } from "@/lib/usePrefersReducedMotion";
 
 /**
  * 650 constituency dots that morph between a UK geographic map
@@ -18,6 +19,7 @@ export default function ConstituencyMorph({
   className?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -159,13 +161,12 @@ export default function ConstituencyMorph({
     const CYCLE_MS = 10000;
     let animId: number;
 
-    // If the user prefers reduced motion, paint a single static frame
-    // at morphT=0 (the map view) and skip scheduling the RAF loop.
-    // Screen-reader users still get the aria-label, and sighted users
-    // with vestibular sensitivity see a non-moving visual.
-    const prefersReducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // If the reader prefers reduced motion, paint a single static frame at
+    // morphT=0 (the map view) and skip scheduling the frame loop. Screen-reader
+    // users still get the aria-label, and sighted users with vestibular
+    // sensitivity see a non-moving visual. The preference is a dependency of
+    // this effect, so turning it on mid-page stops the morph now rather than at
+    // the next remount.
 
     function ease(t: number): number {
       // Smooth ease in-out
@@ -261,7 +262,7 @@ export default function ConstituencyMorph({
     }
     animId = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(animId);
-  }, [seats]);
+  }, [seats, prefersReducedMotion]);
 
   return (
     <canvas

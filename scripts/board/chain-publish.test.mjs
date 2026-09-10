@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { P2PKH, PrivateKey, Transaction } from "@bsv/sdk";
+import { BROADCAST_ENDPOINTS } from "./chain-put.mjs";
 import { headSourceFor, inscribeHeadFor, publishToChain, readLedger, recordInscription, writeLedger } from "./chain-publish.mjs";
 import { EMPTY_LEDGER, canonicalBytes, withHead, withInscription } from "./chain-publish-core.mjs";
 import { CHAIN_REFUSED, reasonFor } from "./publish-core.mjs";
@@ -123,6 +124,40 @@ describe("publishing to the chain", () => {
     expect(steps[0].message).toBeTruthy();
     expect(steps.some((s) => s.name === "chain:head")).toBe(false);
     expect(ledger).toEqual(EMPTY_LEDGER);
+  });
+
+  // Once one broadcast has failed over, the whole rest of the chain follows it.
+  // Before this, every broadcast restarted at the first endpoint, so a child was
+  // offered to a node that had not seen its parent — "500: 258:
+  // txn-mempool-conflict", twice on 9 September, and the run refused its write.
+  it("keeps the rest of the chain on the processor that took the parent", async () => {
+    const path = join(dir, "ledger.json");
+    const address = PrivateKey.fromWif(WIF).toAddress();
+    const tip = new Transaction();
+    tip.addOutput({ lockingScript: new P2PKH().lock(address), satoshis: 5_000_000 });
+    await writeLedger(path, { ...EMPTY_LEDGER, head: { txid: tip.id("hex"), date: "2026-09-08" }, tip: { txid: tip.id("hex"), date: "2026-09-08" } });
+
+    const broadcastHosts = [];
+    const fetchImpl = async (url, init) => {
+      if (init?.method === "POST") {
+        broadcastHosts.push(new URL(url).host);
+        // WhatsOnChain turns the first one away; the mirror carries it.
+        if (broadcastHosts.length === 1) return { ok: false, status: 429, text: async () => "Too Many Requests" };
+        return { ok: true, status: 200, text: async () => JSON.stringify(`${broadcastHosts.length}`.padStart(64, "0")) };
+      }
+      if (url.includes(`/tx/${tip.id("hex")}/hex`)) return { ok: true, status: 200, text: async () => tip.toHex() };
+      throw new Error("unexpected fetch " + url);
+    };
+
+    const { steps } = await publishToChain({
+      documents: docs(), ledgerPath: path, wif: WIF, keyHex: KEY, date: "2026-09-09", dryRun: false, fetchImpl, log: quiet,
+    });
+    expect(steps.map((s) => s.failed)).toEqual([false, false, false]);
+
+    const [woc, mirror] = BROADCAST_ENDPOINTS.map((e) => new URL(e).host);
+    // Refused by WhatsOnChain, taken by the mirror, and then the second document
+    // and the head go straight to the mirror rather than back to WhatsOnChain.
+    expect(broadcastHosts).toEqual([woc, mirror, mirror, mirror]);
   });
 });
 
