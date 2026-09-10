@@ -58,6 +58,7 @@ export default function TimesTableCircle({
     let lastW = 0;
     let lastH = 0;
     let lastDpr = 0;
+    let onScreen = true;
 
     // Respect prefers-reduced-motion — paint one static cardioid and skip the
     // frame loop if the reader's system asks for less motion. The preference is
@@ -76,6 +77,15 @@ export default function TimesTableCircle({
     }
 
     function draw(now: number) {
+      // Off-screen the canvas paints nothing anyone can see, and each frame
+      // costs a shadow-blurred re-stroke of a 600-segment path. Skip the
+      // drawing but keep the clock turning, so the morph on return is at
+      // exactly the point it would have reached had the loop never stopped.
+      if (!onScreen) {
+        animId = requestAnimationFrame(draw);
+        return;
+      }
+
       const um = userMultiplierRef.current;
 
       // If user set a multiplier, animate to it
@@ -187,9 +197,17 @@ export default function TimesTableCircle({
       draw(performance.now());
       return;
     }
+    const visibility = new IntersectionObserver(([entry]) => {
+      onScreen = entry.isIntersecting;
+    });
+    visibility.observe(canvas);
+
     animId = requestAnimationFrame(draw);
 
-    return () => cancelAnimationFrame(animId);
+    return () => {
+      visibility.disconnect();
+      cancelAnimationFrame(animId);
+    };
   }, [prefersReducedMotion]);
 
   return (

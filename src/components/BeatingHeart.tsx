@@ -29,6 +29,7 @@ export default function BeatingHeart({
     let lastW = 0;
     let lastH = 0;
     let lastDpr = 0;
+    let onScreen = true;
 
     // Respect prefers-reduced-motion — paint one static heart and skip the
     // pulse loop for users who've asked for less motion. The preference is a
@@ -96,6 +97,14 @@ export default function BeatingHeart({
     }
 
     function draw(now: number) {
+      // Off-screen the canvas paints nothing anyone can see, and each frame
+      // costs two shadow-blurred passes over the heart path. Skip the
+      // drawing but keep the clock turning, so the beat on return is at
+      // exactly the phase it would have reached had the loop never stopped.
+      if (!onScreen) {
+        animId = requestAnimationFrame(draw);
+        return;
+      }
       const dpr = window.devicePixelRatio || 1;
       const rect = canvas!.getBoundingClientRect();
       const w = rect.width;
@@ -156,8 +165,16 @@ export default function BeatingHeart({
       draw(BEAT_MS * 0.5); // paint mid-beat static frame and exit
       return;
     }
+    const visibility = new IntersectionObserver(([entry]) => {
+      onScreen = entry.isIntersecting;
+    });
+    visibility.observe(canvas);
+
     animId = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(animId);
+    return () => {
+      visibility.disconnect();
+      cancelAnimationFrame(animId);
+    };
   }, [prefersReducedMotion]);
 
   return (

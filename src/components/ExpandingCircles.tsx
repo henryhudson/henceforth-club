@@ -56,8 +56,25 @@ export default function ExpandingCircles({
     let lastW = 0;
     let lastH = 0;
     let lastDpr = 0;
+    let onScreen = true;
+
+    // Respect prefers-reduced-motion — paint one static frame and skip
+    // the breathe loop for users who've asked for less motion. The other
+    // two canvases on the site already do this; this one was the omission.
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     function draw(now: number) {
+      // Every frame re-rasterises 62 separately shadow-blurred strokes,
+      // which is the most expensive per-frame draw on the site. Off-screen
+      // none of it is visible, so skip the drawing but keep the clock
+      // turning — the breathe phase on return is then exactly the phase it
+      // would have reached had the loop never stopped.
+      if (!onScreen) {
+        animId = requestAnimationFrame(draw);
+        return;
+      }
       const dpr = window.devicePixelRatio || 1;
       const rect = canvas!.getBoundingClientRect();
       const w = rect.width;
@@ -133,11 +150,28 @@ export default function ExpandingCircles({
       // Restore default composite for the next frame's clearRect
       ctx!.globalCompositeOperation = "source-over";
 
-      animId = requestAnimationFrame(draw);
+      if (!prefersReducedMotion) {
+        animId = requestAnimationFrame(draw);
+      }
     }
 
+    if (prefersReducedMotion) {
+      // Half a cycle in is the max-radius plateau: the fully-expanded
+      // flower-of-life this grid exists to draw.
+      draw(CYCLE_MS * 0.5);
+      return;
+    }
+
+    const visibility = new IntersectionObserver(([entry]) => {
+      onScreen = entry.isIntersecting;
+    });
+    visibility.observe(canvas);
+
     animId = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(animId);
+    return () => {
+      visibility.disconnect();
+      cancelAnimationFrame(animId);
+    };
   }, []);
 
   return (

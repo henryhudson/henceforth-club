@@ -102,6 +102,30 @@ confirmed headline card above rather than carried separately; it is the same gat
 
 **REJECTED as a finding, kept as a fact: the apex still answers a temporary redirect to www.** Re-derived live. It is already carded as a named decision, so it is not new.
 
+## 2026-09-09 — the site is healthy; pull request 109 reviewed independently, five of six objections refuted
+
+**Range:** `origin/main` pinned at `0496067b1585`, one commit since yesterday and it is a design document. No site source changed. Production was probed live from this machine, and the unmerged branch `canvas-animations-idle-off-screen` at `1248ffc` was read by a finder that did not write it.
+
+**Production is healthy, measured rather than assumed.** Both money routes fail closed with a 503 and the body `{"ok":false,"reason":"not-available"}`; the preview route answers 400 to a malformed transaction id; `/board` challenges with a 307 to its login page. Three timed samples each: the root between 0.163 and 0.378 seconds, `/folklore` between 0.180 and 0.227 seconds with a cache hit on all three, which closes the 4 September dynamic-rendering finding live.
+
+**Recorded as a negative result so it is not re-derived from the same misleading grep: the board challenge page leaks no card data.** A naive grep of the 21,727 byte login page finds the tokens hansard, henceforth and site, but every match is navigation markup (`href="/hansard"` in the header and footer). A grep for card-shaped JSON keys (title, column, rev, movedAt, doneAt, desc, cards) returns nothing, and rendering the markup to plain text gives only site chrome and the password prompt. Unauthenticated surface only; no authentication was attempted.
+
+**CONFIRMED and carded: no component responds to a change in the reduced-motion preference** (`finding-site-reduced-motion-no-change-listener-2026-09-09`). Seven media-query call sites, no change listener anywhere in the source, in either the modern or the legacy form.
+
+**REJECTED: "the times-table circle's pattern-switch schedule is not phase preserving".** The mechanical half is true and every quoted line was re-derived: `lastSwitch` is written only below the off-screen early return, so intervals spent off screen collapse into one switch on return. It is not a defect, because the collapse is invisible to a viewer and the continuous morph is unaffected. It does make the pull request's claim of exact phase overbroad for one of the three, which is noted on the card rather than carded as a fault.
+
+**REJECTED: "the most expensive canvas on the site was left out".** The constituency morph on the Hansard page was indeed not touched, but the finding was labelled a fact at high confidence while nothing measured it, and the refuter found the headline claim unproven and pointing the wrong way.
+
+**REJECTED: "the reduced-motion static frame never redraws, so it goes stale on resize".** The mechanism is real and the quotes are accurate, but it is inherited rather than introduced by this branch, and it is a consequence of the site-wide gap already carded above.
+
+**REJECTED: "the observer callback reads the oldest queued entry rather than the newest".** The quoted code is accurate; the failure it posits is not reachable on this site, and the finder framed it as optional hardening rather than a defect.
+
+**REJECTED: "the quoted gate figure carries no evidence, because no test touches these components".** The grep result is true and worth knowing, but the alleged defect does not exist, because the pull request already says the same thing the recommendation demands. Kept as a note on the card: the verification that matters for this change is the headless browser check, not the suite.
+
+**REJECTED: "pull request 109 has sat unmerged for twenty-one hours".** True as arithmetic and refuted on the ground the finder did not open: the merge was attempted and refused by the session's own permission gate, so the delay is a harness limit awaiting Henry, not neglect.
+
+**REJECTED as a finding, kept as a fact: the apex still answers a temporary redirect to www.** Re-derived live. It is already carded as a named decision, so it is not new.
+
 ## 2026-09-08 — seven merges read on two lenses: two confirmed, four refuted
 
 **Range:** `0a3056b..df60a9b` on main: the ledger, the sales brief, and pull requests 101 to 107 (the printed Board becoming a book, then boxes, then losing its In progress page and gaining one thickness of line and a day time line; the daily's column rules; the planner preserving board fields; the collapse guard; the funnel in the morning reach). HEAD pinned at `df60a9b`. Two reviews generated here from fresh contexts, a numbers lens and a print lens (`~/Desktop/daily-reviews/2026-09-08-site-numbers.md` and `-site-print.md`). Live gates and the test gate re-probed: every route as expected, 2,057 passed and 4 skipped, the baseline exactly.
