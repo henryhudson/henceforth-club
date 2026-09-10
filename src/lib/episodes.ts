@@ -776,6 +776,51 @@ export const episodes: Episode[] = [
     ],
     video: { mp4: "/learn/signatures/episode.mp4" },
   },
+  {
+    number: 15,
+    slug: "the-chain",
+    title: "The Chain",
+    dek: "The chain is a record anyone can read, and the terminal can ask it questions. Three questions, three answers, live from the chain: a payment, a block, an address.",
+    published: true,
+    durationSec: 85,
+    music: { season: "Handel", piece: "Water Music · Bourrée (United States Marine Band, public domain)" },
+    concepts: [
+      "The chain is a record anyone can read, and the terminal can ask it questions.",
+      "A payment: tx-confirmations holds the line on a real network call and resumes with the count on the stack, the depth the payment is buried at.",
+      "A block: wocgetblockbyheight reads a block's own name, its hash, its height and how many payments it holds; the next block carries that name inside it.",
+      "An address: wocgetbalance reads any address's confirmed balance, nobody's permission needed; the answers come from the chain, not from us.",
+    ],
+    // Curated to commands that run on a fresh install. The lesson's contact
+    // words pizza, satoshi and the-block and its narration words (chain-intro,
+    // the-pizza, chain-close) are excluded; a new app has not defined them, so
+    // the code-along spells the transaction id and the address out once. All
+    // three reads are free chain queries; nothing here needs a wallet.
+    codeAlong: [
+      's" a1075db55d416d3ca199f55b6084e2115b9345e16c5cf302fc80e9d5fbf5d48d" tx-confirmations .',
+      "57043 wocgetblockbyheight",
+      's" 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa" wocgetbalance',
+    ],
+    transcript: [
+      "where did my payment go? let's ask.",
+      "episode fifteen. the chain.",
+      "a chain is a record anyone can read.",
+      "the terminal can ask it questions.",
+      "the pizza. is it still there?",
+      "may 2010. two pizzas. ten thousand coins.",
+      "every payment has a name. sixty four characters:",
+      "a1075db55d416d3ca199f55b6084e2115b9345e16c5cf302fc80e9d5fbf5d48d",
+      "the terminal has learned it. the word is pizza.",
+      "nine hundred thousand blocks deep. it is.",
+      "and the block it sits in?",
+      "the block it lives in. a name inside a name.",
+      "an address. anyone's. satoshi's first coins, never moved.",
+      "in satoshis. seventy two coins and change. never spent.",
+      "three questions. three answers.",
+      "from the chain. not from us.",
+      "henceforth.",
+    ],
+    video: { mp4: "/learn/the-chain/episode.mp4" },
+  },
 ];
 
 const byNumber = [...episodes].sort((a, b) => a.number - b.number);
