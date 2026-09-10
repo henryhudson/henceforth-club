@@ -2,11 +2,24 @@
 // download source the App Store Connect dashboard uses) and sums downloads per app over a window.
 // Falls back to null when Apple has not generated the report instances yet (a new ongoing report
 // request takes a day or two), so the caller can use the Sales-report estimate meanwhile.
+//
+// Apple delivers a report as a stream of overlapping daily instances, and a later instance
+// restates earlier dates with revised counts. This reader therefore folds EVERY recent instance
+// through the same merge and coverage rules the daily reach uses (daily-reach-core.mjs) rather
+// than reading one instance and calling the rest zero — the fault that had the weekly review
+// report 17 downloads for a week the daily reader had already counted at 38.
 
-import { mintJWT } from "./asc-client.mjs";
+import { mintJWT, delta } from "./asc-client.mjs";
+import { coverageThrough, mergeByDate } from "./daily-reach-core.mjs";
 import { gunzipSync } from "node:zlib";
 
 const BASE = "https://api.appstoreconnect.apple.com/v1";
+
+/** How many daily instances to fold. Apple packs two to three days into each, so sixteen cover
+ *  the fourteen days of the two windows with the same margin the daily reader keeps over its
+ *  seven (eight instances). Reading too few would leave the older window short of history and
+ *  read its unwritten days as zeros. */
+const TAKE_INSTANCES = 16;
 
 /** Pure: sum download Counts per date from an "App Downloads Standard" CSV (tab-separated).
  *  Counts only rows whose Download Type is a download (first-time, redownload, auto-download). */
@@ -25,55 +38,81 @@ export function parseDownloadsCsv(text) {
   return byDate;
 }
 
+/** Pure: this week's and last week's downloads over the SAME positions of the two windows,
+ *  limited to the dates Apple has processed.
+ *
+ *  The windows are aligned day for day — lastDates[i] is thisDates[i] a week earlier — so a
+ *  position beyond coverage is dropped from BOTH. Measuring a short week against a full one
+ *  would report a fall that is only Apple's lag; dropping the position from both compares like
+ *  with like, at the cost of a shorter comparison the caller announces through `dataThrough`.
+ *
+ *  A date inside coverage that the merged map holds no row for is a real zero: Apple writes a
+ *  row only for a date that had downloads. A window with no covered date at all is unknown, and
+ *  unknown is null, never zero — the distinction the weekly review used to lose, printing an
+ *  unprocessed week as a flat 0 beside a real one. */
+export function unitsOverWindows(merged, through, thisDates, lastDates) {
+  const covered = through ? thisDates.map((_, i) => i).filter((i) => thisDates[i] <= through) : [];
+  if (!covered.length) return { thisWeek: null, lastWeek: null, deltaPct: null };
+  const sum = (dates) => covered.reduce((n, i) => n + (merged[dates[i]] ?? 0), 0);
+  const thisWeek = sum(thisDates), lastWeek = sum(lastDates);
+  return { thisWeek, lastWeek, deltaPct: delta(thisWeek, lastWeek) };
+}
+
 async function jget(url, jwt, fetchImpl) {
   const r = await fetchImpl(url, { headers: { Authorization: `Bearer ${jwt}` } });
   if (!r.ok) throw new Error(`${url.split("?")[0]} ${r.status}`);
   return r.json();
 }
 
-/** The latest App Downloads Standard data (downloads by date) for one report request; null if Apple
- *  has not generated any instance yet. */
-async function downloadsForRequest({ jwt, requestId, fetchImpl }) {
+/** The newest daily instances of one request's App Downloads Standard report, each folded into
+ *  downloads per date. Empty when Apple has generated none yet, so the caller can tell an app
+ *  with no data from an app with no downloads. */
+async function downloadInstances({ jwt, requestId, fetchImpl, take = TAKE_INSTANCES }) {
   const reports = [];
   let next = `${BASE}/analyticsReportRequests/${requestId}/reports?limit=200`;
   while (next) { const j = await jget(next, jwt, fetchImpl); reports.push(...(j.data ?? [])); next = j.links?.next; }
   const report = reports.find((r) => r.attributes?.name === "App Downloads Standard");
-  if (!report) return null;
-  const inst = (await jget(`${BASE}/analyticsReports/${report.id}/instances?limit=200`, jwt, fetchImpl)).data ?? [];
-  if (!inst.length) return null; // not generated yet
-  const daily = inst.filter((i) => i.attributes?.granularity === "DAILY");
-  const pick = (daily.length ? daily : inst).sort((a, b) => (a.attributes.processingDate < b.attributes.processingDate ? 1 : -1))[0];
-  const segs = (await jget(`${BASE}/analyticsReportInstances/${pick.id}/segments`, jwt, fetchImpl)).data ?? [];
-  const byDate = {};
-  for (const s of segs) {
-    const buf = Buffer.from(await (await fetchImpl(s.attributes.url)).arrayBuffer());
-    let csv;
-    try { csv = gunzipSync(buf).toString("utf8"); } catch { csv = buf.toString("utf8"); }
-    for (const [date, n] of Object.entries(parseDownloadsCsv(csv))) byDate[date] = (byDate[date] ?? 0) + n;
-  }
-  return byDate;
+  if (!report) return [];
+  const all = (await jget(`${BASE}/analyticsReports/${report.id}/instances?limit=200`, jwt, fetchImpl)).data ?? [];
+  const daily = all.filter((i) => i.attributes?.granularity === "DAILY");
+  const inst = (daily.length ? daily : all)
+    .sort((a, b) => (a.attributes.processingDate < b.attributes.processingDate ? 1 : -1))
+    .slice(0, take);
+  return Promise.all(inst.map(async (i) => {
+    const segs = (await jget(`${BASE}/analyticsReportInstances/${i.id}/segments`, jwt, fetchImpl)).data ?? [];
+    const byDate = {};
+    for (const s of segs) {
+      const buf = Buffer.from(await (await fetchImpl(s.attributes.url)).arrayBuffer());
+      let csv;
+      try { csv = gunzipSync(buf).toString("utf8"); } catch { csv = buf.toString("utf8"); }
+      for (const [date, n] of Object.entries(parseDownloadsCsv(csv))) byDate[date] = (byDate[date] ?? 0) + n;
+    }
+    return { processingDate: i.attributes.processingDate, byDate };
+  }));
 }
 
 /** Per-app downloads this-week vs last-week from App Analytics (the dashboard's source).
- *  Returns null when no app has generated data yet, so the caller falls back to the Sales report. */
+ *  Returns null when no app has generated data yet, so the caller falls back to the Sales report.
+ *  `dataThrough` is the newest day any app's report reaches, for the edition's note. */
 export async function pullAnalyticsDownloads({ creds, requestIds, names, thisDates, lastDates, fetchImpl = fetch }) {
   const jwt = mintJWT(creds);
-  const sum = (byDate, dates) => dates.reduce((n, d) => n + (byDate[d] ?? 0), 0);
-  const delta = (a, b) => (b === 0 ? (a === 0 ? 0 : null) : (a - b) / b);
   const perApp = [];
-  let any = false;
+  const throughs = [];
   for (const [app, requestId] of Object.entries(requestIds)) {
-    let byDate = null;
-    try { byDate = await downloadsForRequest({ jwt, requestId, fetchImpl }); } catch { byDate = null; }
-    if (byDate) any = true;
-    const bd = byDate ?? {};
-    const tw = sum(bd, thisDates), lw = sum(bd, lastDates);
+    let instances = [];
+    try { instances = await downloadInstances({ jwt, requestId, fetchImpl }); } catch { instances = []; }
+    const through = coverageThrough(instances);
+    if (through) throughs.push(through);
     perApp.push({
       app, name: names[app] ?? app,
-      units: { thisWeek: tw, lastWeek: lw, deltaPct: delta(tw, lw) },
+      units: unitsOverWindows(mergeByDate(instances), through, thisDates, lastDates),
       proceeds: { thisWeek: 0, lastWeek: 0, currency: null, deltaPct: 0 },
     });
   }
-  if (!any) return null;
-  return { window: { thisWeek: thisDates[thisDates.length - 1], lastWeek: lastDates[lastDates.length - 1] }, perApp, drivers: [], source: "App Analytics" };
+  if (!throughs.length) return null;
+  return {
+    window: { thisWeek: thisDates[thisDates.length - 1], lastWeek: lastDates[lastDates.length - 1] },
+    dataThrough: throughs.reduce((a, b) => (a > b ? a : b)),
+    perApp, drivers: [], source: "App Analytics",
+  };
 }

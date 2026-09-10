@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { usePrefersReducedMotion } from "@/lib/usePrefersReducedMotion";
 
 /**
  * Times-table circle canvas animation.
@@ -21,6 +22,7 @@ export default function TimesTableCircle({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const userMultiplierRef = useRef(userMultiplier);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   // Keep the ref in sync with the prop so the animation loop's
   // long-lived closure always reads the latest value. Writing to a
@@ -58,11 +60,10 @@ export default function TimesTableCircle({
     let lastDpr = 0;
     let onScreen = true;
 
-    // Respect prefers-reduced-motion — paint one static cardioid and
-    // skip the RAF loop if the user's OS asks for less motion.
-    const prefersReducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // Respect prefers-reduced-motion — paint one static cardioid and skip the
+    // frame loop if the reader's system asks for less motion. The preference is
+    // a dependency of this effect, so turning it on mid-page freezes the morph
+    // now rather than at the next remount.
 
     function pickTarget() {
       targetMultiplier =
@@ -207,7 +208,7 @@ export default function TimesTableCircle({
       visibility.disconnect();
       cancelAnimationFrame(animId);
     };
-  }, []);
+  }, [prefersReducedMotion]);
 
   return (
     <canvas

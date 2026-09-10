@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { usePrefersReducedMotion } from "@/lib/usePrefersReducedMotion";
 
 export default function FadeIn({
   children,
@@ -14,22 +15,21 @@ export default function FadeIn({
   direction?: "up" | "down" | "left" | "right" | "none";
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [shown, setShown] = useState(false);
+  const [scrolledIn, setScrolledIn] = useState(false);
+  const prefersReducedMotion = usePrefersReducedMotion();
+  // Less motion means the section is simply there. Read at render rather than
+  // latched into state by the effect, so a reader who asks for less motion
+  // mid-page settles every section still below the fold, not only the ones a
+  // remount happens to rebuild.
+  const shown = scrolledIn || prefersReducedMotion;
 
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
-    const reduced =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduced) {
-      setShown(true);
-      return;
-    }
+    if (!el || prefersReducedMotion) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setShown(true);
+          setScrolledIn(true);
           observer.disconnect();
         }
       },
@@ -37,7 +37,7 @@ export default function FadeIn({
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+  }, [prefersReducedMotion]);
 
   const dirClass =
     direction === "none" || shown === false

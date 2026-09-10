@@ -6,6 +6,102 @@ records that sweep's **rejections and dismissals**, newest first, so a later run
 re-flag what a prior run already refuted. Confirmed findings go to the Morning Board, not
 here. Cite `file:line` (or the live probe) so each verdict is independently re-derivable.
 
+## 2026-09-10 — production healthy; one gate hole confirmed, five of six objections refuted
+
+**Range:** `a1f9aa9..2382165` on `main`, six commits — three weeks of This Week in Parliament
+published with their sheets, a division-title shortener taught the colon form, a dash rule widened
+from three overview fields to every prose field, and a morning review that now starts itself at seven
+under launchd. HEAD pinned at `2382165`. Gate green this run: 194 files, 2,068 passed, 4 skipped,
+7.5 seconds. Review generated here (`~/Desktop/daily-reviews/2026-09-10-site.md`); each candidate then
+put to two independent refuters.
+
+**Production swept live and healthy.** The apex redirects 307 to `www`; `/` and `/folklore` return
+200 in 0.16 to 0.21 seconds across three samples each; `/board` challenges via `/board/login`;
+`POST /api/folklore/job` returns **503 `{"ok":false,"reason":"not-available"}`** — the money gate fails
+closed, as designed.
+
+**Checked clean and recorded so it is not re-derived:** the published-sheets invariant holds (sixteen
+published, sixteen sheets, every one a real file, no draft carrying one); there is no chain or
+broadcast interaction anywhere on the digest publish path; and the new colon-folding rules in
+`shortenDivTitle` cannot fire ahead of an existing rule.
+
+**CONFIRMED and carded: the prose gate reads a headline the sheet does not print.** See
+`finding-site-overview-headline-unchecked-2026-09-10`.
+`src/app/hansard/this-week/_components/overview/Overview.tsx:28` prints
+`ov?.headline || digest.headline || …`, so `overview.headline` wins whenever present, while the rule
+widened in `c42b6f1` checks `digest.headline`. They differ in **seven of thirteen issues**. The same
+gate is skipped entirely for a digest with no overview block. Public unauthenticated route
+(`this-week/[week]/page.tsx:43-48`). Both refuters upheld it and the reachability lens widened it.
+
+**CONFIRMED and carded from the artifacts rather than the diff: the Wednesday screenshot gate did not
+finish.** See `finding-wednesday-gate-incomplete-2026-09-10`.
+`~/Desktop/ship-screenshots/2026-09-09/` holds only `henceforth.log` (10:11) and a zero-byte
+`summary.tsv` (08:55) — no app directory, no `index.html`, no `deck.log`, no `hansard.log` — while the
+log itself ends `Done. 152 PNGs total`. The obvious explanation was falsified: all three source paths
+exist and are populated, so the `n -eq 0` branch at `wednesday-screenshots.sh:99-104` would have
+written a loud `failed` row and did not. The run was interrupted between `:93` and `:97`. It needs a
+completion marker, because an empty summary is indistinguishable from a gate nobody ran — and Hansard
+1.11 shipped that evening with no screenshot review of any app.
+
+**REJECTED: "the generator is still ordered to write the dashes the new rule forbids".** The
+citations are real — `PROMPT.md:38` does still say "em-dashes and curly quotes" while `:58-66` forbids
+them — but the author ran a textual falsification test where a behavioural one was available and
+decisive. In `04def8d`, the draft this exact prompt produced, the seven fields the then-current rule
+governed carry **zero** em dashes and the 32 fields it did not govern carry **all 23**. The house-voice
+line did not override the field-scoped rule in a single field where that rule applied, seven for
+seven. So `c42b6f1` fixed the cause the data identifies, not the symptom, and the current published
+digest has 40 prose fields and no em dashes. Tidying `:38` is a cheap editorial nit with a measured
+effect of nil; the missing vitest call in `run-weekly.sh` is reasonable hardening of a path that
+writes `status:"draft"`, which `store.ts:36` filters out of the archive, so no reader sees it.
+
+**REJECTED: "the widened rule now polices the minister's own words".** Citations accurate, gate green
+this run over all sixteen committed digests, and the one collision cited did not occur in `qa` at all.
+An editorial-scope preference about a prospective hazard whose failure mode is a loud draft-time error
+with a lossless fix.
+
+**REJECTED: "the three-hour cap signals the session and not its work".** The author's own stated
+falsification test — "if claude reliably tore its children down on a term signal, the concern would be
+empty" — was run three times by a refuter and passed three times. The process group exists but holds
+only the script, the claude process and the pipe; the proposed group-kill reaches nothing extra.
+
+**REJECTED: "nothing serialises the seven o'clock run against a human at eight, and the board write is
+a blind overwrite".** Every quoted line is where it is said to be, and the observation about the write
+is accurate, but the central premise is refuted on four independent grounds. Recorded because the
+mechanism proved itself this morning: the seven o'clock agent fired unattended for the first time and
+its run was observed live.
+
+**REJECTED as a defect, kept as a decision: "pull request 109 is finished, mergeable and unmerged".**
+This re-files the 9 September rejection. What *is* new and now sits on the board card: on the shipping
+branch `ExpandingCircles.tsx` has no reduced-motion guard at all — the cited lines exist only on the
+109 branch — so 109 is an accessibility fix as well as a speed one.
+
+**ABSTAINED: "a digest with no overview block skips the whole prose gate".** True and folded into the
+confirmed headline card above rather than carried separately; it is the same gate and the same fix.
+
+## 2026-09-09 — the site is healthy; pull request 109 reviewed independently, five of six objections refuted
+
+**Range:** `origin/main` pinned at `0496067b1585`, one commit since yesterday and it is a design document. No site source changed. Production was probed live from this machine, and the unmerged branch `canvas-animations-idle-off-screen` at `1248ffc` was read by a finder that did not write it.
+
+**Production is healthy, measured rather than assumed.** Both money routes fail closed with a 503 and the body `{"ok":false,"reason":"not-available"}`; the preview route answers 400 to a malformed transaction id; `/board` challenges with a 307 to its login page. Three timed samples each: the root between 0.163 and 0.378 seconds, `/folklore` between 0.180 and 0.227 seconds with a cache hit on all three, which closes the 4 September dynamic-rendering finding live.
+
+**Recorded as a negative result so it is not re-derived from the same misleading grep: the board challenge page leaks no card data.** A naive grep of the 21,727 byte login page finds the tokens hansard, henceforth and site, but every match is navigation markup (`href="/hansard"` in the header and footer). A grep for card-shaped JSON keys (title, column, rev, movedAt, doneAt, desc, cards) returns nothing, and rendering the markup to plain text gives only site chrome and the password prompt. Unauthenticated surface only; no authentication was attempted.
+
+**CONFIRMED and carded: no component responds to a change in the reduced-motion preference** (`finding-site-reduced-motion-no-change-listener-2026-09-09`). Seven media-query call sites, no change listener anywhere in the source, in either the modern or the legacy form.
+
+**REJECTED: "the times-table circle's pattern-switch schedule is not phase preserving".** The mechanical half is true and every quoted line was re-derived: `lastSwitch` is written only below the off-screen early return, so intervals spent off screen collapse into one switch on return. It is not a defect, because the collapse is invisible to a viewer and the continuous morph is unaffected. It does make the pull request's claim of exact phase overbroad for one of the three, which is noted on the card rather than carded as a fault.
+
+**REJECTED: "the most expensive canvas on the site was left out".** The constituency morph on the Hansard page was indeed not touched, but the finding was labelled a fact at high confidence while nothing measured it, and the refuter found the headline claim unproven and pointing the wrong way.
+
+**REJECTED: "the reduced-motion static frame never redraws, so it goes stale on resize".** The mechanism is real and the quotes are accurate, but it is inherited rather than introduced by this branch, and it is a consequence of the site-wide gap already carded above.
+
+**REJECTED: "the observer callback reads the oldest queued entry rather than the newest".** The quoted code is accurate; the failure it posits is not reachable on this site, and the finder framed it as optional hardening rather than a defect.
+
+**REJECTED: "the quoted gate figure carries no evidence, because no test touches these components".** The grep result is true and worth knowing, but the alleged defect does not exist, because the pull request already says the same thing the recommendation demands. Kept as a note on the card: the verification that matters for this change is the headless browser check, not the suite.
+
+**REJECTED: "pull request 109 has sat unmerged for twenty-one hours".** True as arithmetic and refuted on the ground the finder did not open: the merge was attempted and refused by the session's own permission gate, so the delay is a harness limit awaiting Henry, not neglect.
+
+**REJECTED as a finding, kept as a fact: the apex still answers a temporary redirect to www.** Re-derived live. It is already carded as a named decision, so it is not new.
+
 ## 2026-09-09 — the site is healthy; pull request 109 reviewed independently, five of six objections refuted
 
 **Range:** `origin/main` pinned at `0496067b1585`, one commit since yesterday and it is a design document. No site source changed. Production was probed live from this machine, and the unmerged branch `canvas-animations-idle-off-screen` at `1248ffc` was read by a finder that did not write it.

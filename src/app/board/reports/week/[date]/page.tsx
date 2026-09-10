@@ -8,6 +8,8 @@ export const dynamic = "force-dynamic";
 
 const ACCENT: Record<string, string> = { henceforth: "text-accent-warm", hansard: "text-accent-green", deck: "text-accent" };
 const pct = (v: number | null) => (v === null ? "—" : `${v > 0 ? "+" : ""}${(v * 100).toFixed(0)}%`);
+/** A week Apple has not processed is an em dash, not a nought. */
+const count = (v: number | null | undefined) => (v == null ? "—" : String(v));
 
 export default async function WeeklyEdition({ params }: { params: Promise<{ date: string }> }) {
   const { date } = await params;
@@ -132,7 +134,7 @@ export default async function WeeklyEdition({ params }: { params: Promise<{ date
                   <div key={a.app} className="rounded-lg border border-card-border bg-card-bg/30 p-3">
                     <div className={`font-bold ${ACCENT[a.app] ?? "text-foreground"}`}>{a.name}</div>
                     <dl className="mt-2 space-y-1 text-sm">
-                      <div className="flex justify-between gap-2"><dt className="text-muted">Downloads (wk)</dt><dd>{a.downloads ? `${a.downloads.thisWeek} (${pct(a.downloads.deltaPct)})` : "—"}</dd></div>
+                      <div className="flex justify-between gap-2"><dt className="text-muted">Downloads (wk)</dt><dd>{a.downloads ? `${count(a.downloads.thisWeek)} (${pct(a.downloads.deltaPct)})` : "—"}</dd></div>
                       <div className="flex justify-between gap-2"><dt className="text-muted">Rating</dt><dd>{a.rating.average != null ? `${a.rating.average.toFixed(1)}★ (${a.rating.count})` : "—"}</dd></div>
                       <div className="flex justify-between gap-2"><dt className="text-muted">Active users</dt><dd className="text-muted/50">generating</dd></div>
                     </dl>

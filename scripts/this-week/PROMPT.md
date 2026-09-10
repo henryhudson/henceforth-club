@@ -55,7 +55,13 @@ In the SAME JSON file, ALSO write an `overview` object on the digest matching `O
   a basis is itself the story: inflation erodes purchasing power, so a large cash rise can be a small
   real one, or a cut.
 
-Prose rules for `intro`, `brief[].note`, and `feature.summary` (enforced by `src/lib/this-week/overview-prose.test.ts`):
+Prose rules for EVERY field a reader reads as prose (enforced by
+`src/lib/this-week/overview-prose.test.ts`): `intro`, `headline`, every entry of
+`body`, `brief[].note`, `feature.summary`, `feature.questions[]`, every `blurb`
+under `highlights` (votes, bills, questions), and both halves of each `qa` entry.
+Titles, headings and dates are data and are exempt. These rules used to name only
+the three overview fields, and the 9 September issue reached Henry with twenty
+three em dashes and eight connector colons in the fields the list left out:
 - Full sentences, plain English, short sentences, full stops freely.
 - No em-dashes or en-dashes as connectors. No colons joining clauses (data headings like "Roads: Temperature" are exempt).
 - Commas sparingly.
