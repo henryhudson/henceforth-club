@@ -6,6 +6,78 @@ records that sweep's **rejections and dismissals**, newest first, so a later run
 re-flag what a prior run already refuted. Confirmed findings go to the Morning Board, not
 here. Cite `file:line` (or the live probe) so each verdict is independently re-derivable.
 
+## 2026-09-10 — production healthy; one gate hole confirmed, five of six objections refuted
+
+**Range:** `a1f9aa9..2382165` on `main`, six commits — three weeks of This Week in Parliament
+published with their sheets, a division-title shortener taught the colon form, a dash rule widened
+from three overview fields to every prose field, and a morning review that now starts itself at seven
+under launchd. HEAD pinned at `2382165`. Gate green this run: 194 files, 2,068 passed, 4 skipped,
+7.5 seconds. Review generated here (`~/Desktop/daily-reviews/2026-09-10-site.md`); each candidate then
+put to two independent refuters.
+
+**Production swept live and healthy.** The apex redirects 307 to `www`; `/` and `/folklore` return
+200 in 0.16 to 0.21 seconds across three samples each; `/board` challenges via `/board/login`;
+`POST /api/folklore/job` returns **503 `{"ok":false,"reason":"not-available"}`** — the money gate fails
+closed, as designed.
+
+**Checked clean and recorded so it is not re-derived:** the published-sheets invariant holds (sixteen
+published, sixteen sheets, every one a real file, no draft carrying one); there is no chain or
+broadcast interaction anywhere on the digest publish path; and the new colon-folding rules in
+`shortenDivTitle` cannot fire ahead of an existing rule.
+
+**CONFIRMED and carded: the prose gate reads a headline the sheet does not print.** See
+`finding-site-overview-headline-unchecked-2026-09-10`.
+`src/app/hansard/this-week/_components/overview/Overview.tsx:28` prints
+`ov?.headline || digest.headline || …`, so `overview.headline` wins whenever present, while the rule
+widened in `c42b6f1` checks `digest.headline`. They differ in **seven of thirteen issues**. The same
+gate is skipped entirely for a digest with no overview block. Public unauthenticated route
+(`this-week/[week]/page.tsx:43-48`). Both refuters upheld it and the reachability lens widened it.
+
+**CONFIRMED and carded from the artifacts rather than the diff: the Wednesday screenshot gate did not
+finish.** See `finding-wednesday-gate-incomplete-2026-09-10`.
+`~/Desktop/ship-screenshots/2026-09-09/` holds only `henceforth.log` (10:11) and a zero-byte
+`summary.tsv` (08:55) — no app directory, no `index.html`, no `deck.log`, no `hansard.log` — while the
+log itself ends `Done. 152 PNGs total`. The obvious explanation was falsified: all three source paths
+exist and are populated, so the `n -eq 0` branch at `wednesday-screenshots.sh:99-104` would have
+written a loud `failed` row and did not. The run was interrupted between `:93` and `:97`. It needs a
+completion marker, because an empty summary is indistinguishable from a gate nobody ran — and Hansard
+1.11 shipped that evening with no screenshot review of any app.
+
+**REJECTED: "the generator is still ordered to write the dashes the new rule forbids".** The
+citations are real — `PROMPT.md:38` does still say "em-dashes and curly quotes" while `:58-66` forbids
+them — but the author ran a textual falsification test where a behavioural one was available and
+decisive. In `04def8d`, the draft this exact prompt produced, the seven fields the then-current rule
+governed carry **zero** em dashes and the 32 fields it did not govern carry **all 23**. The house-voice
+line did not override the field-scoped rule in a single field where that rule applied, seven for
+seven. So `c42b6f1` fixed the cause the data identifies, not the symptom, and the current published
+digest has 40 prose fields and no em dashes. Tidying `:38` is a cheap editorial nit with a measured
+effect of nil; the missing vitest call in `run-weekly.sh` is reasonable hardening of a path that
+writes `status:"draft"`, which `store.ts:36` filters out of the archive, so no reader sees it.
+
+**REJECTED: "the widened rule now polices the minister's own words".** Citations accurate, gate green
+this run over all sixteen committed digests, and the one collision cited did not occur in `qa` at all.
+An editorial-scope preference about a prospective hazard whose failure mode is a loud draft-time error
+with a lossless fix.
+
+**REJECTED: "the three-hour cap signals the session and not its work".** The author's own stated
+falsification test — "if claude reliably tore its children down on a term signal, the concern would be
+empty" — was run three times by a refuter and passed three times. The process group exists but holds
+only the script, the claude process and the pipe; the proposed group-kill reaches nothing extra.
+
+**REJECTED: "nothing serialises the seven o'clock run against a human at eight, and the board write is
+a blind overwrite".** Every quoted line is where it is said to be, and the observation about the write
+is accurate, but the central premise is refuted on four independent grounds. Recorded because the
+mechanism proved itself this morning: the seven o'clock agent fired unattended for the first time and
+its run was observed live.
+
+**REJECTED as a defect, kept as a decision: "pull request 109 is finished, mergeable and unmerged".**
+This re-files the 9 September rejection. What *is* new and now sits on the board card: on the shipping
+branch `ExpandingCircles.tsx` has no reduced-motion guard at all — the cited lines exist only on the
+109 branch — so 109 is an accessibility fix as well as a speed one.
+
+**ABSTAINED: "a digest with no overview block skips the whole prose gate".** True and folded into the
+confirmed headline card above rather than carried separately; it is the same gate and the same fix.
+
 ## 2026-09-09 — the site is healthy; pull request 109 reviewed independently, five of six objections refuted
 
 **Range:** `origin/main` pinned at `0496067b1585`, one commit since yesterday and it is a design document. No site source changed. Production was probed live from this machine, and the unmerged branch `canvas-animations-idle-off-screen` at `1248ffc` was read by a finder that did not write it.
