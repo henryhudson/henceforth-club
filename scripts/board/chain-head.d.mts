@@ -22,4 +22,5 @@ export declare function inscribeHead(args: {
   dryRun?: boolean;
   fetchImpl?: typeof fetch;
   log?: (line: string) => void;
+  preferEndpoint?: string | null;
 }): Promise<InscriptionSummary>;

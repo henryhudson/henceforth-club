@@ -46,15 +46,17 @@ export function parseHeadPayload(bytes) {
 /** Inscribe a head naming the current transaction of every surface.
  *  `prevTx` is the just-inscribed document whose change funds this head
  *  (the strict ordering); `previousHeadTxid` chains the envelope to the
- *  head before it. Dry runs price and sign without broadcasting. */
+ *  head before it. `preferEndpoint` is the processor that took `prevTx`, so
+ *  the head goes to the node already holding the parent it spends. Dry runs
+ *  price and sign without broadcasting. */
 export async function inscribeHead({
   wif, keyHex, date, surfaces, previousHeadTxid = "", prevTx = null,
-  dryRun = false, fetchImpl = fetch, log = console.log,
+  dryRun = false, fetchImpl = fetch, log = console.log, preferEndpoint = null,
 }) {
   return inscribeDocument({
     wif, keyHex, surface: HEAD_SURFACE, date,
     bytes: buildHeadPayload(surfaces),
-    previousTxid: previousHeadTxid, prevTx, dryRun, fetchImpl, log,
+    previousTxid: previousHeadTxid, prevTx, dryRun, fetchImpl, log, preferEndpoint,
   });
 }
 

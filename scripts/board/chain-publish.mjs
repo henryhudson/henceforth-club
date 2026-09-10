@@ -40,14 +40,16 @@ export async function recordInscription({ ledgerPath, surface, txid, bytes, date
 /** Inscribe a head naming every surface the ledger knows — plus `also`, the
  *  inscription this head follows, so a dry run prices the real head and a
  *  real run never depends on a ledger write — spending `prevTx`'s change so
- *  it lands strictly after it. */
+ *  it lands strictly after it, and offered to `preferEndpoint`, the processor
+ *  that took `prevTx`. */
 export async function inscribeHeadFor({
   ledgerPath, wif, keyHex, date, also = {}, prevTx = null, dryRun = false, fetchImpl = fetch, log = console.log,
+  preferEndpoint = null,
 }) {
   const ledger = await readLedger(ledgerPath);
   const out = await inscribeHead({
     wif, keyHex, date, surfaces: { ...headSurfaces(ledger), ...also },
-    previousHeadTxid: ledger.head?.txid ?? "", prevTx, dryRun, fetchImpl, log,
+    previousHeadTxid: ledger.head?.txid ?? "", prevTx, dryRun, fetchImpl, log, preferEndpoint,
   });
   const txid = out.txid ?? out.tx.id("hex");
   if (!dryRun) await writeLedger(ledgerPath, withHead(ledger, { txid, date }));
@@ -103,11 +105,17 @@ export async function publishToChain({
   // indexer instead, once, as it did before the ledger knew a tip.
   let prevTx = dryRun ? null : await headSourceFor({ ledger, wif, fetchImpl, log });
   let fromLedger = prevTx !== null;
+  // The processor that took the previous inscription of this chain, threaded
+  // alongside prevTx for the same reason: a child offered to a node that has
+  // not yet seen its parent is refused (txn-mempool-conflict, Missing inputs),
+  // and every broadcast otherwise restarts at the first endpoint — so one
+  // failover put every later transaction of the run on the wrong node.
+  let preferEndpoint = null;
   for (const doc of changed) {
     const previousTxid = ledger.surfaces[doc.surface]?.txid ?? "";
     const inscribe = (source) => inscribeDocument({
       wif, keyHex, surface: doc.surface, date, bytes: doc.bytes,
-      previousTxid, prevTx: source, feeCeiling: doc.feeCeiling, dryRun, fetchImpl, log,
+      previousTxid, prevTx: source, feeCeiling: doc.feeCeiling, dryRun, fetchImpl, log, preferEndpoint,
     });
     try {
       let out;
@@ -120,6 +128,7 @@ export async function publishToChain({
       }
       fromLedger = false;
       prevTx = out.tx;
+      preferEndpoint = out.endpoint ?? preferEndpoint;
       const txid = out.txid ?? out.tx.id("hex");
       ledger = withInscription(ledger, { surface: doc.surface, txid, sha256: digestOf(doc.bytes), date });
       if (!dryRun) await writeLedger(ledgerPath, ledger);
@@ -133,7 +142,7 @@ export async function publishToChain({
   try {
     const out = await inscribeHead({
       wif, keyHex, date, surfaces: headSurfaces(ledger),
-      previousHeadTxid: ledger.head?.txid ?? "", prevTx, dryRun, fetchImpl, log,
+      previousHeadTxid: ledger.head?.txid ?? "", prevTx, dryRun, fetchImpl, log, preferEndpoint,
     });
     const txid = out.txid ?? out.tx.id("hex");
     ledger = withHead(ledger, { txid, date });
