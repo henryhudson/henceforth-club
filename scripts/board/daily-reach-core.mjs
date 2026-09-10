@@ -11,6 +11,39 @@ export const daysAgo = (date, n) =>
   new Date(new Date(date + "T00:00:00Z").getTime() - n * 86400000).toISOString().slice(0, 10);
 export const dayBefore = (date) => daysAgo(date, 1);
 
+export const maxDate = (dates) => (dates.length ? dates.reduce((a, b) => (a > b ? a : b)) : null);
+
+/** Pure: overlay per-date maps so the NEWEST instance wins each date.
+ *  Apple's daily instances overlap (a late instance restates earlier dates with
+ *  revised counts) — summing would double-count; last-write-wins is the truth.
+ *  Value-agnostic: an instance's byDate may hold plain counts (the downloads
+ *  table) or per-key tallies (the funnel), and the rule is the same either way.
+ *  Both readers of the App Analytics reports share this one definition — the
+ *  weekly review once picked a single instance instead and undercounted a week
+ *  by more than half. */
+export function mergeByDate(instances) {
+  const merged = {};
+  for (const { byDate } of [...instances].sort((a, b) => (a.processingDate < b.processingDate ? -1 : 1))) {
+    for (const [date, value] of Object.entries(byDate)) merged[date] = value;
+  }
+  return merged;
+}
+
+/** Pure: the newest day the instances actually cover. An instance processed on
+ *  day D carries rows only through D−1 — its processingDate over-claims by a
+ *  day (verified live: no instance holds a row dated its own processingDate) —
+ *  but its existence proves Apple processed D−1, rows or none. So coverage is
+ *  the newer of the newest dated row and the newest processingDate minus one:
+ *  a newest instance that restates only older dates (a zero-download day; the
+ *  Subscription Event report does this routinely, and its funnel rule skips
+ *  most rows besides) must not read as Apple having stopped short. */
+export function coverageThrough(instances) {
+  if (!instances.length) return null;
+  const processed = dayBefore(maxDate(instances.map((i) => i.processingDate)));
+  const dated = maxDate(Object.keys(mergeByDate(instances)));
+  return dated != null && dated > processed ? dated : processed;
+}
+
 /** Pure: keywise sum of two tallies. */
 export const addTallies = (a, b) => {
   const out = { ...a };

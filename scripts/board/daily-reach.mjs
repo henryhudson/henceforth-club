@@ -21,41 +21,20 @@ import {
   addTallies,
   buildFunnel,
   buildSubscriptionEvents,
+  coverageThrough,
   dayBefore,
   daysAgo,
   downloadsOnly,
+  maxDate,
+  mergeByDate,
   tallyByDate,
 } from "./daily-reach-core.mjs";
 
+// The merge and the coverage rule live in the core so the weekly review reads
+// the App Analytics instances by exactly the rules this daily reader uses.
+export { coverageThrough, mergeByDate } from "./daily-reach-core.mjs";
+
 const BASE = "https://api.appstoreconnect.apple.com/v1";
-
-const maxDate = (dates) => (dates.length ? dates.reduce((a, b) => (a > b ? a : b)) : null);
-
-/** Pure: overlay per-date download maps so the NEWEST instance wins each date.
- *  Apple's daily instances overlap (a late instance restates earlier dates with
- *  revised counts) — summing would double-count; last-write-wins is the truth. */
-export function mergeByDate(instances) {
-  const merged = {};
-  for (const { byDate } of [...instances].sort((a, b) => (a.processingDate < b.processingDate ? -1 : 1))) {
-    for (const [date, n] of Object.entries(byDate)) merged[date] = n;
-  }
-  return merged;
-}
-
-/** Pure: the newest day the instances actually cover. An instance processed on
- *  day D carries rows only through D−1 — its processingDate over-claims by a
- *  day (verified live: no instance holds a row dated its own processingDate) —
- *  but its existence proves Apple processed D−1, rows or none. So coverage is
- *  the newer of the newest dated row and the newest processingDate minus one:
- *  a newest instance that restates only older dates (a zero-download day; the
- *  Subscription Event report does this routinely, and its funnel rule skips
- *  most rows besides) must not read as Apple having stopped short. */
-export function coverageThrough(instances) {
-  if (!instances.length) return null;
-  const processed = dayBefore(maxDate(instances.map((i) => i.processingDate)));
-  const dated = maxDate(Object.keys(mergeByDate(instances)));
-  return dated != null && dated > processed ? dated : processed;
-}
 
 /** Pure: yesterday's count, honestly. 0 only when the data window actually covers
  *  yesterday (an absent row inside coverage IS zero); null when Apple has not

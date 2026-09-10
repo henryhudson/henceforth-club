@@ -277,14 +277,15 @@ export type Reflag = { signature: string; app: string; title: string; timesFlagg
 export type Stuck = { id: string; title: string; app: string; col: string; firstSeen: string };
 export type AppSales = {
   app: string; name: string;
-  units: { thisWeek: number; lastWeek: number; deltaPct: number | null };
+  /** Null when Apple has not processed any day of the window: an unknown week, never a zero one. */
+  units: { thisWeek: number | null; lastWeek: number | null; deltaPct: number | null };
   proceeds: { thisWeek: number; lastWeek: number; currency: string | null; deltaPct: number | null };
 };
 export type WeekDay = { date: string; weekday: string; reviews: number; hasReport: boolean };
 export type PlanDay = { date: string; weekday: string; isReviewDay: boolean; tasks: (string | { label: string; start?: number; end?: number; done?: boolean })[] };
 export type AppState = {
   app: string; name: string;
-  downloads: { thisWeek: number; lastWeek: number; deltaPct: number | null } | null;
+  downloads: { thisWeek: number | null; lastWeek: number | null; deltaPct: number | null } | null;
   rating: { average: number | null; count: number; version?: string | null };
   analytics: { activeUsers?: number; retention?: number; crashRate?: number } | null;
   verdict: string | null;
@@ -319,7 +320,14 @@ export type WeekReport = {
     stateOfUnion: string;
     wins: (string | NextItem)[]; misses: (string | NextItem)[]; nextWeek: NextItem[];
   };
-  sales: { perApp: AppSales[]; drivers: { app: string; lever: string; rationale: string; action: string }[]; note?: string; source?: string };
+  sales: {
+    perApp: AppSales[];
+    drivers: { app: string; lever: string; rationale: string; action: string }[];
+    note?: string; source?: string;
+    /** The newest day the App Analytics reports actually reach. Apple lags a day or two, so the
+     *  week is read only that far and the edition says so rather than counting the rest as nought. */
+    dataThrough?: string | null;
+  };
 };
 
 const WEEKS_DIR = path.join(process.cwd(), "content/board/weeks");
