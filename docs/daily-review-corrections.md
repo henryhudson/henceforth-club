@@ -6,6 +6,84 @@ records that sweep's **rejections and dismissals**, newest first, so a later run
 re-flag what a prior run already refuted. Confirmed findings go to the Morning Board, not
 here. Cite `file:line` (or the live probe) so each verdict is independently re-derivable.
 
+## 2026-09-11 — production healthy and every gate closed; the one candidate is an already-carded residue, not a new finding
+
+**Range:** `2382165..f1a54b6` on `main`, four commits — `f992047` (corrections ledger), `8b74825` (pull request 110,
+three carded findings), `39b0e8f` (pull request 109, canvases idle off screen), `f1a54b6` (pull request 100,
+episode fifteen). HEAD pinned at `f1a54b6`; `HEAD == origin/main`, zero ahead, zero behind. **Gate green:** `npm test`
+— 195 files passed, 1 skipped; **2,088 tests passed**, 4 skipped; 6.40 seconds. Against yesterday's 194 files and
+2,068 passed, that is one new file and twenty new tests with no regressions. **No open pull requests**, so nothing
+finished is sitting unmerged. Review generated here (`~/Desktop/daily-reviews/2026-09-11-site.md`).
+
+**Production swept live and healthy.** The apex 307s to `www`, so timings are on the canonical host: `/` returned
+200 in 0.069–0.112 s across three samples, `/folklore` 200 in 0.076–0.093 s. Both well inside the sub-second bar
+and tight. `/henceforth` had the widest spread, 0.073–0.488 s, which is a function cold start rather than a finding.
+
+**Every money and privacy gate fails closed, and this run probed all twenty-six API routes on the shipping
+branch rather than only the three the routine names.**
+
+```
+POST /api/folklore/job    503  {"ok":false,"reason":"not-available"}
+POST /api/folklore/link   503  {"ok":false,"reason":"not-available"}
+POST /api/folklore/pass   503  {"ok":false,"reason":"not-available"}
+GET  /board               307  -> /board/login?from=%2Fboard   (password prompt)
+```
+
+Nothing serves privileged content unauthenticated: `/api/ledger`, `/api/ledger/proof` and `/api/this-week` return
+401; `/api/folklore/{duel,float}` return 401; `/api/board/week/tick` and `/api/folklore/tip` return 401 on POST.
+The three unauthenticated 200s were opened and cleared rather than assumed — `/api/backlog` returns a committed
+constant documented at `route.ts:4` as the list the Henceforth `todo` word prints, and `/api/stats` and
+`/api/hansard/digests` are the public counter and the published-digest index. `src/middleware.ts:7` matches only
+`["/board", "/board/:path*"]` and does **not** cover `/api/*` — not a hole, because each sensitive route carries
+its own check and every one of them was probed answering 401 or 405.
+
+**NOT A NEW FINDING — the one candidate is the residue of a finding already carded, and is recorded here so it is
+not double-counted tomorrow.** `ExpandingCircles.tsx:64-66` reads the reduced-motion preference **once at mount**,
+inside a `useEffect` whose dependency array is empty (`:175`); it does not import `usePrefersReducedMotion`, and a
+grep for the hook across `src/` returns five importers without it. So of the seven call sites that
+`finding-site-reduced-motion-no-change-listener-2026-09-09` counted, **six now respond to a change and one does
+not** — and it is the most expensive canvas on the site, sixty-two shadow-blurred strokes a frame, live on
+`/henceforth`. Both refuters confirmed the code fact and both declined it as a *new* finding on the same ground:
+it is the tail of the carded one. **The correct handling, applied:** the existing card is narrowed to one call
+site rather than a duplicate being created. This is a merge artefact the commits themselves predicted — 110 stated
+plainly that it was leaving the file to 109 to avoid a conflict, and 109 then merged on top keeping its own
+one-time read.
+
+**CHECKED CLEAN — recorded so it is not re-derived.**
+
+- **The reduced-motion guard is on `main`.** Yesterday's entry recorded that `ExpandingCircles.tsx` had no guard at
+  all on the shipping branch and that the cited lines existed only on the 109 branch. **That is now closed:**
+  `:61-66` reads the preference, `:153-155` withholds the next frame, `:158-163` paints one static frame at
+  `CYCLE_MS * 0.5` and returns. The accessibility half of 109 landed.
+- **All three of pull request 110's claimed fixes are genuinely present**, each read to its definition rather than
+  its name: `mergeByDate`, `coverageThrough` and `maxDate` now live in `daily-reach-core.mjs:24,40,14` with
+  `asc-analytics.mjs:108` reading through them; `endpointOrder` at `chain-put.mjs:106` with the endpoint threaded
+  end to end through `chain-publish.mjs:113,131,145` into `chain-head.mjs:54,59`; and
+  `src/lib/usePrefersReducedMotion.ts` with five converted callers.
+- **`mergeByDate` is last-write-wins, not a sum** (`daily-reach-core.mjs:24-31`) — the correct reading of Apple's
+  overlapping restatements, and the actual fix for the undercount.
+- **The chain change does not weaken failover** — `endpointOrder` *orders* rather than pins, returning every
+  endpoint with the preference first, and `:131-137` still hands over on a rate limit.
+- **`middleware.ts` fails closed on a missing secret** — `:17-20` requires `secret.length > 0` before accepting a
+  session.
+- **Episode fifteen ships correctly and is LIVE.** `f1a54b6` adds `src/lib/episodes.ts:779-823` with `number: 15`,
+  `slug: "the-chain"`, `published: true`, and the named asset exists at 3,662,471 bytes. Probed live:
+  `/learn/the-chain` returns **200 in 0.11 s**, it is listed on `/learn`, and a range request against the mp4
+  answers 206. *This is a state difference worth carrying, not a clean-bill footnote:* the board booked the
+  publish for Sunday 13 September, and the page has been readable since Thursday. Raised as a question on the
+  episode card.
+- **`FadeIn` reading the hook at render time does not break hydration** — `useSyncExternalStore` uses
+  `getServerSnapshot` during hydration, which is precisely the case that argument exists for. The hook's own
+  warning comment at `:43-46` is over-cautious rather than wrong.
+
+**One tooling defect, confirmed and recorded here because it lives in this repository.**
+`scripts/board/machines-probe.mjs` returned `{host:"laptop", error:"du: /Users/henryhudson/Library/Caches/familycircled:
+Operation not permitted"}` — **one unreadable cache directory aborts the entire laptop read**, so today's report
+carries the mini's numbers and an error object for the laptop, and the laptop's disk trend has a hole in it on the
+exact morning the standing ops card is asking for that number. The mini read fine. A `|| true` on that `du`, or
+`-x`/an exclusion for `~/Library/Caches`, fixes it. Noted on `ops-review-clones-2026-09-08` rather than carded
+separately, since that card is where the disk numbers live.
+
 ## 2026-09-10 — production healthy; one gate hole confirmed, five of six objections refuted
 
 **Range:** `a1f9aa9..2382165` on `main`, six commits — three weeks of This Week in Parliament
