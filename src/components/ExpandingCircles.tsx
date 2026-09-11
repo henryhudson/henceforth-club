@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from "react";
 
+import { usePrefersReducedMotion } from "@/lib/usePrefersReducedMotion";
+
 /**
  * Expanding circles animation.
  * Ported from CircleMath/CirclesThatGetBiggerView.swift.
@@ -39,6 +41,7 @@ export default function ExpandingCircles({
   className?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -58,12 +61,12 @@ export default function ExpandingCircles({
     let lastDpr = 0;
     let onScreen = true;
 
-    // Respect prefers-reduced-motion — paint one static frame and skip
-    // the breathe loop for users who've asked for less motion. The other
-    // two canvases on the site already do this; this one was the omission.
-    const prefersReducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // Respect prefers-reduced-motion: paint one static frame and skip the
+    // breathe loop for readers who have asked for less motion. The value
+    // comes from the shared subscription rather than a one-time read here,
+    // so a reader who turns the preference on while the page is open is
+    // answered at once instead of at the next full remount. This was the
+    // last of the seven call sites still reading it once.
 
     function draw(now: number) {
       // Every frame re-rasterises 62 separately shadow-blurred strokes,
@@ -172,7 +175,7 @@ export default function ExpandingCircles({
       visibility.disconnect();
       cancelAnimationFrame(animId);
     };
-  }, []);
+  }, [prefersReducedMotion]);
 
   return (
     <canvas
