@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleIdentifier</key>
+	<string>club.henceforth.calendar-sync</string>
+	<key>CFBundleName</key>
+	<string>calendar-sync</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>The Morning Board writes your plan and its appointments into a dedicated iCloud calendar, so today's work reaches your phone without opening the board.</string>
+</dict>
+</plist>

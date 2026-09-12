@@ -50,16 +50,44 @@ async function readLaptop() {
   try {
     const home = homedir();
     const paths = Object.values(LAPTOP_CONSUMERS).map((rel) => join(home, rel));
-    const [df, swap, uptime, memsize, du, runtimes] = await Promise.all([
-      capture("df", ["-k", "/System/Volumes/Data"]),
-      capture("sysctl", ["vm.swapusage"]),
-      capture("uptime", []),
-      capture("sysctl", ["-n", "hw.memsize"]),
-      capture("du", ["-sk", ...paths]),
-      capture("xcrun", ["simctl", "runtime", "list"]),
-    ]);
-    return laptopBlock({ readAt, df, swap, uptime, memsize, du, runtimes });
+
+    // allSettled, not all. These six readings are independent, and `all` is
+    // all-or-nothing: one rejection discards the five that worked. That is not
+    // hypothetical — a `du` over a cache directory that no longer exists
+    // produces no stdout, rejects, and used to turn the whole laptop block
+    // into an error object, losing disk, swap, uptime, memory and runtimes
+    // which had all read correctly. A partial reading is worth far more than
+    // no reading, because the disk number is the one the morning acts on.
+    const named = [
+      ["df", capture("df", ["-k", "/System/Volumes/Data"])],
+      ["swap", capture("sysctl", ["vm.swapusage"])],
+      ["uptime", capture("uptime", [])],
+      ["memsize", capture("sysctl", ["-n", "hw.memsize"])],
+      ["du", capture("du", ["-sk", ...paths])],
+      ["runtimes", capture("xcrun", ["simctl", "runtime", "list"])],
+    ];
+    const settled = await Promise.allSettled(named.map(([, p]) => p));
+
+    // A failed reading becomes an empty string for the parsers and a named
+    // entry in `readErrors`. It is never silently dropped: a probe that
+    // starts reading empty must look different from one reading a real zero.
+    const values = {};
+    const readErrors = [];
+    settled.forEach((result, i) => {
+      const key = named[i][0];
+      if (result.status === "fulfilled") {
+        values[key] = result.value;
+      } else {
+        values[key] = "";
+        readErrors.push({ reading: key, error: result.reason.message });
+      }
+    });
+
+    const block = laptopBlock({ readAt, ...values });
+    return readErrors.length ? { ...block, readErrors } : block;
   } catch (e) {
+    // Reached only if a PARSER throws on what did arrive, which is a real
+    // shape change rather than a missing directory.
     return { host: "laptop", readAt, error: e.message };
   }
 }
