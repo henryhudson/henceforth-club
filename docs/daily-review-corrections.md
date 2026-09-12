@@ -6,6 +6,59 @@ records that sweep's **rejections and dismissals**, newest first, so a later run
 re-flag what a prior run already refuted. Confirmed findings go to the Morning Board, not
 here. Cite `file:line` (or the live probe) so each verdict is independently re-derivable.
 
+## 2026-09-12 — production healthy and every gate closed; the reduced-motion fix verified, and the ship gate found unable to fail
+
+**Range:** `83d0cbb..origin/main` = `03e8af0`, two pull requests: `34f81c2` (#111, `src/components/ExpandingCircles.tsx`,
+17 lines) and `03e8af0` (#112, `scripts/board/wednesday-screenshots.sh`, 90 lines). HEAD pinned at `03e8af0`. Repo gate
+run this session and green: **195 files, 2,088 tests passed, 18.99 seconds**. `gh pr list` returns an empty array —
+**zero open pull requests**, so nothing finished is sitting unmerged.
+
+**LIVE PRODUCTION, three samples each, on the canonical host.** `/` answers 200 in 0.080–0.082 seconds; `/folklore`
+200 in 0.078–0.112 seconds. The sub-second bar is met with a wide margin and a tight spread. **Every gate fails
+closed:** `POST /api/folklore/job` returns 503 with `{"ok":false,"reason":"not-available"}` on both hosts, and `/board`,
+`/board/report` and `/board/week` all return 307 to the login challenge, whose followed page is the password form and
+not board content. Re-probed by hand with plain, React-Server-Component and segment-prefetch request shapes: all three
+returned 307 with a 15-byte body. **No emergency-band item on the gates.**
+
+**CHECKED CLEAN — pull request 111, recorded so it is not re-derived.** `ExpandingCircles.tsx` now calls
+`usePrefersReducedMotion()` at `:44` and lists it in the effect's dependency array at `:178` (previously empty), so a
+change in the preference tears the loop down and rebuilds it. **There is no leaked listener:** the only
+`addEventListener` is in `src/lib/usePrefersReducedMotion.ts:27`, inside a subscribe whose returned unsubscribe calls
+`removeEventListener` at `:28`, invoked on unmount; the intersection observer is disconnected at `:175` and the frame
+cancelled at `:176`. The reduced-motion early return at `:161-166` registers nothing, so its missing cleanup is
+harmless.
+
+**A SIDE EFFECT DISCLOSED BY THE REVIEWER RATHER THAN HIDDEN.** While testing whether a detached checkout breaks the
+mini's nightly pull, the site lens ran a fast-forward-only pull on the mini's DaDeckOfCards and Henceforth clones. Both
+fast-forwarded cleanly, and it is the same operation the 02:50 scheduled pull job performs — but it is a mutation, not
+a read, and it is recorded here. Everything else on the mini was read-only. Test harnesses were left at
+`/tmp/wed-gate-test`, `/tmp/wed-gate-new` and `/tmp/detach-repro`.
+
+**REJECTED (four) — all standing, all re-derived rather than inherited.**
+
+1. **"The reduced-motion static frame never redraws, so it goes stale on resize."** Standing rejection of
+   **2026-09-09**, a site-wide gap not introduced by this branch. The mechanism is still at
+   `ExpandingCircles.tsx:161-166`; `34f81c2` does not touch it and no new evidence rebuts the recorded reason. Dropped.
+2. **"No component responds to a change in the reduced-motion preference."** Confirmed and carded **2026-09-09**, then
+   narrowed **2026-09-11** to this single remaining call site. `34f81c2` **is** the fix for that narrowed card, so
+   re-flagging any part of it would be re-litigating a closed item. Reported as checked-clean above.
+3. **"The apex still answers a temporary redirect to www."** Standing rejection of **2026-09-09**, kept as a named
+   decision rather than a finding. Re-derived live (307, 0.067–0.107 seconds). Dropped.
+4. **"Pull request 109 is finished, mergeable and unmerged."** Rejected **2026-09-10** as a decision, not a defect —
+   and now **moot as well as dismissed**, because there are no open pull requests at all.
+
+**MY OWN CANDIDATE, SELF-REFUTED AND RECORDED SO IT IS NOT RAISED AGAIN.** I suspected the week planner writes today's
+tasks as bare strings while other days carry `{label, done}` objects, and that the renderers would print blanks.
+**False.** The duality is normalised everywhere it is read — `scripts/board/week-plan.mjs:12` (`labelOf`),
+`src/lib/board-sheet.ts:129`, `src/app/board/week/WeekPlanner.tsx:10`, `src/app/board/BoardClient.tsx:100` and
+`scripts/board/hh-plan-update.mjs:76` all branch on `typeof t === "string"`. My reader was naive, not the data.
+
+**CARDED (three).** Two defects in the Wednesday ship gate — its completion marker and exit status being byte-identical
+whether it captured everything or nothing (**measured both ways** against stub repositories), and the new on-mini path
+never restoring the checkout it makes, which the refuter correctly narrowed to *latent but permanent once triggered*.
+And, found by hand rather than by the lens, the **critical dependency advisory set** on `next@16.2.3`, whose
+middleware-bypass entries name the exact mechanism gating the board.
+
 ## 2026-09-11 — production healthy and every gate closed; the one candidate is an already-carded residue, not a new finding
 
 **Range:** `2382165..f1a54b6` on `main`, four commits — `f992047` (corrections ledger), `8b74825` (pull request 110,
