@@ -156,6 +156,7 @@ describe("buildReach", () => {
       perApp: [
         {
           app: "deck",
+          through: "2026-07-24",
           yesterday: { date: "2026-07-25", count: null },
           week: {
             "2026-07-18": 0,
@@ -171,6 +172,30 @@ describe("buildReach", () => {
       ],
       site: { yesterday: 12, week: 80, total: 5210 },
     });
+  });
+
+  it("gives each app its OWN coverage date, so one stalled feed cannot hide behind another", () => {
+    // The case this exists for, taken from life. On 2026-09-12 Henceforth's
+    // analytics feed had produced nothing since the 8th while Deck's ran to
+    // the 11th. The top-level dataThrough is the MAXIMUM across apps, so it
+    // read the 11th and Henceforth's rows printed as bare dashes — identical
+    // to an app nobody had downloaded. Per-app coverage is what tells those
+    // two apart.
+    const rating = { average: null, count: 0 };
+    const reach = buildReach("2026-09-12", [
+      { app: "deck", instances: [{ processingDate: "2026-09-11", byDate: { "2026-09-10": 9 } }], rating },
+      { app: "henceforth", instances: [{ processingDate: "2026-09-08", byDate: { "2026-09-07": 0 } }], rating },
+    ]);
+
+    // The shared figure still reports the best any app managed...
+    expect(reach.dataThrough).toBe("2026-09-10");
+    // ...while each app says for itself how far its own feed actually reached.
+    expect(reach.perApp.find((a) => a.app === "deck").through).toBe("2026-09-10");
+    expect(reach.perApp.find((a) => a.app === "henceforth").through).toBe("2026-09-07");
+    // And the stalled app's yesterday is null rather than zero, which is the
+    // other half of the same honesty: absence of evidence, not evidence of
+    // absence.
+    expect(reach.perApp.find((a) => a.app === "henceforth").yesterday.count).toBeNull();
   });
 
   it("takes the newest coverage across apps for the top-level dataThrough", () => {
