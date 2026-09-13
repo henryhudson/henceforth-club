@@ -37,6 +37,7 @@ import { Redis } from "@upstash/redis";
 import { changeOutputIndex, inscribeDocument } from "./chain-put.mjs";
 import { editionSurface } from "./chain-publish-core.mjs";
 import { inscribeHeadFor, readLedger, recordInscription } from "./chain-publish.mjs";
+import { refusedSheetMark, refusedSheetPath } from "./render-pdf-core.mjs";
 
 // The publisher's ledger of everything on the chain; an edition joins it the
 // moment it is broadcast, and the head inscribed right after names it. The
@@ -166,14 +167,35 @@ async function render(browser, kind, date, outPath, prevTx, dryRun, column) {
   await page.evaluate(() => document.fonts.ready);
   await new Promise((r) => setTimeout(r, 400));
   const overflow = await page.evaluate(() => Number(document.querySelector("[data-pack-root]")?.dataset.packOverflow ?? 0));
+  // A sheet the check is about to refuse is marked NOW, before the bytes are
+  // fixed. On 12 September 2026 the refused 09:21 daily — written and opened
+  // below for diagnosis, identical in every visible way to the 09:26 edition
+  // that replaced it — was the one that reached the printer, clipped. The
+  // mark is a full-bleed diagonal band; the diagnostic copy stays readable
+  // underneath it, and nobody can print it by mistake.
+  const refused = overflow > 1;
+  if (refused) {
+    await page.evaluate((html) => {
+      // Inside the sheet, not on body. A4Sheet's print stylesheet hides every
+      // element under body and re-shows only .a4-print-root and its
+      // descendants, so a body-level mark is present in the DOM and absent
+      // from the page. The sheet is position:absolute in print, so the mark's
+      // inset:0 fills exactly the A4 the printer sees.
+      const host = document.querySelector(".a4-print-root") ?? document.body;
+      host.insertAdjacentHTML("beforeend", html);
+    }, refusedSheetMark(overflow, label));
+  }
   const pdf = await page.pdf({ format: "A4", preferCSSPageSize: true, printBackground: true });
   await page.close();
 
   // The local copy is written BEFORE the budget check: when the fit loop loses,
   // the failed sheet must exist on disk to be opened and diagnosed. Only the
   // free local write moves ahead of the throw — the archive and the inscription
-  // stay strictly behind it (money must stay behind the check).
-  const localPath = outPath ?? join(tmpdir(), `board-${kind}-${date}${column ? `-${column}` : ""}.pdf`);
+  // stay strictly behind it (money must stay behind the check). A refused
+  // sheet is also NAMED as refused, so a later good render of the same date
+  // never overwrites the evidence and a folder listing tells them apart.
+  const tmpPath = join(tmpdir(), `board-${kind}-${date}${column ? `-${column}` : ""}.pdf`);
+  const localPath = refused ? refusedSheetPath(outPath ?? tmpPath, Boolean(outPath)) : (outPath ?? tmpPath);
   await writeFile(localPath, pdf);
 
   const pages = (await PDFDocument.load(pdf)).getPageCount();

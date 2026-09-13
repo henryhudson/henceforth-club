@@ -92,7 +92,12 @@ export function buildReach(today, apps, site) {
     const through = coverageThrough(instances);
     const week = trailingWeek(merged, through);
     const yesterday = through ? yesterdayCount(merged, through, today) : { date: null, count: null };
-    return { through, entry: { app, yesterday, week, rating, ...(funnel ? { funnel } : {}) } };
+    // `through` goes INSIDE the entry as well as beside it. Beside it, it only
+    // ever became the maximum across all three apps, so an app whose feed had
+    // stalled looked exactly like an app with no downloads. Each app carries
+    // its own coverage now, and a reader can tell "nobody installed it" from
+    // "Apple has not sent us anything since the 8th".
+    return { through, entry: { app, through, yesterday, week, rating, ...(funnel ? { funnel } : {}) } };
   });
   return {
     dataThrough: maxDate(entries.map((e) => e.through).filter((d) => d != null)),
