@@ -5,6 +5,7 @@
 import { readFile, readdir, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { windowDates, buildRetro, weekStripDates, buildWeekStrip, weekPlanSkeleton, addDays } from "./whh-aggregate.mjs";
+import { measureBenchmarks } from "./whh-benchmarks.mjs";
 import { attachWeekToBoardFiles } from "./local-mirror.mjs";
 import { pullSales } from "./asc-client.mjs";
 import { pullAnalyticsDownloads } from "./asc-analytics.mjs";
@@ -18,7 +19,7 @@ const NAMES = { henceforth: "Henceforth", deck: "DaDeckOfCards", hansard: "Hansa
 const APP_IDS = { henceforth: "1602896145", deck: "1520654142", hansard: "6762037651" };
 
 /** Pure: assemble a WeekReport from already-loaded inputs. */
-export function assemble({ endDate, days = 7, reports, board, sales, generatedAt, weekStrip, appState }) {
+export function assemble({ endDate, days = 7, reports, board, sales, generatedAt, weekStrip, appState, benchmarks = null }) {
   const dates = windowDates(endDate, days);
   // weekOf/weekEnd label the REVIEWED window (the trailing `days` ending endDate) —
   // this is a retrospective, so its header and every figure (reviews, sales,
@@ -30,6 +31,10 @@ export function assemble({ endDate, days = 7, reports, board, sales, generatedAt
   // run into next week, while Sunday/mid-week runs plan the week they fall in.
   retro.weekPlan = weekPlanSkeleton(addDays(endDate, 1));
   retro.appState = appState ?? [];
+  // The benchmarks table rides the week file; null only when assemble is
+  // called without one (tests). The live run measures it and FAILS when
+  // nothing could be read (whh-benchmarks.mjs), so the table cannot lapse.
+  retro.benchmarks = benchmarks;
   return {
     weekOf: dates[0], weekEnd: endDate, generatedAt,
     daysCovered: reports.map((r) => r.date),
@@ -87,7 +92,9 @@ export async function run({ endDate, days = 7 }) {
   }
   const apps = Object.keys(NAMES).map((key) => ({ key, name: NAMES[key], appId: APP_IDS[key] }));
   const appState = await pullAppState({ apps, sales });
-  const week = assemble({ endDate, days, reports, board, sales, weekStrip, appState, generatedAt: new Date().toISOString() });
+  const dates = windowDates(endDate, days);
+  const benchmarks = await measureBenchmarks({ since: dates[0], measuredAt: new Date().toISOString() });
+  const week = assemble({ endDate, days, reports, board, sales, weekStrip, appState, benchmarks, generatedAt: new Date().toISOString() });
   await mkdir(WEEKS_DIR, { recursive: true });
   // Keyed by the review-end date (endDate), the day the retrospective was run.
   await writeFile(path.join(WEEKS_DIR, `${endDate}.json`), JSON.stringify(week, null, 2) + "\n");

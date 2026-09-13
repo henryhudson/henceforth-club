@@ -1,4 +1,4 @@
-import type { WeekReport, NextItem } from "@/lib/board-data";
+import type { BenchmarkRow, WeekReport, NextItem } from "@/lib/board-data";
 import { MACHINE_NAMES, datesBetween, machineHogs, sparkPoints } from "@/lib/report-helpers";
 import A4Sheet from "@/app/hansard/this-week/_components/overview/A4Sheet";
 import s from "./week.module.css";
@@ -38,6 +38,19 @@ function longDate(iso: string): string {
   });
 }
 
+/** One benchmark row as agate: continuous-integration rows and route rows read differently. */
+function benchmarkRow(key: string, r: BenchmarkRow): string {
+  if (key === "continuous-integration") {
+    if (!r.workflow) return `${r.name}: quiet, no runs`;
+    const median = r.medianMinutes == null ? "no green run" : `${r.medianMinutes} min`;
+    return `${r.name} ${r.workflow}: ${median} over ${r.runs}${r.failed ? `, ${r.failed} red` : ""}`;
+  }
+  if (key === "site-routes") {
+    return r.medianMs == null ? `${r.path}: unreachable` : `${r.path}: ${r.medianMs} ms, worst ${r.worstMs}`;
+  }
+  return Object.values(r).join(" ");
+}
+
 export default function WeekSheet({ week }: { week: WeekReport }) {
   const wins = asLines(week.retro.wins, 6);
   const misses = asLines(week.retro.misses, 6);
@@ -60,6 +73,7 @@ export default function WeekSheet({ week }: { week: WeekReport }) {
   // plotted between its own low and high, with the mornings it was not read
   // left as gaps.
   const weekDates = datesBetween(week.weekOf, week.weekEnd);
+  const benchmarks = week.retro.benchmarks ?? null;
   const machines = (week.retro.machines ?? []).map((m) => ({
     ...m,
     name: MACHINE_NAMES[m.host] ?? m.host,
@@ -196,6 +210,25 @@ export default function WeekSheet({ week }: { week: WeekReport }) {
                   ))}
                   {m.verdict && <p><i>{m.verdict}</i></p>}
                 </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── BAND C2 · the benchmarks: every instrument named, measured or
+            missing, one agate line each; the run fails when none was read ── */}
+        {benchmarks && (
+          <div className={s.machines}>
+            <div className={s.sectionTitle}>The benchmarks</div>
+            <div className={s.agate}>
+              {benchmarks.instruments.map((inst) => (
+                <p key={inst.key}>
+                  <b>{inst.name}</b>
+                  {inst.status === "measured"
+                    ? inst.rows.map((r, i) => <span key={i}> · {benchmarkRow(inst.key, r)}</span>)
+                    : <> · not yet measured</>}
+                  {inst.note && <> · <i>{inst.note}</i></>}
+                </p>
               ))}
             </div>
           </div>
