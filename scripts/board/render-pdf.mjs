@@ -37,7 +37,7 @@ import { Redis } from "@upstash/redis";
 import { changeOutputIndex, inscribeDocument } from "./chain-put.mjs";
 import { editionSurface } from "./chain-publish-core.mjs";
 import { inscribeHeadFor, readLedger, recordInscription } from "./chain-publish.mjs";
-import { refusedSheetMark, refusedSheetPath, sheetOverflow } from "./render-pdf-core.mjs";
+import { overflowNames, refusedSheetMark, refusedSheetPath, sheetOverflow } from "./render-pdf-core.mjs";
 
 // The publisher's ledger of everything on the chain; an edition joins it the
 // moment it is broadcast, and the head inscribed right after names it. The
@@ -165,19 +165,39 @@ async function render(browser, kind, date, outPath, prevTx, dryRun, column) {
   // Let the fonts land and the fit settle before measuring, then read how far
   // the content overflows the sheet: the sheet clips that, silently. The
   // packed daily reports its residual through data-pack-overflow; every
-  // sheet also reports its clipped height as scrollHeight past clientHeight
-  // on the sheet root, which is the only reading the weekly edition has
-  // (on 13 September 2026 it lost its footer bands while this read zero).
+  // sheet also reports how far its elements' own boxes run past the page
+  // edge, which is the only reading the weekly edition has (on 13 September
+  // 2026 it lost its footer bands while the pack reading was zero).
   await page.evaluate(() => document.fonts.ready);
   await new Promise((r) => setTimeout(r, 400));
-  const overflow = sheetOverflow(await page.evaluate(() => {
+  const reading = await page.evaluate(() => {
     const sheet = document.querySelector(".a4-print-root");
+    const bottom = sheet?.getBoundingClientRect().bottom ?? 0;
+    // What runs past the page edge, deepest element first: the copy to
+    // tighten is named in the refusal rather than hunted on the sheet.
+    const past = [];
+    let pastMax = 0;
+    for (const el of sheet?.querySelectorAll("*") ?? []) {
+      const r = el.getBoundingClientRect();
+      if (r.height === 0 || r.bottom <= bottom + 1) continue;
+      if (getComputedStyle(el).visibility === "hidden") continue;
+      const by = Math.round(r.bottom - bottom);
+      pastMax = Math.max(pastMax, by);
+      if (el.children.length === 0) past.push({ by, tag: el.tagName.toLowerCase(), cls: el.className?.toString().slice(0, 40) ?? "", text: (el.textContent ?? "").trim().slice(0, 60) });
+    }
+    past.sort((a, b) => b.by - a.by);
     return {
       packOverflow: Number(document.querySelector("[data-pack-root]")?.dataset.packOverflow ?? 0),
+      pastMax,
+      // For the record only: scrollHeight over-reads on the daily (111px
+      // with nothing past the edge on 13 September 2026), so it does not decide.
       scrollHeight: sheet?.scrollHeight ?? 0,
       clientHeight: sheet?.clientHeight ?? 0,
+      past: past.slice(0, 6),
     };
-  }));
+  });
+  const overflow = sheetOverflow(reading);
+  const pastEdge = overflowNames(reading.past);
   // A sheet the check is about to refuse is marked NOW, before the bytes are
   // fixed. On 12 September 2026 the refused 09:21 daily — written and opened
   // below for diagnosis, identical in every visible way to the 09:26 edition
@@ -216,7 +236,7 @@ async function render(browser, kind, date, outPath, prevTx, dryRun, column) {
   }
   if (overflow > 1) {
     try { execSync(`open ${JSON.stringify(localPath)}`); } catch { /* open is best-effort */ }
-    throw new Error(`${label}: the content overflows the sheet by ${overflow}px at the floor type size — the page would clip text; tighten the copy, do not skip (clipped sheet at ${localPath})`);
+    throw new Error(`${label}: the content overflows the sheet by ${overflow}px at the floor type size — the page would clip text; tighten the copy, do not skip (clipped sheet at ${localPath})${pastEdge}`);
   }
   // Every render also lands a permanent copy in the editions archive (Henry,
   // 2026-08-20: "ensure we are saving all this in folders for future
