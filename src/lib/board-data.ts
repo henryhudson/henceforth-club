@@ -307,6 +307,18 @@ export type MachineWeek = {
   verdict: string;
   recommendations: MachineRecommendation[];
 };
+// The weekly benchmarks: every instrument named, measured or missing, from
+// scripts/board/whh-benchmarks.mjs. Rows are per instrument: continuous
+// integration rows carry name/workflow/runs/medianMinutes/failed; site route
+// rows carry path/samples/medianMs/worstMs/status.
+export type BenchmarkRow = Record<string, string | number | null>;
+export type BenchmarkInstrument = {
+  key: string; name: string; unit: string;
+  status: "measured" | "missing";
+  rows: BenchmarkRow[];
+  note: string | null;
+};
+export type Benchmarks = { measuredAt: string; instruments: BenchmarkInstrument[]; measured: number; missing: number };
 export type WeekReport = {
   weekOf: string; weekEnd: string; daysCovered: string[];
   retro: {
@@ -317,6 +329,7 @@ export type WeekReport = {
     weekPlan: PlanDay[];
     appState: AppState[];
     machines?: MachineWeek[];
+    benchmarks?: Benchmarks | null;
     stateOfUnion: string;
     wins: (string | NextItem)[]; misses: (string | NextItem)[]; nextWeek: NextItem[];
   };
