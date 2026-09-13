@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { refusedSheetMark, refusedSheetPath } from "./render-pdf-core.mjs";
+import { refusedSheetMark, refusedSheetPath, sheetOverflow } from "./render-pdf-core.mjs";
 
 describe("refusedSheetMark", () => {
   it("says on its face that the sheet did not fit, by how much, and that it must not be printed", () => {
@@ -55,5 +55,20 @@ describe("refusedSheetPath", () => {
 
   it("leaves a path the caller chose with --out untouched", () => {
     expect(refusedSheetPath("/Users/h/Desktop/preview.pdf", true)).toBe("/Users/h/Desktop/preview.pdf");
+  });
+});
+
+describe("sheetOverflow", () => {
+  it("reads the packed daily's own residual", () => {
+    expect(sheetOverflow({ packOverflow: 44, scrollHeight: 1000, clientHeight: 1000 })).toBe(44);
+  });
+  it("reads the clipped height of a sheet with no pack root, the weekly edition's case", () => {
+    expect(sheetOverflow({ packOverflow: 0, scrollHeight: 1187, clientHeight: 1123 })).toBe(64);
+  });
+  it("takes the larger of the two readings and never goes negative", () => {
+    expect(sheetOverflow({ packOverflow: 3, scrollHeight: 1187, clientHeight: 1123 })).toBe(64);
+    expect(sheetOverflow({ packOverflow: 0, scrollHeight: 900, clientHeight: 1123 })).toBe(0);
+    expect(sheetOverflow({})).toBe(0);
+    expect(sheetOverflow({ packOverflow: NaN, scrollHeight: NaN, clientHeight: 5 })).toBe(0);
   });
 });

@@ -37,7 +37,7 @@ import { Redis } from "@upstash/redis";
 import { changeOutputIndex, inscribeDocument } from "./chain-put.mjs";
 import { editionSurface } from "./chain-publish-core.mjs";
 import { inscribeHeadFor, readLedger, recordInscription } from "./chain-publish.mjs";
-import { refusedSheetMark, refusedSheetPath } from "./render-pdf-core.mjs";
+import { refusedSheetMark, refusedSheetPath, sheetOverflow } from "./render-pdf-core.mjs";
 
 // The publisher's ledger of everything on the chain; an edition joins it the
 // moment it is broadcast, and the head inscribed right after names it. The
@@ -163,10 +163,21 @@ async function render(browser, kind, date, outPath, prevTx, dryRun, column) {
     throw new Error(`${url} bounced to the login gate — BOARD_COOKIE_SECRET in .env.local no longer matches production`);
   }
   // Let the fonts land and the fit settle before measuring, then read how far
-  // the packed columns overflow the sheet: the sheet clips that, silently.
+  // the content overflows the sheet: the sheet clips that, silently. The
+  // packed daily reports its residual through data-pack-overflow; every
+  // sheet also reports its clipped height as scrollHeight past clientHeight
+  // on the sheet root, which is the only reading the weekly edition has
+  // (on 13 September 2026 it lost its footer bands while this read zero).
   await page.evaluate(() => document.fonts.ready);
   await new Promise((r) => setTimeout(r, 400));
-  const overflow = await page.evaluate(() => Number(document.querySelector("[data-pack-root]")?.dataset.packOverflow ?? 0));
+  const overflow = sheetOverflow(await page.evaluate(() => {
+    const sheet = document.querySelector(".a4-print-root");
+    return {
+      packOverflow: Number(document.querySelector("[data-pack-root]")?.dataset.packOverflow ?? 0),
+      scrollHeight: sheet?.scrollHeight ?? 0,
+      clientHeight: sheet?.clientHeight ?? 0,
+    };
+  }));
   // A sheet the check is about to refuse is marked NOW, before the bytes are
   // fixed. On 12 September 2026 the refused 09:21 daily — written and opened
   // below for diagnosis, identical in every visible way to the 09:26 edition
@@ -205,7 +216,7 @@ async function render(browser, kind, date, outPath, prevTx, dryRun, column) {
   }
   if (overflow > 1) {
     try { execSync(`open ${JSON.stringify(localPath)}`); } catch { /* open is best-effort */ }
-    throw new Error(`${label}: the packed columns overflow the sheet by ${overflow}px at the floor type size — the page would clip text; tighten the copy, do not skip (clipped sheet at ${localPath})`);
+    throw new Error(`${label}: the content overflows the sheet by ${overflow}px at the floor type size — the page would clip text; tighten the copy, do not skip (clipped sheet at ${localPath})`);
   }
   // Every render also lands a permanent copy in the editions archive (Henry,
   // 2026-08-20: "ensure we are saving all this in folders for future

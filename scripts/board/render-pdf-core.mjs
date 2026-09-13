@@ -49,3 +49,18 @@ export function refusedSheetPath(localPath, callerChoseIt) {
   if (callerChoseIt) return localPath;
   return localPath.replace(/\.pdf$/i, "-DID-NOT-FIT.pdf");
 }
+
+/**
+ * How far a sheet's content runs past the page, in pixels. The packed daily
+ * reports its own residual through data-pack-overflow after shrinking the
+ * type; every other sheet (the weekly edition, the board) clips at 297mm with
+ * overflow hidden, and the clipped-away height is exactly scrollHeight minus
+ * clientHeight on the sheet root. On 13 September 2026 the weekly edition
+ * lost its two footer bands this way while the gate read zero, because it
+ * only asked the pack. The larger of the two readings is the truth.
+ */
+export function sheetOverflow({ packOverflow = 0, scrollHeight = 0, clientHeight = 0 } = {}) {
+  const pack = Number.isFinite(packOverflow) ? Math.max(0, packOverflow) : 0;
+  const clipped = Number.isFinite(scrollHeight) && Number.isFinite(clientHeight) ? Math.max(0, scrollHeight - clientHeight) : 0;
+  return Math.max(pack, clipped);
+}
