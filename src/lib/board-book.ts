@@ -56,6 +56,13 @@ export type GridMonth = { month: string; label: string; items: PlanLine[] };
 export type TimeMark = { at: number; label: string | null };
 
 export type DayPageModel = { date: string; heading: string; tasks: Tick[]; marks: TimeMark[] };
+/** One row of the week: the weekday spelt out, the date without its year,
+ *  whether it is the Wednesday that ships and writes the digest, and every
+ *  task in full, ticked as written. */
+export type WeekDayModel = { date: string; weekday: string; label: string; review: boolean; tasks: Tick[] };
+/** `laidOut` is false when the board carries no week; the page then prints
+ *  the not-laid-out line and no rows. */
+export type WeekPageModel = { heading: string; laidOut: boolean; days: WeekDayModel[] };
 /** `others` are the plan's lines that fall on no box: a month-wide item or
  *  words on the month, words or a month beyond the twelve on the year.
  *  `laidOut` is false when the board carries no such plan; the boxes print
@@ -68,6 +75,7 @@ export type YearPageModel = { heading: string; note: string | null; laidOut: boo
 export type BookPage =
   | { id: "todo"; kind: "cards"; title: string; empty: string; inHand: ColumnCard[]; list: ColumnPageModel }
   | { id: "day"; kind: "day"; title: string; day: DayPageModel }
+  | { id: "week"; kind: "week"; title: string; empty: string; week: WeekPageModel }
   | { id: "month"; kind: "month"; title: string; empty: string; month: MonthPageModel }
   | { id: "year"; kind: "year"; title: string; empty: string; year: YearPageModel };
 
@@ -198,6 +206,23 @@ export function dayPageModel(week: SheetBoard["week"], date: string): DayPageMod
   };
 }
 
+/** The week as the planner laid it out: headed by its first date, one row a
+ *  day in the order written, Wednesday marked because that is ship day and
+ *  the digest. Without a week the heading is the date's own and there are
+ *  no rows. */
+export function weekPageModel(week: SheetBoard["week"], date: string): WeekPageModel {
+  const rows = weekRows(week?.weekPlan);
+  const first = parts(rows[0]?.date ?? date);
+  return {
+    heading: `Week of ${first.day} ${first.month} ${first.year}`,
+    laidOut: rows.length > 0,
+    days: rows.map((row) => {
+      const d = parts(row.date);
+      return { date: row.date, weekday: d.weekday, label: `${d.day} ${d.month}`, review: d.weekday === "Wednesday", tasks: row.tasks };
+    }),
+  };
+}
+
 export function monthPageModel(plan: BoardPlan | null | undefined, date: string): MonthPageModel {
   const month = firstMonthOf(plan, date);
   const items = plan?.items ?? [];
@@ -239,6 +264,7 @@ export function boardBookModel(board: BookBoard, report: SheetReport, date: stri
         list: columnPage(board, "todo", date),
       },
       { id: "day", kind: "day", title: "The day", day: dayPageModel(board.week, date) },
+      { id: "week", kind: "week", title: "The week", empty: "Not laid out yet.", week: weekPageModel(board.week, date) },
       { id: "month", kind: "month", title: "The month", empty: "Not laid out yet.", month: monthPageModel(board.month, date) },
       { id: "year", kind: "year", title: "The year", empty: "Not laid out yet.", year: yearPageModel(board.year, date) },
     ],

@@ -4,6 +4,7 @@ import {
   dayPageModel,
   dayTimeline,
   monthGrid,
+  weekPageModel,
   monthPageModel,
   whenLabel,
   yearGrid,
@@ -82,6 +83,7 @@ describe("the book's pages", () => {
     expect(book.pages.map((p) => [p.id, p.kind, p.title])).toEqual([
       ["todo", "cards", "To do"],
       ["day", "day", "The day"],
+      ["week", "week", "The week"],
       ["month", "month", "The month"],
       ["year", "year", "The year"],
     ]);
@@ -120,12 +122,14 @@ describe("the book's pages", () => {
     expect(page.inHand.map((c) => c.id)).toEqual(["h-newer", "h-older"]);
     expect(page.inHand[0].note).toBe("Script staged.");
     expect(page.list.cards.map((c) => c.id)).toEqual(["t-newer", "cadence-appstore", "t-older", "parked"]);
-    expect(boardBookModel(busy, report, DATE).pages.map((p) => p.id)).toEqual(["todo", "day", "month", "year"]);
+    expect(boardBookModel(busy, report, DATE).pages.map((p) => p.id)).toEqual(["todo", "day", "week", "month", "year"]);
   });
 
   it("carries the day, the month and the year as grids with the plans' words, and the not-laid-out line for the plans the board lacks", () => {
-    const [, d, m, y] = book.pages;
-    if (d.kind !== "day" || m.kind !== "month" || y.kind !== "year") throw new Error("the last three pages are the grids");
+    const [, d, w, m, y] = book.pages;
+    if (d.kind !== "day" || w.kind !== "week" || m.kind !== "month" || y.kind !== "year") throw new Error("the last four pages are the day, the week and the grids");
+    expect(w.week.laidOut).toBe(true);
+    expect(w.week.days.map((row) => row.date)).toEqual(["2026-09-06", "2026-09-07"]);
     expect(d.day.heading).toBe("Monday 7 September 2026");
     expect(m.month.heading).toBe("September 2026");
     expect(m.month.note).toBe("Drafted on 7 September. Edit freely.");
@@ -135,8 +139,11 @@ describe("the book's pages", () => {
     expect(y.year.laidOut).toBe(true);
 
     const bare = boardBookModel({ ...board, week: undefined, month: undefined, year: null }, null, DATE);
-    const [, bd, bm, by] = bare.pages;
-    if (bd.kind !== "day" || bm.kind !== "month" || by.kind !== "year") throw new Error("the last three pages are the grids");
+    const [, bd, bw, bm, by] = bare.pages;
+    if (bd.kind !== "day" || bw.kind !== "week" || bm.kind !== "month" || by.kind !== "year") throw new Error("the last four pages are the day, the week and the grids");
+    expect(bw.empty).toBe("Not laid out yet.");
+    expect(bw.week.laidOut).toBe(false);
+    expect(bw.week.days).toEqual([]);
     expect(bd.day.tasks).toEqual([]);
     expect(bd.day.marks).toEqual(dayTimeline());
     expect(bm.empty).toBe("Not laid out yet.");
@@ -194,6 +201,32 @@ describe("the day: one line from midnight to midnight, and the week's plan for t
     expect(dayPageModel(board.week, "2026-09-09").tasks).toEqual([]);
     expect(dayPageModel(undefined, DATE).tasks).toEqual([]);
     expect(dayPageModel(null, DATE).marks).toEqual(dayTimeline());
+  });
+});
+
+describe("the week as seven rows", () => {
+  it("is headed by the week's first date and carries one row a day with the weekday spelt out, the date, and every task in full, ticked as written", () => {
+    const week = weekPageModel(board.week, DATE);
+    expect(week.laidOut).toBe(true);
+    expect(week.heading).toMatch(/^Week of \d+ September 2026$/);
+    const monday = week.days.find((d) => d.date === DATE);
+    expect(monday).toMatchObject({ weekday: "Monday", label: "7 September", review: false });
+    expect(monday?.tasks).toEqual([
+      { label: "Cut episode fifteen.", done: true },
+      { label: "Press the 1.10 release.", done: false },
+      { label: "Post the film.", done: false },
+    ]);
+  });
+
+  it("marks the Wednesday as the review day, because it ships and writes the digest", () => {
+    const week = weekPageModel({ weekPlan: [{ date: "2026-09-09", weekday: "Wed", isReviewDay: true, tasks: ["Ship."] }] }, DATE);
+    expect(week.heading).toBe("Week of 9 September 2026");
+    expect(week.days).toEqual([{ date: "2026-09-09", weekday: "Wednesday", label: "9 September", review: true, tasks: [{ label: "Ship.", done: false }] }]);
+  });
+
+  it("is not laid out without a week: the date's own heading and no rows", () => {
+    expect(weekPageModel(undefined, DATE)).toEqual({ heading: "Week of 7 September 2026", laidOut: false, days: [] });
+    expect(weekPageModel(null, DATE).laidOut).toBe(false);
   });
 });
 
