@@ -70,6 +70,8 @@ while kill -0 "$run" 2>/dev/null; do
 done
 
 wait "$run"
-status=$?
-print -r -- "=== morning review finished $(date '+%Y-%m-%dT%H:%M:%S%z') exit $status after ${waited}s ===" >> "$LOG"
-exit $status
+# Not status: in zsh that is a read-only alias of the exit code, the assignment
+# aborts the script, and five mornings finished without saying so.
+rc=$?
+print -r -- "=== morning review finished $(date '+%Y-%m-%dT%H:%M:%S%z') exit $rc after ${waited}s ===" >> "$LOG"
+exit $rc
