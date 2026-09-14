@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { refusedSheetMark, refusedSheetPath } from "./render-pdf-core.mjs";
+import { overflowNames, refusedSheetMark, refusedSheetPath, sheetOverflow } from "./render-pdf-core.mjs";
 
 describe("refusedSheetMark", () => {
   it("says on its face that the sheet did not fit, by how much, and that it must not be printed", () => {
@@ -55,5 +55,33 @@ describe("refusedSheetPath", () => {
 
   it("leaves a path the caller chose with --out untouched", () => {
     expect(refusedSheetPath("/Users/h/Desktop/preview.pdf", true)).toBe("/Users/h/Desktop/preview.pdf");
+  });
+});
+
+describe("sheetOverflow", () => {
+  it("reads the packed daily's own residual", () => {
+    expect(sheetOverflow({ packOverflow: 44, pastMax: 0 })).toBe(44);
+  });
+  it("reads how far the elements run past the edge, the weekly edition's only reading", () => {
+    expect(sheetOverflow({ packOverflow: 0, pastMax: 64 })).toBe(64);
+  });
+  it("takes the larger of the two readings and never goes negative", () => {
+    expect(sheetOverflow({ packOverflow: 3, pastMax: 64 })).toBe(64);
+    expect(sheetOverflow({ packOverflow: 0, pastMax: -5 })).toBe(0);
+    expect(sheetOverflow({})).toBe(0);
+    expect(sheetOverflow({ packOverflow: NaN, pastMax: NaN })).toBe(0);
+  });
+});
+
+describe("overflowNames", () => {
+  it("is silent when nothing ran past the edge", () => {
+    expect(overflowNames([])).toBe("");
+    expect(overflowNames(undefined)).toBe("");
+  });
+  it("names what ran past the edge, deepest first, with the text to tighten", () => {
+    const text = overflowNames([{ by: 64, tag: "p", cls: "agate", text: "Missed. The benchmarks table" }, { by: 12, tag: "span", cls: "", text: "Sat 19" }]);
+    expect(text).toContain("past the page edge:");
+    expect(text).toContain('  64px past the edge: <p class="agate"> "Missed. The benchmarks table"');
+    expect(text).toContain('  12px past the edge: <span> "Sat 19"');
   });
 });

@@ -49,3 +49,26 @@ export function refusedSheetPath(localPath, callerChoseIt) {
   if (callerChoseIt) return localPath;
   return localPath.replace(/\.pdf$/i, "-DID-NOT-FIT.pdf");
 }
+
+/**
+ * How far a sheet's content runs past the page, in pixels. The packed daily
+ * reports its own residual through data-pack-overflow after shrinking the
+ * type; every sheet (the weekly edition, the board) reports how far its
+ * elements' own boxes run past the page edge, which is what the 297mm sheet
+ * clips with overflow hidden. On 13 September 2026 the weekly edition lost
+ * its two footer bands this way while the gate read zero, because it only
+ * asked the pack. scrollHeight is not the measure: on the daily it over-read
+ * by 111px with nothing visible past the edge. The larger reading is the truth.
+ */
+export function sheetOverflow({ packOverflow = 0, pastMax = 0 } = {}) {
+  const pack = Number.isFinite(packOverflow) ? Math.max(0, packOverflow) : 0;
+  const past = Number.isFinite(pastMax) ? Math.max(0, pastMax) : 0;
+  return Math.max(pack, past);
+}
+
+/** The refusal's postscript: what ran past the page edge, deepest first. Empty when nothing is named. */
+export function overflowNames(past = []) {
+  if (!Array.isArray(past) || past.length === 0) return "";
+  const lines = past.map((p) => `  ${String(p.by).padStart(4)}px past the edge: <${p.tag}${p.cls ? ` class="${p.cls}"` : ""}> ${JSON.stringify(p.text ?? "")}`);
+  return `\n  past the page edge:\n${lines.join("\n")}`;
+}
