@@ -51,14 +51,14 @@ const section = (page: string, id: string, next: string) => page.slice(page.inde
 describe("The Board as a book", () => {
   const page = html(board);
 
-  it("sets the front, then four pages in order, each anchored and headed by its name, the date, the month or the year's span, and no page for what is in progress", () => {
-    expect([...page.matchAll(/<section id="([a-z]+)"/g)].map((m) => m[1])).toEqual(["todo", "day", "month", "year"]);
+  it("sets the front, then five pages in order, each anchored and headed by its name, the date, the week, the month or the year's span, and no page for what is in progress", () => {
+    expect([...page.matchAll(/<section id="([a-z]+)"/g)].map((m) => m[1])).toEqual(["todo", "day", "week", "month", "year"]);
     const h1 = page.match(/<h1 class="([^"]+)"/)?.[1];
-    for (const title of ["To do", "Monday 7 September 2026", "September 2026", "September 2026 to August 2027"]) {
+    for (const title of ["To do", "Monday 7 September 2026", "Week of 7 September 2026", "September 2026", "September 2026 to August 2027"]) {
       expect(page).toContain(`<h1 class="${h1}">${title}</h1>`);
     }
     expect(page).not.toContain(">In progress</h1>");
-    for (const foot of ["To do", "The day", "The month", "The year"]) expect(page).toContain(`<b>The Board</b> · ${foot}`);
+    for (const foot of ["To do", "The day", "The week", "The month", "The year"]) expect(page).toContain(`<b>The Board</b> · ${foot}`);
     expect(page).not.toContain("<b>The Board</b> · In progress");
     expect(page.indexOf("The working set of the four")).toBeLessThan(page.indexOf("<section"));
   });
@@ -119,7 +119,7 @@ describe("The Board as a book", () => {
     expect(todo.match(/<article class="/g)).toHaveLength(3);
     expect(todo).not.toContain("Nothing in hand.");
     expect(todo).not.toContain("Nothing to do.");
-    expect([...busy.matchAll(/<section id="([a-z]+)"/g)].map((m) => m[1])).toEqual(["todo", "day", "month", "year"]);
+    expect([...busy.matchAll(/<section id="([a-z]+)"/g)].map((m) => m[1])).toEqual(["todo", "day", "week", "month", "year"]);
   });
 
   it("prints the day as the week's plan for the date, ticked, above one line from midnight to midnight with paper to write on", () => {
@@ -145,6 +145,18 @@ describe("The Board as a book", () => {
     expect(day.match(new RegExp(s.markHalf, "g"))).toHaveLength(24);
     expect(day).toContain(`<span class="${s.markLabel}"></span>`);
     expect(day).not.toContain("☐</span><span>Cut");
+  });
+
+  it("prints the week as one row a day, the weekday spelt out with its date in the margin column and every task in full beside it, ticked as the planner has it", () => {
+    const week = section(page, "week", "month");
+    expect(week).toContain("Week of 7 September 2026");
+    expect(week).toContain("<b>Monday</b>");
+    expect(week).toContain("7 September");
+    expect(week).toContain("☑");
+    expect(week).toContain("Cut episode fifteen, the chain.");
+    expect(week).toContain("Press the 1.10 release.");
+    expect(week).not.toContain("Ship day · the digest");
+    expect(week).toContain("3 items · 1 done".replace("3", "2"));
   });
 
   it("prints the month as seven columns of days with the days either side greyed, each item in its day's box, the done one ticked", () => {
@@ -183,7 +195,8 @@ describe("The Board as a book", () => {
 
   it("says a plan is not laid out yet when the board carries none, and still prints the empty boxes", () => {
     const bare = html({ ...board, week: undefined, month: undefined, year: undefined });
-    expect(bare.match(/Not laid out yet\./g)).toHaveLength(2);
+    // The week, the month and the year each say so; the day says its own line.
+    expect(bare.match(/Not laid out yet\./g)).toHaveLength(3);
     expect(bare).toContain("Nothing on the week&#x27;s plan for the day.");
     expect(bare).toContain('<section id="year"');
     expect(boxClasses(section(bare, "month", "year"), "\\d+")).toHaveLength(35);
@@ -191,7 +204,7 @@ describe("The Board as a book", () => {
     expect(boxClasses(bare, "August 2027")).toHaveLength(1);
     expect(bare).not.toContain("Also on the plan");
     expect(bare).not.toContain("Ship day");
-    expect(bare.match(/0 items · 0 done/g)).toHaveLength(3);
+    expect(bare.match(/0 items · 0 done/g)).toHaveLength(4);
   });
 });
 

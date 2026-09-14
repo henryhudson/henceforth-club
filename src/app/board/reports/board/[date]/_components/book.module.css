@@ -258,3 +258,31 @@
   color: #333;
   text-align: center;
 }
+
+/* ── the week: seven rows, one a day, the weekday and date in the same
+   margin column the day's time line uses, every task in full beside it, the
+   Wednesday named as ship day; the rows share the page's height so a light
+   week leaves paper for the pen. ── */
+.week { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.weekRow {
+  display: grid;
+  grid-template-columns: 22mm 1fr;
+  column-gap: 4mm;
+  border-top: var(--rule);
+  padding: 1.8mm 0 1.4mm;
+  flex: 1 1 0;
+  min-height: 0;
+  break-inside: avoid;
+}
+.weekRow:last-child { border-bottom: var(--rule); }
+.weekDay { display: flex; flex-direction: column; gap: .7mm; }
+.weekDay b {
+  font: 700 .857em/1 -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: #111;
+}
+.weekDay span { font: 5.5pt/1.2 Georgia, serif; color: #444; }
+.weekDay em { font: italic 5.5pt/1.2 Georgia, serif; color: #0e7490; }
+.weekReview .weekDay b { color: #0e7490; }
+.weekLines .line { margin: 0 0 1mm; }

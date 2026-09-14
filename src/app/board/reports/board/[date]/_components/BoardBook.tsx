@@ -1,4 +1,4 @@
-import type { BoardBookModel, BookPage, DayPageModel, MonthPageModel, YearPageModel } from "@/lib/board-book";
+import type { BoardBookModel, BookPage, DayPageModel, MonthPageModel, WeekPageModel, YearPageModel } from "@/lib/board-book";
 import { longDate } from "@/lib/report-helpers";
 import { ColumnCards } from "@/app/board/reports/columns/[date]/[column]/_components/ColumnSheet";
 import BoardSheet from "./BoardSheet";
@@ -71,6 +71,32 @@ function DayTimeline({ day }: { day: DayPageModel }) {
   );
 }
 
+/** The week: seven rows, one a day, the weekday and date in the margin
+ *  column and every task in full beside it, ticked as the planner has it;
+ *  the Wednesday marked, because it ships and writes the digest. This is
+ *  the page the Sunday review lays out: the plan for the week ahead, whole. */
+function WeekRows({ week }: { week: WeekPageModel }) {
+  if (week.days.length === 0) return null;
+  return (
+    <div className={s.week}>
+      {week.days.map((d) => (
+        <div key={d.date} className={d.review ? `${s.weekRow} ${s.weekReview}` : s.weekRow}>
+          <div className={s.weekDay}>
+            <b>{d.weekday}</b>
+            <span>{d.label}</span>
+            {d.review && <em>Ship day · the digest</em>}
+          </div>
+          {d.tasks.length > 0 ? (
+            <Lines lines={d.tasks} className={s.weekLines} />
+          ) : (
+            <p className={s.nothing}>Nothing planned.</p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** The month: a calendar of weeks, Monday to Sunday, the days outside the
  *  month greyed, each day's items inside its box. */
 function MonthGrid({ month }: { month: MonthPageModel }) {
@@ -119,6 +145,8 @@ function heading(page: BookPage): string {
       return page.title;
     case "day":
       return page.day.heading;
+    case "week":
+      return page.week.heading;
     case "month":
       return page.month.heading;
     case "year":
@@ -133,6 +161,8 @@ function linesOf(page: BookPage): Line[] {
       return [];
     case "day":
       return page.day.tasks;
+    case "week":
+      return page.week.days.flatMap((d) => d.tasks);
     case "month":
       return [...page.month.weeks.flat().flatMap((d) => d.items), ...page.month.others];
     case "year":
@@ -156,6 +186,7 @@ function standfirst(page: BookPage, stamp: string | null): string {
 /** The plan's note in the author's words, or the not-laid-out line when the
  *  board carries no such plan; nothing when the plan has no note. */
 function note(page: BookPage): string | null {
+  if (page.kind === "week") return page.week.laidOut ? null : page.empty;
   if (page.kind === "month") return page.month.laidOut ? page.month.note : page.empty;
   if (page.kind === "year") return page.year.laidOut ? page.year.note : page.empty;
   return null;
@@ -217,6 +248,7 @@ export default function BoardBook({ model, date }: { model: BoardBookModel; date
             )}
             {page.kind === "cards" && <ColumnCards cards={page.list.cards} empty={page.empty} />}
             {page.kind === "day" && <DayTimeline day={page.day} />}
+            {page.kind === "week" && <WeekRows week={page.week} />}
             {page.kind === "month" && <MonthGrid month={page.month} />}
             {page.kind === "year" && <YearGrid year={page.year} />}
             {i === model.pages.length - 1 && (
@@ -224,7 +256,8 @@ export default function BoardBook({ model, date }: { model: BoardBookModel; date
                 Set in Georgia, seven point upon eight; agate matter at five and a half point. Drawn from the board as
                 published and printed on demand: the working set on the front, then every card to do and in hand on as
                 many pages as they take, then the day as one line from midnight to midnight with paper to write on
-                beside it, and the month and the year as boxes for the pen.
+                beside it, the week as seven rows with every task in full, and the month and the year as boxes for
+                the pen.
               </p>
             )}
           </section>
