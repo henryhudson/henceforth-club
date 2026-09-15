@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { overflowNames, refusedSheetMark, refusedSheetPath, sheetOverflow } from "./render-pdf-core.mjs";
+import { foldReadings, overflowNames, refusedSheetMark, refusedSheetPath, sheetOverflow } from "./render-pdf-core.mjs";
 
 describe("refusedSheetMark", () => {
   it("says on its face that the sheet did not fit, by how much, and that it must not be printed", () => {
@@ -83,5 +83,46 @@ describe("overflowNames", () => {
     expect(text).toContain("past the page edge:");
     expect(text).toContain('  64px past the edge: <p class="agate"> "Missed. The benchmarks table"');
     expect(text).toContain('  12px past the edge: <span> "Sat 19"');
+  });
+  it("names the page an element sits on when the book's reading carries it", () => {
+    const text = overflowNames([{ by: 85, tag: "span", cls: "", text: "Press the release.", page: "week" }, { by: 3, tag: "li", cls: "", text: "Later", page: "month" }]);
+    expect(text).toContain('  85px past the edge of the week page: <span> "Press the release."');
+    expect(text).toContain('   3px past the edge of the month page: <li> "Later"');
+  });
+});
+
+describe("foldReadings", () => {
+  it("reads the sheet alone as before: the daily and the weekly edition are one part, and nothing is named by page", () => {
+    const sheet = { page: null, pastMax: 64, past: [{ by: 64, tag: "p", cls: "agate", text: "Missed." }] };
+    expect(foldReadings([sheet])).toEqual({ pastMax: 64, past: [{ by: 64, tag: "p", cls: "agate", text: "Missed." }] });
+  });
+
+  it("folds the deepest run on any page of the book into one reading and names the page each element sits on, deepest first across the pages", () => {
+    // The 15 September 2026 shape: the front fits, the week page's Tuesday
+    // runs past its section, and the month page is a hair over.
+    const front = { page: "front", pastMax: 0, past: [] };
+    const week = { page: "week", pastMax: 85, past: [{ by: 85, tag: "span", cls: "", text: "Press the release." }, { by: 12, tag: "b", cls: "", text: "Tuesday" }] };
+    const month = { page: "month", pastMax: 3, past: [{ by: 3, tag: "li", cls: "", text: "Later" }] };
+    expect(foldReadings([front, week, month])).toEqual({
+      pastMax: 85,
+      past: [
+        { by: 85, tag: "span", cls: "", text: "Press the release.", page: "week" },
+        { by: 12, tag: "b", cls: "", text: "Tuesday", page: "week" },
+        { by: 3, tag: "li", cls: "", text: "Later", page: "month" },
+      ],
+    });
+  });
+
+  it("names six elements at most across the book, and reads nothing as nothing", () => {
+    const parts = ["todo", "day", "week"].map((page) => ({
+      page,
+      pastMax: 10,
+      past: Array.from({ length: 4 }, (_, i) => ({ by: 10 - i, tag: "p", cls: "", text: `${page} ${i}` })),
+    }));
+    expect(foldReadings(parts).past).toHaveLength(6);
+    expect(foldReadings(parts).past.map((p) => p.by)).toEqual([10, 10, 10, 9, 9, 9]);
+    expect(foldReadings([])).toEqual({ pastMax: 0, past: [] });
+    expect(foldReadings(undefined)).toEqual({ pastMax: 0, past: [] });
+    expect(foldReadings([{ page: "day", pastMax: NaN }]).pastMax).toBe(0);
   });
 });
