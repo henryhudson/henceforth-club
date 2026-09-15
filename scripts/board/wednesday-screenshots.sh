@@ -17,8 +17,9 @@
 # the machine whose fifteen-minute load average was 44 on ten cores. So
 # --on-mini sends the capture to ~/Programming/Main/<repo> there, puts that
 # checkout on THIS machine's commit first (detached, so nothing on the mini has
-# an opinion about branches), and brings the screens back. The comparison and
-# the review page stay here, because they are cheap and they are read here.
+# an opinion about branches), brings the screens back, and puts the checkout
+# back on what it was, however the run ends. The comparison and the review
+# page stay here, because they are cheap and they are read here.
 #
 # The mini's three runners share ONE simulator device set, so a capture started
 # while a job is testing contends with it. The run says so in the status file
@@ -89,15 +90,40 @@ SUMMARY="$OUT/summary.tsv"
 # left behind one log and a zero-byte summary, which is indistinguishable from a
 # run that never started — so Hansard 1.11 shipped that evening believing the
 # gate had simply not been asked for. An empty summary is now never ambiguous:
-# the status file says "started" from the first second, and says "complete" only
-# if the run reaches its own end. Anything else, a kill, a crash, a set -e exit,
-# leaves "interrupted" behind, because the trap fires on the way out either way.
+# the status file says "started" from the first second, and says "complete"
+# only if the run reaches its own end with screenshots from every app. A run
+# that reaches its end with an app that produced none says "failed" and exits
+# 1: until 2026-09-15 the marker counted the summary's rows, a failure wrote a
+# row like any other, and the exit was 0 whatever happened. Anything else, a
+# kill, a crash, a set -e exit, leaves "interrupted" behind, because the trap
+# fires on the way out either way; and on every way out the trap first puts
+# the mini's checkouts back on what they were.
 STATUS="$OUT/status.tsv"
 COMPLETED=false
+ENDED=false
+FAILED=()
+OK=0
+SHOTS=0
+MINI_RESTORE=()
 note_status() { printf '%s\t%s\t%s\n' "$(date +%FT%T%z)" "$1" "${2:-}" >> "$STATUS"; }
+restore_mini() {
+    # The counterpart to the detaching checkout in the --on-mini path: each
+    # entry is the remote repository and the branch (or commit) it was on.
+    if [ ${#MINI_RESTORE[@]} -eq 0 ]; then return; fi
+    local entry path ref
+    for entry in "${MINI_RESTORE[@]}"; do
+        path="${entry%% *}"
+        ref="${entry#* }"
+        ssh "$MINI" "cd $path && git checkout --quiet $ref" >> "$OUT/mini-restore.log" 2>&1 \
+            || echo "  could not put $MINI back on $ref in $path — see $OUT/mini-restore.log" >&2
+    done
+}
 finish() {
+    restore_mini
     if [ "$COMPLETED" = true ]; then
-        note_status complete "$(wc -l < "$SUMMARY" | tr -d ' ') app(s) recorded"
+        note_status complete "$OK of ${#APPS[@]} app(s) produced screenshots, $SHOTS in all"
+    elif [ "$ENDED" = true ]; then
+        note_status failed "no screenshots from ${FAILED[*]}; the other apps' screens here are whole"
     else
         note_status interrupted "ended before finishing; any screens here are partial"
     fi
@@ -117,6 +143,7 @@ for app in "${APPS[@]}"; do
     if [ ! -x "$script" ]; then
         echo "  no capture script at $script — SKIPPED" >&2
         printf '%s\tno-script\t0\t-\n' "$app" >> "$SUMMARY"
+        FAILED+=("$app")
         continue
     fi
 
@@ -128,6 +155,7 @@ for app in "${APPS[@]}"; do
     else
         echo "  capturing at $sha"
     fi
+    captured=true
 
     if [ "$ON_MINI" = true ]; then
         # CAPTURE ON THE MAC MINI. This moved here on 2026-09-11 because the
@@ -142,10 +170,20 @@ for app in "${APPS[@]}"; do
         # so nothing on the mini has an opinion about branches.
         remote_repo="\$HOME/Programming/Main/$(basename "$repo")"
         note_status capturing "$app on $MINI at $sha"
+        # Remember what the mini is on before detaching it, the branch by name
+        # or the commit if it is already detached, so finish can put it back.
+        if ! was_on="$(ssh "$MINI" "cd $remote_repo && (git symbolic-ref --short -q HEAD || git rev-parse HEAD)" 2> "$OUT/$app.log")"; then
+            echo "  could not read what $MINI is on — see $OUT/$app.log" >&2
+            printf '%s\tremote-checkout-failed\t0\t%s\n' "$app" "$sha" >> "$SUMMARY"
+            FAILED+=("$app")
+            continue
+        fi
+        MINI_RESTORE+=("$remote_repo $was_on")
         if ! ssh "$MINI" "cd $remote_repo && git fetch --quiet origin && git checkout --quiet --detach $sha" \
-                > "$OUT/$app.log" 2>&1; then
+                >> "$OUT/$app.log" 2>&1; then
             echo "  could not put $MINI on $sha — see $OUT/$app.log" >&2
             printf '%s\tremote-checkout-failed\t0\t%s\n' "$app" "$sha" >> "$SUMMARY"
+            FAILED+=("$app")
             continue
         fi
         # The mini's three runners share ONE simulator device set, so a capture
@@ -158,6 +196,7 @@ for app in "${APPS[@]}"; do
         if ! ssh "$MINI" "cd $remote_repo && ./Scripts/regenerate-snapshots.sh" \
                 >> "$OUT/$app.log" 2>&1; then
             echo "  capture script reported failure on $MINI — see $OUT/$app.log" >&2
+            captured=false
         fi
         mkdir -p "$OUT/$app"
         find "$OUT/$app" -maxdepth 1 -name '*.png' -delete
@@ -167,6 +206,7 @@ for app in "${APPS[@]}"; do
     else
         if ! ( cd "$repo" && ./Scripts/regenerate-snapshots.sh ) > "$OUT/$app.log" 2>&1; then
             echo "  capture script reported failure — see $OUT/$app.log" >&2
+            captured=false
         fi
     fi
 
@@ -181,6 +221,7 @@ for app in "${APPS[@]}"; do
         # Zero is a failure, never a quiet week — say so loudly.
         echo "  NO SCREENSHOTS PRODUCED — this is a failure, not an empty week" >&2
         printf '%s\tfailed\t0\t%s\n' "$app" "$sha" >> "$SUMMARY"
+        FAILED+=("$app")
         continue
     fi
     [ "$ON_MINI" = true ] || find "$src" -maxdepth 1 -name '*.png' -exec cp {} "$OUT/$app/" \;
@@ -190,15 +231,33 @@ for app in "${APPS[@]}"; do
         python3 "$HERE/diff-screens.py" "$PREV/$app" "$OUT/$app" "$OUT/$app.diff.json" \
             || echo "  comparison failed" >&2
     fi
-    printf '%s\tok\t%s\t%s\n' "$app" "$n" "$sha" >> "$SUMMARY"
+    if [ "$captured" = true ]; then
+        printf '%s\tok\t%s\t%s\n' "$app" "$n" "$sha" >> "$SUMMARY"
+        OK=$((OK + 1))
+        SHOTS=$((SHOTS + n))
+    else
+        # The screens a failed capture left are kept and compared for the
+        # review page, but they are partial, and the app counts as failed.
+        printf '%s\tcapture-failed\t%s\t%s\n' "$app" "$n" "$sha" >> "$SUMMARY"
+        FAILED+=("$app")
+    fi
 done
 
 python3 "$HERE/render-screenshot-review.py" "$OUT" "$TODAY" "${PREV:-}"
 
-COMPLETED=true
+# The run reached its own end. It is complete only if every app produced
+# screenshots; otherwise the status says failed and names the apps, and the
+# exit status says so too, so nothing downstream can read a failed gate as a
+# pass. The review page still opens: the other apps' screens are worth reading.
+ENDED=true
+if [ ${#FAILED[@]} -eq 0 ]; then COMPLETED=true; fi
 
 echo ""
 echo "==> $OUT"
 column -t -s $'\t' "$SUMMARY" 2>/dev/null || cat "$SUMMARY"
 [ "$OPEN_PAGE" = true ] && open "$OUT/index.html"
+if [ ${#FAILED[@]} -gt 0 ]; then
+    echo "==> FAILED: no screenshots from ${FAILED[*]}" >&2
+    exit 1
+fi
 exit 0
