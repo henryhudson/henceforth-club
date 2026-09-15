@@ -271,7 +271,8 @@
   border-top: var(--rule);
   padding: 1.8mm 0 1.4mm;
   flex: 1 1 0;
-  min-height: 0;
+  /* no min-height: 0: a row must grow to its list, so a week heavier than the
+     page spills where the render gate can see it, not across the day below */
   break-inside: avoid;
 }
 .weekRow:last-child { border-bottom: var(--rule); }

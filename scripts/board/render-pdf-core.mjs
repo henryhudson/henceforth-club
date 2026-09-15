@@ -66,9 +66,31 @@ export function sheetOverflow({ packOverflow = 0, pastMax = 0 } = {}) {
   return Math.max(pack, past);
 }
 
-/** The refusal's postscript: what ran past the page edge, deepest first. Empty when nothing is named. */
+/**
+ * One reading for a whole document from the readings of its parts: the sheet
+ * alone for the daily and the weekly edition; the front and then every page
+ * of the book for the board, whose pages sit outside the print root and were
+ * never read before 15 September 2026, when a heavy day on the week page ran
+ * past its section while the gate read zero. The deepest run past any part's
+ * edge is the document's pastMax, and what ran past is named deepest first
+ * across every part, each element carrying the page it sits on when the part
+ * is named, six at most.
+ */
+export function foldReadings(readings = []) {
+  const parts = Array.isArray(readings) ? readings : [];
+  const pastMax = Math.max(0, ...parts.map((r) => (Number.isFinite(r?.pastMax) ? r.pastMax : 0)));
+  const past = parts
+    .flatMap((r) => (Array.isArray(r?.past) ? r.past : []).map((p) => (r.page ? { ...p, page: r.page } : p)))
+    .sort((a, b) => b.by - a.by)
+    .slice(0, 6);
+  return { pastMax, past };
+}
+
+/** The refusal's postscript: what ran past the page edge, deepest first, each
+ *  named with its page when the document has more than one. Empty when
+ *  nothing is named. */
 export function overflowNames(past = []) {
   if (!Array.isArray(past) || past.length === 0) return "";
-  const lines = past.map((p) => `  ${String(p.by).padStart(4)}px past the edge: <${p.tag}${p.cls ? ` class="${p.cls}"` : ""}> ${JSON.stringify(p.text ?? "")}`);
+  const lines = past.map((p) => `  ${String(p.by).padStart(4)}px past the edge${p.page ? ` of the ${p.page} page` : ""}: <${p.tag}${p.cls ? ` class="${p.cls}"` : ""}> ${JSON.stringify(p.text ?? "")}`);
   return `\n  past the page edge:\n${lines.join("\n")}`;
 }

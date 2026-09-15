@@ -234,3 +234,16 @@ describe("The Board's lines", () => {
     expect(front).toContain("--pack-rule-c: #111;");
   });
 });
+
+describe("The Board's week rows", () => {
+  it("lets a row keep its automatic minimum height, so a heavy day grows to its list instead of painting across the day below it", () => {
+    // On 15 September 2026 min-height: 0 pinned every row to a seventh of the
+    // field, nothing clipped, and Tuesday's eight tasks printed over Wednesday.
+    // Without the pin a week heavier than the page spills past the section,
+    // where the render gate reads it.
+    const declarations = readFileSync(join(here, "book.module.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    const row = declarations.match(/\.weekRow\s*\{([^}]*)\}/)?.[1];
+    expect(row).toBeDefined();
+    expect(row).not.toMatch(/min-height/);
+  });
+});
